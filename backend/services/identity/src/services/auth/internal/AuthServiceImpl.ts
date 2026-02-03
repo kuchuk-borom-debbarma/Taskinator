@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { getDb } from "../../../db";
 import { users } from "../../../db/schemas/users";
-import { hashPassword } from "../../../util/crypto";
+import { hashPassword, verifyPassword } from "../../../util/crypto";
 import { createJwe, decryptJwe } from "../../../util/jwe";
 import { IAuthService, SignUpParam, User } from "../IAuthService";
 import { createUserQuery } from "./Queries";
@@ -37,14 +37,18 @@ export class AuthServiceImpl implements IAuthService {
 
     const firstResult = result[0];
 
-    return {
-      id: firstResult.id,
-      displayName: firstResult.displayName,
-      username: firstResult.username,
-      email: firstResult.email,
-      createdAt: firstResult.createdAt,
-      updatedAt: firstResult.updatedAt,
-    };
+    const valid = await verifyPassword(data.password, firstResult.password);
+    if (valid)
+      return {
+        id: firstResult.id,
+        displayName: firstResult.displayName,
+        username: firstResult.username,
+        email: firstResult.email,
+        createdAt: firstResult.createdAt,
+        updatedAt: firstResult.updatedAt,
+      };
+    console.error("Invalid password!");
+    return null;
   }
 
   getUserByFilter(filter: {

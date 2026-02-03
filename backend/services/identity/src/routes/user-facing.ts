@@ -103,9 +103,15 @@ publicRoute.post(
 );
 
 publicRoute.post("/reset-password", (c) => {
+  // get user by email
+  // create JWE containing new password and userId
+  // use noti service to send notification to email
   return c.text("Password Reset Endpoint");
 });
-
+publicRoute.post("/update-password", (c) => {
+  // get by cred if found update password
+  return c.text("wip");
+});
 publicRoute.get("/", (c) => {
   return c.text(
     "Info about the current user based on authorization token. Add middleware",
