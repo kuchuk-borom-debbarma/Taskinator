@@ -1,3 +1,4 @@
+import { and, eq } from "drizzle-orm";
 import { getDb } from "../../../db";
 import { users } from "../../../db/schemas/users";
 import { SignUpParam } from "../IAuthService";
@@ -5,7 +6,7 @@ import { SignUpParam } from "../IAuthService";
 export const createUserQuery = async (data: SignUpParam) => {
   const db = getDb();
 
-  const added = await db
+  return await db
     .insert(users)
     .values({
       displayName: data.displayName,
@@ -14,4 +15,32 @@ export const createUserQuery = async (data: SignUpParam) => {
       password: data.password,
     })
     .returning();
+};
+
+export const findUserByFilter = async (filter: {
+  username?: string;
+  email?: string;
+  id?: string;
+}) => {
+  const { username, email, id } = filter;
+  const conditions = [];
+  if (id) {
+    conditions.push(eq(users.id, id));
+  }
+  if (username) {
+    conditions.push(eq(users.username, username));
+  }
+  if (email) {
+    conditions.push(eq(users.email, email));
+  }
+  if (conditions.length === 0) {
+    throw new Error("No filters provided!");
+  }
+
+  const db = getDb();
+  const found = await db
+    .select()
+    .from(users)
+    .where(and(...conditions));
+  return found;
 };

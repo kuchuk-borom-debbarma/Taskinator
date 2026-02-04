@@ -21,11 +21,6 @@ export interface IAuthService {
     password: string;
   }): Promise<User | null>;
 
-  getUserByFilter(filter: {
-    email?: string;
-    username?: string;
-    id?: string;
-  }): User | null;
   createUserJWEToken(data: SignUpParam): Promise<string>;
 
   verifyUserFromJWEToken(token: string): Promise<SignUpParam | undefined>;

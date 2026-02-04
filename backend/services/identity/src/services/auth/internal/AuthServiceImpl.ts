@@ -4,7 +4,7 @@ import { users } from "../../../db/schemas/users";
 import { hashPassword, verifyPassword } from "../../../util/crypto";
 import { createJwe, decryptJwe } from "../../../util/jwe";
 import { IAuthService, SignUpParam, User } from "../IAuthService";
-import { createUserQuery } from "./Queries";
+import { createUserQuery, findUserByFilter } from "./Queries";
 
 export class AuthServiceImpl implements IAuthService {
   async getUserByCredential(data: {
@@ -12,51 +12,29 @@ export class AuthServiceImpl implements IAuthService {
     method: "email" | "user";
     password: string;
   }): Promise<User | null> {
-    let user: User | null = null;
-    const db = getDb();
-    const query = db.select().from(users);
-    let result: {
-      id: string;
-      username: string;
-      displayName: string;
-      email: string;
-      password: string;
-      createdAt: Date;
-      updatedAt: Date | null;
-    }[] = [];
+    const filter: any = {};
     if (data.method === "email") {
-      result = await query.where(eq(users.email, data.key));
+      filter.email = data.key;
     } else {
-      result = await query.where(eq(users.username, data.key));
+      filter.username = data.key;
     }
 
-    if (result === undefined || result.length !== 1) {
+    const result = await findUserByFilter(filter);
+
+    if (result.length === 0) {
       console.warn("User not found");
       return null;
     }
 
-    const firstResult = result[0];
+    const user = result[0];
 
-    const valid = await verifyPassword(data.password, firstResult.password);
-    if (valid)
-      return {
-        id: firstResult.id,
-        displayName: firstResult.displayName,
-        username: firstResult.username,
-        email: firstResult.email,
-        createdAt: firstResult.createdAt,
-        updatedAt: firstResult.updatedAt,
-      };
-    console.error("Invalid password!");
+    //validate cred
+    if (await verifyPassword(data.password, user.password)) {
+      return user;
+    }
+
+    console.warn("Invalid credential");
     return null;
-  }
-
-  getUserByFilter(filter: {
-    email?: string;
-    username?: string;
-    id?: string;
-  }): User | null {
-    throw new Error("Method not implemented.");
   }
 
   async createUserJWEToken(data: SignUpParam): Promise<string> {
@@ -80,6 +58,6 @@ export class AuthServiceImpl implements IAuthService {
   async createUser(userData: SignUpParam): Promise<void> {
     const hashed = await hashPassword(userData.password);
     userData.password = hashed;
-    const result = await createUserQuery(userData);
+    await createUserQuery(userData);
   }
 }
