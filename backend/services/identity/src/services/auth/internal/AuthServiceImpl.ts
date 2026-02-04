@@ -7,6 +7,25 @@ import { IAuthService, SignUpParam, User } from "../IAuthService";
 import { createUserQuery, findUserByFilter } from "./Queries";
 
 export class AuthServiceImpl implements IAuthService {
+  async getUserByFilter(filter: {
+    username?: string;
+    id?: string;
+    email?: string;
+  }): Promise<User | null> {
+    const result = await findUserByFilter(filter);
+    if (result.length === 0) {
+      return null;
+    }
+    const user = result[0];
+    return {
+      createdAt: user.createdAt,
+      displayName: user.displayName,
+      email: user.email,
+      id: user.id,
+      updatedAt: user.updatedAt,
+      username: user.username,
+    };
+  }
   async getUserByCredential(data: {
     key: string;
     method: "email" | "user";

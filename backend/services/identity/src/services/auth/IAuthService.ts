@@ -15,10 +15,20 @@ export type SignUpParam = {
 };
 
 export interface IAuthService {
+  updateUserById(data: {
+    id: string;
+    update: { password: string };
+  }): Promise<void>;
   getUserByCredential(data: {
     key: string;
     method: "email" | "user";
     password: string;
+  }): Promise<User | null>;
+
+  getUserByFilter(filter: {
+    username?: string;
+    id?: string;
+    email?: string;
   }): Promise<User | null>;
 
   createUserJWEToken(data: SignUpParam): Promise<string>;

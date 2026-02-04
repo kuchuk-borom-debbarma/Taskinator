@@ -17,7 +17,7 @@ export const createJwe = async (payload: string): Promise<string> => {
     .encrypt(key);
 };
 
-export const decryptJwe = async (jwe: string): Promise<any> => {
+export const decryptJwe = async (jwe: string): Promise<string> => {
   const c = getContext<{ Bindings: Bindings }>();
   const key = hexToUint8Array(c.env.JWE_KEY);
 

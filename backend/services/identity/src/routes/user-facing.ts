@@ -3,11 +3,8 @@ import { Bindings } from "../util/env";
 import { zValidator } from "@hono/zod-validator";
 import * as z from "zod";
 import { authService, notiService } from "../services";
-import { User } from "../services/auth/IAuthService";
-import { auth } from "hono/utils/basic-auth";
-import { verifyPassword } from "../util/crypto";
-import { validator } from "hono/validator";
 import { createJwtToken } from "../util/jwt";
+import { createJwe, decryptJwe } from "../util/jwe";
 
 /// Routes that are exposed to the end users
 const publicRoute = new Hono<{
@@ -102,16 +99,116 @@ publicRoute.post(
   },
 );
 
-publicRoute.post("/reset-password", (c) => {
-  // get user by email
-  // create JWE containing new password and userId
-  // use noti service to send notification to email
-  return c.text("Password Reset Endpoint");
+publicRoute.post(
+  "/reset-password",
+  zValidator(
+    "json",
+    z.object({
+      email: z.email(),
+      password: z.string().length(6),
+    }),
+  ),
+  async (c) => {
+    const v = c.req.valid("json");
+    const { email, password } = v;
+    // get user by email
+    const user = await authService.getUserByFilter({ email });
+    if (user === null) {
+      return c.json(
+        { success: false, message: "User with email not found" },
+        404,
+      );
+    }
+    // create JWE containing new password and userId
+    const jwe = createJwe(
+      JSON.stringify({
+        userId: user.id,
+        password: password,
+      }),
+    );
+    // use noti service to send notification to email
+    // 2. Prepare Link
+    const url = new URL(c.req.url);
+    const currentPath = c.req.path; //doing this because if main router changes the prefix route later, it will still work
+    const basePath = currentPath.substring(0, currentPath.lastIndexOf("/"));
+    const verificationLink = `${url.origin}${basePath}/complete-reset-password?token=${jwe}`; //TODO turn into helper
+    notiService.sendNotification(
+      email,
+      "Reset Password",
+      `Link to reset password is ${verificationLink}`,
+    );
+    return c.json({
+      success: true,
+      message: "Link set successfully",
+    });
+  },
+);
+
+publicRoute.get("/complete-reset-password", async (c) => {
+  const token = c.req.query("token");
+  if (token === undefined) {
+    return c.json(
+      {
+        success: false,
+        message: "Token not present in query",
+      },
+      403,
+    );
+  }
+  const jsonString = await decryptJwe(token);
+  const data = (await JSON.parse(jsonString)) as {
+    userId: string;
+    password: string;
+  };
+
+  await authService.updateUserById({
+    id: data.userId,
+    update: {
+      password: data.password,
+    },
+  });
+
+  return c.json({
+    success: true,
+    message: "Successfully updated password",
+  });
 });
-publicRoute.post("/update-password", (c) => {
-  // get by cred if found update password
-  return c.text("wip");
-});
+
+publicRoute.post(
+  "/update-password",
+  zValidator(
+    "json",
+    z.object({
+      email: z.email(),
+      currentPassword: z.string(),
+      newPassword: z.string().length(6),
+    }),
+  ),
+  async (c) => {
+    const { email, currentPassword, newPassword } = c.req.valid("json");
+    // get by cred if found update password
+    const user = await authService.getUserByCredential({
+      key: email,
+      method: "email",
+      password: currentPassword,
+    });
+
+    if (user === null) {
+      return c.json({ success: false, message: "Invalid credential" }, 404);
+    }
+
+    await authService.updateUserById({
+      id: user.id,
+      update: { password: newPassword },
+    });
+
+    return c.json({
+      success: true,
+      message: "Updated password successfully",
+    });
+  },
+);
+
 publicRoute.get("/", (c) => {
   return c.text(
     "Info about the current user based on authorization token. Add middleware",

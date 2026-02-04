@@ -41,6 +41,8 @@ export const findUserByFilter = async (filter: {
   const found = await db
     .select()
     .from(users)
-    .where(and(...conditions));
+    .where(and(...conditions))
+    .limit(1);
+
   return found;
 };
