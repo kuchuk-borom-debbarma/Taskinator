@@ -1,14 +1,16 @@
 import { Hono } from "hono";
-import { Bindings } from "../util/env";
+import { Bindings, Variables } from "../util/env";
 import { zValidator } from "@hono/zod-validator";
 import * as z from "zod";
 import { authService, notiService } from "../services";
 import { createJwtToken } from "../util/jwt";
 import { createJwe, decryptJwe } from "../util/jwe";
+import { authMiddleware } from "../middlewares/auth";
 
 /// Routes that are exposed to the end users
 const publicRoute = new Hono<{
   Bindings: Bindings;
+  Variables: Variables;
 }>();
 
 //Sign up
@@ -217,10 +219,12 @@ publicRoute.post(
   },
 );
 
-publicRoute.get("/", (c) => {
-  return c.text(
-    "Info about the current user based on authorization token. Add middleware",
-  );
+publicRoute.get("/", authMiddleware, (c) => {
+  const identity = c.get("identity");
+  return c.json({
+    success: true,
+    data: identity,
+  });
 });
 
 export default publicRoute;

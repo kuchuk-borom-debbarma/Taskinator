@@ -1,9 +1,10 @@
 import { Hono } from "hono";
 import publicRoute from "./routes/user-facing";
-import { Bindings } from "./util/env";
+import { Bindings, Variables } from "./util/env";
 import { contextStorage } from "hono/context-storage";
 const app = new Hono<{
   Bindings: Bindings;
+  Variables: Variables;
 }>();
 
 app.use("*", contextStorage()); // This "saves" the context for this request only

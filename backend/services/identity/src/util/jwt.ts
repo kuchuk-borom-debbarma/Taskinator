@@ -1,6 +1,7 @@
 import { getContext } from "hono/context-storage";
-import { decode, sign, verify } from "hono/jwt";
+import { sign, verify } from "hono/jwt";
 import { Bindings } from "./env";
+import { JWTPayload } from "hono/utils/jwt/types";
 
 export const createJwtToken = async (data: {
   subject: string;
@@ -17,14 +18,13 @@ export const createJwtToken = async (data: {
   return await sign(payload, secret, "HS256");
 };
 
-export const verifyJwtToken = async (data: {}): Promise<boolean> => {
+export const verifyJwtToken = async (data: {}): Promise<JWTPayload | null> => {
   const token = (data as any).token as string;
   const c = getContext<{ Bindings: Bindings }>();
   const secret = c.env.JWT_SECRET;
   try {
-    await verify(token, secret, "HS256");
-    return true;
+    return await verify(token, secret, "HS256");
   } catch (e) {
-    return false;
+    return null;
   }
 };
