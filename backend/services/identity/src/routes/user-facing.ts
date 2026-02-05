@@ -6,6 +6,7 @@ import { authService, notiService } from "../services";
 import { createJwtToken } from "../util/jwt";
 import { createJwe, decryptJwe } from "../util/jwe";
 import { authMiddleware } from "../middlewares/auth";
+import { getVerificationLink } from "../util/url";
 
 /// Routes that are exposed to the end users
 const publicRoute = new Hono<{
@@ -32,10 +33,7 @@ publicRoute.post(
     const jwe = await authService.createUserJWEToken(validated);
 
     // 2. Prepare Link
-    const url = new URL(c.req.url);
-    const currentPath = c.req.path; //doing this because if main router changes the prefix route later, it will still work
-    const basePath = currentPath.substring(0, currentPath.lastIndexOf("/"));
-    const verificationLink = `${url.origin}${basePath}/complete-sign-up?token=${jwe}`;
+    const verificationLink = getVerificationLink(c, "complete-sign-up", jwe);
 
     // 3. Send Notification
     await notiService.sendNotification(
@@ -136,10 +134,11 @@ publicRoute.post(
     );
     // use noti service to send notification to email
     // 2. Prepare Link
-    const url = new URL(c.req.url);
-    const currentPath = c.req.path; //doing this because if main router changes the prefix route later, it will still work
-    const basePath = currentPath.substring(0, currentPath.lastIndexOf("/"));
-    const verificationLink = `${url.origin}${basePath}/complete-reset-password?token=${jwe}`; //TODO turn into helper
+    const verificationLink = getVerificationLink(
+      c,
+      "complete-reset-password",
+      jwe,
+    );
     await notiService.sendNotification(
       email,
       "Reset Password",
