@@ -60,6 +60,8 @@ publicRoute.get("/complete-sign-up", async (c) => {
   }
 
   authService.createUser(userData);
+
+  return c.json({ success: true, message: "Sign up complete" });
 });
 
 publicRoute.post(
