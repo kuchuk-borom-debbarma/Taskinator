@@ -4,9 +4,17 @@ import { users } from "../../../db/schemas/users";
 import { hashPassword, verifyPassword } from "../../../util/crypto";
 import { createJwe, decryptJwe } from "../../../util/jwe";
 import { IAuthService, SignUpParam, User } from "../IAuthService";
-import { createUserQuery, findUserByFilter } from "./Queries";
+import { createUserQuery, findUserByFilter, updateUserQuery } from "./Queries";
 
 export class AuthServiceImpl implements IAuthService {
+  async updateUserById(data: {
+    id: string;
+    update: { password: string };
+  }): Promise<void> {
+    const hashed = await hashPassword(data.update.password);
+    await updateUserQuery(data.id, { password: hashed });
+  }
+
   async getUserByFilter(filter: {
     username?: string;
     id?: string;

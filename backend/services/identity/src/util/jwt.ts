@@ -5,7 +5,7 @@ import { Bindings } from "./env";
 export const createJwtToken = async (data: {
   subject: string;
   claims?: Record<string, unknown>;
-  expiresAt: number; // epoch millis
+  expiresAt: number; // epoch seconds
 }): Promise<string> => {
   const payload = {
     sub: data.subject,

@@ -46,3 +46,17 @@ export const findUserByFilter = async (filter: {
 
   return found;
 };
+
+export const updateUserQuery = async (
+  id: string,
+  update: Partial<SignUpParam>,
+) => {
+  const db = getDb();
+  return await db
+    .update(users)
+    .set({
+      ...update,
+      updatedAt: new Date(),
+    })
+    .where(eq(users.id, id));
+};

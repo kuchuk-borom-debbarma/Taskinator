@@ -11,6 +11,7 @@ const publicRoute = new Hono<{
   Bindings: Bindings;
 }>();
 
+//Sign up
 publicRoute.post(
   "/sign-up",
   zValidator(
@@ -48,6 +49,7 @@ publicRoute.post(
   },
 );
 
+//Complete sign up
 publicRoute.get("/complete-sign-up", async (c) => {
   const token = c.req.query("token");
   if (!token) {
@@ -64,6 +66,7 @@ publicRoute.get("/complete-sign-up", async (c) => {
   return c.json({ success: true, message: "Sign up complete" });
 });
 
+//sign in
 publicRoute.post(
   "/sign-in",
   zValidator(
@@ -91,7 +94,7 @@ publicRoute.post(
     const token = await createJwtToken({
       subject: user.id,
       claims: {},
-      expiresAt: 100, //TODO
+      expiresAt: Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60,
     });
 
     return c.json(
@@ -101,6 +104,7 @@ publicRoute.post(
   },
 );
 
+//reset-password
 publicRoute.post(
   "/reset-password",
   zValidator(
@@ -122,7 +126,7 @@ publicRoute.post(
       );
     }
     // create JWE containing new password and userId
-    const jwe = createJwe(
+    const jwe = await createJwe(
       JSON.stringify({
         userId: user.id,
         password: password,
@@ -134,7 +138,7 @@ publicRoute.post(
     const currentPath = c.req.path; //doing this because if main router changes the prefix route later, it will still work
     const basePath = currentPath.substring(0, currentPath.lastIndexOf("/"));
     const verificationLink = `${url.origin}${basePath}/complete-reset-password?token=${jwe}`; //TODO turn into helper
-    notiService.sendNotification(
+    await notiService.sendNotification(
       email,
       "Reset Password",
       `Link to reset password is ${verificationLink}`,
@@ -146,6 +150,7 @@ publicRoute.post(
   },
 );
 
+//complete reset password
 publicRoute.get("/complete-reset-password", async (c) => {
   const token = c.req.query("token");
   if (token === undefined) {
@@ -176,6 +181,7 @@ publicRoute.get("/complete-reset-password", async (c) => {
   });
 });
 
+//update password
 publicRoute.post(
   "/update-password",
   zValidator(
