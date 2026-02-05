@@ -1,8 +1,10 @@
-import { Hono } from "hono";
+import { OpenAPIHono } from "@hono/zod-openapi";
 import publicRoute from "./routes/user-facing";
 import { Bindings, Variables } from "./util/env";
 import { contextStorage } from "hono/context-storage";
-const app = new Hono<{
+import { Scalar } from "@scalar/hono-api-reference";
+
+const app = new OpenAPIHono<{
   Bindings: Bindings;
   Variables: Variables;
 }>();
@@ -17,5 +19,32 @@ app.get("/health", (c) => {
 });
 
 app.route("/api/v1/public", publicRoute);
+
+// OpenAPI Documentation
+app.doc("/doc", {
+  openapi: "3.0.0",
+  info: {
+    version: "1.0.0",
+    title: "Identity Service API",
+    description: "Authentication and User Management Service",
+  },
+});
+
+// Interactive API Reference
+app.get(
+  "/reference",
+  Scalar({
+    spec: {
+      url: "/doc",
+    },
+  } as any),
+);
+
+// Add Security Scheme
+app.openAPIRegistry.registerComponent("securitySchemes", "bearerAuth", {
+  type: "http",
+  scheme: "bearer",
+  bearerFormat: "JWT",
+});
 
 export default app;

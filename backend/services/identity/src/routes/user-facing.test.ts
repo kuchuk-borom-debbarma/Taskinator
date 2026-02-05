@@ -1,5 +1,5 @@
 import { describe, expect, it, mock, beforeEach } from "bun:test";
-import { Hono } from "hono";
+import { OpenAPIHono } from "@hono/zod-openapi";
 import { contextStorage } from "hono/context-storage";
 import publicRoute from "./user-facing";
 import { authService, notiService } from "../services";
@@ -29,7 +29,7 @@ describe("User-Facing Routes", () => {
     DATABASE_URL: "postgres://test"
   };
 
-  const app = new Hono<{ Bindings: Bindings; Variables: Variables }>();
+  const app = new OpenAPIHono<{ Bindings: Bindings; Variables: Variables }>();
   app.use("*", contextStorage());
   
   app.get("/issue-token", async (c) => {
@@ -80,11 +80,11 @@ describe("User-Facing Routes", () => {
     });
   });
 
-  describe("GET / (authenticated info)", () => {
+  describe("GET /me/info (authenticated info)", () => {
     it("should return 200 for valid token", async () => {
       const tokenRes = await app.request("/issue-token", {}, env);
       const token = await tokenRes.text();
-      const res = await app.request("/api/v1/public", {
+      const res = await app.request("/api/v1/public/me/info", {
         headers: { "Authorization": `Bearer ${token}` }
       }, env);
       expect(res.status).toBe(200);
