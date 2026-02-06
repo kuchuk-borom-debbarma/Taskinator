@@ -21,10 +21,9 @@ repositories {
 }
 
 dependencies {
-    implementation("org.jetbrains.exposed:exposed-core:1.0.0")
-    implementation("org.jetbrains.exposed:exposed-jdbc:1.0.0")
-    implementation("org.jetbrains.exposed:exposed-dao:1.0.0")
     implementation("org.jetbrains.exposed:exposed-spring-boot4-starter:1.0.0")
+    implementation("org.jetbrains.exposed:exposed-java-time:1.0.0")
+    implementation("com.github.f4b6a3:uuid-creator:6.0.0")
 
     implementation("org.springframework.boot:spring-boot-starter-webmvc")
     implementation("org.jetbrains.kotlin:kotlin-reflect")

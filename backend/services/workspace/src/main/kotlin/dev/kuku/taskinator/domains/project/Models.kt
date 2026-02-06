@@ -2,7 +2,6 @@ package dev.kuku.taskinator.domains.project
 
 import java.util.Date
 
-
 data class ProjectInfo(
     val id: String,
     val name: String,
