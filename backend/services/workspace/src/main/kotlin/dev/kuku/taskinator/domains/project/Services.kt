@@ -20,5 +20,11 @@ interface ProjectService {
     fun removeProjectMembers(projectId: String, userId: String, memberIds: List<String>)
 
     ///Delete a project of a user
-    fun deleteProject(projectId: String, userId: String)
+    fun deleteProject(projectId: String, userId: String): List<ProjectMember>
+
+    ///Get the project by Id
+    fun getProjectById(projectId: String, userId: String) : ProjectInfo
+
+    ///Get project members as pagination
+    fun getProjectMembers(projectId: String, userId: String, sortBy: ProjectMemberSortKey, offset: Int, limit : Int): List<ProjectMember>
 }
