@@ -1,6 +1,7 @@
 package dev.kuku.taskinator.domains.team.internal
 
 import dev.kuku.taskinator.domains.project.internal.ProjectMembers
+import dev.kuku.taskinator.domains.project.internal.Projects
 import dev.kuku.taskinator.domains.team.*
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.jetbrains.exposed.v1.core.*
@@ -239,9 +240,9 @@ class TeamQueriesExposed : TeamQueries {
     @OptIn(ExperimentalUuidApi::class)
     override fun findProjectOwner(projectId: String): String? {
         val projectUuid = Uuid.parse(projectId)
-        return dev.kuku.taskinator.domains.project.internal.Projects.selectAll()
-            .where { dev.kuku.taskinator.domains.project.internal.Projects.id eq projectUuid }
-            .map { it[dev.kuku.taskinator.domains.project.internal.Projects.ownerId].toString() }
+        return Projects.selectAll()
+            .where { Projects.id eq projectUuid }
+            .map { it[Projects.ownerId].toString() }
             .singleOrNull()
     }
 

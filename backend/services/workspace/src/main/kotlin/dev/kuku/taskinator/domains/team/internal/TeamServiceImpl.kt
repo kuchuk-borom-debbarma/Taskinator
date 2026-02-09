@@ -78,6 +78,7 @@ class TeamServiceImpl(private val teamRepo: TeamQueries) : TeamService {
      * This ensures team data remains isolated within the project container.
      */
     override fun addTeamMembers(projectId: String, userId: String, teamId: String, memberIds: List<String>) {
+        //TODO use joins with projects table for single database call?
         log.info { "Adding members to team $teamId in project $projectId" }
         try {
             // 1. Ownership Context
