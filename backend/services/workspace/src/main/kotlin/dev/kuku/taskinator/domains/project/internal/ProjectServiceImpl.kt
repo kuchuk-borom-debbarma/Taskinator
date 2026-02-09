@@ -88,4 +88,13 @@ class ProjectServiceImpl(private val projectRepo: ProjectQueries) : ProjectServi
         log.info { "Fetching members for project $projectId (Owner: $userId) with sort $sortBy, offset $offset, limit $limit" }
         return projectRepo.findProjectMembers(projectId, userId, sortBy, offset, limit)
     }
+
+    override fun getProjectUserIsPartOf(
+        userId: String,
+        limit: Int,
+        offset: Int
+    ): List<String> {
+        log.info { "Fetching project IDs user $userId is a member of (limit: $limit, offset: $offset)" }
+        return projectRepo.findProjectIdsByUserMembership(userId, limit, offset)
+    }
 }

@@ -31,6 +31,7 @@ interface ProjectService {
     ///Get the project by Id
     fun getProjectById(projectId: String, userId: String): ProjectInfo?
 
+    ///Get projects that the user created
     fun getProjectsByUser(userId: String, limit: Int, offset: Int): List<ProjectInfo>
 
     ///Get project members as pagination
@@ -41,4 +42,7 @@ interface ProjectService {
         offset: Int,
         limit: Int
     ): List<ProjectMember>
+
+    ///Get projectIds that the user is part of
+    fun getProjectUserIsPartOf(userId:String, limit:Int, offset: Int): List<String>
 }

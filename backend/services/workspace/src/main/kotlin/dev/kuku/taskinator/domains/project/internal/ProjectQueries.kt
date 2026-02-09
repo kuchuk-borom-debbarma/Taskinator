@@ -2,6 +2,8 @@ package dev.kuku.taskinator.domains.project.internal
 
 import dev.kuku.taskinator.domains.project.ProjectFieldsToUpdate
 import dev.kuku.taskinator.domains.project.ProjectInfo
+import dev.kuku.taskinator.domains.project.ProjectMember
+import dev.kuku.taskinator.domains.project.ProjectMemberSortKey
 
 interface ProjectQueries {
     fun insertProject(name: String, ownerId: String, description: String?): ProjectInfo?
@@ -21,11 +23,13 @@ interface ProjectQueries {
 
     fun findProjectsByOwner(userId: String, limit: Int, offset: Int): List<ProjectInfo>
 
+    fun findProjectIdsByUserMembership(userId: String, limit: Int, offset: Int): List<String>
+
     fun findProjectMembers(
         projectId: String,
         userId: String,
-        sortBy: dev.kuku.taskinator.domains.project.ProjectMemberSortKey,
+        sortBy: ProjectMemberSortKey,
         offset: Int,
         limit: Int
-    ): List<dev.kuku.taskinator.domains.project.ProjectMember>
+    ): List<ProjectMember>
 }

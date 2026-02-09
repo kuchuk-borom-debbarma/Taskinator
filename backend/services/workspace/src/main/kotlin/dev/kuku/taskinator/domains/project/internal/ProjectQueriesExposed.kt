@@ -93,7 +93,7 @@ class ProjectQueriesExposed : ProjectQueries {
         memberIds: List<String>
     ) {
         log.debug { "Batch inserting ${memberIds.size} members for project $projectId (Owner: $userId)" }
-        
+
         val projectUuid = Uuid.parse(projectId)
         val ownerUuid = Uuid.parse(userId)
         val now = LocalDateTime.now(ZoneOffset.UTC)
@@ -106,7 +106,7 @@ class ProjectQueriesExposed : ProjectQueries {
             this[ProjectMembers.projectId] = projectUuid
             this[ProjectMembers.ownerId] = ownerUuid
             this[ProjectMembers.memberId] = Uuid.parse(memberId)
-            
+
             this[ProjectMembers.username] = "member_$memberId"
             this[ProjectMembers.displayName] = "Member $memberId"
             this[ProjectMembers.createdAt] = now
@@ -116,6 +116,18 @@ class ProjectQueriesExposed : ProjectQueries {
     /**
      * Dynamic member search with pagination and sorting.
      */
+    @OptIn(ExperimentalUuidApi::class)
+    override fun findProjectIdsByUserMembership(userId: String, limit: Int, offset: Int): List<String> {
+        log.debug { "Finding project IDs where user $userId is a member (limit: $limit, offset: $offset)" }
+        
+        return ProjectMembers.selectAll()
+            .where { ProjectMembers.memberId eq Uuid.parse(userId) }
+            .orderBy(ProjectMembers.createdAt, SortOrder.DESC)
+            .limit(limit)
+            .offset(offset.toLong())
+            .map { it[ProjectMembers.projectId].toString() }
+    }
+
     @OptIn(ExperimentalUuidApi::class)
     override fun findProjectMembers(
         projectId: String,
@@ -132,7 +144,11 @@ class ProjectQueriesExposed : ProjectQueries {
         }
 
         return ProjectMembers.selectAll()
-            .where { (ProjectMembers.projectId eq Uuid.parse(projectId)) and (ProjectMembers.ownerId eq Uuid.parse(userId)) }
+            .where {
+                (ProjectMembers.projectId eq Uuid.parse(projectId)) and (ProjectMembers.ownerId eq Uuid.parse(
+                    userId
+                ))
+            }
             .orderBy(sortColumn, SortOrder.ASC)
             .limit(limit)
             .offset(offset.toLong())
@@ -150,15 +166,15 @@ class ProjectQueriesExposed : ProjectQueries {
         memberIds: List<String>
     ) {
         log.debug { "Batch deleting ${memberIds.size} members from project $projectId (Owner: $userId)" }
-        
+
         val projectUuid = Uuid.parse(projectId)
         val ownerUuid = Uuid.parse(userId)
         val memberUuids = memberIds.map { Uuid.parse(it) }
 
         ProjectMembers.deleteWhere {
-            (ProjectMembers.projectId eq projectUuid) and 
-            (ProjectMembers.ownerId eq ownerUuid) and 
-            (ProjectMembers.memberId inList memberUuids)
+            (ProjectMembers.projectId eq projectUuid) and
+                    (ProjectMembers.ownerId eq ownerUuid) and
+                    (ProjectMembers.memberId inList memberUuids)
         }
     }
 
@@ -168,11 +184,11 @@ class ProjectQueriesExposed : ProjectQueries {
     @OptIn(ExperimentalUuidApi::class)
     override fun deleteProject(projectId: String, userId: String, version: Long): Int {
         log.debug { "Deleting project $projectId for user $userId with version $version" }
-        
+
         return Projects.deleteWhere {
-            (Projects.id eq Uuid.parse(projectId)) and 
-            (Projects.ownerId eq Uuid.parse(userId)) and 
-            (Projects.version eq version)
+            (Projects.id eq Uuid.parse(projectId)) and
+                    (Projects.ownerId eq Uuid.parse(userId)) and
+                    (Projects.version eq version)
         }
     }
 
@@ -182,7 +198,7 @@ class ProjectQueriesExposed : ProjectQueries {
     @OptIn(ExperimentalUuidApi::class)
     override fun findProjectById(projectId: String, userId: String): ProjectInfo? {
         log.debug { "Finding project $projectId for user $userId" }
-        
+
         return Projects.selectAll()
             .where { (Projects.id eq Uuid.parse(projectId)) and (Projects.ownerId eq Uuid.parse(userId)) }
             .map { it.toProjectInfo() }
@@ -195,7 +211,7 @@ class ProjectQueriesExposed : ProjectQueries {
     @OptIn(ExperimentalUuidApi::class)
     override fun findProjectsByOwner(userId: String, limit: Int, offset: Int): List<ProjectInfo> {
         log.debug { "Finding projects for user $userId with limit $limit and offset $offset" }
-        
+
         return Projects.selectAll()
             .where { Projects.ownerId eq Uuid.parse(userId) }
             .orderBy(Projects.createdAt, SortOrder.DESC)
