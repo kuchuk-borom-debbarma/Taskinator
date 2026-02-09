@@ -18,6 +18,7 @@ object Projects : IdTable<Uuid>("projects") {
     override val primaryKey = PrimaryKey(id)
 
     val projectName = varchar("project_name", 155)
+    val description = text("description").default("")
     val ownerId = uuid("fk_owner_id").index() // get projects of user
 
 
@@ -43,6 +44,7 @@ object ProjectMembers : IdTable<Uuid>("project_members") {
     override val primaryKey = PrimaryKey(id)
 
     val projectId = uuid("fk_project_id").index() // get members of project
+    val ownerId = uuid("fk_owner_id").index() // for sharding by user
     val memberId = uuid("fk_member_id").index() // get projects of member
 
     // Denormalized member info for high-performance board rendering

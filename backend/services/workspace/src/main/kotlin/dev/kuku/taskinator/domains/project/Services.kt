@@ -2,16 +2,22 @@ package dev.kuku.taskinator.domains.project
 
 import org.springframework.stereotype.Service
 
+data class ProjectFieldsToUpdate(
+    val version: Long,
+    val name: String? = null,
+    val description: String? = null
+)
+
 @Service
 /**
  * Handles project related operation. Users can create projects
  */
 interface ProjectService {
     ///Create a project for the given user. Unique project name
-    fun createProject(userId: String, projectName: String)
+    fun createProject(userId: String, projectName: String, projectDescription: String): ProjectInfo?
 
     ///Rename a project. Unique project name
-    fun renameProject(userId: String, projectId: String, updatedName: String)
+    fun renameProject(userId: String, projectId: String, toUpdate: ProjectFieldsToUpdate)
 
     ///Add member to the project
     fun addProjectMembers(projectId: String, userId: String, memberIds: List<String>)
@@ -20,11 +26,19 @@ interface ProjectService {
     fun removeProjectMembers(projectId: String, userId: String, memberIds: List<String>)
 
     ///Delete a project of a user
-    fun deleteProject(projectId: String, userId: String): List<ProjectMember>
+    fun deleteProject(projectId: String, userId: String, version: Long): Boolean
 
     ///Get the project by Id
-    fun getProjectById(projectId: String, userId: String) : ProjectInfo
+    fun getProjectById(projectId: String, userId: String): ProjectInfo?
+
+    fun getProjectsByUser(userId: String, limit: Int, offset: Int): List<ProjectInfo>
 
     ///Get project members as pagination
-    fun getProjectMembers(projectId: String, userId: String, sortBy: ProjectMemberSortKey, offset: Int, limit : Int): List<ProjectMember>
+    fun getProjectMembers(
+        projectId: String,
+        userId: String,
+        sortBy: ProjectMemberSortKey,
+        offset: Int,
+        limit: Int
+    ): List<ProjectMember>
 }

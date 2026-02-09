@@ -6,7 +6,7 @@ data class ProjectInfo(
     val id: String,
     val name: String,
     val owner: String,
-    val descriptor: String,
+    val description: String,
     val createdAt: Date,
     val updatedAt: Date
 )

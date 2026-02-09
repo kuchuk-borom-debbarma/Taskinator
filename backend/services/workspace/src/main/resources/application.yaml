@@ -2,7 +2,7 @@ spring:
   application:
     name: workspace
   datasource:
-    url: jdbc:postgresql://localhost:5432/workspace
+    url: jdbc:postgresql://localhost:5432/workspace?reWriteBatchedInserts=true
     username: user
     password: password
     driver-class-name: org.postgresql.Driver
