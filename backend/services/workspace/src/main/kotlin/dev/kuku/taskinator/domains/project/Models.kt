@@ -20,3 +20,6 @@ enum class ProjectMemberSortKey{
     ADDED,
     NAME
 }
+
+class ProjectNameConflictException(message: String) : RuntimeException(message)
+class ProjectConcurrencyException(message: String) : RuntimeException(message)
