@@ -28,9 +28,14 @@ interface TeamQueries {
     ): Boolean
 
     /**
-     * Deletes a team and its associated hierarchy entries.
+     * Deletes a team and its associated hierarchy entries using optimistic locking.
      */
-    fun deleteTeam(projectId: String, teamId: String): Boolean
+    fun deleteTeam(projectId: String, teamId: String, version: Long): Int
+
+    /**
+     * Finds all teams belonging to a project with pagination.
+     */
+    fun findTeamsByProject(projectId: String, limit: Int, offset: Int): List<Team>
 
     /**
      * Batch inserts members into a team with denormalized info.
@@ -40,6 +45,11 @@ interface TeamQueries {
         teamId: String,
         memberIds: List<String>
     )
+
+    /**
+     * Optimized one-call insert-select from ProjectMembers to ProjectTeamMembers.
+     */
+    fun insertTeamMembersFromProject(projectId: String, teamId: String, memberIds: List<String>)
 
     /**
      * Batch removes members from a team.

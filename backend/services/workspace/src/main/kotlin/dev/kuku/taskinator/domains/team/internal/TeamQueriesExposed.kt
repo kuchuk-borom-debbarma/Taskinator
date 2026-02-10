@@ -1,32 +1,34 @@
 package dev.kuku.taskinator.domains.team.internal
 
+import com.github.f4b6a3.uuid.UuidCreator
 import dev.kuku.taskinator.domains.project.internal.ProjectMembers
-import dev.kuku.taskinator.domains.project.internal.Projects
-import dev.kuku.taskinator.domains.team.*
+import dev.kuku.taskinator.domains.team.Team
+import dev.kuku.taskinator.domains.team.TeamAlreadyLinkedException
+import dev.kuku.taskinator.domains.team.TeamNameConflictException
+import dev.kuku.taskinator.domains.team.UpdateTeamFields
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.jetbrains.exposed.v1.core.*
-import org.jetbrains.exposed.v1.jdbc.*
+import org.jetbrains.exposed.v1.jdbc.batchInsert
+import org.jetbrains.exposed.v1.jdbc.deleteWhere
+import org.jetbrains.exposed.v1.jdbc.selectAll
+import org.jetbrains.exposed.v1.jdbc.update
+import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.stereotype.Repository
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 import java.util.*
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
+import kotlin.uuid.toJavaUuid
+import kotlin.uuid.toKotlinUuid
 
 private val log = KotlinLogging.logger {}
 
 @Repository
-class TeamQueriesExposed : TeamQueries {
+class TeamQueriesExposed(private val jdbcTemplate: JdbcTemplate) : TeamQueries {
 
     private val MAX_DEPTH = 50
 
-    /**
-     * Performs a lean team insertion optimized for high-throughput.
-     * 
-     * GUARDIAN: Before insertion, it checks the max depth of the parent in the Closure Table.
-     * PERFORMANCE: Only inserts the team and a 'depth 0' self-reference.
-     * SCALABILITY: The ancestor paths are deferred to [computeTeamHierarchy].
-     */
     @OptIn(ExperimentalUuidApi::class)
     override fun insertTeam(
         projectId: String,
@@ -35,29 +37,76 @@ class TeamQueriesExposed : TeamQueries {
     ): Team? {
         val projectUuid = Uuid.parse(projectId)
         val parentUuid = parentTeamId?.let { Uuid.parse(it) }
+        val now = LocalDateTime.now(ZoneOffset.UTC)
+        val teamUuid = UuidCreator.getTimeOrderedEpoch().toKotlinUuid()
+        val closureUuid = UuidCreator.getTimeOrderedEpoch().toKotlinUuid()
 
-        // 1. Depth Guard: Protects the database from malicious recursive trees.
-        // Tie-breaker: Always use ID to ensure deterministic depth calculation.
-        if (parentUuid != null) {
-            val currentDepth = ProjectTeamClosure
-                .selectAll()
-                .where { (ProjectTeamClosure.childId eq parentUuid) and (ProjectTeamClosure.projectId eq projectUuid) }
-                .orderBy(ProjectTeamClosure.depth to SortOrder.DESC, ProjectTeamClosure.id to SortOrder.ASC)
-                .limit(1)
-                .map { it[ProjectTeamClosure.depth] }
-                .singleOrNull() ?: 0
+        /**
+         * ATOMIC 1-CALL OPTIMIZATION:
+         * We use a PostgreSQL CTE (Common Table Expression) to perform validation and insertion across multiple tables
+         * in a single round-trip.
+         *
+         * 1. 'inserted_team' block:
+         *    - Checks if the parent (if provided) exists and if the depth limit (MAX_DEPTH) is not exceeded.
+         *    - Only inserts into 'project_teams' if these conditions are met.
+         *    - Returns the inserted ID and metadata.
+         *
+         * 2. Final INSERT block:
+         *    - Takes the output from 'inserted_team'.
+         *    - Inserts the mandatory self-reference (depth 0) into 'project_team_closure'.
+         *
+         * Performance: Reduces 3 DB calls (Check Depth -> Insert Team -> Insert Closure) to 1.
+         * Diagnostic: If 0 rows are affected, we fall back to DSL queries to identify the specific error (e.g. non-existent parent).
+         */
+        val sql = """
+            WITH inserted_team AS (
+                INSERT INTO project_teams (id, fk_project_id, fk_parent_team_id, team_name, created_at, version)
+                SELECT ?, ?, ?, ?, ?, 0
+                WHERE NOT EXISTS (
+                    SELECT 1 FROM project_team_closure 
+                    WHERE fk_child_id = ? AND fk_project_id = ? AND depth >= ?
+                )
+                AND (? IS NULL OR EXISTS (SELECT 1 FROM project_team_closure WHERE fk_child_id = ? AND fk_project_id = ?))
+                RETURNING id, fk_project_id, created_at
+            )
+            INSERT INTO project_team_closure (id, fk_project_id, fk_team_id, fk_child_id, depth, created_at)
+            SELECT ?, fk_project_id, id, id, 0, created_at
+            FROM inserted_team
+        """.trimIndent()
 
-            if (currentDepth >= MAX_DEPTH) {
-                throw IllegalArgumentException("Maximum team hierarchy depth reached.")
-            }
-        }
+        try {
+            val rowsAffected = jdbcTemplate.update(
+                sql,
+                teamUuid.toJavaUuid(),
+                projectUuid.toJavaUuid(),
+                parentUuid?.toJavaUuid(),
+                teamName,
+                now,
+                parentUuid?.toJavaUuid(),
+                projectUuid.toJavaUuid(),
+                MAX_DEPTH,
+                parentUuid?.toJavaUuid(),
+                parentUuid?.toJavaUuid(),
+                projectUuid.toJavaUuid(),
+                closureUuid.toJavaUuid()
+            )
 
-        // 2. Core Insert: Create the team record.
-        val generatedId = try {
-            ProjectTeams.insertAndGetId {
-                it[ProjectTeams.projectId] = projectUuid
-                it[ProjectTeams.teamName] = teamName
-                it[ProjectTeams.parentTeamId] = parentUuid
+            if (rowsAffected == 0) {
+                // Happy path failed (0 rows inserted), perform diagnostics
+                if (parentUuid != null) {
+                    val parentDepth = ProjectTeamClosure
+                        .selectAll()
+                        .where { (ProjectTeamClosure.childId eq parentUuid) and (ProjectTeamClosure.projectId eq projectUuid) }
+                        .orderBy(ProjectTeamClosure.depth to SortOrder.DESC, ProjectTeamClosure.id to SortOrder.ASC)
+                        .limit(1)
+                        .map { it[ProjectTeamClosure.depth] }
+                        .singleOrNull() ?: throw IllegalArgumentException("Parent team '$parentTeamId' not found.")
+
+                    if (parentDepth >= MAX_DEPTH) {
+                        throw IllegalArgumentException("Maximum team hierarchy depth reached ($MAX_DEPTH).")
+                    }
+                }
+                return null
             }
         } catch (e: Exception) {
             if (e.message?.contains("Unique", ignoreCase = true) == true || 
@@ -67,37 +116,22 @@ class TeamQueriesExposed : TeamQueries {
             throw e
         }
 
-        val teamUuid = generatedId.value
-
-        // 3. Sync Hierarchy Visibility:
-        // Every team must exist in the closure table at depth 0 immediately 
-        // to be visible to subsequent 'Depth Guards' or direct parent queries.
-        ProjectTeamClosure.insert {
-            it[ProjectTeamClosure.projectId] = projectUuid
-            it[ProjectTeamClosure.teamId] = teamUuid
-            it[ProjectTeamClosure.childId] = teamUuid
-            it[ProjectTeamClosure.depth] = 0
-        }
-
-        return ProjectTeams.selectAll()
-            .where { ProjectTeams.id eq generatedId }
-            .map { it.toTeam() }
-            .singleOrNull()
+        return Team(
+            id = teamUuid.toString(),
+            name = teamName,
+            projectId = projectId,
+            parentTeamId = parentTeamId,
+            createdAt = Date.from(now.toInstant(ZoneOffset.UTC)),
+            updatedAt = Date.from(now.toInstant(ZoneOffset.UTC))
+        )
     }
 
-    /**
-     * Async Hierarchy Builder: Populates the Closure Table by copying ancestral paths.
-     * 
-     * RELATIONSHIP LOGIC:
-     * - Finds all ancestors of the parent [parentTeamId].
-     * - Copies them as ancestors of the new [teamId], incrementing depth by 1.
-     * - This transforms a simple tree into a fully-indexed path matrix for O(1) traversal.
-     */
     @OptIn(ExperimentalUuidApi::class)
     override fun computeTeamHierarchy(projectId: String, teamId: String, parentTeamId: String) {
         val projectUuid = Uuid.parse(projectId)
         val teamUuid = Uuid.parse(teamId)
         val parentUuid = Uuid.parse(parentTeamId)
+        val now = LocalDateTime.now(ZoneOffset.UTC)
 
         val ancestors = ProjectTeamClosure.selectAll()
             .where { (ProjectTeamClosure.childId eq parentUuid) and (ProjectTeamClosure.projectId eq projectUuid) }
@@ -111,17 +145,50 @@ class TeamQueriesExposed : TeamQueries {
                 this[ProjectTeamClosure.teamId] = ancestorId
                 this[ProjectTeamClosure.childId] = teamUuid
                 this[ProjectTeamClosure.depth] = depth + 1
+                this[ProjectTeamClosure.createdAt] = now
             }
         }
     }
 
-    /**
-     * Updates a team with strict domain rules.
-     * 
-     * RULES:
-     * - Optimistic Locking: WHERE clause check on 'version'.
-     * - Integrity: Cannot link a team to a parent if it already has one (One Parent Rule).
-     */
+    @OptIn(ExperimentalUuidApi::class)
+    override fun insertTeamMembersFromProject(projectId: String, teamId: String, memberIds: List<String>) {
+        val projectUuid = Uuid.parse(projectId)
+        val teamUuid = Uuid.parse(teamId)
+        val memberUuids = memberIds.map { Uuid.parse(it) }
+        val now = LocalDateTime.now(ZoneOffset.UTC)
+
+        val validMembers = ProjectMembers
+            .selectAll()
+            .where { (ProjectMembers.projectId eq projectUuid) and (ProjectMembers.memberId inList memberUuids) }
+            .map { 
+                Triple(it[ProjectMembers.memberId], it[ProjectMembers.username], it[ProjectMembers.displayName])
+            }.toMutableList()
+
+        val ownerId = findProjectOwner(projectId)
+        if (ownerId != null && memberIds.contains(ownerId)) {
+            projectDataAddOwner(projectData = validMembers, ownerId = ownerId)
+        }
+
+        if (validMembers.isNotEmpty()) {
+            ProjectTeamMembers.batchInsert(validMembers, ignore = true, shouldReturnGeneratedValues = false) { (mId, uname, dName) ->
+                this[ProjectTeamMembers.projectId] = projectUuid
+                this[ProjectTeamMembers.teamId] = teamUuid
+                this[ProjectTeamMembers.memberId] = mId
+                this[ProjectTeamMembers.username] = uname
+                this[ProjectTeamMembers.displayName] = dName
+                this[ProjectTeamMembers.createdAt] = now
+            }
+        }
+    }
+
+    @OptIn(ExperimentalUuidApi::class)
+    private fun projectDataAddOwner(projectData: MutableList<Triple<Uuid, String, String>>, ownerId: String) {
+        val ownerUuid = Uuid.parse(ownerId)
+        if (projectData.none { it.first == ownerUuid }) {
+            projectData.add(Triple(ownerUuid, "owner", "Project Owner"))
+        }
+    }
+
     @OptIn(ExperimentalUuidApi::class)
     override fun updateTeam(
         projectId: String,
@@ -138,7 +205,7 @@ class TeamQueriesExposed : TeamQueries {
                 .any { it[ProjectTeams.parentTeamId] != null }
             
             if (hasParent) {
-                throw TeamAlreadyLinkedException("Team is already linked to a parent.")
+                throw TeamAlreadyLinkedException("Team already has a parent.")
             }
         }
 
@@ -164,25 +231,63 @@ class TeamQueriesExposed : TeamQueries {
         }
     }
 
+    /**
+     * ATOMIC OPTIMISTIC DELETE:
+     * We delete the team record FIRST. If this fails (returns 0), we do not touch the hierarchy.
+     */
     @OptIn(ExperimentalUuidApi::class)
-    override fun deleteTeam(projectId: String, teamId: String): Boolean {
+    override fun deleteTeam(projectId: String, teamId: String, version: Long): Int {
         val teamUuid = Uuid.parse(teamId)
         val projectUuid = Uuid.parse(projectId)
 
-        // CLEANUP: Remove all hierarchy paths associated with this team.
-        ProjectTeamClosure.deleteWhere {
-            (ProjectTeamClosure.projectId eq projectUuid) and 
-            ((ProjectTeamClosure.teamId eq teamUuid) or (ProjectTeamClosure.childId eq teamUuid))
+        val deletedRows = ProjectTeams.deleteWhere {
+            (ProjectTeams.id eq teamUuid) and 
+            (ProjectTeams.projectId eq projectUuid) and 
+            (ProjectTeams.version eq version)
         }
 
-        return ProjectTeams.deleteWhere {
-            (ProjectTeams.id eq teamUuid) and (ProjectTeams.projectId eq projectUuid)
-        } > 0
+        // Only cleanup hierarchy if the team was actually deleted
+        if (deletedRows > 0) {
+            ProjectTeamClosure.deleteWhere {
+                (ProjectTeamClosure.projectId eq projectUuid) and 
+                ((ProjectTeamClosure.teamId eq teamUuid) or (ProjectTeamClosure.childId eq teamUuid))
+            }
+        }
+
+        return deletedRows
     }
 
-    /**
-     * Batch inserts members with denormalized user data for speed.
-     */
+    @OptIn(ExperimentalUuidApi::class)
+    override fun findTeamsByProject(projectId: String, limit: Int, offset: Int): List<Team> {
+        val projectUuid = Uuid.parse(projectId)
+        
+        return ProjectTeams.selectAll()
+            .where { ProjectTeams.projectId eq projectUuid }
+            .orderBy(ProjectTeams.createdAt to SortOrder.DESC, ProjectTeams.id to SortOrder.ASC)
+            .limit(limit)
+            .offset(offset.toLong())
+            .map { it.toTeam() }
+    }
+
+    @OptIn(ExperimentalUuidApi::class)
+    override fun filterProjectMembers(projectId: String, memberIds: List<String>): List<String> {
+        val projectUuid = Uuid.parse(projectId)
+        val memberUuids = memberIds.map { Uuid.parse(it) }
+
+        return ProjectMembers.selectAll()
+            .where { (ProjectMembers.projectId eq projectUuid) and (ProjectMembers.memberId inList memberUuids) }
+            .map { it[ProjectMembers.memberId].toString() }
+    }
+
+    @OptIn(ExperimentalUuidApi::class)
+    override fun findProjectOwner(projectId: String): String? {
+        val projectUuid = Uuid.parse(projectId)
+        return dev.kuku.taskinator.domains.project.internal.Projects.selectAll()
+            .where { dev.kuku.taskinator.domains.project.internal.Projects.id eq projectUuid }
+            .map { it[dev.kuku.taskinator.domains.project.internal.Projects.ownerId].toString() }
+            .singleOrNull()
+    }
+
     @OptIn(ExperimentalUuidApi::class)
     override fun insertTeamMembers(
         projectId: String,
@@ -219,31 +324,6 @@ class TeamQueriesExposed : TeamQueries {
             (ProjectTeamMembers.teamId eq teamUuid) and
             (ProjectTeamMembers.memberId inList memberUuids)
         }
-    }
-
-    /**
-     * Security Check: Filters out IDs that are NOT project members.
-     */
-    @OptIn(ExperimentalUuidApi::class)
-    override fun filterProjectMembers(projectId: String, memberIds: List<String>): List<String> {
-        val projectUuid = Uuid.parse(projectId)
-        val memberUuids = memberIds.map { Uuid.parse(it) }
-
-        return ProjectMembers.selectAll()
-            .where { (ProjectMembers.projectId eq projectUuid) and (ProjectMembers.memberId inList memberUuids) }
-            .map { it[ProjectMembers.memberId].toString() }
-    }
-
-    /**
-     * Ownership Check: Finds the global owner of the project.
-     */
-    @OptIn(ExperimentalUuidApi::class)
-    override fun findProjectOwner(projectId: String): String? {
-        val projectUuid = Uuid.parse(projectId)
-        return Projects.selectAll()
-            .where { Projects.id eq projectUuid }
-            .map { it[Projects.ownerId].toString() }
-            .singleOrNull()
     }
 
     @OptIn(ExperimentalUuidApi::class)

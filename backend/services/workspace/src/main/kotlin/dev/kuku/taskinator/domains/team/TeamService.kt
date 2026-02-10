@@ -19,8 +19,11 @@ interface TeamService {
     ///Update the name of the team
     fun updateTeam(projectId: String, userId: String, teamId: String, toUpdate: UpdateTeamFields)
 
-    ///Delete a team
-    fun deleteTeam(projectId: String, userId: String, teamId: String)
+    ///Delete a team using optimistic locking
+    fun deleteTeam(projectId: String, userId: String, teamId: String, version: Long): Boolean
+
+    ///Get all teams in a project with pagination
+    fun getTeamsByProject(projectId: String, userId: String, limit: Int, offset: Int): List<Team>
 
     ///Add team members
     fun addTeamMembers(projectId: String, userId: String, teamId: String, memberIds: List<String>)

@@ -17,15 +17,7 @@ private val log = KotlinLogging.logger {}
 class ProjectQueriesExposed : ProjectQueries {
 
     /**
-     * Inserts a new project into the 'projects' table.
-     * 
-     * CONCURRENCY & INTEGRITY:
-     * - Uses [insertAndGetId] to create the project and return its UUID.
-     * - Enforces name uniqueness per owner via a DB unique index.
-     * - Throws [ProjectNameConflictException] if a collision occurs.
-     * 
-     * NOTE: This method is designed to be called within a @Transactional context
-     * provided by the Service layer to ensure atomic operations.
+     * ATOMIC INSERT WITH RETURNING (1 DB Call):
      */
     @OptIn(ExperimentalUuidApi::class)
     override fun insertProject(
@@ -36,15 +28,17 @@ class ProjectQueriesExposed : ProjectQueries {
         log.debug { "Insert project $name for owner $ownerId" }
 
         val ownerUuid = Uuid.parse(ownerId)
+        val now = LocalDateTime.now(ZoneOffset.UTC)
         
-        val generatedId = try {
-            Projects.insertAndGetId {
+        val resultRow = try {
+            Projects.insert {
                 it[Projects.projectName] = name
                 it[Projects.ownerId] = ownerUuid
                 it[Projects.description] = description ?: ""
-            }
+                it[Projects.createdAt] = now
+                it[Projects.version] = 0
+            }.resultedValues?.singleOrNull()
         } catch (e: Exception) {
-            // Mapping low-level SQL exceptions to domain-specific exceptions for better API clarity
             if (e.message?.contains("Unique", ignoreCase = true) == true || 
                 e.message?.contains("duplicate", ignoreCase = true) == true) {
                 throw ProjectNameConflictException("Project with name '$name' already exists for this user.")
@@ -52,20 +46,9 @@ class ProjectQueriesExposed : ProjectQueries {
             throw e
         }
 
-        return Projects.selectAll()
-            .where { Projects.id eq generatedId }
-            .map { it.toProjectInfo() }
-            .singleOrNull()
+        return resultRow?.toProjectInfo()
     }
 
-    /**
-     * Updates an existing project using Optimistic Locking (version-based).
-     * 
-     * ARCHITECTURE:
-     * - The WHERE clause includes 'version' to ensure the record hasn't changed since last read.
-     * - Throws [ProjectConcurrencyException] if 'updatedRows' is 0 (indicating a conflict).
-     * - Throws [ProjectNameConflictException] if renaming to an existing project name.
-     */
     @OptIn(ExperimentalUuidApi::class)
     override fun updateProject(
         projectId: String,
@@ -88,34 +71,25 @@ class ProjectQueriesExposed : ProjectQueries {
             }
 
             if (updatedRows == 0) {
-                throw ProjectConcurrencyException("Update failed: Project modified by another user or does not exist.")
+                throw ProjectConcurrencyException("Update failed: Concurrency conflict.")
             }
         } catch (e: Exception) {
             if (e is ProjectConcurrencyException) throw e
             if (e.message?.contains("Unique", ignoreCase = true) == true || 
                 e.message?.contains("duplicate", ignoreCase = true) == true) {
-                throw ProjectNameConflictException("Project name '${toUpdate.name}' already exists for this user.")
+                throw ProjectNameConflictException("Project name conflict.")
             }
             throw e
         }
     }
 
-    /**
-     * Batch inserts multiple members into a project.
-     * 
-     * PERFORMANCE (10k RPS):
-     * - Uses [batchInsert] to bundle multiple rows into a single JDBC packet.
-     * - Setting 'reWriteBatchedInserts=true' in application.yaml collapses these into one SQL statement.
-     * - 'shouldReturnGeneratedValues = false' prevents the driver from waiting for ID roundtrips.
-     * - 'ignore = true' provides idempotency (silently skips members already in the project).
-     */
     @OptIn(ExperimentalUuidApi::class)
     override fun insertProjectMembers(
         projectId: String,
         userId: String,
         memberIds: List<String>
     ) {
-        log.debug { "Batch inserting ${memberIds.size} members for project $projectId (Owner: $userId)" }
+        log.debug { "Batch inserting ${memberIds.size} members for project $projectId" }
 
         val projectUuid = Uuid.parse(projectId)
         val ownerUuid = Uuid.parse(userId)
@@ -130,23 +104,14 @@ class ProjectQueriesExposed : ProjectQueries {
             this[ProjectMembers.ownerId] = ownerUuid
             this[ProjectMembers.memberId] = Uuid.parse(memberId)
 
-            // Member info is denormalized here for high-performance board rendering (No JOINs required later)
             this[ProjectMembers.username] = "member_$memberId"
             this[ProjectMembers.displayName] = "Member $memberId"
             this[ProjectMembers.createdAt] = now
         }
     }
 
-    /**
-     * Finds projects where the user is a member.
-     * 
-     * STABILITY:
-     * - Always sorts by [id] as a tie-breaker after [createdAt] to ensure deterministic pagination.
-     */
     @OptIn(ExperimentalUuidApi::class)
     override fun findProjectIdsByUserMembership(userId: String, limit: Int, offset: Int): List<String> {
-        log.debug { "Finding project IDs where user $userId is a member (limit: $limit, offset: $offset)" }
-
         return ProjectMembers.selectAll()
             .where { ProjectMembers.memberId eq Uuid.parse(userId) }
             .orderBy(ProjectMembers.createdAt to SortOrder.DESC, ProjectMembers.id to SortOrder.ASC)
@@ -155,12 +120,6 @@ class ProjectQueriesExposed : ProjectQueries {
             .map { it[ProjectMembers.projectId].toString() }
     }
 
-    /**
-     * Dynamic member search with pagination and sorting.
-     * 
-     * STABILITY:
-     * - Tie-breaker: Always sorts by [id] at the end to prevent "item jumping" during concurrent writes.
-     */
     @OptIn(ExperimentalUuidApi::class)
     override fun findProjectMembers(
         projectId: String,
@@ -169,8 +128,6 @@ class ProjectQueriesExposed : ProjectQueries {
         offset: Int,
         limit: Int
     ): List<ProjectMember> {
-        log.debug { "Finding members for project $projectId (Owner: $userId) sorted by $sortBy" }
-
         val sortColumn = when (sortBy) {
             ProjectMemberSortKey.ADDED -> ProjectMembers.createdAt
             ProjectMemberSortKey.NAME -> ProjectMembers.displayName
@@ -186,35 +143,17 @@ class ProjectQueriesExposed : ProjectQueries {
             .map { it.toProjectMember() }
     }
 
-    /**
-     * Batch deletes multiple members from a project using a single SQL statement.
-     */
     @OptIn(ExperimentalUuidApi::class)
-    override fun deleteProjectMembers(
-        projectId: String,
-        userId: String,
-        memberIds: List<String>
-    ) {
-        log.debug { "Batch deleting ${memberIds.size} members from project $projectId (Owner: $userId)" }
-
-        val projectUuid = Uuid.parse(projectId)
-        val ownerUuid = Uuid.parse(userId)
-        val memberUuids = memberIds.map { Uuid.parse(it) }
-
+    override fun deleteProjectMembers(projectId: String, userId: String, memberIds: List<String>) {
         ProjectMembers.deleteWhere {
-            (ProjectMembers.projectId eq projectUuid) and
-                    (ProjectMembers.ownerId eq ownerUuid) and
-                    (ProjectMembers.memberId inList memberUuids)
+            (ProjectMembers.projectId eq Uuid.parse(projectId)) and
+                    (ProjectMembers.ownerId eq Uuid.parse(userId)) and
+                    (ProjectMembers.memberId inList memberIds.map { Uuid.parse(it) })
         }
     }
 
-    /**
-     * Synchronously deletes a project record using Optimistic Locking.
-     */
     @OptIn(ExperimentalUuidApi::class)
     override fun deleteProject(projectId: String, userId: String, version: Long): Int {
-        log.debug { "Deleting project $projectId for user $userId with version $version" }
-
         return Projects.deleteWhere {
             (Projects.id eq Uuid.parse(projectId)) and
                     (Projects.ownerId eq Uuid.parse(userId)) and
@@ -224,8 +163,6 @@ class ProjectQueriesExposed : ProjectQueries {
 
     @OptIn(ExperimentalUuidApi::class)
     override fun findProjectById(projectId: String, userId: String): ProjectInfo? {
-        log.debug { "Finding project $projectId for user $userId" }
-
         return Projects.selectAll()
             .where { (Projects.id eq Uuid.parse(projectId)) and (Projects.ownerId eq Uuid.parse(userId)) }
             .map { it.toProjectInfo() }
@@ -234,8 +171,6 @@ class ProjectQueriesExposed : ProjectQueries {
 
     @OptIn(ExperimentalUuidApi::class)
     override fun findProjectsByOwner(userId: String, limit: Int, offset: Int): List<ProjectInfo> {
-        log.debug { "Finding projects for user $userId with limit $limit and offset $offset" }
-
         return Projects.selectAll()
             .where { Projects.ownerId eq Uuid.parse(userId) }
             .orderBy(Projects.createdAt to SortOrder.DESC, Projects.id to SortOrder.ASC)
@@ -251,9 +186,6 @@ class ProjectQueriesExposed : ProjectQueries {
         createdAt = Date.from(this[ProjectMembers.createdAt].toInstant(ZoneOffset.UTC))
     )
 
-    /**
-     * Maps ResultRow to ProjectInfo, converting LocalDateTime (UTC) to java.util.Date.
-     */
     @OptIn(ExperimentalUuidApi::class)
     private fun ResultRow.toProjectInfo() = ProjectInfo(
         id = this[Projects.id].value.toString(),
