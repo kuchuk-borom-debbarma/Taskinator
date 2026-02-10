@@ -48,14 +48,12 @@ class ProjectServiceImpl(private val projectRepo: ProjectQueries) : ProjectServi
 
     /**
      * SECURE MEMBER ADDITION:
-     * - Verify project ownership FIRST to prevent unauthorized member injection.
-     * - Uses high-throughput batching for the actual insert.
+     * - Verifies project ownership and performs batch insertion in a single atomic DB call.
+     * - Prevents unauthorized member injection via SQL-level validation.
      */
     override fun addProjectMembers(projectId: String, userId: String, memberIds: List<String>) {
         try {
-            val project = projectRepo.findProjectById(projectId, userId) 
-                ?: throw IllegalArgumentException("Project not found or unauthorized.")
-
+            // The repository handles ownership validation and batching in 1 call.
             projectRepo.insertProjectMembers(projectId, userId, memberIds)
             
             // ASYNC: Move stat updates (members_count) out of the critical request path.

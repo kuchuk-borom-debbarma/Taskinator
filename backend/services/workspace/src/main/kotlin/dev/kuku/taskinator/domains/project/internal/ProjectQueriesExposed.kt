@@ -4,17 +4,19 @@ import dev.kuku.taskinator.domains.project.*
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.jetbrains.exposed.v1.core.*
 import org.jetbrains.exposed.v1.jdbc.*
+import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.stereotype.Repository
 import java.time.LocalDateTime
 import java.time.ZoneOffset
 import java.util.*
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
+import kotlin.uuid.toJavaUuid
 
 private val log = KotlinLogging.logger {}
 
 @Repository
-class ProjectQueriesExposed : ProjectQueries {
+class ProjectQueriesExposed(private val jdbcTemplate: JdbcTemplate) : ProjectQueries {
 
     /**
      * ATOMIC INSERT WITH RETURNING (1 DB Call):
@@ -89,25 +91,81 @@ class ProjectQueriesExposed : ProjectQueries {
         userId: String,
         memberIds: List<String>
     ) {
-        log.debug { "Batch inserting ${memberIds.size} members for project $projectId" }
-
         val projectUuid = Uuid.parse(projectId)
         val ownerUuid = Uuid.parse(userId)
+        val memberUuids = memberIds.map { Uuid.parse(it).toJavaUuid() }.toTypedArray()
         val now = LocalDateTime.now(ZoneOffset.UTC)
 
-        ProjectMembers.batchInsert(
-            data = memberIds,
-            ignore = true,
-            shouldReturnGeneratedValues = false
-        ) { memberId: String ->
-            this[ProjectMembers.projectId] = projectUuid
-            this[ProjectMembers.ownerId] = ownerUuid
-            this[ProjectMembers.memberId] = Uuid.parse(memberId)
+        /**
+         * ATOMIC SECURE BATCH INSERT (1 DB Call):
+         * Performs both Ownership Validation and Insertion in a single round-trip.
+         * 
+         * Logic: We only insert into 'project_members' if the project ID exists AND 
+         * its owner matches the 'userId' provided. This prevents non-owners from 
+         * injecting members into projects they don't control.
+         * 
+         * Performance: O(1) app-side complexity regardless of batch size.
+         */
+        val sql = """
+            INSERT INTO project_members (id, fk_project_id, fk_owner_id, fk_member_id, username, display_name, created_at)
+            SELECT gen_random_uuid(), p.id, p.owner_id, m.id, 'member_' || m.id, 'Member ' || m.id, ?
+            FROM projects p
+            CROSS JOIN (SELECT unnest(?) as id) m
+            WHERE p.id = ? AND p.owner_id = ?
+            ON CONFLICT (fk_project_id, fk_member_id) DO NOTHING
+        """.trimIndent()
 
-            this[ProjectMembers.username] = "member_$memberId"
-            this[ProjectMembers.displayName] = "Member $memberId"
-            this[ProjectMembers.createdAt] = now
+        val rows = jdbcTemplate.update(sql) { ps ->
+            ps.setTimestamp(1, java.sql.Timestamp.valueOf(now))
+            ps.setArray(2, ps.connection.createArrayOf("uuid", memberUuids))
+            ps.setObject(3, projectUuid.toJavaUuid())
+            ps.setObject(4, ownerUuid.toJavaUuid())
         }
+
+        if (rows == 0 && memberIds.isNotEmpty()) {
+            // Check if failure was due to ownership
+            val exists = Projects.selectAll()
+                .where { (Projects.id eq projectUuid) and (Projects.ownerId eq ownerUuid) }
+                .any()
+            if (!exists) {
+                throw IllegalArgumentException("Project not found or unauthorized.")
+            }
+        }
+    }
+
+    @OptIn(ExperimentalUuidApi::class)
+    override fun deleteProject(projectId: String, userId: String, version: Long): Int {
+        val projectUuid = Uuid.parse(projectId)
+        val ownerUuid = Uuid.parse(userId)
+
+        /**
+         * ATOMIC OPTIMISTIC DELETE (1 DB Call):
+         * Deletes the project and cleans up all member associations atomically.
+         * 
+         * Pattern: CTE (Common Table Expression)
+         * Integrity: Only cleans up members if the project record was actually deleted 
+         * (matches both correct owner and version).
+         */
+        val sql = """
+            WITH deleted AS (
+                DELETE FROM projects 
+                WHERE id = ? AND owner_id = ? AND version = ?
+                RETURNING id
+            ),
+            cleanup AS (
+                DELETE FROM project_members 
+                WHERE fk_project_id IN (SELECT id FROM deleted)
+            )
+            SELECT COUNT(*) FROM deleted
+        """.trimIndent()
+
+        return jdbcTemplate.queryForObject(
+            sql,
+            Int::class.java,
+            projectUuid.toJavaUuid(),
+            ownerUuid.toJavaUuid(),
+            version
+        ) ?: 0
     }
 
     @OptIn(ExperimentalUuidApi::class)
@@ -149,15 +207,6 @@ class ProjectQueriesExposed : ProjectQueries {
             (ProjectMembers.projectId eq Uuid.parse(projectId)) and
                     (ProjectMembers.ownerId eq Uuid.parse(userId)) and
                     (ProjectMembers.memberId inList memberIds.map { Uuid.parse(it) })
-        }
-    }
-
-    @OptIn(ExperimentalUuidApi::class)
-    override fun deleteProject(projectId: String, userId: String, version: Long): Int {
-        return Projects.deleteWhere {
-            (Projects.id eq Uuid.parse(projectId)) and
-                    (Projects.ownerId eq Uuid.parse(userId)) and
-                    (Projects.version eq version)
         }
     }
 

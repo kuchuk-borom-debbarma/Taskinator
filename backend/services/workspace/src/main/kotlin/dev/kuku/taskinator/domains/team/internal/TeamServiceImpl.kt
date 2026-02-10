@@ -1,6 +1,7 @@
 package dev.kuku.taskinator.domains.team.internal
 
 import dev.kuku.taskinator.domains.team.Team
+import dev.kuku.taskinator.domains.team.TeamConcurrencyException
 import dev.kuku.taskinator.domains.team.TeamService
 import dev.kuku.taskinator.domains.team.UpdateTeamFields
 import io.github.oshai.kotlinlogging.KotlinLogging
@@ -48,7 +49,7 @@ class TeamServiceImpl(private val teamRepo: TeamQueries) : TeamService {
         try {
             val updated = teamRepo.updateTeam(projectId, teamId, toUpdate)
             if (!updated) {
-                throw dev.kuku.taskinator.domains.team.TeamConcurrencyException("Concurrency conflict.")
+                throw TeamConcurrencyException("Concurrency conflict.")
             }
             
             if (toUpdate.parentTeamId != null) {
@@ -74,7 +75,7 @@ class TeamServiceImpl(private val teamRepo: TeamQueries) : TeamService {
         val deletedRows = teamRepo.deleteTeam(projectId, teamId, version)
         
         if (deletedRows == 0) {
-            throw dev.kuku.taskinator.domains.team.TeamConcurrencyException("Delete failed: version mismatch.")
+            throw TeamConcurrencyException("Delete failed: version mismatch.")
         }
         
         // Background cleanup of members and sub-tasks
