@@ -108,10 +108,10 @@ class ProjectQueriesExposed(private val jdbcTemplate: JdbcTemplate) : ProjectQue
          */
         val sql = """
             INSERT INTO project_members (id, fk_project_id, fk_owner_id, fk_member_id, username, display_name, created_at)
-            SELECT gen_random_uuid(), p.id, p.owner_id, m.id, 'member_' || m.id, 'Member ' || m.id, ?
+            SELECT gen_random_uuid(), p.id, p.fk_owner_id, m.id, 'member_' || m.id, 'Member ' || m.id, ?
             FROM projects p
             CROSS JOIN (SELECT unnest(?) as id) m
-            WHERE p.id = ? AND p.owner_id = ?
+            WHERE p.id = ? AND p.fk_owner_id = ?
             ON CONFLICT (fk_project_id, fk_member_id) DO NOTHING
         """.trimIndent()
 
@@ -149,7 +149,7 @@ class ProjectQueriesExposed(private val jdbcTemplate: JdbcTemplate) : ProjectQue
         val sql = """
             WITH deleted AS (
                 DELETE FROM projects 
-                WHERE id = ? AND owner_id = ? AND version = ?
+                WHERE id = ? AND fk_owner_id = ? AND version = ?
                 RETURNING id
             ),
             cleanup AS (

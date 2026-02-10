@@ -57,7 +57,7 @@ class ProjectServiceImpl(private val projectRepo: ProjectQueries) : ProjectServi
             projectRepo.insertProjectMembers(projectId, userId, memberIds)
             
             // ASYNC: Move stat updates (members_count) out of the critical request path.
-            TODO("Fire PROJECT_MEMBERS_ADDED event")
+            log.info { "TODO: Fire PROJECT_MEMBERS_ADDED event" }
         } catch (e: Exception) {
             log.error(e) { "Failed to add project members" }
             throw e
@@ -67,7 +67,7 @@ class ProjectServiceImpl(private val projectRepo: ProjectQueries) : ProjectServi
     override fun removeProjectMembers(projectId: String, userId: String, memberIds: List<String>) {
         try {
             projectRepo.deleteProjectMembers(projectId, userId, memberIds)
-            TODO("Fire PROJECT_MEMBERS_REMOVED event")
+            log.info { "TODO: Fire PROJECT_MEMBERS_REMOVED event" }
         } catch (e: Exception) {
             log.error(e) { "Failed to remove project members" }
             throw e
@@ -87,7 +87,7 @@ class ProjectServiceImpl(private val projectRepo: ProjectQueries) : ProjectServi
         }
         
         // CASCADE DELETION: The event-listener will clean up associated data.
-        TODO("Fire PROJECT_DELETED event for background cleanup")
+        log.info { "TODO: Fire PROJECT_DELETED event for background cleanup" }
         
         return true
     }

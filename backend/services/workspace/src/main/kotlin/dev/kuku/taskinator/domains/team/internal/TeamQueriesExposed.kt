@@ -61,16 +61,16 @@ class TeamQueriesExposed(private val jdbcTemplate: JdbcTemplate) : TeamQueries {
         val sql = """
             WITH inserted_team AS (
                 INSERT INTO project_teams (id, fk_project_id, fk_parent_team_id, team_name, created_at, version)
-                SELECT ?, ?, ?, ?, ?, 0
+                SELECT ?::uuid, ?::uuid, ?::uuid, ?, ?, 0
                 WHERE NOT EXISTS (
                     SELECT 1 FROM project_team_closure 
-                    WHERE fk_child_id = ? AND fk_project_id = ? AND depth >= ?
+                    WHERE fk_child_id = ?::uuid AND fk_project_id = ?::uuid AND depth >= ? - 1
                 )
-                AND (? IS NULL OR EXISTS (SELECT 1 FROM project_team_closure WHERE fk_child_id = ? AND fk_project_id = ?))
+                AND (?::uuid IS NULL OR EXISTS (SELECT 1 FROM project_team_closure WHERE fk_child_id = ?::uuid AND fk_project_id = ?::uuid))
                 RETURNING id, fk_project_id, created_at
             )
             INSERT INTO project_team_closure (id, fk_project_id, fk_team_id, fk_child_id, depth, created_at)
-            SELECT ?, fk_project_id, id, id, 0, created_at
+            SELECT ?::uuid, fk_project_id, id, id, 0, created_at
             FROM inserted_team
         """.trimIndent()
 
@@ -102,7 +102,7 @@ class TeamQueriesExposed(private val jdbcTemplate: JdbcTemplate) : TeamQueries {
                         .map { it[ProjectTeamClosure.depth] }
                         .singleOrNull() ?: throw IllegalArgumentException("Parent team '$parentTeamId' not found.")
 
-                    if (parentDepth >= MAX_DEPTH) {
+                    if (parentDepth >= MAX_DEPTH - 1) {
                         throw IllegalArgumentException("Maximum team hierarchy depth reached ($MAX_DEPTH).")
                     }
                 }
@@ -186,9 +186,9 @@ class TeamQueriesExposed(private val jdbcTemplate: JdbcTemplate) : TeamQueries {
                 FROM project_members 
                 WHERE fk_project_id = ? AND fk_member_id = ANY(?)
                 UNION ALL
-                SELECT id, owner_id, 'owner', 'Project Owner'
+                SELECT id, fk_owner_id, 'owner', 'Project Owner'
                 FROM projects
-                WHERE id = ? AND owner_id = ANY(?)
+                WHERE id = ? AND fk_owner_id = ANY(?)
             ) sub
             ON CONFLICT (fk_project_id, fk_team_id, fk_member_id) DO NOTHING
         """.trimIndent()
@@ -236,7 +236,7 @@ class TeamQueriesExposed(private val jdbcTemplate: JdbcTemplate) : TeamQueries {
                     WHERE id = ? AND fk_project_id = ? AND version = ?
                     AND EXISTS (
                         SELECT 1 FROM project_team_closure 
-                        WHERE fk_child_id = ? AND fk_project_id = ? AND depth < ?
+                        WHERE fk_child_id = ?::uuid AND fk_project_id = ?::uuid AND depth < ? - 1
                     )
                     AND NOT EXISTS (
                         SELECT 1 FROM project_team_closure 
@@ -289,7 +289,7 @@ class TeamQueriesExposed(private val jdbcTemplate: JdbcTemplate) : TeamQueries {
                         .map { it[ProjectTeamClosure.depth] }
                         .singleOrNull() ?: throw IllegalArgumentException("Parent team '${toUpdate.parentTeamId}' not found.")
 
-                    if (parentDepth >= MAX_DEPTH) {
+                    if (parentDepth >= MAX_DEPTH - 1) {
                         throw IllegalArgumentException("Maximum team hierarchy depth reached ($MAX_DEPTH).")
                     }
 
