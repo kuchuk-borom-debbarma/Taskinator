@@ -31,5 +31,5 @@ interface TeamService {
     ///Remove team members
     fun removeTeamMembers(projectId: String, userId: String, teamId: String, memberIds: List<String>)
 
-    //TODO get functions
+    fun getTeamById(projectId: String, teamId: String): Team?
 }

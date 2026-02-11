@@ -64,6 +64,11 @@ interface TeamQueries {
     fun filterProjectMembers(projectId: String, memberIds: List<String>): List<String>
 
     /**
+     * Finds a specific team by its ID.
+     */
+    fun findTeamById(projectId: String, teamId: String): Team?
+
+    /**
      * Returns the owner ID of the project.
      */
     fun findProjectOwner(projectId: String): String?

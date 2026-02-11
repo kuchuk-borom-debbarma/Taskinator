@@ -117,5 +117,9 @@ class TeamServiceImpl(private val teamRepo: TeamQueries) : TeamService {
                 throw e
             }
         }
+
+        override fun getTeamById(projectId: String, teamId: String): Team? {
+            return teamRepo.findTeamById(projectId, teamId)
+        }
     }
     

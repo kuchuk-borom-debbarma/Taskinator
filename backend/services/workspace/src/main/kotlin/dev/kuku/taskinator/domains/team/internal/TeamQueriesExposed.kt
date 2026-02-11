@@ -342,6 +342,21 @@ class TeamQueriesExposed(private val jdbcTemplate: JdbcTemplate) : TeamQueries {
     }
 
     /**
+     * SINGLE TEAM LOOKUP:
+     * Fetches details of a specific team within a project.
+     */
+    @OptIn(ExperimentalUuidApi::class)
+    override fun findTeamById(projectId: String, teamId: String): Team? {
+        val projectUuid = Uuid.parse(projectId)
+        val teamUuid = Uuid.parse(teamId)
+        
+        return ProjectTeams.selectAll()
+            .where { (ProjectTeams.projectId eq projectUuid) and (ProjectTeams.id eq teamUuid) }
+            .map { it.toTeam() }
+            .singleOrNull()
+    }
+
+    /**
      * PROJECT OWNER LOOKUP:
      * Identifies the ultimate authority of a project.
      */
