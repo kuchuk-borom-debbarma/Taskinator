@@ -3,6 +3,8 @@ import publicRoute from "./routes/user-facing";
 import { Bindings, Variables } from "./util/env";
 import { contextStorage } from "hono/context-storage";
 import { Scalar } from "@scalar/hono-api-reference";
+import { createYogaInstance } from "./graphql";
+import { authMiddleware } from "./middlewares/auth";
 
 const app = new OpenAPIHono<{
   Bindings: Bindings;
@@ -19,6 +21,13 @@ app.get("/health", (c) => {
 });
 
 app.route("/api/v1/public", publicRoute);
+
+// GraphQL Subgraph
+app.use("/graphql", authMiddleware);
+app.all("/graphql", (c) => {
+  const yoga = createYogaInstance(c.env);
+  return yoga.handle(c.req.raw, { honoContext: c });
+});
 
 // OpenAPI Documentation
 app.doc("/doc", {
