@@ -3,12 +3,9 @@ package dev.kuku.taskinator.domains.team.internal
 import com.github.f4b6a3.uuid.UuidCreator
 import dev.kuku.taskinator.domains.project.internal.ProjectMembers
 import dev.kuku.taskinator.domains.team.Team
-import dev.kuku.taskinator.domains.team.TeamAlreadyLinkedException
 import dev.kuku.taskinator.domains.team.TeamNameConflictException
 import dev.kuku.taskinator.domains.team.UpdateTeamFields
-import io.github.oshai.kotlinlogging.KotlinLogging
 import org.jetbrains.exposed.v1.core.*
-import org.jetbrains.exposed.v1.jdbc.batchInsert
 import org.jetbrains.exposed.v1.jdbc.deleteWhere
 import org.jetbrains.exposed.v1.jdbc.selectAll
 import org.jetbrains.exposed.v1.jdbc.update
@@ -21,8 +18,6 @@ import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 import kotlin.uuid.toJavaUuid
 import kotlin.uuid.toKotlinUuid
-
-private val log = KotlinLogging.logger {}
 
 @Repository
 class TeamQueriesExposed(private val jdbcTemplate: JdbcTemplate) : TeamQueries {
@@ -161,6 +156,11 @@ class TeamQueriesExposed(private val jdbcTemplate: JdbcTemplate) : TeamQueries {
      */
     @OptIn(ExperimentalUuidApi::class)
     override fun computeTeamHierarchy(projectId: String, teamId: String, parentTeamId: String) {
+        val projectUuid = Uuid.parse(projectId)
+        val teamUuid = Uuid.parse(teamId)
+        val parentUuid = Uuid.parse(parentTeamId)
+        val now = LocalDateTime.now(ZoneOffset.UTC)
+
         val sql = """
             INSERT INTO project_team_closure (id, fk_project_id, fk_team_id, fk_child_id, depth, created_at)
             SELECT gen_random_uuid(), fk_project_id, fk_team_id, ?, depth + 1, ?
