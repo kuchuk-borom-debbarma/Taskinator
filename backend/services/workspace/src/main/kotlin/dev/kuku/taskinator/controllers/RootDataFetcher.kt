@@ -1,46 +1,50 @@
 package dev.kuku.taskinator.controllers
 
 import com.netflix.graphql.dgs.DgsComponent
-import com.netflix.graphql.dgs.DgsQuery
+import com.netflix.graphql.dgs.DgsData
 import com.netflix.graphql.dgs.InputArgument
 import dev.kuku.taskinator.domains.project.ProjectService
+import dev.kuku.taskinator.domains.team.TeamService
 import dev.kuku.taskinator.generated.DgsConstants
-import dev.kuku.taskinator.generated.types.Project
-import dev.kuku.taskinator.generated.types.ProjectInput
-import dev.kuku.taskinator.generated.types.Team
-import dev.kuku.taskinator.generated.types.TeamInput
-import dev.kuku.taskinator.generated.types.User
-import java.time.OffsetDateTime
+import dev.kuku.taskinator.generated.types.*
 
+/**
+ * Resolves the root query and mutation
+ */
 @DgsComponent
-class RootDataFetcher(private val projectService: ProjectService) {
-    
-    @DgsQuery(field = DgsConstants.QUERY.Project)
-    fun project(@InputArgument input: ProjectInput): Project? {
-        // Accessing ID via the type-safe input object
-        val id = input.id
-        
-        return Project(
-            id = id,
-            name = "Input-Object Project",
-            owner = User(id = "owner-1", projects = emptyList()),
-            description = "Using ProjectInput for better type safety",
-            createdAt = OffsetDateTime.now().toString(),
-            teams = emptyList(),
-            members = emptyList()
-        )
+class RootDataFetcher(
+    private val projectService: ProjectService,
+    private val teamService: TeamService
+) {
+
+    @DgsData(parentType = DgsConstants.QUERY_TYPE, field = DgsConstants.QUERY.Project)
+    fun getProject(@InputArgument(DgsConstants.QUERY.PROJECT_INPUT_ARGUMENT.Input) input: ProjectInput): Project? {
+        val userId = "user-1"
+        return projectService.getProjectById(input.id, userId)?.let {
+            Project(
+                id = it.id,
+                name = it.name,
+                owner = User(id = it.owner, projects = emptyList()),
+                description = it.description,
+                createdAt = it.createdAt.toString(),
+                updatedAt = it.updatedAt.toString(),
+                teams = emptyList(),
+                members = emptyList()
+            )
+        }
     }
 
-    @DgsQuery(field = DgsConstants.QUERY.Team)
-    fun team(@InputArgument input: TeamInput): Team? {
-        val id = input.id
-        
-        return Team(
-            id = id,
-            name = "Input-Object Team",
-            projectId = "project-1",
-            createdAt = OffsetDateTime.now().toString(),
-            members = emptyList()
-        )
+    @DgsData(parentType = DgsConstants.QUERY_TYPE, field = DgsConstants.QUERY.Team)
+    fun getTeam(@InputArgument(DgsConstants.QUERY.TEAM_INPUT_ARGUMENT.Input) input: TeamInput): Team? {
+        return teamService.getTeamById("", input.id)?.let {
+            Team(
+                id = it.id,
+                name = it.name,
+                projectId = it.projectId,
+                parentTeamId = it.parentTeamId,
+                createdAt = it.createdAt.toString(),
+                members = emptyList()
+            )
+        }
     }
 }
