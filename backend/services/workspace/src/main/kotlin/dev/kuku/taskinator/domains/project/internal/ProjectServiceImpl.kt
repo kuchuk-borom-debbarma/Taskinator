@@ -26,7 +26,9 @@ class ProjectServiceImpl(private val projectRepo: ProjectQueries) : ProjectServi
     override fun createProject(userId: String, projectName: String, projectDescription: String): ProjectInfo? {
         log.info { "Creating Project $projectName for user $userId" }
         try {
+            //Simple insert
             return projectRepo.insertProject(projectName, userId, projectDescription)
+            //TODO fire event
         } catch (e: ProjectNameConflictException) {
             log.warn { "Creation failed: duplicate name" }
             throw e
@@ -36,7 +38,9 @@ class ProjectServiceImpl(private val projectRepo: ProjectQueries) : ProjectServi
     override fun renameProject(userId: String, projectId: String, toUpdate: ProjectFieldsToUpdate) {
         log.info { "Renaming project $projectId" }
         try {
+            //Simple single table update
             projectRepo.updateProject(projectId, userId, toUpdate)
+            //TODO fire event
         } catch (e: Exception) {
             when (e) {
                 is ProjectConcurrencyException,
@@ -66,6 +70,7 @@ class ProjectServiceImpl(private val projectRepo: ProjectQueries) : ProjectServi
 
     override fun removeProjectMembers(projectId: String, userId: String, memberIds: List<String>) {
         try {
+            //Simple delete operation, no need optimistic locking
             projectRepo.deleteProjectMembers(projectId, userId, memberIds)
             log.info { "TODO: Fire PROJECT_MEMBERS_REMOVED event" }
         } catch (e: Exception) {
@@ -80,6 +85,7 @@ class ProjectServiceImpl(private val projectRepo: ProjectQueries) : ProjectServi
      * - Defers heavy cleanup (Members, Teams, Tasks) to an async worker.
      */
     override fun deleteProject(projectId: String, userId: String, version: Long): Boolean {
+        //Simple delete operation, no need for optimistic locking if we do nothing if failed to delete
         val deletedRows = projectRepo.deleteProject(projectId, userId, version)
         
         if (deletedRows == 0) {

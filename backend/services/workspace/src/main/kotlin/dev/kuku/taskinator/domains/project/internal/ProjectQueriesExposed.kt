@@ -105,6 +105,23 @@ class ProjectQueriesExposed(private val jdbcTemplate: JdbcTemplate) : ProjectQue
          * injecting members into projects they don't control.
          * 
          * Performance: O(1) app-side complexity regardless of batch size.
+         * 
+         * Visualizing the CROSS JOIN (The "Sticker" Analogy):
+         * 1. 'unnest(?)' creates a vertical column of Member IDs (Virtual Table 'm').
+         * 2. 'projects' filters down to 1 specific Project Row (Table 'p').
+         * 3. 'CROSS JOIN' stretches the 1 Project Row to fit every Member ID.
+         *
+         * Table 'p' (Project)       Table 'm' (Input IDs)      Result (Ready to Insert)
+         * | ID   | OWNER |    X    | ID |                 =>  | PROJ_1 | OWNER_99 | ID_A |
+         * | PROJ_1| OWNER_99|       | ID_A |               =>  | PROJ_1 | OWNER_99 | ID_B |
+         *                           | ID_B |               =>  | PROJ_1 | OWNER_99 | ID_C |
+         *                           | ID_C |
+         *
+         * Why CROSS JOIN?
+         * We use CROSS JOIN because Table 'm' is a "virtual" table generated from raw input. 
+         * There is no common column to join 'ON' (like p.id = m.project_id) because the 
+         * relationship doesn't exist yet! CROSS JOIN allows us to multiply our 1 validated 
+         * project row by all input IDs to create the new relationship records.
          */
         val sql = """
             INSERT INTO project_members (id, fk_project_id, fk_owner_id, fk_member_id, username, display_name, created_at)
@@ -139,33 +156,18 @@ class ProjectQueriesExposed(private val jdbcTemplate: JdbcTemplate) : ProjectQue
         val ownerUuid = Uuid.parse(userId)
 
         /**
-         * ATOMIC OPTIMISTIC DELETE (1 DB Call):
-         * Deletes the project and cleans up all member associations atomically.
-         * 
-         * Pattern: CTE (Common Table Expression)
-         * Integrity: Only cleans up members if the project record was actually deleted 
-         * (matches both correct owner and version).
+         * LEAN OPTIMISTIC DELETE (1 DB Call):
+         * Only deletes the project record. Associated data (members, tasks, etc.)
+         * is cleaned up asynchronously via event listeners to keep the API fast.
          */
-        val sql = """
-            WITH deleted AS (
-                DELETE FROM projects 
-                WHERE id = ? AND fk_owner_id = ? AND version = ?
-                RETURNING id
-            ),
-            cleanup AS (
-                DELETE FROM project_members 
-                WHERE fk_project_id IN (SELECT id FROM deleted)
-            )
-            SELECT COUNT(*) FROM deleted
-        """.trimIndent()
+        val sql = "DELETE FROM projects WHERE id = ? AND fk_owner_id = ? AND version = ?"
 
-        return jdbcTemplate.queryForObject(
+        return jdbcTemplate.update(
             sql,
-            Int::class.java,
             projectUuid.toJavaUuid(),
             ownerUuid.toJavaUuid(),
             version
-        ) ?: 0
+        )
     }
 
     @OptIn(ExperimentalUuidApi::class)
