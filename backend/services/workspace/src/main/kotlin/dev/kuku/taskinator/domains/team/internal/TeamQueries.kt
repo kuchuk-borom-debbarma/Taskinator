@@ -6,9 +6,11 @@ import dev.kuku.taskinator.domains.team.UpdateTeamFields
 interface TeamQueries {
     /**
      * Inserts a team and sets up its initial closure table entries.
+     * Validates that the user is the project owner or a member.
      */
     fun insertTeam(
         projectId: String,
+        userId: String,
         teamName: String,
         parentTeamId: String?
     ): Team?
@@ -46,10 +48,6 @@ interface TeamQueries {
         memberIds: List<String>
     )
 
-    /**
-     * Optimized one-call insert-select from ProjectMembers to ProjectTeamMembers.
-     */
-    fun insertTeamMembersFromProject(projectId: String, teamId: String, memberIds: List<String>)
 
     /**
      * Batch removes members from a team.

@@ -51,6 +51,10 @@ class ProjectQueriesExposed(private val jdbcTemplate: JdbcTemplate) : ProjectQue
         return resultRow?.toProjectInfo()
     }
 
+    /**
+     * OPTIMISTIC PROJECT UPDATE:
+     * Updates name or description while validating the owner and current version.
+     */
     @OptIn(ExperimentalUuidApi::class)
     override fun updateProject(
         projectId: String,
@@ -170,6 +174,10 @@ class ProjectQueriesExposed(private val jdbcTemplate: JdbcTemplate) : ProjectQue
         )
     }
 
+    /**
+     * MEMBERSHIP LOOKUP:
+     * Finds all project IDs where the user is a member.
+     */
     @OptIn(ExperimentalUuidApi::class)
     override fun findProjectIdsByUserMembership(userId: String, limit: Int, offset: Int): List<String> {
         return ProjectMembers.selectAll()
@@ -180,6 +188,10 @@ class ProjectQueriesExposed(private val jdbcTemplate: JdbcTemplate) : ProjectQue
             .map { it[ProjectMembers.projectId].toString() }
     }
 
+    /**
+     * PAGINATED MEMBER DISCOVERY:
+     * Lists all members of a project with configurable sorting.
+     */
     @OptIn(ExperimentalUuidApi::class)
     override fun findProjectMembers(
         projectId: String,
@@ -203,6 +215,10 @@ class ProjectQueriesExposed(private val jdbcTemplate: JdbcTemplate) : ProjectQue
             .map { it.toProjectMember() }
     }
 
+    /**
+     * BATCH MEMBER REMOVAL:
+     * Removes specified users from the project's member list.
+     */
     @OptIn(ExperimentalUuidApi::class)
     override fun deleteProjectMembers(projectId: String, userId: String, memberIds: List<String>) {
         ProjectMembers.deleteWhere {
@@ -212,6 +228,10 @@ class ProjectQueriesExposed(private val jdbcTemplate: JdbcTemplate) : ProjectQue
         }
     }
 
+    /**
+     * SINGLE PROJECT LOOKUP:
+     * Fetches details of a project if the user is the owner.
+     */
     @OptIn(ExperimentalUuidApi::class)
     override fun findProjectById(projectId: String, userId: String): ProjectInfo? {
         return Projects.selectAll()
@@ -220,6 +240,10 @@ class ProjectQueriesExposed(private val jdbcTemplate: JdbcTemplate) : ProjectQue
             .singleOrNull()
     }
 
+    /**
+     * PAGINATED OWNER DASHBOARD:
+     * Lists all projects owned by the specified user.
+     */
     @OptIn(ExperimentalUuidApi::class)
     override fun findProjectsByOwner(userId: String, limit: Int, offset: Int): List<ProjectInfo> {
         return Projects.selectAll()

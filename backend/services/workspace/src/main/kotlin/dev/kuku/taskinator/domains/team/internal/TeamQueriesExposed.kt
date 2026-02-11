@@ -32,37 +32,49 @@ class TeamQueriesExposed(private val jdbcTemplate: JdbcTemplate) : TeamQueries {
     @OptIn(ExperimentalUuidApi::class)
     override fun insertTeam(
         projectId: String,
+        userId: String,
         teamName: String,
         parentTeamId: String?
     ): Team? {
         val projectUuid = Uuid.parse(projectId)
+        val userUuid = Uuid.parse(userId)
         val parentUuid = parentTeamId?.let { Uuid.parse(it) }
         val now = LocalDateTime.now(ZoneOffset.UTC)
         val teamUuid = UuidCreator.getTimeOrderedEpoch().toKotlinUuid()
         val closureUuid = UuidCreator.getTimeOrderedEpoch().toKotlinUuid()
 
         /**
-         * ATOMIC 1-CALL OPTIMIZATION:
-         * We use a PostgreSQL CTE (Common Table Expression) to perform validation and insertion across multiple tables
-         * in a single round-trip.
+         * ATOMIC 1-CALL SECURE INSERT:
+         * Performs security validation, parent validation, and insertion in one DB call.
          *
-         * 1. 'inserted_team' block:
-         *    - Checks if the parent (if provided) exists and if the depth limit (MAX_DEPTH) is not exceeded.
-         *    - Only inserts into 'project_teams' if these conditions are met.
-         *    - Returns the inserted ID and metadata.
+         * Visualizing the CTE (Common Table Expression):
+         * 
+         * 1. THE "BOUNCER" (Security Check): 
+         *    Checks if 'userId' is the Owner (Projects table) OR a Member (ProjectMembers table).
+         * 
+         * 2. THE "FAMILY TREE" (Parent Check): 
+         *    If a Parent ID is given, it MUST exist in the Closure Table for THIS Project.
+         *    This prevents "kidnapping" a team from another project.
+         * 
+         * 3. THE "STRETCH" (Depth Check): 
+         *    Checks if the parent's current depth is < 49 (MAX_DEPTH - 1).
          *
-         * 2. Final INSERT block:
-         *    - Takes the output from 'inserted_team'.
-         *    - Inserts the mandatory self-reference (depth 0) into 'project_team_closure'.
+         * FLOW:
+         * [ Input ] -> [ Security & Parent Validation ] -> [ Insert Team ] -> [ Insert Self-Reference ]
+         *      |                    |                         |                      |
+         *      +----(One Trip)------+-------------------------+----------------------+
          *
-         * Performance: Reduces 3 DB calls (Check Depth -> Insert Team -> Insert Closure) to 1.
-         * Diagnostic: If 0 rows are affected, we fall back to DSL queries to identify the specific error (e.g. non-existent parent).
+         * Efficiency: 1 round-trip. No data loaded into app memory for validation.
          */
         val sql = """
             WITH inserted_team AS (
                 INSERT INTO project_teams (id, fk_project_id, fk_parent_team_id, team_name, created_at, version)
                 SELECT ?::uuid, ?::uuid, ?::uuid, ?, ?, 0
-                WHERE NOT EXISTS (
+                WHERE (
+                    EXISTS (SELECT 1 FROM projects WHERE id = ?::uuid AND fk_owner_id = ?::uuid)
+                    OR EXISTS (SELECT 1 FROM project_members WHERE fk_project_id = ?::uuid AND fk_member_id = ?::uuid)
+                )
+                AND NOT EXISTS (
                     SELECT 1 FROM project_team_closure 
                     WHERE fk_child_id = ?::uuid AND fk_project_id = ?::uuid AND depth >= ? - 1
                 )
@@ -82,17 +94,27 @@ class TeamQueriesExposed(private val jdbcTemplate: JdbcTemplate) : TeamQueries {
                 parentUuid?.toJavaUuid(),
                 teamName,
                 now,
-                parentUuid?.toJavaUuid(),
+                projectUuid.toJavaUuid(), // Security: Owner check
+                userUuid.toJavaUuid(),
+                projectUuid.toJavaUuid(), // Security: Member check
+                userUuid.toJavaUuid(),
+                parentUuid?.toJavaUuid(), // Depth check
                 projectUuid.toJavaUuid(),
                 MAX_DEPTH,
-                parentUuid?.toJavaUuid(),
+                parentUuid?.toJavaUuid(), // Parent Existence & Project Match
                 parentUuid?.toJavaUuid(),
                 projectUuid.toJavaUuid(),
                 closureUuid.toJavaUuid()
             )
 
             if (rowsAffected == 0) {
-                // Happy path failed (0 rows inserted), perform diagnostics
+                // Happy path failed, run diagnostics
+                val ownerId = findProjectOwner(projectId)
+                val isMember = filterProjectMembers(projectId, listOf(userId)).isNotEmpty()
+                
+                if (ownerId == null) throw IllegalArgumentException("Project not found.")
+                if (ownerId != userId && !isMember) throw IllegalArgumentException("Unauthorized: User is not a member of the project.")
+
                 if (parentUuid != null) {
                     val parentDepth = ProjectTeamClosure
                         .selectAll()
@@ -100,7 +122,7 @@ class TeamQueriesExposed(private val jdbcTemplate: JdbcTemplate) : TeamQueries {
                         .orderBy(ProjectTeamClosure.depth to SortOrder.DESC, ProjectTeamClosure.id to SortOrder.ASC)
                         .limit(1)
                         .map { it[ProjectTeamClosure.depth] }
-                        .singleOrNull() ?: throw IllegalArgumentException("Parent team '$parentTeamId' not found.")
+                        .singleOrNull() ?: throw IllegalArgumentException("Parent team '$parentTeamId' not found in this project.")
 
                     if (parentDepth >= MAX_DEPTH - 1) {
                         throw IllegalArgumentException("Maximum team hierarchy depth reached ($MAX_DEPTH).")
@@ -126,24 +148,19 @@ class TeamQueriesExposed(private val jdbcTemplate: JdbcTemplate) : TeamQueries {
         )
     }
 
+    /**
+     * ATOMIC HIERARCHY COPY (The "Bulk Inherit"):
+     * 
+     * 1. THE "ANCESTRY" (Select): Finds every existing path leading to the parent.
+     * 2. THE "EXTENSION" (Insert): Clones those paths and adds +1 depth for the new child.
+     * 
+     * FLOW:
+     * [ Parent's Ancestors ] -> [ Increment Depth ] -> [ New Team's Ancestors ]
+     *
+     * Efficiency: O(1) app complexity. All inheritance happens inside the DB.
+     */
     @OptIn(ExperimentalUuidApi::class)
     override fun computeTeamHierarchy(projectId: String, teamId: String, parentTeamId: String) {
-        val projectUuid = Uuid.parse(projectId)
-        val teamUuid = Uuid.parse(teamId)
-        val parentUuid = parentTeamId?.let { Uuid.parse(it) } ?: return
-        val now = LocalDateTime.now(ZoneOffset.UTC)
-
-        /**
-         * ATOMIC HIERARCHY COPY (1 DB Call):
-         * Performs a "Bulk Inherit" of all ancestral paths.
-         * 
-         * Pattern: INSERT ... SELECT
-         * Logic: We find every team that is an ancestor of the parent (depth N) and 
-         * insert them as ancestors of the new team at depth N+1.
-         * 
-         * Performance: O(1) app-side complexity. No ancestors are fetched into memory.
-         * Integrity: ON CONFLICT DO NOTHING prevents duplicate paths if the event is retried.
-         */
         val sql = """
             INSERT INTO project_team_closure (id, fk_project_id, fk_team_id, fk_child_id, depth, created_at)
             SELECT gen_random_uuid(), fk_project_id, fk_team_id, ?, depth + 1, ?
@@ -161,47 +178,6 @@ class TeamQueriesExposed(private val jdbcTemplate: JdbcTemplate) : TeamQueries {
         )
     }
 
-    @OptIn(ExperimentalUuidApi::class)
-    override fun insertTeamMembersFromProject(projectId: String, teamId: String, memberIds: List<String>) {
-        val projectUuid = Uuid.parse(projectId)
-        val teamUuid = Uuid.parse(teamId)
-        val memberUuids = memberIds.map { Uuid.parse(it).toJavaUuid() }.toTypedArray()
-        val now = LocalDateTime.now(ZoneOffset.UTC)
-
-        /**
-         * ATOMIC SECURE BATCH INSERT (1 DB Call):
-         * This query solves the "Secure Batching" problem without loading data into app RAM.
-         * 
-         * 1. Multi-Source Validation: 
-         *    - The 'project_members' subquery ensures IDs are valid members of the parent project.
-         *    - The 'projects' UNION allows the Project Owner to join even if not in the member list.
-         * 2. Atomic Filter: We only insert rows that exist in the result of the UNION.
-         * 3. Performance: 1 round-trip regardless of batch size (up to Postgres param limits).
-         */
-        val sql = """
-            INSERT INTO project_team_members (id, fk_project_id, fk_team_id, fk_member_id, username, display_name, created_at)
-            SELECT gen_random_uuid(), fk_project_id, ?, fk_member_id, username, display_name, ?
-            FROM (
-                SELECT fk_project_id, fk_member_id, username, display_name 
-                FROM project_members 
-                WHERE fk_project_id = ? AND fk_member_id = ANY(?)
-                UNION ALL
-                SELECT id, fk_owner_id, 'owner', 'Project Owner'
-                FROM projects
-                WHERE id = ? AND fk_owner_id = ANY(?)
-            ) sub
-            ON CONFLICT (fk_project_id, fk_team_id, fk_member_id) DO NOTHING
-        """.trimIndent()
-
-        jdbcTemplate.update(sql) { ps ->
-            ps.setObject(1, teamUuid.toJavaUuid())
-            ps.setTimestamp(2, java.sql.Timestamp.valueOf(now))
-            ps.setObject(3, projectUuid.toJavaUuid())
-            ps.setArray(4, ps.connection.createArrayOf("uuid", memberUuids))
-            ps.setObject(5, projectUuid.toJavaUuid())
-            ps.setArray(6, ps.connection.createArrayOf("uuid", memberUuids))
-        }
-    }
 
     @OptIn(ExperimentalUuidApi::class)
     override fun updateTeam(
@@ -215,14 +191,17 @@ class TeamQueriesExposed(private val jdbcTemplate: JdbcTemplate) : TeamQueries {
 
         try {
             /**
-             * ATOMIC 1-CALL UPDATE:
-             * If the parent is being changed, we perform a complex atomic check + update.
+             * ATOMIC SECURE UPDATE (The "Moving Day" Logic):
              * 
-             * Safety Guards:
-             * 1. Version Check: Optimistic locking.
-             * 2. Parent Existence: New parent must exist in the same project.
-             * 3. Depth Guard: New parent depth must be < MAX_DEPTH.
-             * 4. Cycle Detection: New parent cannot be a descendant of the team itself.
+             * 1. THE "LOCK" (Optimistic Locking): Matches version to prevent concurrent edits.
+             * 2. THE "BOUNCER" (Project Guard): New parent must belong to the same Project.
+             * 3. THE "HEIGHT LIMIT" (Depth Guard): New parent depth must be < 49 (MAX_DEPTH - 1).
+             * 4. THE "TIME PARADOX" (Cycle Detection): Prevents moving a team under its own descendant.
+             * 
+             * FLOW:
+             * [ Request ] -> [ Version + Project + Depth + Cycle Checks ] -> [ Update Team ]
+             *      |                                |                          |
+             *      +---------------------------(One Trip)----------------------+
              */
             val rowsAffected = if (toUpdate.parentTeamId != null) {
                 val newParentUuid = Uuid.parse(toUpdate.parentTeamId)
@@ -313,41 +292,29 @@ class TeamQueriesExposed(private val jdbcTemplate: JdbcTemplate) : TeamQueries {
     }
 
     /**
-     * ATOMIC OPTIMISTIC DELETE (1 DB Call):
-     * Uses a PostgreSQL CTE to delete the team record AND its hierarchy in one go.
-     * Integrity: Only cleans up 'project_team_closure' if the 'project_teams' record was actually deleted (correct version).
+     * LEAN OPTIMISTIC DELETE:
+     * Only deletes the team record. Associated hierarchy data in the closure table
+     * is cleaned up asynchronously via event listeners.
      */
     @OptIn(ExperimentalUuidApi::class)
     override fun deleteTeam(projectId: String, teamId: String, version: Long): Int {
         val teamUuid = Uuid.parse(teamId)
         val projectUuid = Uuid.parse(projectId)
 
-        val sql = """
-            WITH deleted AS (
-                DELETE FROM project_teams 
-                WHERE id = ? AND fk_project_id = ? AND version = ?
-                RETURNING 1
-            ),
-            cleanup AS (
-                DELETE FROM project_team_closure 
-                WHERE fk_project_id = ? 
-                AND (fk_team_id = ? OR fk_child_id = ?)
-            )
-            SELECT COUNT(*) FROM deleted
-        """.trimIndent()
+        val sql = "DELETE FROM project_teams WHERE id = ? AND fk_project_id = ? AND version = ?"
 
-        return jdbcTemplate.queryForObject(
+        return jdbcTemplate.update(
             sql,
-            Int::class.java,
             teamUuid.toJavaUuid(),
             projectUuid.toJavaUuid(),
-            version,
-            projectUuid.toJavaUuid(),
-            teamUuid.toJavaUuid(),
-            teamUuid.toJavaUuid()
-        ) ?: 0
+            version
+        )
     }
 
+    /**
+     * PAGINATED TEAM DISCOVERY:
+     * Fetches teams for a project, sorted by newest first.
+     */
     @OptIn(ExperimentalUuidApi::class)
     override fun findTeamsByProject(projectId: String, limit: Int, offset: Int): List<Team> {
         val projectUuid = Uuid.parse(projectId)
@@ -360,6 +327,10 @@ class TeamQueriesExposed(private val jdbcTemplate: JdbcTemplate) : TeamQueries {
             .map { it.toTeam() }
     }
 
+    /**
+     * MEMBER FILTER (The "Guest List Check"):
+     * Takes a list of IDs and returns only those that are valid members of the project.
+     */
     @OptIn(ExperimentalUuidApi::class)
     override fun filterProjectMembers(projectId: String, memberIds: List<String>): List<String> {
         val projectUuid = Uuid.parse(projectId)
@@ -370,6 +341,10 @@ class TeamQueriesExposed(private val jdbcTemplate: JdbcTemplate) : TeamQueries {
             .map { it[ProjectMembers.memberId].toString() }
     }
 
+    /**
+     * PROJECT OWNER LOOKUP:
+     * Identifies the ultimate authority of a project.
+     */
     @OptIn(ExperimentalUuidApi::class)
     override fun findProjectOwner(projectId: String): String? {
         val projectUuid = Uuid.parse(projectId)
@@ -387,19 +362,52 @@ class TeamQueriesExposed(private val jdbcTemplate: JdbcTemplate) : TeamQueries {
     ) {
         val projectUuid = Uuid.parse(projectId)
         val teamUuid = Uuid.parse(teamId)
+        val memberUuids = memberIds.map { Uuid.parse(it).toJavaUuid() }.toTypedArray()
         val now = LocalDateTime.now(ZoneOffset.UTC)
 
-        ProjectTeamMembers.batchInsert(memberIds, ignore = true, shouldReturnGeneratedValues = false) { memberId ->
-            this[ProjectTeamMembers.projectId] = projectUuid
-            this[ProjectTeamMembers.teamId] = teamUuid
-            this[ProjectTeamMembers.memberId] = Uuid.parse(memberId)
-            
-            this[ProjectTeamMembers.username] = "member_$memberId"
-            this[ProjectTeamMembers.displayName] = "Member $memberId"
-            this[ProjectTeamMembers.createdAt] = now
+        /**
+         * ATOMIC SECURE BATCH INSERT (The "Project Filter"):
+         * 
+         * 1. THE "GATE" (Subquery): Only IDs that exist in 'project_members' (or the Owner) pass through.
+         * 2. THE "STAMP" (Insert): New team membership records are created from the filtered list.
+         * 
+         * Logic: We never trust the input 'memberIds' directly. We treat them as a "request" 
+         * and only grant access if the database proves they are already part of the Project.
+         *
+         * FLOW:
+         * [ Input IDs ] -> [ Project & Owner Filter ] -> [ Insert into Team Members ]
+         *      |                    |                             |
+         *      +----------------(One DB Trip)---------------------+
+         */
+        val sql = """
+            INSERT INTO project_team_members (id, fk_project_id, fk_team_id, fk_member_id, username, display_name, created_at)
+            SELECT gen_random_uuid(), fk_project_id, ?, fk_member_id, username, display_name, ?
+            FROM (
+                SELECT fk_project_id, fk_member_id, username, display_name 
+                FROM project_members 
+                WHERE fk_project_id = ? AND fk_member_id = ANY(?)
+                UNION ALL
+                SELECT id, fk_owner_id, 'owner', 'Project Owner'
+                FROM projects
+                WHERE id = ? AND fk_owner_id = ANY(?)
+            ) sub
+            ON CONFLICT (fk_project_id, fk_team_id, fk_member_id) DO NOTHING
+        """.trimIndent()
+
+        jdbcTemplate.update(sql) { ps ->
+            ps.setObject(1, teamUuid.toJavaUuid())
+            ps.setTimestamp(2, java.sql.Timestamp.valueOf(now))
+            ps.setObject(3, projectUuid.toJavaUuid())
+            ps.setArray(4, ps.connection.createArrayOf("uuid", memberUuids))
+            ps.setObject(5, projectUuid.toJavaUuid())
+            ps.setArray(6, ps.connection.createArrayOf("uuid", memberUuids))
         }
     }
 
+    /**
+     * BATCH MEMBER REMOVAL:
+     * Removes specified members from a team context.
+     */
     @OptIn(ExperimentalUuidApi::class)
     override fun deleteTeamMembers(
         projectId: String,
