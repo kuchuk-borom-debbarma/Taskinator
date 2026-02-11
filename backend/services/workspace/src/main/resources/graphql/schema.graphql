@@ -1,5 +1,28 @@
-# Federation 2.0 Setup: This imports the necessary 'stickers' (@key, @external) 
-# that allow different microservices to talk to each other.
+# Federation 2.0 Directives Declaration
+# -----------------------------------------------------------------------------
+# @link: Imports federation instructions into the schema.
+directive @link(url: String, import: [String]) on SCHEMA
+
+# @key: Defines the unique identifier for an entity (e.g., Project ID).
+# It allows other services to look up or "join" to this object.
+directive @key(fields: String!, resolvable: Boolean = true) repeatable on OBJECT | INTERFACE
+
+# @shareable: Indicates that multiple services can provide this field.
+directive @shareable on OBJECT | FIELD_DEFINITION
+
+# @external: Marks a field as owned by another service (e.g., User's ID).
+directive @external on FIELD_DEFINITION
+
+# @requires: Tells the Gateway "I need field X from another service to compute field Y".
+directive @requires(fields: String!) on FIELD_DEFINITION
+
+# @provides: Optimization: "I can give you a 'sneak peek' of this field owned by another service".
+directive @provides(fields: String!) on FIELD_DEFINITION
+
+# @override: Used when moving a field's ownership from one service to another.
+directive @override(from: String!) on FIELD_DEFINITION
+# -----------------------------------------------------------------------------
+
 extend schema
   @link(url: "https://specs.apollo.dev/federation/v2.0",
         import: ["@key", "@shareable", "@external"])
@@ -11,36 +34,23 @@ type Query {
 
 # --- EXTENSIONS ---
 # We do NOT own the User (Identity Service does). 
-# We are "plugging in" our data into their object.
 type User @key(fields: "id") {
-    id: ID! @external # This field is owned by Identity Service
-    
-    # We provide this field! The Gateway will ask us to fill this
-    # whenever someone queries a User.
+    id: ID! @external # Owned by Identity Service
     projects(limit: Int = 10, offset: Int = 0): [Project!]!
 }
 
 # --- CORE TYPES ---
-
-# @key means other services can "lookup" a Project if they have its ID.
 type Project @key(fields: "id") {
     id: ID!
     name: String! @shareable
-    
-    # This points back to the User in Identity Service.
-    # We return the ID, and the Gateway fetches the rest.
     owner: User! 
-    
     description: String
     createdAt: String!
     updatedAt: String
-    
-    # Nested relationships within this service
     teams(limit: Int = 10, offset: Int = 0): [Team!]!
     members(limit: Int = 10, offset: Int = 0): [ProjectMember!]!
 }
 
-# Joining Project to User
 type ProjectMember {
     user: User!
     createdAt: String!
@@ -55,7 +65,6 @@ type Team @key(fields: "id") {
     members(limit: Int = 10, offset: Int = 0): [TeamMember!]!
 }
 
-# Joining Team to User
 type TeamMember {
     user: User!
     createdAt: String!
