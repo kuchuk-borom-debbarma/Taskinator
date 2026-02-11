@@ -1,52 +1,60 @@
 # Federation 2.0 Directives
 extend schema
-@link(url: "https://specs.apollo.dev/federation/v2.0",
-  import: ["@key", "@shareable", "@external"])
+  @link(url: "https://specs.apollo.dev/federation/v2.0",
+        import: ["@key", "@shareable", "@external"])
 
 type Query {
-  project(id: ID!): Project
-  team(id: ID!): Team
+    project(input: ProjectInput!): Project
+    team(input: TeamInput!): Team
 }
 
-# REUSABLE INPUTS
+# INPUT OBJECTS
+input ProjectInput {
+    id: ID!
+}
+
+input TeamInput {
+    id: ID!
+}
+
 input PaginationInput {
-  limit: Int = 10
-  offset: Int = 0
+    limit: Int = 10
+    offset: Int = 0
 }
 
 # --- EXTENSIONS ---
 type User @key(fields: "id") {
-  id: ID! @external
-  projects(pagination: PaginationInput): [Project!]!
+    id: ID! @external
+    projects(input: PaginationInput): [Project!]!
 }
 
 # --- CORE TYPES ---
 type Project @key(fields: "id") {
-  id: ID!
-  name: String! @shareable
-  owner: User!
-  description: String
-  createdAt: String!
-  updatedAt: String
-  teams(pagination: PaginationInput): [Team!]!
-  members(pagination: PaginationInput): [ProjectMember!]!
+    id: ID!
+    name: String! @shareable
+    owner: User! 
+    description: String
+    createdAt: String!
+    updatedAt: String
+    teams(input: PaginationInput): [Team!]!
+    members(input: PaginationInput): [ProjectMember!]!
 }
 
 type ProjectMember {
-  user: User!
-  createdAt: String!
+    user: User!
+    createdAt: String!
 }
 
 type Team @key(fields: "id") {
-  id: ID!
-  name: String!
-  projectId: ID!
-  parentTeamId: ID
-  createdAt: String!
-  members(pagination: PaginationInput): [TeamMember!]!
+    id: ID!
+    name: String!
+    projectId: ID!
+    parentTeamId: ID
+    createdAt: String!
+    members(input: PaginationInput): [TeamMember!]!
 }
 
 type TeamMember {
-  user: User!
-  createdAt: String!
+    user: User!
+    createdAt: String!
 }

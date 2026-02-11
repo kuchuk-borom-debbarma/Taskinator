@@ -6,3 +6,12 @@ spring:
     username: user
     password: password
     driver-class-name: org.postgresql.Driver
+  graphql:
+    graphiql:
+      enabled: true
+      path: /graphiql
+
+dgs:
+  graphql:
+    schema-locations:
+      - classpath:graphql/**/*.graphql*
