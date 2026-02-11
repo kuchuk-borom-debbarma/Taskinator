@@ -3,6 +3,7 @@ plugins {
     kotlin("plugin.spring") version "2.2.21"
     id("org.springframework.boot") version "4.0.2"
     id("io.spring.dependency-management") version "1.1.7"
+    id("com.netflix.dgs.codegen") version "8.3.0"
 }
 val netflixDgsVersion by extra("11.0.0")
 
@@ -10,7 +11,10 @@ group = "dev.kuku"
 version = "0.0.1-SNAPSHOT"
 description = "workspace"
 
-
+tasks.withType<com.netflix.graphql.dgs.codegen.gradle.GenerateJavaTask> {
+    packageName = "dev.kuku.taskinator.generated"
+    schemaPaths = mutableListOf("${projectDir}/src/main/resources/graphql")
+}
 java {
     toolchain {
         languageVersion = JavaLanguageVersion.of(21)
@@ -31,7 +35,6 @@ dependencies {
     implementation("tools.jackson.module:jackson-module-kotlin")
     implementation("com.netflix.graphql.dgs:graphql-dgs-spring-graphql-starter")
     implementation("org.springframework.boot:spring-boot-starter-graphql")
-    implementation("com.netflix.graphql.dgs.codegen:graphql-dgs-codegen-gradle:8.3.0")
     testImplementation("org.springframework.graphql:spring-graphql-test")
     testImplementation("org.springframework:spring-webflux")
     runtimeOnly("org.postgresql:postgresql")
@@ -56,6 +59,7 @@ dependencyManagement {
         mavenBom("com.netflix.graphql.dgs:graphql-dgs-platform-dependencies:$netflixDgsVersion")
     }
 }
+
 
 tasks.withType<Test> {
     useJUnitPlatform()

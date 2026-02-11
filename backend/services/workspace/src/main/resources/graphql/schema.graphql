@@ -1,71 +1,52 @@
-# Federation 2.0 Directives Declaration
-# -----------------------------------------------------------------------------
-# @link: Imports federation instructions into the schema.
-directive @link(url: String, import: [String]) on SCHEMA
-
-# @key: Defines the unique identifier for an entity (e.g., Project ID).
-# It allows other services to look up or "join" to this object.
-directive @key(fields: String!, resolvable: Boolean = true) repeatable on OBJECT | INTERFACE
-
-# @shareable: Indicates that multiple services can provide this field.
-directive @shareable on OBJECT | FIELD_DEFINITION
-
-# @external: Marks a field as owned by another service (e.g., User's ID).
-directive @external on FIELD_DEFINITION
-
-# @requires: Tells the Gateway "I need field X from another service to compute field Y".
-directive @requires(fields: String!) on FIELD_DEFINITION
-
-# @provides: Optimization: "I can give you a 'sneak peek' of this field owned by another service".
-directive @provides(fields: String!) on FIELD_DEFINITION
-
-# @override: Used when moving a field's ownership from one service to another.
-directive @override(from: String!) on FIELD_DEFINITION
-# -----------------------------------------------------------------------------
-
+# Federation 2.0 Directives
 extend schema
-  @link(url: "https://specs.apollo.dev/federation/v2.0",
-        import: ["@key", "@shareable", "@external"])
+@link(url: "https://specs.apollo.dev/federation/v2.0",
+  import: ["@key", "@shareable", "@external"])
 
 type Query {
-    project(id: ID!): Project
-    team(id: ID!): Team
+  project(id: ID!): Project
+  team(id: ID!): Team
+}
+
+# REUSABLE INPUTS
+input PaginationInput {
+  limit: Int = 10
+  offset: Int = 0
 }
 
 # --- EXTENSIONS ---
-# We do NOT own the User (Identity Service does). 
 type User @key(fields: "id") {
-    id: ID! @external # Owned by Identity Service
-    projects(limit: Int = 10, offset: Int = 0): [Project!]!
+  id: ID! @external
+  projects(pagination: PaginationInput): [Project!]!
 }
 
 # --- CORE TYPES ---
 type Project @key(fields: "id") {
-    id: ID!
-    name: String! @shareable
-    owner: User! 
-    description: String
-    createdAt: String!
-    updatedAt: String
-    teams(limit: Int = 10, offset: Int = 0): [Team!]!
-    members(limit: Int = 10, offset: Int = 0): [ProjectMember!]!
+  id: ID!
+  name: String! @shareable
+  owner: User!
+  description: String
+  createdAt: String!
+  updatedAt: String
+  teams(pagination: PaginationInput): [Team!]!
+  members(pagination: PaginationInput): [ProjectMember!]!
 }
 
 type ProjectMember {
-    user: User!
-    createdAt: String!
+  user: User!
+  createdAt: String!
 }
 
 type Team @key(fields: "id") {
-    id: ID!
-    name: String!
-    projectId: ID!
-    parentTeamId: ID
-    createdAt: String!
-    members(limit: Int = 10, offset: Int = 0): [TeamMember!]!
+  id: ID!
+  name: String!
+  projectId: ID!
+  parentTeamId: ID
+  createdAt: String!
+  members(pagination: PaginationInput): [TeamMember!]!
 }
 
 type TeamMember {
-    user: User!
-    createdAt: String!
+  user: User!
+  createdAt: String!
 }
