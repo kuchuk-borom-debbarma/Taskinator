@@ -1,0 +1,12 @@
+## Taskinator Project Context
+- **Architecture:** High-performance orchestration engine with a recursive, event-driven architecture.
+- **Backend Services:**
+    - **Workspace Service:** Spring Boot 4.0.2, Kotlin, Exposed ORM, PostgreSQL. Handles Projects/Teams with Closure Table hierarchy (max 50 depth). Optimized for 10k RPS.
+    - **Identity Service:** Cloudflare Workers, Hono, Drizzle ORM, Neon (PostgreSQL). Handles JWT/JWE authentication.
+- **Key Features:**
+    - Infinite recursive task hierarchy (planned).
+    - Team-first topology.
+    - Apollo Federation 2.0 support.
+    - Optimistic locking for concurrency.
+- **Documentation:** Technical details available in `backend/services/workspace/docs/`.
+- **Status:** Task domain logic in Workspace service is pending; Frontend (`web/`) implementation not yet started.
