@@ -7,6 +7,7 @@ interface TeamQueries {
     /**
      * Inserts a team and sets up its initial closure table entries.
      * Validates that the user is the project owner or a member.
+     * Validates that the parentTeamId is valid
      */
     fun insertTeam(
         projectId: String,

@@ -10,7 +10,8 @@ data class ProjectFieldsToUpdate(
 
 @Service
 /**
- * Handles project related operation. Users can create projects
+ * Handles project related operation. Users can create projects. Projects can have teams and tasks.
+ * Tasks can be assigned to teams. Tasks can have sub-tasks and so on.
  */
 interface ProjectService {
     ///Create a project for the given user. Unique project name
@@ -44,5 +45,5 @@ interface ProjectService {
     ): List<ProjectMember>
 
     ///Get projectIds that the user is part of
-    fun getProjectUserIsPartOf(userId:String, limit:Int, offset: Int): List<String>
+    fun getProjectUserIsPartOf(userId: String, limit: Int, offset: Int): List<String>
 }

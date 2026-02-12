@@ -2,7 +2,7 @@ package dev.kuku.taskinator.domains.team
 
 import java.util.Date
 
-data class Team(
+data class ProjectTeam(
     val id: String,
     val name: String,
     val projectId: String,
@@ -11,7 +11,7 @@ data class Team(
     val updatedAt: Date
 )
 
-data class TeamMember(
+data class ProjectTeamMember(
     val id: String,
     val memberId: String,
     val teamId: String,

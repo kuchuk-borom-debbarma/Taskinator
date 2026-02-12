@@ -10,7 +10,11 @@ data class UpdateTeamFields(
 
 @Service
 /**
- * Team service handles team management of a project
+ * Team service handles team management of a project.
+ * Teams have hierarchy by default, and it's main purpose is to make it easy to assign sub-tasks.
+ * In an project with lots of team it may be hard to determine the teams to assign so we have team hierarchy to make it easier. <br>
+ * It doesn't have any other purpose except this for now. <br>
+ * In future we can set rules for project so that we do not allow assigning tasks to teams that are not children of the parent team and so on.
  */
 interface TeamService {
     ///Create a team for a project, optionally set its parents too
@@ -23,7 +27,7 @@ interface TeamService {
     fun deleteTeam(projectId: String, userId: String, teamId: String, version: Long): Boolean
 
     ///Get all teams in a project with pagination
-    fun getTeamsByProject(projectId: String, userId: String, limit: Int, offset: Int): List<Team>
+    fun getTeamsByProject(projectId: String, userId: String, limit: Int, offset: Int): List<ProjectTeam>
 
     ///Add team members
     fun addTeamMembers(projectId: String, userId: String, teamId: String, memberIds: List<String>)
@@ -31,5 +35,5 @@ interface TeamService {
     ///Remove team members
     fun removeTeamMembers(projectId: String, userId: String, teamId: String, memberIds: List<String>)
 
-    fun getTeamById(projectId: String, teamId: String): Team?
+    fun getTeamById(projectId: String, teamId: String): ProjectTeam?
 }
