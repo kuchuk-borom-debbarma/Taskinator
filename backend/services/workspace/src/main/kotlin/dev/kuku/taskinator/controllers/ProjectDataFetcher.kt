@@ -16,7 +16,8 @@ import dev.kuku.taskinator.generated.types.*
 @DgsComponent
 class ProjectDataFetcher(
     private val projectService: ProjectService,
-    private val teamService: TeamService
+    private val teamService: TeamService,
+    private val taskService: dev.kuku.taskinator.domains.task.TaskService
 ) {
 
     @DgsData(parentType = DgsConstants.PROJECT.TYPE_NAME, field = DgsConstants.PROJECT.Owner)
@@ -42,7 +43,8 @@ class ProjectDataFetcher(
                 projectId = it.projectId,
                 parentTeamId = it.parentTeamId,
                 createdAt = it.createdAt.toString(),
-                members = emptyList()
+                members = emptyList(),
+                tasks = emptyList()
             )
         }
     }
@@ -67,6 +69,42 @@ class ProjectDataFetcher(
             ProjectMember(
                 user = User(id = it.memberId, projects = emptyList()),
                 createdAt = it.createdAt.toString()
+            )
+        }
+    }
+
+    @DgsData(parentType = DgsConstants.PROJECT.TYPE_NAME, field = DgsConstants.PROJECT.Tasks)
+    fun tasks(
+        dfe: DgsDataFetchingEnvironment,
+        @InputArgument(DgsConstants.PROJECT.TASKS_INPUT_ARGUMENT.Input) input: PaginationInput?
+    ): List<Task> {
+        val project = dfe.getSource<Project>()!!
+        val userId = "user-1"
+        val limit = input?.limit ?: 10
+        val offset = input?.offset ?: 0
+
+        return taskService.getTasks(
+            project.id, 
+            userId, 
+            dev.kuku.taskinator.domains.task.GetTasksFilterParam(
+                isUnassigned = true,
+                limit = limit,
+                offset = offset
+            )
+        ).map {
+            Task(
+                id = it.id,
+                projectId = it.projectId,
+                parentTaskId = it.parentTaskId,
+                rootId = it.rootId,
+                path = it.path,
+                createdBy = it.createdBy,
+                title = it.title,
+                description = it.description,
+                status = it.status,
+                lexoRank = it.lexoRank,
+                version = it.version.toInt(),
+                createdAt = "" // Placeholder for now
             )
         }
     }

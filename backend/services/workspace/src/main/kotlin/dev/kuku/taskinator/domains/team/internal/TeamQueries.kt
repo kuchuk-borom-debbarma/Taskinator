@@ -1,6 +1,6 @@
 package dev.kuku.taskinator.domains.team.internal
 
-import dev.kuku.taskinator.domains.team.Team
+import dev.kuku.taskinator.domains.team.ProjectTeam
 import dev.kuku.taskinator.domains.team.UpdateTeamFields
 
 interface TeamQueries {
@@ -14,7 +14,7 @@ interface TeamQueries {
         userId: String,
         teamName: String,
         parentTeamId: String?
-    ): Team?
+    ): ProjectTeam?
 
     /**
      * Heavy hierarchy computation to be called by an async event listener.
@@ -38,7 +38,7 @@ interface TeamQueries {
     /**
      * Finds all teams belonging to a project with pagination.
      */
-    fun findTeamsByProject(projectId: String, limit: Int, offset: Int): List<Team>
+    fun findTeamsByProject(projectId: String, limit: Int, offset: Int): List<ProjectTeam>
 
     /**
      * Batch inserts members into a team with denormalized info.
@@ -67,10 +67,11 @@ interface TeamQueries {
     /**
      * Finds a specific team by its ID.
      */
-    fun findTeamById(projectId: String, teamId: String): Team?
+    fun findTeamById(projectId: String, teamId: String): ProjectTeam?
 
     /**
      * Returns the owner ID of the project.
      */
     fun findProjectOwner(projectId: String): String?
+    fun getChildrenTeam(projectId: String, userId: String, teamId: String, limit: Int, offset: Int): List<ProjectTeam>
 }

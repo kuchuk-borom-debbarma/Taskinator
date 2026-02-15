@@ -29,21 +29,24 @@ class RootDataFetcher(
                 createdAt = it.createdAt.toString(),
                 updatedAt = it.updatedAt.toString(),
                 teams = emptyList(),
-                members = emptyList()
+                members = emptyList(),
+                tasks = emptyList()
             )
         }
     }
 
     @DgsData(parentType = DgsConstants.QUERY_TYPE, field = DgsConstants.QUERY.Team)
     fun getTeam(@InputArgument(DgsConstants.QUERY.TEAM_INPUT_ARGUMENT.Input) input: TeamInput): Team? {
-        return teamService.getTeamById("", input.id)?.let {
+        val userId = "user-1"
+        return teamService.getTeamById("", userId, input.id)?.let {
             Team(
                 id = it.id,
                 name = it.name,
                 projectId = it.projectId,
                 parentTeamId = it.parentTeamId,
                 createdAt = it.createdAt.toString(),
-                members = emptyList()
+                members = emptyList(),
+                tasks = emptyList()
             )
         }
     }

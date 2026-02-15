@@ -3,7 +3,7 @@ package dev.kuku.taskinator.domains.task
 import org.springframework.stereotype.Service
 
 data class TaskToCreateParam(
-    val name: String,
+    val title: String,
     val description: String?,
     val projectId: String,
     val parentTaskId: String?,
@@ -14,7 +14,12 @@ data class TaskToCreateParam(
 
 data class AssignTaskParam(val teamId: String?, val teamMemberId: String?)
 
-data class GetTasksFilterParam()
+data class GetTasksFilterParam(
+    val assignedTeam: String? = null,
+    val isUnassigned: Boolean = false,
+    val limit: Int = 100,
+    val offset: Int = 0
+)
 
 @Service
 /**
@@ -30,19 +35,19 @@ data class GetTasksFilterParam()
  */
 interface TaskService {
     /// Create a task or sub-task for a project
-    fun createTask(projectId: String, userId: String, toCreate: TaskToCreateParam)
+    fun createTask(userId: String, toCreate: TaskToCreateParam): ProjectTask?
 
     /// Assign a task to a team and/or team-member
-    fun assignTask(projectId: String, userId: String, taskId: String, assignTo: AssignTaskParam)
+    fun assignTask(projectId: String, userId: String, taskId: String, version: Long, assignTo: AssignTaskParam)
 
     /// Update the status of a given task. Any team member can update the task if no member assigned, if member is assigned then only that person can.
-    fun updateTaskStatus(projectId: String, userId: String, taskId: String, status: String)
+    fun updateTaskStatus(projectId: String, userId: String, taskId: String, version: Long, status: String)
 
     /// Delete a task. Sub tasks will have to be deleted in async manner too
-    fun deleteTask(projectId: String, userId: String, taskId: String)
+    fun deleteTask(projectId: String, userId: String, taskId: String, version: Long)
 
     /// get the task by Id as long as authorized
-    fun getTaskById(projectId: String, userId: String): ProjectTask?
+    fun getTaskById(projectId: String, userId: String, taskId: String): ProjectTask?
 
     /// Get tasks based on given filter as long as authorized
     fun getTasks(projectId: String, userId: String, filter: GetTasksFilterParam): List<ProjectTask>

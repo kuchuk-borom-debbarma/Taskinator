@@ -2,7 +2,7 @@ package dev.kuku.taskinator.domains.team.internal
 
 import com.github.f4b6a3.uuid.UuidCreator
 import dev.kuku.taskinator.domains.project.internal.ProjectMembers
-import dev.kuku.taskinator.domains.team.Team
+import dev.kuku.taskinator.domains.team.ProjectTeam
 import dev.kuku.taskinator.domains.team.TeamNameConflictException
 import dev.kuku.taskinator.domains.team.UpdateTeamFields
 import org.jetbrains.exposed.v1.core.*
@@ -30,7 +30,7 @@ class TeamQueriesExposed(private val jdbcTemplate: JdbcTemplate) : TeamQueries {
         userId: String,
         teamName: String,
         parentTeamId: String?
-    ): Team? {
+    ): ProjectTeam? {
         val projectUuid = Uuid.parse(projectId)
         val userUuid = Uuid.parse(userId)
         val parentUuid = parentTeamId?.let { Uuid.parse(it) }
@@ -106,7 +106,7 @@ class TeamQueriesExposed(private val jdbcTemplate: JdbcTemplate) : TeamQueries {
                 // Happy path failed, run diagnostics
                 val ownerId = findProjectOwner(projectId)
                 val isMember = filterProjectMembers(projectId, listOf(userId)).isNotEmpty()
-                
+
                 if (ownerId == null) throw IllegalArgumentException("Project not found.")
                 if (ownerId != userId && !isMember) throw IllegalArgumentException("Unauthorized: User is not a member of the project.")
 
@@ -117,7 +117,8 @@ class TeamQueriesExposed(private val jdbcTemplate: JdbcTemplate) : TeamQueries {
                         .orderBy(ProjectTeamClosure.depth to SortOrder.DESC, ProjectTeamClosure.id to SortOrder.ASC)
                         .limit(1)
                         .map { it[ProjectTeamClosure.depth] }
-                        .singleOrNull() ?: throw IllegalArgumentException("Parent team '$parentTeamId' not found in this project.")
+                        .singleOrNull()
+                        ?: throw IllegalArgumentException("Parent team '$parentTeamId' not found in this project.")
 
                     if (parentDepth >= MAX_DEPTH - 1) {
                         throw IllegalArgumentException("Maximum team hierarchy depth reached ($MAX_DEPTH).")
@@ -126,14 +127,15 @@ class TeamQueriesExposed(private val jdbcTemplate: JdbcTemplate) : TeamQueries {
                 return null
             }
         } catch (e: Exception) {
-            if (e.message?.contains("Unique", ignoreCase = true) == true || 
-                e.message?.contains("duplicate", ignoreCase = true) == true) {
+            if (e.message?.contains("Unique", ignoreCase = true) == true ||
+                e.message?.contains("duplicate", ignoreCase = true) == true
+            ) {
                 throw TeamNameConflictException("Team with name '$teamName' already exists in this project.")
             }
             throw e
         }
 
-        return Team(
+        return ProjectTeam(
             id = teamUuid.toString(),
             name = teamName,
             projectId = projectId,
@@ -205,7 +207,7 @@ class TeamQueriesExposed(private val jdbcTemplate: JdbcTemplate) : TeamQueries {
              */
             val rowsAffected = if (toUpdate.parentTeamId != null) {
                 val newParentUuid = Uuid.parse(toUpdate.parentTeamId)
-                
+
                 val sql = """
                     UPDATE project_teams 
                     SET fk_parent_team_id = ?, 
@@ -242,8 +244,8 @@ class TeamQueriesExposed(private val jdbcTemplate: JdbcTemplate) : TeamQueries {
                 // Standard DSL update for name-only changes
                 ProjectTeams.update({
                     (ProjectTeams.id eq teamUuid) and
-                    (ProjectTeams.projectId eq projectUuid) and
-                    (ProjectTeams.version eq toUpdate.version)
+                            (ProjectTeams.projectId eq projectUuid) and
+                            (ProjectTeams.version eq toUpdate.version)
                 }) {
                     if (toUpdate.teamName != null) it[teamName] = toUpdate.teamName
                     it[version] = toUpdate.version + 1
@@ -266,7 +268,8 @@ class TeamQueriesExposed(private val jdbcTemplate: JdbcTemplate) : TeamQueries {
                         .orderBy(ProjectTeamClosure.depth to SortOrder.DESC, ProjectTeamClosure.id to SortOrder.ASC)
                         .limit(1)
                         .map { it[ProjectTeamClosure.depth] }
-                        .singleOrNull() ?: throw IllegalArgumentException("Parent team '${toUpdate.parentTeamId}' not found.")
+                        .singleOrNull()
+                        ?: throw IllegalArgumentException("Parent team '${toUpdate.parentTeamId}' not found.")
 
                     if (parentDepth >= MAX_DEPTH - 1) {
                         throw IllegalArgumentException("Maximum team hierarchy depth reached ($MAX_DEPTH).")
@@ -283,8 +286,9 @@ class TeamQueriesExposed(private val jdbcTemplate: JdbcTemplate) : TeamQueries {
             }
             return true
         } catch (e: Exception) {
-            if (e.message?.contains("Unique", ignoreCase = true) == true || 
-                e.message?.contains("duplicate", ignoreCase = true) == true) {
+            if (e.message?.contains("Unique", ignoreCase = true) == true ||
+                e.message?.contains("duplicate", ignoreCase = true) == true
+            ) {
                 throw TeamNameConflictException("Team with name '${toUpdate.teamName}' already exists.")
             }
             throw e
@@ -292,23 +296,35 @@ class TeamQueriesExposed(private val jdbcTemplate: JdbcTemplate) : TeamQueries {
     }
 
     /**
-     * LEAN OPTIMISTIC DELETE:
-     * Only deletes the team record. Associated hierarchy data in the closure table
-     * is cleaned up asynchronously via event listeners.
+     * ATOMIC TEAM DELETE (1-Call):
+     * Deletes the team and its associated hierarchy data in the closure table.
+     * Members and sub-tasks are cleaned up asynchronously via events.
      */
     @OptIn(ExperimentalUuidApi::class)
     override fun deleteTeam(projectId: String, teamId: String, version: Long): Int {
         val teamUuid = Uuid.parse(teamId)
         val projectUuid = Uuid.parse(projectId)
 
-        val sql = "DELETE FROM project_teams WHERE id = ? AND fk_project_id = ? AND version = ?"
+        val sql = """
+            WITH deleted_team AS (
+                DELETE FROM project_teams 
+                WHERE id = ? AND fk_project_id = ? AND version = ?
+                RETURNING id
+            ),
+            deleted_closure AS (
+                DELETE FROM project_team_closure 
+                WHERE (fk_team_id IN (SELECT id FROM deleted_team) OR fk_child_id IN (SELECT id FROM deleted_team))
+            )
+            SELECT COUNT(*) FROM deleted_team
+        """.trimIndent()
 
-        return jdbcTemplate.update(
+        return jdbcTemplate.queryForObject(
             sql,
+            Int::class.java,
             teamUuid.toJavaUuid(),
             projectUuid.toJavaUuid(),
             version
-        )
+        ) ?: 0
     }
 
     /**
@@ -316,15 +332,15 @@ class TeamQueriesExposed(private val jdbcTemplate: JdbcTemplate) : TeamQueries {
      * Fetches teams for a project, sorted by newest first.
      */
     @OptIn(ExperimentalUuidApi::class)
-    override fun findTeamsByProject(projectId: String, limit: Int, offset: Int): List<Team> {
+    override fun findTeamsByProject(projectId: String, limit: Int, offset: Int): List<ProjectTeam> {
         val projectUuid = Uuid.parse(projectId)
-        
+
         return ProjectTeams.selectAll()
             .where { ProjectTeams.projectId eq projectUuid }
             .orderBy(ProjectTeams.createdAt to SortOrder.DESC, ProjectTeams.id to SortOrder.ASC)
             .limit(limit)
             .offset(offset.toLong())
-            .map { it.toTeam() }
+            .map { it.toProjectTeam() }
     }
 
     /**
@@ -346,13 +362,13 @@ class TeamQueriesExposed(private val jdbcTemplate: JdbcTemplate) : TeamQueries {
      * Fetches details of a specific team within a project.
      */
     @OptIn(ExperimentalUuidApi::class)
-    override fun findTeamById(projectId: String, teamId: String): Team? {
+    override fun findTeamById(projectId: String, teamId: String): ProjectTeam? {
         val projectUuid = Uuid.parse(projectId)
         val teamUuid = Uuid.parse(teamId)
-        
+
         return ProjectTeams.selectAll()
             .where { (ProjectTeams.projectId eq projectUuid) and (ProjectTeams.id eq teamUuid) }
-            .map { it.toTeam() }
+            .map { it.toProjectTeam() }
             .singleOrNull()
     }
 
@@ -367,6 +383,16 @@ class TeamQueriesExposed(private val jdbcTemplate: JdbcTemplate) : TeamQueries {
             .where { dev.kuku.taskinator.domains.project.internal.Projects.id eq projectUuid }
             .map { it[dev.kuku.taskinator.domains.project.internal.Projects.ownerId].toString() }
             .singleOrNull()
+    }
+
+    override fun getChildrenTeam(
+        projectId: String,
+        userId: String,
+        teamId: String,
+        limit: Int,
+        offset: Int
+    ): List<ProjectTeam> {
+        throw NotImplementedError("WIP")
     }
 
     @OptIn(ExperimentalUuidApi::class)
@@ -435,13 +461,13 @@ class TeamQueriesExposed(private val jdbcTemplate: JdbcTemplate) : TeamQueries {
 
         ProjectTeamMembers.deleteWhere {
             (ProjectTeamMembers.projectId eq projectUuid) and
-            (ProjectTeamMembers.teamId eq teamUuid) and
-            (ProjectTeamMembers.memberId inList memberUuids)
+                    (ProjectTeamMembers.teamId eq teamUuid) and
+                    (ProjectTeamMembers.memberId inList memberUuids)
         }
     }
 
     @OptIn(ExperimentalUuidApi::class)
-    private fun ResultRow.toTeam() = Team(
+    private fun ResultRow.toProjectTeam() = ProjectTeam(
         id = this[ProjectTeams.id].value.toString(),
         name = this[ProjectTeams.teamName],
         projectId = this[ProjectTeams.projectId].toString(),

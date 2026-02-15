@@ -38,6 +38,7 @@ type Project @key(fields: "id") {
     updatedAt: String
     teams(input: PaginationInput): [Team!]!
     members(input: PaginationInput): [ProjectMember!]!
+    tasks(input: PaginationInput): [Task!]!
 }
 
 type ProjectMember {
@@ -52,9 +53,28 @@ type Team @key(fields: "id") {
     parentTeamId: ID
     createdAt: String!
     members(input: PaginationInput): [TeamMember!]!
+    tasks(input: PaginationInput): [Task!]!
 }
 
 type TeamMember {
     user: User!
     createdAt: String!
+}
+
+type Task @key(fields: "id") {
+    id: ID!
+    projectId: ID!
+    parentTaskId: ID
+    rootId: ID
+    path: String!
+    createdBy: ID!
+    title: String!
+    description: String
+    assignedTeam: Team
+    assignedTeamMember: User
+    status: String!
+    lexoRank: String!
+    version: Int!
+    createdAt: String!
+    updatedAt: String
 }

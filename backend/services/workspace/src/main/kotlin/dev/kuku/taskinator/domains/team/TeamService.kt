@@ -35,5 +35,7 @@ interface TeamService {
     ///Remove team members
     fun removeTeamMembers(projectId: String, userId: String, teamId: String, memberIds: List<String>)
 
-    fun getTeamById(projectId: String, teamId: String): ProjectTeam?
+    fun getTeamById(projectId: String,userId:String, teamId: String): ProjectTeam?
+
+    fun getChildren(projectId:String, userId: String, teamId: String, limit: Int, offset: Int): List<ProjectTeam>
 }

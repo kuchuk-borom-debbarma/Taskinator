@@ -1,6 +1,6 @@
 package dev.kuku.taskinator.domains.team.internal
 
-import dev.kuku.taskinator.domains.team.Team
+import dev.kuku.taskinator.domains.team.ProjectTeam
 import dev.kuku.taskinator.domains.team.TeamConcurrencyException
 import dev.kuku.taskinator.domains.team.TeamService
 import dev.kuku.taskinator.domains.team.UpdateTeamFields
@@ -85,7 +85,7 @@ class TeamServiceImpl(private val teamRepo: TeamQueries) : TeamService {
             return true
         }
     
-        override fun getTeamsByProject(projectId: String, userId: String, limit: Int, offset: Int): List<Team> {
+        override fun getTeamsByProject(projectId: String, userId: String, limit: Int, offset: Int): List<ProjectTeam> {
             val enforcedLimit = limit.coerceAtMost(MAX_LIMIT)
             return teamRepo.findTeamsByProject(projectId, enforcedLimit, offset)
         }
@@ -118,8 +118,19 @@ class TeamServiceImpl(private val teamRepo: TeamQueries) : TeamService {
             }
         }
 
-        override fun getTeamById(projectId: String, teamId: String): Team? {
+        override fun getTeamById(projectId: String,userId: String, teamId: String): ProjectTeam? {
             return teamRepo.findTeamById(projectId, teamId)
         }
+
+    override fun getChildren(
+        projectId: String,
+        userId: String,
+        teamId: String,
+        limit: Int,
+        offset: Int
+    ): List<ProjectTeam> {
+        val children: List<ProjectTeam> = teamRepo.getChildrenTeam(projectId,userId, teamId, limit, offset)
+        TODO("Not yet implemented")
     }
+}
     

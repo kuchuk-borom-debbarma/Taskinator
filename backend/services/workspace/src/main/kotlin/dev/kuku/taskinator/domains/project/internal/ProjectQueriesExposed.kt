@@ -160,18 +160,46 @@ class ProjectQueriesExposed(private val jdbcTemplate: JdbcTemplate) : ProjectQue
         val ownerUuid = Uuid.parse(userId)
 
         /**
-         * LEAN OPTIMISTIC DELETE (1 DB Call):
-         * Only deletes the project record. Associated data (members, tasks, etc.)
-         * is cleaned up asynchronously via event listeners to keep the API fast.
+         * ATOMIC PROJECT DELETE (1-Call):
+         * Deletes the project and its members in a single round-trip.
+         * Other entities (Teams, Tasks) are still cleaned up asynchronously via events
+         * to avoid an excessively large single transaction.
          */
-        val sql = "DELETE FROM projects WHERE id = ? AND fk_owner_id = ? AND version = ?"
+        val sql = """
+            WITH deleted_project AS (
+                DELETE FROM projects 
+                WHERE id = ? AND fk_owner_id = ? AND version = ?
+                RETURNING id
+            )
+            DELETE FROM project_members 
+            WHERE fk_project_id IN (SELECT id FROM deleted_project)
+        """.trimIndent()
 
-        return jdbcTemplate.update(
-            sql,
+        // jdbcTemplate.update for CTE with multiple DELETEs might return total rows affected.
+        // We need to ensure we return > 0 if the project itself was deleted.
+        // Actually, we want to return the number of projects deleted (0 or 1).
+        
+        // Let's refine the SQL to return the count of deleted projects
+        val refinedSql = """
+            WITH deleted_project AS (
+                DELETE FROM projects 
+                WHERE id = ? AND fk_owner_id = ? AND version = ?
+                RETURNING id
+            ),
+            deleted_members AS (
+                DELETE FROM project_members 
+                WHERE fk_project_id IN (SELECT id FROM deleted_project)
+            )
+            SELECT COUNT(*) FROM deleted_project
+        """.trimIndent()
+
+        return jdbcTemplate.queryForObject(
+            refinedSql,
+            Int::class.java,
             projectUuid.toJavaUuid(),
             ownerUuid.toJavaUuid(),
             version
-        )
+        ) ?: 0
     }
 
     /**
