@@ -8,6 +8,8 @@ import dev.kuku.taskinator.domains.team.TeamService
 import dev.kuku.taskinator.generated.DgsConstants
 import dev.kuku.taskinator.generated.types.*
 
+import org.springframework.web.bind.annotation.RequestHeader
+
 /**
  * Resolves the root query and mutation
  */
@@ -18,8 +20,10 @@ class RootDataFetcher(
 ) {
 
     @DgsData(parentType = DgsConstants.QUERY_TYPE, field = DgsConstants.QUERY.Project)
-    fun getProject(@InputArgument(DgsConstants.QUERY.PROJECT_INPUT_ARGUMENT.Input) input: ProjectInput): Project? {
-        val userId = "user-1"
+    fun getProject(
+        @InputArgument(DgsConstants.QUERY.PROJECT_INPUT_ARGUMENT.Input) input: ProjectInput,
+        @RequestHeader("X-User-Id") userId: String
+    ): Project? {
         return projectService.getProjectById(input.id, userId)?.let {
             Project(
                 id = it.id,
@@ -36,8 +40,10 @@ class RootDataFetcher(
     }
 
     @DgsData(parentType = DgsConstants.QUERY_TYPE, field = DgsConstants.QUERY.Team)
-    fun getTeam(@InputArgument(DgsConstants.QUERY.TEAM_INPUT_ARGUMENT.Input) input: TeamInput): Team? {
-        val userId = "user-1"
+    fun getTeam(
+        @InputArgument(DgsConstants.QUERY.TEAM_INPUT_ARGUMENT.Input) input: TeamInput,
+        @RequestHeader("X-User-Id") userId: String
+    ): Team? {
         return teamService.getTeamById("", userId, input.id)?.let {
             Team(
                 id = it.id,

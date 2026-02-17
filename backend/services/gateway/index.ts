@@ -1,6 +1,10 @@
 import { ApolloServer } from "@apollo/server";
 import { startStandaloneServer } from "@apollo/server/standalone";
 import { ApolloGateway, IntrospectAndCompose, RemoteGraphQLDataSource } from "@apollo/gateway";
+import { jwtVerify } from "jose";
+
+const JWT_SECRET = process.env.JWT_SECRET || "super-secret-key";
+const secret = new TextEncoder().encode(JWT_SECRET);
 
 const gateway = new ApolloGateway({
   supergraphSdl: new IntrospectAndCompose({
@@ -12,9 +16,19 @@ const gateway = new ApolloGateway({
   buildService({ url }) {
     return new RemoteGraphQLDataSource({
       url,
-      willSendRequest({ request, context }) {
-        // Forward the Authorization header from the client to the subgraphs
+      async willSendRequest({ request, context }) {
         if (context.authHeader) {
+          const token = context.authHeader.replace("Bearer ", "");
+          try {
+            const { payload } = await jwtVerify(token, secret);
+            if (payload.sub) {
+              request.http?.headers.set("X-User-Id", payload.sub);
+            }
+          } catch (e) {
+            console.warn("Invalid token received at gateway:", (e as Error).message);
+          }
+          
+          // Still forward the original Authorization header
           request.http?.headers.set("Authorization", context.authHeader);
         }
       },

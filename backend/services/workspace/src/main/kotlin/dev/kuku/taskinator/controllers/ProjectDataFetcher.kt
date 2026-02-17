@@ -10,6 +10,8 @@ import dev.kuku.taskinator.domains.team.TeamService
 import dev.kuku.taskinator.generated.DgsConstants
 import dev.kuku.taskinator.generated.types.*
 
+import org.springframework.web.bind.annotation.RequestHeader
+
 /**
  * Resolves fields of project type
  */
@@ -23,16 +25,16 @@ class ProjectDataFetcher(
     @DgsData(parentType = DgsConstants.PROJECT.TYPE_NAME, field = DgsConstants.PROJECT.Owner)
     fun owner(dfe: DgsDataFetchingEnvironment): User {
         val project = dfe.getSource<Project>()!!
-        return User(id = "owner-id", projects = emptyList()) 
+        return User(id = project.owner.id, projects = emptyList()) 
     }
 
     @DgsData(parentType = DgsConstants.PROJECT.TYPE_NAME, field = DgsConstants.PROJECT.Teams)
     fun teams(
         dfe: DgsDataFetchingEnvironment,
-        @InputArgument(DgsConstants.PROJECT.TEAMS_INPUT_ARGUMENT.Input) input: PaginationInput?
+        @InputArgument(DgsConstants.PROJECT.TEAMS_INPUT_ARGUMENT.Input) input: PaginationInput?,
+        @RequestHeader("X-User-Id") userId: String
     ): List<Team> {
         val project = dfe.getSource<Project>()!!
-        val userId = "user-1"
         val limit = input?.limit ?: 10
         val offset = input?.offset ?: 0
         
@@ -52,10 +54,10 @@ class ProjectDataFetcher(
     @DgsData(parentType = DgsConstants.PROJECT.TYPE_NAME, field = DgsConstants.PROJECT.Members)
     fun members(
         dfe: DgsDataFetchingEnvironment,
-        @InputArgument(DgsConstants.PROJECT.MEMBERS_INPUT_ARGUMENT.Input) input: PaginationInput?
+        @InputArgument(DgsConstants.PROJECT.MEMBERS_INPUT_ARGUMENT.Input) input: PaginationInput?,
+        @RequestHeader("X-User-Id") userId: String
     ): List<ProjectMember> {
         val project = dfe.getSource<Project>()!!
-        val userId = "user-1"
         val limit = input?.limit ?: 10
         val offset = input?.offset ?: 0
 
@@ -76,10 +78,10 @@ class ProjectDataFetcher(
     @DgsData(parentType = DgsConstants.PROJECT.TYPE_NAME, field = DgsConstants.PROJECT.Tasks)
     fun tasks(
         dfe: DgsDataFetchingEnvironment,
-        @InputArgument(DgsConstants.PROJECT.TASKS_INPUT_ARGUMENT.Input) input: PaginationInput?
+        @InputArgument(DgsConstants.PROJECT.TASKS_INPUT_ARGUMENT.Input) input: PaginationInput?,
+        @RequestHeader("X-User-Id") userId: String
     ): List<Task> {
         val project = dfe.getSource<Project>()!!
-        val userId = "user-1"
         val limit = input?.limit ?: 10
         val offset = input?.offset ?: 0
 

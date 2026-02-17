@@ -11,6 +11,8 @@ import dev.kuku.taskinator.generated.types.Team
 import dev.kuku.taskinator.generated.types.TeamMember
 import dev.kuku.taskinator.generated.types.Task
 
+import org.springframework.web.bind.annotation.RequestHeader
+
 /**
  * Resolves fields of team type
  */
@@ -32,10 +34,10 @@ class TeamDataFetcher(
     @DgsData(parentType = DgsConstants.TEAM.TYPE_NAME, field = DgsConstants.TEAM.Tasks)
     fun tasks(
         dfe: DgsDataFetchingEnvironment,
-        @InputArgument(DgsConstants.TEAM.TASKS_INPUT_ARGUMENT.Input) input: PaginationInput?
+        @InputArgument(DgsConstants.TEAM.TASKS_INPUT_ARGUMENT.Input) input: PaginationInput?,
+        @RequestHeader("X-User-Id") userId: String
     ): List<Task> {
         val team = dfe.getSource<Team>()!!
-        val userId = "user-1"
         val limit = input?.limit ?: 10
         val offset = input?.offset ?: 0
 
