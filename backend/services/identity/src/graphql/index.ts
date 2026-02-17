@@ -2,7 +2,7 @@ import { parse } from "graphql";
 import { buildSubgraphSchema } from "@apollo/subgraph";
 import { createYoga } from "graphql-yoga";
 import { authService } from "../services";
-import schemaRaw from "./schema.graphql" with { type: "text" };
+import schemaRaw from "./schema.graphql";
 
 const typeDefs = parse(schemaRaw);
 

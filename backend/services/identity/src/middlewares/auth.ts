@@ -18,3 +18,19 @@ export const authMiddleware = createMiddleware<{
   c.set("identity", payload);
   await nxt();
 });
+
+export const optionalAuthMiddleware = createMiddleware<{
+  Bindings: Bindings;
+  Variables: Variables;
+}>(async (c, nxt) => {
+  const authHeader = c.req.header("Authorization");
+  const token = authHeader?.split(" ")[1]; //Bearer <token>
+
+  if (token) {
+    const payload = await verifyJwtToken({ token });
+    if (payload && payload.sub) {
+      c.set("identity", payload);
+    }
+  }
+  await nxt();
+});

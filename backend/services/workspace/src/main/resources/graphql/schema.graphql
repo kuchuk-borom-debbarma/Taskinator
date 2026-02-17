@@ -24,7 +24,7 @@ input PaginationInput {
 
 # --- EXTENSIONS ---
 type User @key(fields: "id") {
-    id: ID! @external
+    id: ID! @shareable
     projects(input: PaginationInput): [Project!]!
 }
 
