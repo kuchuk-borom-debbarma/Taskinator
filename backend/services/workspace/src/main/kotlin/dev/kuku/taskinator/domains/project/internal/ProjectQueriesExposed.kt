@@ -298,6 +298,6 @@ class ProjectQueriesExposed(private val jdbcTemplate: JdbcTemplate) : ProjectQue
         createdAt = Date.from(this[Projects.createdAt].toInstant(ZoneOffset.UTC)),
         updatedAt = this[Projects.updatedAt]?.let {
             Date.from(it.toInstant(ZoneOffset.UTC))
-        } ?: Date()
+        }
     )
 }

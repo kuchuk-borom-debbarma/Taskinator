@@ -18,7 +18,7 @@ data class UpdateTeamFields(
  */
 interface TeamService {
     ///Create a team for a project, optionally set its parents too
-    fun createTeam(projectId: String, userId: String, teamName: String, parentTeamId: String?)
+    fun createTeam(projectId: String, userId: String, teamName: String, parentTeamId: String?): ProjectTeam?
 
     ///Update the name of the team
     fun updateTeam(projectId: String, userId: String, teamId: String, toUpdate: UpdateTeamFields)

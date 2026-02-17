@@ -27,7 +27,7 @@ class TeamServiceImpl(private val teamRepo: TeamQueries) : TeamService {
      * 
      * PERF: Maintains < 50ms latency by moving hierarchy computation out of the critical path.
      */
-        override fun createTeam(projectId: String, userId: String, teamName: String, parentTeamId: String?) {
+        override fun createTeam(projectId: String, userId: String, teamName: String, parentTeamId: String?): ProjectTeam? {
             log.info { "Creating team $teamName in project $projectId" }
 
             val team = teamRepo.insertTeam(projectId, userId, teamName, parentTeamId)
@@ -39,6 +39,7 @@ class TeamServiceImpl(private val teamRepo: TeamQueries) : TeamService {
             } else {
                 throw IllegalArgumentException("Failed to create team. Ensure project and parent team are valid.")
             }
+            return team
         }
     
         /**

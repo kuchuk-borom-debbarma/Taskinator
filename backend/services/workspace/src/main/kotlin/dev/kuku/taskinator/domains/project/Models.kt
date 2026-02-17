@@ -8,7 +8,7 @@ data class ProjectInfo(
     val owner: String,
     val description: String,
     val createdAt: Date,
-    val updatedAt: Date
+    val updatedAt: Date?
 )
 
 data class ProjectMember(val projectId: String,

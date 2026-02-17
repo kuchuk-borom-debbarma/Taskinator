@@ -8,7 +8,7 @@ data class ProjectTeam(
     val projectId: String,
     val parentTeamId: String?,
     val createdAt: Date,
-    val updatedAt: Date
+    val updatedAt: Date?
 )
 
 data class ProjectTeamMember(
@@ -16,7 +16,7 @@ data class ProjectTeamMember(
     val memberId: String,
     val teamId: String,
     val createdAt: Date,
-    val updatedAt: Date
+    val updatedAt: Date?
 )
 
 class TeamNameConflictException(message: String) : RuntimeException(message)

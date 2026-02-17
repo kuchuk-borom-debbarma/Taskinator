@@ -1,5 +1,7 @@
 package dev.kuku.taskinator.domains.task
 
+import java.util.Date
+
 data class ProjectTask(
     val id: String,
     val projectId: String,
@@ -13,5 +15,7 @@ data class ProjectTask(
     val assignedTeamMember: String?,
     val status: String,
     val lexoRank: String,
-    val version: Long
+    val version: Long,
+    val createdAt: Date,
+    val updatedAt: Date?
 )

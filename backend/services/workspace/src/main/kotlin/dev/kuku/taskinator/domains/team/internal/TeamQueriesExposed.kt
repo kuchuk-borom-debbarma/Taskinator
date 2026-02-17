@@ -473,6 +473,6 @@ class TeamQueriesExposed(private val jdbcTemplate: JdbcTemplate) : TeamQueries {
         projectId = this[ProjectTeams.projectId].toString(),
         parentTeamId = this[ProjectTeams.parentTeamId]?.toString(),
         createdAt = Date.from(this[ProjectTeams.createdAt].toInstant(ZoneOffset.UTC)),
-        updatedAt = this[ProjectTeams.updatedAt]?.let { Date.from(it.toInstant(ZoneOffset.UTC)) } ?: Date()
+        updatedAt = this[ProjectTeams.updatedAt]?.let { Date.from(it.toInstant(ZoneOffset.UTC)) }
     )
 }

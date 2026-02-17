@@ -4,12 +4,10 @@ import com.github.f4b6a3.uuid.UuidCreator
 import dev.kuku.taskinator.domains.task.AssignTaskParam
 import dev.kuku.taskinator.domains.task.ProjectTask
 import dev.kuku.taskinator.domains.task.TaskToCreateParam
-import org.jetbrains.exposed.v1.core.ResultRow
 import org.springframework.jdbc.core.JdbcTemplate
 import org.springframework.stereotype.Repository
 import java.time.LocalDateTime
 import java.time.ZoneOffset
-import java.util.*
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 import kotlin.uuid.toJavaUuid
@@ -78,7 +76,9 @@ class TaskQueriesExposed(private val jdbcTemplate: JdbcTemplate) : TaskQueries {
                 assignedTeamMember = rs.getString("fk_assigned_team_member"),
                 status = rs.getString("status"),
                 lexoRank = rs.getString("lexo_rank"),
-                version = rs.getLong("version")
+                version = rs.getLong("version"),
+                createdAt = rs.getTimestamp("created_at"),
+                updatedAt = rs.getTimestamp("updated_at")
             )
         }, 
             taskUuid.toJavaUuid(),
@@ -252,7 +252,9 @@ class TaskQueriesExposed(private val jdbcTemplate: JdbcTemplate) : TaskQueries {
                 assignedTeamMember = rs.getString("fk_assigned_team_member"),
                 status = rs.getString("status"),
                 lexoRank = rs.getString("lexo_rank"),
-                version = rs.getLong("version")
+                version = rs.getLong("version"),
+                createdAt = rs.getTimestamp("created_at"),
+                updatedAt = rs.getTimestamp("updated_at")
             )
         }, *params.toTypedArray())
     }
@@ -274,7 +276,9 @@ class TaskQueriesExposed(private val jdbcTemplate: JdbcTemplate) : TaskQueries {
                 assignedTeamMember = rs.getString("fk_assigned_team_member"),
                 status = rs.getString("status"),
                 lexoRank = rs.getString("lexo_rank"),
-                version = rs.getLong("version")
+                version = rs.getLong("version"),
+                createdAt = rs.getTimestamp("created_at"),
+                updatedAt = rs.getTimestamp("updated_at")
             )
         }, Uuid.parse(taskId).toJavaUuid(), Uuid.parse(projectId).toJavaUuid()).firstOrNull()
     }
