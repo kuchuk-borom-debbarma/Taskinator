@@ -1,1 +1,8 @@
 /backend/gateway.log
+/backend/services/identity/.idea/.gitignore
+/backend/services/identity/.idea/discord.xml
+/backend/services/identity/.idea/go.imports.xml
+/backend/services/identity/.idea/identity.iml
+/backend/services/identity/.idea/misc.xml
+/backend/services/identity/.idea/modules.xml
+/backend/services/identity/.idea/vcs.xml
