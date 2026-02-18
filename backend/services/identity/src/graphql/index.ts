@@ -21,6 +21,9 @@ const resolvers = {
     },
   },
   Mutation: {
+    auth: () => ({}),
+  },
+  AuthMutation: {
     signUp: async (_: any, { input }: any, context: any) => {
       const jwe = await authService.createUserJWEToken(input);
       const verificationLink = getVerificationLink(context.honoContext, "complete-sign-up", jwe);

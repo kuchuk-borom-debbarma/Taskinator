@@ -17,18 +17,22 @@ type AuthResponse {
   token: String
 }
 
-type Query {
-  me: User
-  userById(id: ID!): User
-}
-
-type Mutation {
+type AuthMutation {
   signUp(input: SignUpInput!): AuthResponse!
   completeSignUp(token: String!): AuthResponse!
   signIn(input: SignInInput!): AuthResponse!
   resetPassword(email: String!, password: String!): AuthResponse!
   completeResetPassword(token: String!): AuthResponse!
   updatePassword(input: UpdatePasswordInput!): AuthResponse!
+}
+
+type Query {
+  me: User
+  userById(id: ID!): User
+}
+
+type Mutation {
+  auth: AuthMutation!
 }
 
 input SignUpInput {
