@@ -9,7 +9,8 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Get the directory where the script is located
-SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+BACKEND_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+ROOT_DIR="$( dirname "$BACKEND_DIR" )"
 
 echo -e "${BLUE}Stopping any existing services...${NC}"
 # Kill processes on ports 8080, 8787, 4000
@@ -25,14 +26,22 @@ cleanup() {
 # Catch Ctrl+C
 trap cleanup SIGINT SIGTERM
 
-echo -e "${BLUE}1. Starting Database (Docker)...${NC}"
-cd "$SCRIPT_DIR/services/workspace" && docker compose up -d
+echo -e "${BLUE}1. Starting Databases (Docker)...${NC}"
+cd "$ROOT_DIR" && docker compose up -d
+
+echo -e "${BLUE}Waiting for databases to be healthy...${NC}"
+until [ "$(docker inspect -f {{.State.Health.Status}} taskinator-workspace-db)" == "healthy" ] && \
+      [ "$(docker inspect -f {{.State.Health.Status}} taskinator-identity-db)" == "healthy" ]; do
+    echo -n "."
+    sleep 2
+done
+echo -e "\n${GREEN}Databases are healthy!${NC}"
 
 echo -e "${BLUE}2. Starting Workspace Service (Gradle)...${NC}"
-cd "$SCRIPT_DIR/services/workspace" && ./gradlew bootRun > "$SCRIPT_DIR/workspace.log" 2>&1 &
+cd "$BACKEND_DIR/services/workspace" && ./gradlew bootRun > "$BACKEND_DIR/workspace.log" 2>&1 &
 
 echo -e "${BLUE}3. Starting Identity Service (Bun/Wrangler)...${NC}"
-cd "$SCRIPT_DIR/services/identity" && bun run dev > "$SCRIPT_DIR/identity.log" 2>&1 &
+cd "$BACKEND_DIR/services/identity" && bun run dev > "$BACKEND_DIR/identity.log" 2>&1 &
 
 echo -e "${BLUE}Waiting for subgraphs to initialize...${NC}"
 # Wait for Workspace (8080)
@@ -50,12 +59,12 @@ done
 echo -e "\n${GREEN}Identity Service is ready!${NC}"
 
 echo -e "${BLUE}4. Starting Gateway (Bun)...${NC}"
-cd "$SCRIPT_DIR/services/gateway" && bun run dev > "$SCRIPT_DIR/gateway.log" 2>&1 &
+cd "$BACKEND_DIR/services/gateway" && bun run dev > "$BACKEND_DIR/gateway.log" 2>&1 &
 
 echo -e "${GREEN}========================================${NC}"
 echo -e "${GREEN}All services are UP!${NC}"
 echo -e "Gateway: http://localhost:4000/"
-echo -e "Logs: $SCRIPT_DIR/workspace.log, $SCRIPT_DIR/identity.log, $SCRIPT_DIR/gateway.log"
+echo -e "Logs: $BACKEND_DIR/workspace.log, $BACKEND_DIR/identity.log, $BACKEND_DIR/gateway.log"
 echo -e "${GREEN}========================================${NC}"
 echo "Press Ctrl+C to stop everything."
 
