@@ -49,9 +49,9 @@ Once the backend is healthy, you can start the React development server.
 
 If you need to run or debug services individually:
 
-### Database
+### Databases
 ```bash
-cd backend/services/workspace
+# Run from the project root
 docker compose up -d
 ```
 

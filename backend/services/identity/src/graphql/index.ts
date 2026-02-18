@@ -138,10 +138,15 @@ export const createYogaInstance = (env: any) => {
     graphqlEndpoint: "/graphql",
     fetchAPI: { Response },
     context: (ctx: any) => {
-      // Identity is added by authMiddleware in Hono
+      // 1. Check for X-User-Id (Propagated by Gateway for 10k RPS efficiency)
+      const xUserId = ctx.honoContext?.req.header("X-User-Id");
+      
+      // 2. Fallback to middleware-resolved identity (for direct subgraph calls)
+      const identity = ctx.honoContext?.get("identity");
+
       return {
         ...ctx,
-        identity: ctx.honoContext?.get("identity"),
+        identity: xUserId ? { sub: xUserId } : identity,
       };
     },
   });
