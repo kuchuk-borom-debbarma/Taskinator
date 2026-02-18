@@ -7,7 +7,6 @@ import dev.kuku.taskinator.domains.project.ProjectService
 import dev.kuku.taskinator.domains.team.TeamService
 import dev.kuku.taskinator.generated.DgsConstants
 import dev.kuku.taskinator.generated.types.*
-
 import org.springframework.web.bind.annotation.RequestHeader
 
 /**
@@ -54,6 +53,38 @@ class RootDataFetcher(
                 members = emptyList(),
                 tasks = emptyList()
             )
+        }
+    }
+
+    @DgsData(parentType = DgsConstants.Mutation_TYPE, field = DgsConstants.MUTATION.Project)
+    fun projectMutation(): ProjectMutation {
+        return object : ProjectMutation {
+            override val createProject: CreateProjectResponse get() = TODO()
+            override val renameProject: GenericResponse get() = TODO()
+            override val deleteProject: GenericResponse get() = TODO()
+            override val addProjectMembers: GenericResponse get() = TODO()
+            override val removeProjectMembers: GenericResponse get() = TODO()
+        }
+    }
+
+    @DgsData(parentType = DgsConstants.Mutation_TYPE, field = DgsConstants.MUTATION.Team)
+    fun teamMutation(): TeamMutation {
+        return object : TeamMutation {
+            override val createTeam: CreateTeamResponse get() = TODO()
+            override val updateTeam: GenericResponse get() = TODO()
+            override val deleteTeam: GenericResponse get() = TODO()
+            override val addTeamMembers: GenericResponse get() = TODO()
+            override val removeTeamMembers: GenericResponse get() = TODO()
+        }
+    }
+
+    @DgsData(parentType = DgsConstants.Mutation_TYPE, field = DgsConstants.MUTATION.Task)
+    fun taskMutation(): TaskMutation {
+        return object : TaskMutation {
+            override val createTask: CreateTaskResponse get() = TODO()
+            override val assignTask: GenericResponse get() = TODO()
+            override val updateTaskStatus: GenericResponse get() = TODO()
+            override val deleteTask: GenericResponse get() = TODO()
         }
     }
 }
