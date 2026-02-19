@@ -1,4 +1,5 @@
 import { JWTPayload } from "hono/utils/jwt/types";
+import type { Database } from "../db";
 
 export type Bindings = {
   JWT_SECRET: string;
@@ -8,4 +9,5 @@ export type Bindings = {
 
 export type Variables = {
   identity: JWTPayload;
+  db: Database;
 };
