@@ -13,6 +13,17 @@ const app = new OpenAPIHono<{
 
 app.use("*", contextStorage()); // This "saves" the context for this request only
 
+app.onError((err, c) => {
+  console.error("Hono Error:", err);
+  if (err.cause) {
+    console.error("Error Cause:", err.cause);
+  }
+  return c.json({
+    success: false,
+    message: err.message || "Internal Server Error",
+  }, 500);
+});
+
 app.get("/health", (c) => {
   return c.json({
     status: "ok",

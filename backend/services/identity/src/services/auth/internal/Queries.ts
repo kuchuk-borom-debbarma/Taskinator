@@ -38,13 +38,19 @@ export const findUserByFilter = async (filter: {
   }
 
   const db = getDb();
-  const found = await db
-    .select()
-    .from(users)
-    .where(and(...conditions))
-    .limit(1);
+  try {
+    const found = await db
+      .select()
+      .from(users)
+      .where(and(...conditions))
+      .limit(1);
 
-  return found;
+    return found;
+  } catch (error: any) {
+    console.error("Database error in findUserByFilter:", error);
+    console.error("Filters used:", filter);
+    throw error;
+  }
 };
 
 export const updateUserQuery = async (
