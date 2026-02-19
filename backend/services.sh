@@ -30,8 +30,8 @@ echo -e "${BLUE}1. Starting Databases (Docker)...${NC}"
 cd "$ROOT_DIR" && docker compose up -d
 
 echo -e "${BLUE}Waiting for databases to be healthy...${NC}"
-until [ "$(docker inspect -f {{.State.Health.Status}} taskinator-workspace-db)" == "healthy" ] && \
-      [ "$(docker inspect -f {{.State.Health.Status}} taskinator-identity-db)" == "healthy" ]; do
+until [ "$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}starting{{end}}' taskinator-workspace-db 2>/dev/null)" == "healthy" ] && \
+      [ "$(docker inspect -f '{{if .State.Health}}{{.State.Health.Status}}{{else}}starting{{end}}' taskinator-identity-db 2>/dev/null)" == "healthy" ]; do
     echo -n "."
     sleep 2
 done
