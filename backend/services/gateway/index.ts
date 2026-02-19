@@ -3,7 +3,7 @@ import { startStandaloneServer } from "@apollo/server/standalone";
 import { ApolloGateway, IntrospectAndCompose, RemoteGraphQLDataSource } from "@apollo/gateway";
 import { jwtVerify } from "jose";
 
-const JWT_SECRET = process.env.JWT_SECRET || "super-secret-key";
+const JWT_SECRET = process.env.JWT_SECRET || "320e5c96f36f30c09c6d25fd0c6836a1";
 const secret = new TextEncoder().encode(JWT_SECRET);
 
 const gateway = new ApolloGateway({

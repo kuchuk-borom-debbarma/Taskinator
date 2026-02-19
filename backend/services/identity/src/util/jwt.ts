@@ -14,14 +14,20 @@ export const createJwtToken = async (data: {
     ...data.claims,
   };
   const c = getContext<{ Bindings: Bindings }>();
-  const secret = c.env.JWT_SECRET;
+  const secret = c.env?.JWT_SECRET;
+  if (!secret) {
+    throw new Error("JWT_SECRET is not defined in the environment bindings.");
+  }
   return await sign(payload, secret, "HS256");
 };
 
 export const verifyJwtToken = async (data: {}): Promise<JWTPayload | null> => {
   const token = (data as any).token as string;
   const c = getContext<{ Bindings: Bindings }>();
-  const secret = c.env.JWT_SECRET;
+  const secret = c.env?.JWT_SECRET;
+  if (!secret) {
+    throw new Error("JWT_SECRET is not defined in the environment bindings.");
+  }
   try {
     return await verify(token, secret, "HS256");
   } catch (e) {
