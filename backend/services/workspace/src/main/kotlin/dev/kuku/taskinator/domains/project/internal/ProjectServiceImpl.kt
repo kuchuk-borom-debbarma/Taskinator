@@ -3,6 +3,7 @@ package dev.kuku.taskinator.domains.project.internal
 import dev.kuku.taskinator.domains.project.*
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 
 private val log = KotlinLogging.logger {}
 
@@ -15,6 +16,7 @@ private val log = KotlinLogging.logger {}
  * 3. Scalability: Fires events for non-critical stat updates (Eventual Consistency).
  */
 @Service
+@Transactional
 class ProjectServiceImpl(private val projectRepo: ProjectQueries) : ProjectService {
 
     /**

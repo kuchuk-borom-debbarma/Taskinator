@@ -20,7 +20,7 @@ type Mutation {
     task: TaskMutation!
 }
 
-interface ProjectMutation {
+type ProjectMutation {
     createProject(input: CreateProjectInput!): CreateProjectResponse!
     renameProject(input: RenameProjectInput!): GenericResponse!
     deleteProject(input: DeleteProjectInput!): GenericResponse!
@@ -35,7 +35,7 @@ type CreateProjectResponse {
 }
 
 
-interface TeamMutation {
+type TeamMutation {
     createTeam(input: CreateTeamInput!): CreateTeamResponse!
     updateTeam(input: UpdateTeamInput!): GenericResponse!
     deleteTeam(input: DeleteTeamInput!): GenericResponse!
@@ -49,7 +49,7 @@ type CreateTeamResponse {
     response: Team
 }
 
-interface TaskMutation {
+type TaskMutation {
     createTask(input: CreateTaskInput!): CreateTaskResponse!
     assignTask(input: AssignTaskInput!): GenericResponse!
     updateTaskStatus(input: UpdateTaskStatusInput!): GenericResponse!

@@ -3,10 +3,12 @@ package dev.kuku.taskinator.domains.task.internal
 import dev.kuku.taskinator.domains.task.*
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 
 private val log = KotlinLogging.logger {}
 
 @Service
+@Transactional
 class TaskServiceImpl(private val taskQueries: TaskQueries) : TaskService {
 
     private val MAX_LIMIT = 100

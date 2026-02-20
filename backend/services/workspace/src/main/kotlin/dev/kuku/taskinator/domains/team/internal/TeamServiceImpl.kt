@@ -6,6 +6,7 @@ import dev.kuku.taskinator.domains.team.TeamService
 import dev.kuku.taskinator.domains.team.UpdateTeamFields
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.stereotype.Service
+import org.springframework.transaction.annotation.Transactional
 
 private val log = KotlinLogging.logger {}
 
@@ -15,6 +16,7 @@ private val log = KotlinLogging.logger {}
  * SPECIALIZATION: High-Concurrency Hierarchy Management.
  */
 @Service
+@Transactional
 class TeamServiceImpl(private val teamRepo: TeamQueries) : TeamService {
 
     private val MAX_LIMIT = 100

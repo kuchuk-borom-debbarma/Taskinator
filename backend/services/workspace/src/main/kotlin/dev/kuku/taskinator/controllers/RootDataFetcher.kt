@@ -58,33 +58,33 @@ class RootDataFetcher(
 
     @DgsData(parentType = DgsConstants.Mutation_TYPE, field = DgsConstants.MUTATION.Project)
     fun projectMutation(): ProjectMutation {
-        return object : ProjectMutation {
-            override val createProject: CreateProjectResponse get() = TODO()
-            override val renameProject: GenericResponse get() = TODO()
-            override val deleteProject: GenericResponse get() = TODO()
-            override val addProjectMembers: GenericResponse get() = TODO()
-            override val removeProjectMembers: GenericResponse get() = TODO()
-        }
+        return ProjectMutation(
+            createProject = CreateProjectResponse(false),
+            renameProject = GenericResponse(false),
+            deleteProject = GenericResponse(false),
+            addProjectMembers = GenericResponse(false),
+            removeProjectMembers = GenericResponse(false)
+        )
     }
 
     @DgsData(parentType = DgsConstants.Mutation_TYPE, field = DgsConstants.MUTATION.Team)
     fun teamMutation(): TeamMutation {
-        return object : TeamMutation {
-            override val createTeam: CreateTeamResponse get() = TODO()
-            override val updateTeam: GenericResponse get() = TODO()
-            override val deleteTeam: GenericResponse get() = TODO()
-            override val addTeamMembers: GenericResponse get() = TODO()
-            override val removeTeamMembers: GenericResponse get() = TODO()
-        }
+        return TeamMutation(
+            createTeam = CreateTeamResponse(false),
+            updateTeam = GenericResponse(false),
+            deleteTeam = GenericResponse(false),
+            addTeamMembers = GenericResponse(false),
+            removeTeamMembers = GenericResponse(false)
+        )
     }
 
     @DgsData(parentType = DgsConstants.Mutation_TYPE, field = DgsConstants.MUTATION.Task)
     fun taskMutation(): TaskMutation {
-        return object : TaskMutation {
-            override val createTask: CreateTaskResponse get() = TODO()
-            override val assignTask: GenericResponse get() = TODO()
-            override val updateTaskStatus: GenericResponse get() = TODO()
-            override val deleteTask: GenericResponse get() = TODO()
-        }
+        return TaskMutation(
+            createTask = CreateTaskResponse(false),
+            assignTask = GenericResponse(false),
+            updateTaskStatus = GenericResponse(false),
+            deleteTask = GenericResponse(false)
+        )
     }
 }
