@@ -1,35 +1,36 @@
 services:
   taskinator-kafka:
-    image: bitnami/kafka:latest
+    image: apache/kafka:latest # Using the official Apache image
     ports:
-      - "9092:9092" # Port for host-to-container communication
+      - "9092:9092"
     environment:
-      # --- KRaft Mode Configuration ---
-      - KAFKA_CFG_NODE_ID=0 # Unique ID for this Kafka node
-      - KAFKA_CFG_PROCESS_ROLES=controller,broker # Acts as both metadata controller and data broker
-      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=0@taskinator-kafka:9093 # Points to itself for metadata consensus
-      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      # --- KRaft Mode (Apache Kafka Official) ---
+      - KAFKA_NODE_ID=0
+      - KAFKA_PROCESS_ROLES=controller,broker
+      - KAFKA_CONTROLLER_QUORUM_VOTERS=0@taskinator-kafka:9093
+      - KAFKA_CONTROLLER_LISTENER_NAMES=CONTROLLER
       
       # --- Network Listeners ---
-      # INTERNAL: For Docker container-to-container communication
-      # EXTERNAL: For host machine (IntelliJ/Local App) to Kafka communication
-      - KAFKA_CFG_LISTENERS=INTERNAL://:29092,EXTERNAL://:9092,CONTROLLER://:9093
-      - KAFKA_CFG_ADVERTISED_LISTENERS=INTERNAL://taskinator-kafka:29092,EXTERNAL://localhost:9092
-      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
-      - KAFKA_CFG_INTER_BROKER_LISTENER_NAME=INTERNAL
+      - KAFKA_LISTENERS=INTERNAL://:29092,EXTERNAL://:9092,CONTROLLER://:9093
+      - KAFKA_ADVERTISED_LISTENERS=INTERNAL://taskinator-kafka:29092,EXTERNAL://localhost:9092
+      - KAFKA_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+      - KAFKA_INTER_BROKER_LISTENER_NAME=INTERNAL
       
       # --- Security & Misc ---
-      - ALLOW_PLAINTEXT_LISTENER=yes # Disable SSL/Auth for local development
+      - KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR=1
+      - KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS=0
+      - KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR=1
+      - KAFKA_TRANSACTION_STATE_LOG_MIN_ISR=1
     volumes:
-      - kafka_data:/bitnami/kafka # Persist Kafka metadata and message logs
+      - kafka_data:/var/lib/kafka/data
 
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
     ports:
-      - "8080:8080" # Web UI accessible at http://localhost:8080
+      - "8080:8080"
     environment:
       - KAFKA_CLUSTERS_0_NAME=local
-      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=taskinator-kafka:29092 # Connects via internal Docker network
+      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=taskinator-kafka:29092
     depends_on:
       - taskinator-kafka
 
@@ -41,14 +42,14 @@ services:
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
     ports:
-      - "5432:5432" # Standard Postgres port
+      - "5432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U user -d workspace"]
       interval: 5s
       timeout: 5s
       retries: 5
     volumes:
-      - workspace_data:/var/lib/postgresql/data # Persist Workspace database data
+      - workspace_data:/var/lib/postgresql/data
 
   identity-db:
     image: postgres:17-alpine
@@ -58,14 +59,14 @@ services:
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
     ports:
-      - "5433:5432" # Mapped to 5433 to avoid conflict with workspace-db
+      - "5433:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U user -d identity"]
       interval: 5s
       timeout: 5s
       retries: 5
     volumes:
-      - identity_data:/var/lib/postgresql/data # Persist Identity database data
+      - identity_data:/var/lib/postgresql/data
 
 volumes:
   workspace_data:
