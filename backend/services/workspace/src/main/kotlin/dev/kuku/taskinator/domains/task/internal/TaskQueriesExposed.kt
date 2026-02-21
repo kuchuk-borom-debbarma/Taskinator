@@ -13,6 +13,13 @@ import kotlin.uuid.Uuid
 import kotlin.uuid.toJavaUuid
 import kotlin.uuid.toKotlinUuid
 
+/**
+ * TaskQueriesExposed handles high-performance SQL operations using Spring JdbcTemplate.
+ * 
+ * DESIGN GOAL: "One Round Trip"
+ * Every operation is written as a single, complex SQL statement to avoid multiple
+ * database round-trips (N+1 queries), which is critical for 10k-1M RPS scale.
+ */
 @Repository
 class TaskQueriesExposed(private val jdbcTemplate: JdbcTemplate) : TaskQueries {
 
@@ -25,11 +32,13 @@ class TaskQueriesExposed(private val jdbcTemplate: JdbcTemplate) : TaskQueries {
         val now = LocalDateTime.now(ZoneOffset.UTC)
 
         /**
-         * ATOMIC 1-CALL TASK INSERTION:
-         * 1. Authorization: Checks if user is owner or member of the project.
-         * 2. Hierarchy: If parentTaskId is provided, it must belong to the same project.
-         * 3. Materialized Path: Computes the path (root/parent/self) in-database.
-         * 4. Idempotency: ON CONFLICT (idempotency_key) DO NOTHING prevents duplicate tasks.
+         * ATOMIC MULTI-RULE INSERTION
+         * 
+         * This single query performs:
+         * 1. Authorization: Verified that the user has access to the project.
+         * 2. Hierarchy Validation: Ensures the parentTaskId belongs to the same project.
+         * 3. Materialized Path: Calculates the 'path' (root/parent/self) in-database.
+         * 4. Idempotency (Exactly-Once): Uses ON CONFLICT to ignore duplicate events.
          */
         val sql = """
             INSERT INTO project_tasks (
@@ -111,6 +120,12 @@ class TaskQueriesExposed(private val jdbcTemplate: JdbcTemplate) : TaskQueries {
         val projectUuid = Uuid.parse(projectId).toJavaUuid()
         val userUuid = Uuid.parse(userId).toJavaUuid()
 
+        /**
+         * SECURE STATUS UPDATE
+         * Enforces optimistic locking using the 'version' column.
+         * If 'version' in the DB is different from the version in the event, 
+         * the update will affect 0 rows and return false.
+         */
         val sql = """
             UPDATE project_tasks
             SET status = ?, updated_at = ?, version = version + 1
