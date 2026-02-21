@@ -1,4 +1,38 @@
 services:
+  taskinator-kafka:
+    image: bitnami/kafka:latest
+    ports:
+      - "9092:9092" # Port for host-to-container communication
+    environment:
+      # --- KRaft Mode Configuration ---
+      - KAFKA_CFG_NODE_ID=0 # Unique ID for this Kafka node
+      - KAFKA_CFG_PROCESS_ROLES=controller,broker # Acts as both metadata controller and data broker
+      - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=0@taskinator-kafka:9093 # Points to itself for metadata consensus
+      - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+      
+      # --- Network Listeners ---
+      # INTERNAL: For Docker container-to-container communication
+      # EXTERNAL: For host machine (IntelliJ/Local App) to Kafka communication
+      - KAFKA_CFG_LISTENERS=INTERNAL://:29092,EXTERNAL://:9092,CONTROLLER://:9093
+      - KAFKA_CFG_ADVERTISED_LISTENERS=INTERNAL://taskinator-kafka:29092,EXTERNAL://localhost:9092
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
+      - KAFKA_CFG_INTER_BROKER_LISTENER_NAME=INTERNAL
+      
+      # --- Security & Misc ---
+      - ALLOW_PLAINTEXT_LISTENER=yes # Disable SSL/Auth for local development
+    volumes:
+      - kafka_data:/bitnami/kafka # Persist Kafka metadata and message logs
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    ports:
+      - "8080:8080" # Web UI accessible at http://localhost:8080
+    environment:
+      - KAFKA_CLUSTERS_0_NAME=local
+      - KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS=taskinator-kafka:29092 # Connects via internal Docker network
+    depends_on:
+      - taskinator-kafka
+
   workspace-db:
     image: postgres:17-alpine
     container_name: taskinator-workspace-db
@@ -7,14 +41,14 @@ services:
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
     ports:
-      - "5432:5432"
+      - "5432:5432" # Standard Postgres port
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U user -d workspace"]
       interval: 5s
       timeout: 5s
       retries: 5
     volumes:
-      - workspace_data:/var/lib/postgresql/data
+      - workspace_data:/var/lib/postgresql/data # Persist Workspace database data
 
   identity-db:
     image: postgres:17-alpine
@@ -24,15 +58,16 @@ services:
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
     ports:
-      - "5433:5432" # Mapped to 5433 on host
+      - "5433:5432" # Mapped to 5433 to avoid conflict with workspace-db
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U user -d identity"]
       interval: 5s
       timeout: 5s
       retries: 5
     volumes:
-      - identity_data:/var/lib/postgresql/data
+      - identity_data:/var/lib/postgresql/data # Persist Identity database data
 
 volumes:
   workspace_data:
   identity_data:
+  kafka_data:
