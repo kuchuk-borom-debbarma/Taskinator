@@ -13,7 +13,9 @@ import java.time.Instant
 
 /**
  * TeamMutationFetcher implements the "Ingest" phase for Team mutations.
- * It uses the Unified Entity Stream (Kafka) to ensure causal ordering.
+ * 
+ * By using the Unified Entity Stream, it ensures that all team operations 
+ * are processed in the correct order relative to projects and tasks.
  */
 @DgsComponent
 class TeamMutationFetcher(
@@ -26,11 +28,14 @@ class TeamMutationFetcher(
         @RequestHeader("X-User-Id") userId: String
     ): CreateTeamResponse {
         
-        // 1. GENERATE TEAM ID (ID-First)
+        /**
+         * 1. ID-FIRST GENERATION
+         * Ensures the team has a permanent identity before hitting the DB.
+         */
         val teamId = UuidCreator.getTimeOrderedWithRandom().toString()
         val idempotencyKey = UuidCreator.getTimeOrderedWithRandom().toString()
 
-        // 2. CONSTRUCT EVENT
+        // 2. CONSTRUCT TEAM EVENT
         val event = TeamEvent.TeamCreated(
             projectId = input.projectId,
             userId = userId,
@@ -40,7 +45,7 @@ class TeamMutationFetcher(
             idempotencyKey = idempotencyKey
         )
 
-        // 3. PRODUCE TO KAFKA
+        // 3. PRODUCE TO UNIFIED STREAM (Partitioned by Project)
         kafkaTemplate.send("workspace-activity", input.projectId, event)
 
         // 4. RETURN ACCEPTED

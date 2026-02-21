@@ -13,7 +13,9 @@ import java.time.Instant
 
 /**
  * ProjectMutationFetcher implements the "Ingest" phase for Project mutations.
- * It uses the Unified Entity Stream (Kafka) to ensure causal ordering.
+ * 
+ * It converts GraphQL requests into asynchronous events, allowing the API 
+ * to scale to 1M RPS by removing synchronous database I/O from the request path.
  */
 @DgsComponent
 class ProjectMutationFetcher(
@@ -26,11 +28,16 @@ class ProjectMutationFetcher(
         @RequestHeader("X-User-Id") userId: String
     ): CreateProjectResponse {
         
-        // 1. GENERATE PROJECT ID (ID-First)
+        /**
+         * 1. ID-FIRST ARCHITECTURE
+         * We generate the Project ID immediately. This allows the client 
+         * to start creating teams and tasks for this project without 
+         * waiting for the database confirmation.
+         */
         val projectId = UuidCreator.getTimeOrderedWithRandom().toString()
         val idempotencyKey = UuidCreator.getTimeOrderedWithRandom().toString()
 
-        // 2. CONSTRUCT EVENT
+        // 2. CONSTRUCT EVENT (The Intent)
         val event = ProjectEvent.ProjectCreated(
             projectId = projectId,
             userId = userId,
@@ -39,11 +46,14 @@ class ProjectMutationFetcher(
             idempotencyKey = idempotencyKey
         )
 
-        // 3. PRODUCE TO KAFKA
-        // Partitioned by projectId (the ID we just generated)
+        /**
+         * 3. UNIFIED ENTITY STREAM
+         * We push to the 'workspace-activity' topic and use 'projectId' 
+         * as the Kafka partition key to ensure causal ordering.
+         */
         kafkaTemplate.send("workspace-activity", projectId, event)
 
-        // 4. RETURN ACCEPTED
+        // 4. RETURN "ACCEPTED" (HTTP 202 Flow)
         return CreateProjectResponse(
             success = true,
             message = "Project creation queued",
