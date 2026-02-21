@@ -15,12 +15,13 @@ class TaskServiceImpl(private val taskQueries: TaskQueries) : TaskService {
 
     override fun createTask(userId: String, toCreate: TaskToCreateParam): ProjectTask? {
         log.info { "Creating task '${toCreate.title}' in project ${toCreate.projectId} by user $userId" }
-        val task = taskQueries.insertTask(userId, toCreate)
+        // For the worker, we use the direct DB insert
+        // Manual calls via Service (rare) get a random key
+        val task = taskQueries.insertTask(userId, toCreate, java.util.UUID.randomUUID().toString())
         if (task != null) {
-            log.info { "Task created: ${task.id}" }
-            // TODO: Fire TASK_CREATED event
+            log.info { "Task persisted to database: ${task.id}" }
         } else {
-            log.warn { "Failed to create task. Check project permissions and parent task validity." }
+            log.warn { "Failed to persist task. Check project permissions and parent task validity." }
         }
         return task
     }

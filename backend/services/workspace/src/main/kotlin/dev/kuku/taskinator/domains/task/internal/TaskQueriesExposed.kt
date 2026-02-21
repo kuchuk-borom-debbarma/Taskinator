@@ -17,7 +17,7 @@ import kotlin.uuid.toKotlinUuid
 class TaskQueriesExposed(private val jdbcTemplate: JdbcTemplate) : TaskQueries {
 
     @OptIn(ExperimentalUuidApi::class)
-    override fun insertTask(userId: String, toCreate: TaskToCreateParam): ProjectTask? {
+    override fun insertTask(userId: String, toCreate: TaskToCreateParam, idempotencyKey: String): ProjectTask? {
         val taskUuid = UuidCreator.getTimeOrderedEpoch().toKotlinUuid()
         val projectUuid = Uuid.parse(toCreate.projectId)
         val userUuid = Uuid.parse(userId)
@@ -29,12 +29,13 @@ class TaskQueriesExposed(private val jdbcTemplate: JdbcTemplate) : TaskQueries {
          * 1. Authorization: Checks if user is owner or member of the project.
          * 2. Hierarchy: If parentTaskId is provided, it must belong to the same project.
          * 3. Materialized Path: Computes the path (root/parent/self) in-database.
+         * 4. Idempotency: ON CONFLICT (idempotency_key) DO NOTHING prevents duplicate tasks.
          */
         val sql = """
             INSERT INTO project_tasks (
                 id, fk_project_id, fk_parent_task_id, fk_root_id, path, 
                 fk_created_by, fk_assigned_team, fk_assigned_team_member, 
-                title, description, status, lexo_rank, created_at, version
+                title, description, status, lexo_rank, idempotency_key, created_at, version
             )
             SELECT 
                 ?::uuid, p_id, parent_id, COALESCE(root_id, ?::uuid), 
@@ -42,7 +43,7 @@ class TaskQueriesExposed(private val jdbcTemplate: JdbcTemplate) : TaskQueries {
                     WHEN parent_id IS NULL THEN ?::text 
                     ELSE parent_path || '/' || ? 
                 END,
-                ?::uuid, ?::uuid, ?::uuid, ?, ?, 'NOT STARTED', '0|hzzzzz:', ?, 0
+                ?::uuid, ?::uuid, ?::uuid, ?, ?, 'NOT STARTED', '0|hzzzzz:', ?, ?, 0
             FROM (
                 SELECT 
                     proj.id as p_id,
@@ -58,6 +59,7 @@ class TaskQueriesExposed(private val jdbcTemplate: JdbcTemplate) : TaskQueries {
                 )
                 AND (?::uuid IS NULL OR parent.id IS NOT NULL)
             ) as valid_context
+            ON CONFLICT (idempotency_key) DO NOTHING
             RETURNING *
         """.trimIndent()
 
@@ -82,14 +84,15 @@ class TaskQueriesExposed(private val jdbcTemplate: JdbcTemplate) : TaskQueries {
             )
         }, 
             taskUuid.toJavaUuid(),
-            taskUuid.toJavaUuid(), // for COALESCE(root_id, ?)
-            taskIdStr, // Path for top-level
-            taskIdStr, // Path suffix for child
+            taskUuid.toJavaUuid(), 
+            taskIdStr, 
+            taskIdStr, 
             userUuid.toJavaUuid(),
             toCreate.assignedTeam?.let { Uuid.parse(it).toJavaUuid() },
             toCreate.assignedMember?.let { Uuid.parse(it).toJavaUuid() },
             toCreate.title,
             toCreate.description ?: "",
+            idempotencyKey,
             now,
             parentUuid?.toJavaUuid(),
             projectUuid.toJavaUuid(),
@@ -108,14 +111,6 @@ class TaskQueriesExposed(private val jdbcTemplate: JdbcTemplate) : TaskQueries {
         val projectUuid = Uuid.parse(projectId).toJavaUuid()
         val userUuid = Uuid.parse(userId).toJavaUuid()
 
-        /**
-         * SECURE STATUS UPDATE (1-Call):
-         * Rules:
-         * 1. Project Owner can always update.
-         * 2. Assigned Team Member can update.
-         * 3. If no member is assigned, any member of the assigned team can update.
-         * 4. OPTIMISTIC LOCKING: version must match.
-         */
         val sql = """
             UPDATE project_tasks
             SET status = ?, updated_at = ?, version = version + 1
@@ -152,11 +147,6 @@ class TaskQueriesExposed(private val jdbcTemplate: JdbcTemplate) : TaskQueries {
         val projectUuid = Uuid.parse(projectId).toJavaUuid()
         val userUuid = Uuid.parse(userId).toJavaUuid()
 
-        /**
-         * SECURE ASSIGNMENT (1-Call):
-         * Rule: Only Project Owner or Project Members can assign tasks.
-         * OPTIMISTIC LOCKING: version must match.
-         */
         val sql = """
             UPDATE project_tasks
             SET fk_assigned_team = ?, fk_assigned_team_member = ?, updated_at = ?, version = version + 1
@@ -188,11 +178,6 @@ class TaskQueriesExposed(private val jdbcTemplate: JdbcTemplate) : TaskQueries {
         val projectUuid = Uuid.parse(projectId).toJavaUuid()
         val userUuid = Uuid.parse(userId).toJavaUuid()
 
-        /**
-         * SECURE DELETE (1-Call):
-         * Rule: Only Project Owner or the creator of the task can delete it.
-         * OPTIMISTIC LOCKING: version must match.
-         */
         val sql = """
             DELETE FROM project_tasks 
             WHERE id = ? AND fk_project_id = ? AND version = ?

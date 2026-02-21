@@ -35,6 +35,8 @@ object ProjectTasksTable : IdTable<Uuid>("project_tasks") {
     // Lexorank for O(1) drag-and-drop reordering
     val lexoRank = varchar("lexo_rank", 255).default("0|hzzzzz:")
 
+    val idempotencyKey = varchar("idempotency_key", 100).uniqueIndex() // Exactly-Once protection
+
     val createdAt = datetime("created_at").defaultExpression(CurrentDateTime)
     val updatedAt = datetime("updated_at").nullable()
     val version = long("version").default(0) // Optimistic Locking
