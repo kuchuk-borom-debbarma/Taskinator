@@ -1,5 +1,6 @@
 package dev.kuku.taskinator.domains.task
 
+import dev.kuku.taskinator.TestPostgresConfiguration
 import dev.kuku.taskinator.domains.project.ProjectService
 import dev.kuku.taskinator.domains.project.internal.ProjectMembers
 import dev.kuku.taskinator.domains.project.internal.Projects
@@ -8,7 +9,6 @@ import dev.kuku.taskinator.domains.team.internal.ProjectTeamClosure
 import dev.kuku.taskinator.domains.team.internal.ProjectTeamMembers
 import dev.kuku.taskinator.domains.team.internal.ProjectTeams
 import dev.kuku.taskinator.domains.task.internal.ProjectTasksTable
-import io.zonky.test.db.postgres.embedded.EmbeddedPostgres
 import org.jetbrains.exposed.v1.core.*
 import org.jetbrains.exposed.v1.jdbc.*
 import org.junit.jupiter.api.BeforeEach
@@ -16,12 +16,10 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.boot.test.context.TestConfiguration
-import org.springframework.context.annotation.Bean
-import org.springframework.context.annotation.Primary
+import org.springframework.context.annotation.Import
+import org.springframework.test.context.bean.override.mockito.MockitoBean
+import org.springframework.kafka.core.KafkaTemplate
 import org.springframework.transaction.annotation.Transactional
-import java.util.*
-import javax.sql.DataSource
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -34,6 +32,7 @@ import kotlin.uuid.Uuid
         "spring.autoconfigure.exclude=com.netflix.graphql.dgs.springgraphql.autoconfig.DgsSpringGraphQLAutoConfiguration,org.springframework.boot.autoconfigure.graphql.GraphQlAutoConfiguration"
     ]
 )
+@Import(TestPostgresConfiguration::class)
 @Transactional
 class TaskDomainTests @Autowired constructor(
     private val projectService: ProjectService,
@@ -41,15 +40,8 @@ class TaskDomainTests @Autowired constructor(
     private val taskService: TaskService
 ) {
 
-    @TestConfiguration
-    class PostgresTestConfig {
-        @Bean
-        @Primary
-        fun dataSource(): DataSource {
-            val pg = EmbeddedPostgres.builder().start()
-            return pg.postgresDatabase
-        }
-    }
+    @MockitoBean
+    private lateinit var kafkaTemplate: KafkaTemplate<String, Any>
 
     private val ownerId = Uuid.random().toString()
     private lateinit var projectId: String

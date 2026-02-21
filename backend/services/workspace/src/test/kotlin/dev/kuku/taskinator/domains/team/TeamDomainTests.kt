@@ -1,10 +1,10 @@
 package dev.kuku.taskinator.domains.team
 
+import dev.kuku.taskinator.TestPostgresConfiguration
 import dev.kuku.taskinator.domains.project.ProjectService
 import dev.kuku.taskinator.domains.project.internal.ProjectMembers
 import dev.kuku.taskinator.domains.project.internal.Projects
 import dev.kuku.taskinator.domains.team.internal.*
-import io.zonky.test.db.postgres.embedded.EmbeddedPostgres
 import org.jetbrains.exposed.v1.core.*
 import org.jetbrains.exposed.v1.jdbc.*
 import org.junit.jupiter.api.BeforeEach
@@ -12,12 +12,11 @@ import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
-import org.springframework.boot.test.context.TestConfiguration
-import org.springframework.context.annotation.Bean
-import org.springframework.context.annotation.Primary
+import org.springframework.context.annotation.Import
+import org.springframework.test.context.bean.override.mockito.MockitoBean
+import org.springframework.kafka.core.KafkaTemplate
 import org.springframework.transaction.annotation.Transactional
 import java.util.*
-import javax.sql.DataSource
 import kotlin.test.assertEquals
 import kotlin.test.assertNotNull
 import kotlin.test.assertTrue
@@ -30,6 +29,7 @@ import kotlin.uuid.Uuid
         "spring.autoconfigure.exclude=com.netflix.graphql.dgs.springgraphql.autoconfig.DgsSpringGraphQLAutoConfiguration,org.springframework.boot.autoconfigure.graphql.GraphQlAutoConfiguration"
     ]
 )
+@Import(TestPostgresConfiguration::class)
 @Transactional
 class TeamDomainTests @Autowired constructor(
     private val teamService: TeamService,
@@ -37,14 +37,8 @@ class TeamDomainTests @Autowired constructor(
     private val teamRepo: TeamQueries
 ) {
 
-    @TestConfiguration
-    class PostgresTestConfig {
-        @Bean
-        @Primary
-        fun dataSource(): DataSource {
-            return EmbeddedPostgres.builder().start().postgresDatabase
-        }
-    }
+    @MockitoBean
+    private lateinit var kafkaTemplate: KafkaTemplate<String, Any>
 
     private val ownerId = Uuid.random().toString()
     private lateinit var projectId: String

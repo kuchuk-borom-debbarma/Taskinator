@@ -28,6 +28,7 @@ repositories {
 dependencies {
     implementation("org.jetbrains.exposed:exposed-spring-boot4-starter:1.0.0")
     implementation("org.jetbrains.exposed:exposed-java-time:1.0.0")
+    implementation("org.springframework.kafka:spring-kafka")
     implementation("com.github.f4b6a3:uuid-creator:6.0.0")
 
     implementation("org.springframework.boot:spring-boot-starter-webmvc")
@@ -35,11 +36,13 @@ dependencies {
     implementation("tools.jackson.module:jackson-module-kotlin")
     implementation("com.netflix.graphql.dgs:graphql-dgs-spring-graphql-starter")
     implementation("org.springframework.boot:spring-boot-starter-graphql")
+    testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.graphql:spring-graphql-test")
     testImplementation("org.springframework:spring-webflux")
     runtimeOnly("org.postgresql:postgresql")
     testImplementation("org.springframework.boot:spring-boot-starter-webmvc-test")
     testImplementation("org.jetbrains.kotlin:kotlin-test-junit5")
+    testImplementation("org.springframework.kafka:spring-kafka-test")
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")

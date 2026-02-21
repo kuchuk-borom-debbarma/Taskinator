@@ -6,6 +6,34 @@ spring:
     username: user
     password: password
     driver-class-name: org.postgresql.Driver
+  
+  # --- Kafka Configuration for Ingest-Buffer-Drain ---
+  kafka:
+    bootstrap-servers: localhost:9092 # Pointing to the external listener of our KRaft broker
+    
+    producer:
+      # Keys are Project IDs (String), Values are TaskEvents (JSON)
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      acks: all # Wait for full replication before returning "OK" to the API
+      properties:
+        enable.idempotence: true # Broker-level deduplication
+        linger.ms: 10 # Throughput optimization: wait 10ms to fill network packets
+        compression.type: lz4 # Best CPU/Compression ratio for 1M RPS
+    
+    consumer:
+      group-id: workspace-worker
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        # Security requirement for JsonDeserializer
+        spring.json.trusted.packages: "dev.kuku.taskinator.domains.task"
+    
+    listener:
+      type: batch # Critical for the "Drain" phase: allows processing 5,000 records at once
+      ack-mode: manual_immediate # We commit offsets manually to guarantee DB consistency
+
   graphql:
     graphiql:
       enabled: true
