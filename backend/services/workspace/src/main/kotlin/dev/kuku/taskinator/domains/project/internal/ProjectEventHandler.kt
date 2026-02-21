@@ -7,13 +7,16 @@ import org.springframework.stereotype.Component
 private val log = KotlinLogging.logger {}
 
 @Component
-class ProjectEventHandler(private val projectService: ProjectService) {
+class ProjectEventHandler(
+    private val projectService: ProjectService,
+    private val projectRepo: ProjectQueries
+) {
 
     fun handle(event: ProjectEvent) {
         when (event) {
             is ProjectEvent.ProjectCreated -> {
                 log.info { "Processing ProjectCreated: ${event.projectId}" }
-                projectService.createProject(event.userId, event.name, event.description)
+                projectRepo.insertProject(event.projectId, event.name, event.userId, event.description, event.idempotencyKey)
             }
             is ProjectEvent.ProjectRenamed -> {
                 log.info { "Processing ProjectRenamed: ${event.projectId}" }

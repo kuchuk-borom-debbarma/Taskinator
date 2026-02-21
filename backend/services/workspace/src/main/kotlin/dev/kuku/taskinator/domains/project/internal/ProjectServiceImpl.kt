@@ -25,12 +25,12 @@ class ProjectServiceImpl(private val projectRepo: ProjectQueries) : ProjectServi
      */
     private val MAX_LIMIT = 100
 
-    override fun createProject(userId: String, projectName: String, projectDescription: String): ProjectInfo? {
+    override fun createProject(userId: String, projectName: String, projectDescription: String, projectId: String?): ProjectInfo? {
         log.info { "Creating Project $projectName for user $userId" }
         try {
-            //Simple insert
-            return projectRepo.insertProject(projectName, userId, projectDescription)
-            //TODO fire event
+            val finalId = projectId ?: com.github.f4b6a3.uuid.UuidCreator.getTimeOrderedWithRandom().toString()
+            // Manual calls get a random key
+            return projectRepo.insertProject(finalId, projectName, userId, projectDescription, java.util.UUID.randomUUID().toString())
         } catch (e: ProjectNameConflictException) {
             log.warn { "Creation failed: duplicate name" }
             throw e

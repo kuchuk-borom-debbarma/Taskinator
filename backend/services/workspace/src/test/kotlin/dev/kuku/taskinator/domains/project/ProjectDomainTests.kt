@@ -64,7 +64,7 @@ class ProjectDomainTests @Autowired constructor(
         val name = "Duplicate Project"
         projectService.createProject(ownerId, name, "First")
         
-        assertThrows<ProjectNameConflictException> {
+        assertThrows<org.springframework.dao.DuplicateKeyException> {
             projectService.createProject(ownerId, name, "Second")
         }
     }

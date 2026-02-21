@@ -20,7 +20,7 @@ class TaskEventHandler(private val taskQueries: TaskQueries) {
                     parentTaskId = event.parentTaskId,
                     assignedTeam = event.assignedTeam,
                     assignedMember = event.assignedMember
-                ), event.idempotencyKey)
+                ), event.idempotencyKey, event.taskId)
             }
             is TaskEvent.TaskStatusUpdated -> {
                 log.info { "Processing TaskStatusUpdated: ${event.taskId}" }

@@ -29,10 +29,12 @@ class TeamServiceImpl(private val teamRepo: TeamQueries) : TeamService {
      * 
      * PERF: Maintains < 50ms latency by moving hierarchy computation out of the critical path.
      */
-        override fun createTeam(projectId: String, userId: String, teamName: String, parentTeamId: String?): ProjectTeam? {
+        override fun createTeam(projectId: String, userId: String, teamName: String, parentTeamId: String?, teamId: String?): ProjectTeam? {
             log.info { "Creating team $teamName in project $projectId" }
 
-            val team = teamRepo.insertTeam(projectId, userId, teamName, parentTeamId)
+            val finalTeamId = teamId ?: com.github.f4b6a3.uuid.UuidCreator.getTimeOrderedWithRandom().toString()
+            // Manual calls get a random key
+            val team = teamRepo.insertTeam(projectId, userId, finalTeamId, teamName, parentTeamId, java.util.UUID.randomUUID().toString())
             if (team != null) {
                 log.info { "Team created. Firing async hierarchy computation." }
                 

@@ -6,7 +6,7 @@ import dev.kuku.taskinator.domains.project.ProjectMember
 import dev.kuku.taskinator.domains.project.ProjectMemberSortKey
 
 interface ProjectQueries {
-    fun insertProject(name: String, ownerId: String, description: String?): ProjectInfo?
+    fun insertProject(projectId: String, name: String, ownerId: String, description: String?, idempotencyKey: String): ProjectInfo?
 
     fun updateProject(
         projectId: String, userId: String, toUpdate:

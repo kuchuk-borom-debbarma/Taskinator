@@ -17,7 +17,7 @@ class TaskServiceImpl(private val taskQueries: TaskQueries) : TaskService {
         log.info { "Creating task '${toCreate.title}' in project ${toCreate.projectId} by user $userId" }
         // For the worker, we use the direct DB insert
         // Manual calls via Service (rare) get a random key
-        val task = taskQueries.insertTask(userId, toCreate, java.util.UUID.randomUUID().toString())
+        val task = taskQueries.insertTask(userId, toCreate, java.util.UUID.randomUUID().toString(), null)
         if (task != null) {
             log.info { "Task persisted to database: ${task.id}" }
         } else {

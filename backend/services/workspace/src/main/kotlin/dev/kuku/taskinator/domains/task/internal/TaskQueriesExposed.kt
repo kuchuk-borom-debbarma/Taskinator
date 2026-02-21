@@ -24,8 +24,10 @@ import kotlin.uuid.toKotlinUuid
 class TaskQueriesExposed(private val jdbcTemplate: JdbcTemplate) : TaskQueries {
 
     @OptIn(ExperimentalUuidApi::class)
-    override fun insertTask(userId: String, toCreate: TaskToCreateParam, idempotencyKey: String): ProjectTask? {
-        val taskUuid = UuidCreator.getTimeOrderedEpoch().toKotlinUuid()
+    override fun insertTask(userId: String, toCreate: TaskToCreateParam, idempotencyKey: String, taskId: String?): ProjectTask? {
+        // Use provided taskId or generate a new one if not provided
+        val taskUuid = taskId?.let { Uuid.parse(it) } ?: UuidCreator.getTimeOrderedEpoch().toKotlinUuid()
+        
         val projectUuid = Uuid.parse(toCreate.projectId)
         val userUuid = Uuid.parse(userId)
         val parentUuid = toCreate.parentTaskId?.let { Uuid.parse(it) }
@@ -33,12 +35,6 @@ class TaskQueriesExposed(private val jdbcTemplate: JdbcTemplate) : TaskQueries {
 
         /**
          * ATOMIC MULTI-RULE INSERTION
-         * 
-         * This single query performs:
-         * 1. Authorization: Verified that the user has access to the project.
-         * 2. Hierarchy Validation: Ensures the parentTaskId belongs to the same project.
-         * 3. Materialized Path: Calculates the 'path' (root/parent/self) in-database.
-         * 4. Idempotency (Exactly-Once): Uses ON CONFLICT to ignore duplicate events.
          */
         val sql = """
             INSERT INTO project_tasks (
@@ -110,7 +106,7 @@ class TaskQueriesExposed(private val jdbcTemplate: JdbcTemplate) : TaskQueries {
             parentUuid?.toJavaUuid()
         )
 
-        return result.firstOrNull()
+        return result.firstOrNull() ?: taskId?.let { findTaskById(toCreate.projectId, it) }
     }
 
     @OptIn(ExperimentalUuidApi::class)
@@ -120,12 +116,6 @@ class TaskQueriesExposed(private val jdbcTemplate: JdbcTemplate) : TaskQueries {
         val projectUuid = Uuid.parse(projectId).toJavaUuid()
         val userUuid = Uuid.parse(userId).toJavaUuid()
 
-        /**
-         * SECURE STATUS UPDATE
-         * Enforces optimistic locking using the 'version' column.
-         * If 'version' in the DB is different from the version in the event, 
-         * the update will affect 0 rows and return false.
-         */
         val sql = """
             UPDATE project_tasks
             SET status = ?, updated_at = ?, version = version + 1

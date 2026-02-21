@@ -31,6 +31,8 @@ object Projects : IdTable<Uuid>("projects") {
     val updatedAt = datetime("updated_at").nullable()
     val version = long("version").default(0) // Optimistic Locking for concurrency protection in some cases
 
+    val idempotencyKey = varchar("idempotency_key", 100).uniqueIndex() // Exactly-Once protection
+
     init {
         // no duplicate project name for a user
         index(isUnique = true, ownerId, projectName)

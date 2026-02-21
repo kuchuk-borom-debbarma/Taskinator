@@ -5,7 +5,7 @@ import dev.kuku.taskinator.domains.task.ProjectTask
 import dev.kuku.taskinator.domains.task.TaskToCreateParam
 
 interface TaskQueries {
-    fun insertTask(userId: String, toCreate: TaskToCreateParam, idempotencyKey: String): ProjectTask?
+    fun insertTask(userId: String, toCreate: TaskToCreateParam, idempotencyKey: String, taskId: String? = null): ProjectTask?
     
     fun updateTaskStatus(projectId: String, userId: String, taskId: String, version: Long, status: String): Boolean
     

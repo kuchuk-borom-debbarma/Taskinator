@@ -12,8 +12,10 @@ interface TeamQueries {
     fun insertTeam(
         projectId: String,
         userId: String,
+        teamId: String,
         teamName: String,
-        parentTeamId: String?
+        parentTeamId: String?,
+        idempotencyKey: String
     ): ProjectTeam?
 
     /**

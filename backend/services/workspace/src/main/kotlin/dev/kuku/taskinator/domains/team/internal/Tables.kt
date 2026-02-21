@@ -24,6 +24,8 @@ object ProjectTeams : IdTable<Uuid>("project_teams") {
     val updatedAt = datetime("updated_at").nullable()
     val version = long("version").default(0) // Optimistic Locking
 
+    val idempotencyKey = varchar("idempotency_key", 100).uniqueIndex() // Exactly-Once protection
+
     init {
         // unique team name per project
         index(isUnique = true, projectId, teamName)

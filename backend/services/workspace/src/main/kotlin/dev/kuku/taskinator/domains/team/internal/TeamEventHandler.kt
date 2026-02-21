@@ -7,13 +7,16 @@ import org.springframework.stereotype.Component
 private val log = KotlinLogging.logger {}
 
 @Component
-class TeamEventHandler(private val teamService: TeamService) {
+class TeamEventHandler(
+    private val teamService: TeamService,
+    private val teamRepo: TeamQueries
+) {
 
     fun handle(event: TeamEvent) {
         when (event) {
             is TeamEvent.TeamCreated -> {
                 log.info { "Processing TeamCreated: ${event.teamId}" }
-                teamService.createTeam(event.projectId, event.userId, event.name, event.parentTeamId)
+                teamRepo.insertTeam(event.projectId, event.userId, event.teamId, event.name, event.parentTeamId, event.idempotencyKey)
             }
             is TeamEvent.TeamRenamed -> {
                 log.info { "Processing TeamRenamed: ${event.teamId}" }
