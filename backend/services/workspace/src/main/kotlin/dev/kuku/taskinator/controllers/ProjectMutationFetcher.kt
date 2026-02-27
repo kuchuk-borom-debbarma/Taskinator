@@ -38,11 +38,6 @@ class ProjectMutationFetcher(
          * 2. Fire an event to kafka.
          * 3. [Yet to define consumers]
          */
-        /**
-         * 1. Create the project synchronously as projects are not created often
-         * 2. Fire an event to kafka.
-         * 3. [Yet to define consumers]
-         */
         val createdProject = projectService.createProject(userId, input.name, input.description)
             ?: throw RuntimeException("Failed to create project!")
 
@@ -79,6 +74,16 @@ class ProjectMutationFetcher(
         @InputArgument("input") input: RenameProjectInput,
         @RequestHeader("X-User-Id") userId: String
     ): GenericResponse {
+        projectService.renameProject(
+            userId,
+            input.projectId,
+            dev.kuku.taskinator.domains.project.ProjectFieldsToUpdate(
+                version = input.version.toLong(),
+                name = input.name,
+                description = input.description
+            )
+        )
+
         val event = ProjectEvent.ProjectRenamed(
             projectId = input.projectId,
             userId = userId,
@@ -89,7 +94,7 @@ class ProjectMutationFetcher(
 
         kafkaTemplate.send("workspace-activity", input.projectId, event)
 
-        return GenericResponse(success = true, message = "Project rename queued")
+        return GenericResponse(success = true, message = "Project renamed successfully")
     }
 
     @DgsData(parentType = DgsConstants.PROJECTMUTATION.TYPE_NAME)
@@ -97,6 +102,8 @@ class ProjectMutationFetcher(
         @InputArgument("input") input: DeleteProjectInput,
         @RequestHeader("X-User-Id") userId: String
     ): GenericResponse {
+        projectService.deleteProject(input.projectId, userId, input.version.toLong())
+
         val event = ProjectEvent.ProjectDeleted(
             projectId = input.projectId,
             userId = userId,
@@ -105,7 +112,7 @@ class ProjectMutationFetcher(
 
         kafkaTemplate.send("workspace-activity", input.projectId, event)
 
-        return GenericResponse(success = true, message = "Project deletion queued")
+        return GenericResponse(success = true, message = "Project deleted successfully")
     }
 
     @DgsData(parentType = DgsConstants.PROJECTMUTATION.TYPE_NAME)
@@ -129,6 +136,8 @@ class ProjectMutationFetcher(
         @InputArgument("input") input: RemoveProjectMembersInput,
         @RequestHeader("X-User-Id") userId: String
     ): GenericResponse {
+        projectService.removeProjectMembers(input.projectId, userId, input.memberIds)
+
         val event = ProjectEvent.ProjectMembersRemoved(
             projectId = input.projectId,
             userId = userId,
@@ -137,6 +146,6 @@ class ProjectMutationFetcher(
 
         kafkaTemplate.send("workspace-activity", input.projectId, event)
 
-        return GenericResponse(success = true, message = "Member removal queued")
+        return GenericResponse(success = true, message = "Members removed successfully")
     }
 }
