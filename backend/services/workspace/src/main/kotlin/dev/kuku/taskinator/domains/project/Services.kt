@@ -15,7 +15,7 @@ data class ProjectFieldsToUpdate(
  */
 interface ProjectService {
     ///Create a project for the given user. Unique project name
-    fun createProject(userId: String, projectName: String, projectDescription: String, projectId: String? = null): ProjectInfo?
+    fun createProject(userId: String, projectName: String, projectDescription: String? = null, projectId: String? = null): ProjectInfo?
 
     ///Rename a project. Unique project name
     fun renameProject(userId: String, projectId: String, toUpdate: ProjectFieldsToUpdate)

@@ -22,7 +22,7 @@ class TeamMutationFetcher(
     private val kafkaTemplate: KafkaTemplate<String, Any>
 ) {
 
-    @DgsData(parentType = DgsConstants.TEAMMUTATION.TYPE_NAME, field = DgsConstants.TEAMMUTATION.CreateTeam)
+    @DgsData(parentType = DgsConstants.TEAMMUTATION.TYPE_NAME)
     fun createTeam(
         @InputArgument("input") input: CreateTeamInput,
         @RequestHeader("X-User-Id") userId: String
@@ -64,7 +64,7 @@ class TeamMutationFetcher(
         )
     }
 
-    @DgsData(parentType = DgsConstants.TEAMMUTATION.TYPE_NAME, field = DgsConstants.TEAMMUTATION.UpdateTeam)
+    @DgsData(parentType = DgsConstants.TEAMMUTATION.TYPE_NAME)
     fun updateTeam(
         @InputArgument("input") input: UpdateTeamInput,
         @RequestHeader("X-User-Id") userId: String
@@ -82,7 +82,7 @@ class TeamMutationFetcher(
         return GenericResponse(success = true, message = "Team update queued")
     }
 
-    @DgsData(parentType = DgsConstants.TEAMMUTATION.TYPE_NAME, field = DgsConstants.TEAMMUTATION.DeleteTeam)
+    @DgsData(parentType = DgsConstants.TEAMMUTATION.TYPE_NAME)
     fun deleteTeam(
         @InputArgument("input") input: DeleteTeamInput,
         @RequestHeader("X-User-Id") userId: String
@@ -99,7 +99,7 @@ class TeamMutationFetcher(
         return GenericResponse(success = true, message = "Team deletion queued")
     }
 
-    @DgsData(parentType = DgsConstants.TEAMMUTATION.TYPE_NAME, field = DgsConstants.TEAMMUTATION.AddTeamMembers)
+    @DgsData(parentType = DgsConstants.TEAMMUTATION.TYPE_NAME)
     fun addTeamMembers(
         @InputArgument("input") input: AddTeamMembersInput,
         @RequestHeader("X-User-Id") userId: String
@@ -116,7 +116,7 @@ class TeamMutationFetcher(
         return GenericResponse(success = true, message = "Member addition queued")
     }
 
-    @DgsData(parentType = DgsConstants.TEAMMUTATION.TYPE_NAME, field = DgsConstants.TEAMMUTATION.RemoveTeamMembers)
+    @DgsData(parentType = DgsConstants.TEAMMUTATION.TYPE_NAME)
     fun removeTeamMembers(
         @InputArgument("input") input: RemoveTeamMembersInput,
         @RequestHeader("X-User-Id") userId: String

@@ -22,7 +22,7 @@ class TeamDataFetcher(
     private val taskService: TaskService
 ) {
 
-    @DgsData(parentType = DgsConstants.TEAM.TYPE_NAME, field = DgsConstants.TEAM.Members)
+    @DgsData(parentType = DgsConstants.TEAM.TYPE_NAME)
     fun members(
         dfe: DgsDataFetchingEnvironment,
         @InputArgument(DgsConstants.TEAM.MEMBERS_INPUT_ARGUMENT.Input) input: PaginationInput?
@@ -31,7 +31,7 @@ class TeamDataFetcher(
         return emptyList()
     }
 
-    @DgsData(parentType = DgsConstants.TEAM.TYPE_NAME, field = DgsConstants.TEAM.Tasks)
+    @DgsData(parentType = DgsConstants.TEAM.TYPE_NAME)
     fun tasks(
         dfe: DgsDataFetchingEnvironment,
         @InputArgument(DgsConstants.TEAM.TASKS_INPUT_ARGUMENT.Input) input: PaginationInput?,

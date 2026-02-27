@@ -6,6 +6,8 @@ import com.netflix.graphql.dgs.DgsDataFetchingEnvironment
 import com.netflix.graphql.dgs.InputArgument
 import dev.kuku.taskinator.domains.project.ProjectMemberSortKey
 import dev.kuku.taskinator.domains.project.ProjectService
+import dev.kuku.taskinator.domains.task.GetTasksFilterParam
+import dev.kuku.taskinator.domains.task.TaskService
 import dev.kuku.taskinator.domains.team.TeamService
 import dev.kuku.taskinator.generated.DgsConstants
 import dev.kuku.taskinator.generated.types.*
@@ -19,16 +21,16 @@ import org.springframework.web.bind.annotation.RequestHeader
 class ProjectDataFetcher(
     private val projectService: ProjectService,
     private val teamService: TeamService,
-    private val taskService: dev.kuku.taskinator.domains.task.TaskService
+    private val taskService: TaskService
 ) {
 
-    @DgsData(parentType = DgsConstants.PROJECT.TYPE_NAME, field = DgsConstants.PROJECT.Owner)
+    @DgsData(parentType = DgsConstants.PROJECT.TYPE_NAME)
     fun owner(dfe: DgsDataFetchingEnvironment): User {
         val project = dfe.getSource<Project>()!!
         return User(id = project.owner.id, projects = emptyList()) 
     }
 
-    @DgsData(parentType = DgsConstants.PROJECT.TYPE_NAME, field = DgsConstants.PROJECT.Teams)
+    @DgsData(parentType = DgsConstants.PROJECT.TYPE_NAME)
     fun teams(
         dfe: DgsDataFetchingEnvironment,
         @InputArgument(DgsConstants.PROJECT.TEAMS_INPUT_ARGUMENT.Input) input: PaginationInput?,
@@ -51,7 +53,7 @@ class ProjectDataFetcher(
         }
     }
 
-    @DgsData(parentType = DgsConstants.PROJECT.TYPE_NAME, field = DgsConstants.PROJECT.Members)
+    @DgsData(parentType = DgsConstants.PROJECT.TYPE_NAME)
     fun members(
         dfe: DgsDataFetchingEnvironment,
         @InputArgument(DgsConstants.PROJECT.MEMBERS_INPUT_ARGUMENT.Input) input: PaginationInput?,
@@ -75,7 +77,7 @@ class ProjectDataFetcher(
         }
     }
 
-    @DgsData(parentType = DgsConstants.PROJECT.TYPE_NAME, field = DgsConstants.PROJECT.Tasks)
+    @DgsData(parentType = DgsConstants.PROJECT.TYPE_NAME)
     fun tasks(
         dfe: DgsDataFetchingEnvironment,
         @InputArgument(DgsConstants.PROJECT.TASKS_INPUT_ARGUMENT.Input) input: PaginationInput?,
@@ -87,8 +89,8 @@ class ProjectDataFetcher(
 
         return taskService.getTasks(
             project.id, 
-            userId, 
-            dev.kuku.taskinator.domains.task.GetTasksFilterParam(
+            userId,
+            GetTasksFilterParam(
                 isUnassigned = true,
                 limit = limit,
                 offset = offset
@@ -106,7 +108,7 @@ class ProjectDataFetcher(
                 status = it.status,
                 lexoRank = it.lexoRank,
                 version = it.version.toInt(),
-                createdAt = "" // Placeholder for now
+                createdAt = it.createdAt.toString() //TODO consistency UTC second
             )
         }
     }

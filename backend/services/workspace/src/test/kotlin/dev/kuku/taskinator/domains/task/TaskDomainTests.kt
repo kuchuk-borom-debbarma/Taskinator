@@ -9,7 +9,6 @@ import dev.kuku.taskinator.domains.team.internal.ProjectTeamClosure
 import dev.kuku.taskinator.domains.team.internal.ProjectTeamMembers
 import dev.kuku.taskinator.domains.team.internal.ProjectTeams
 import dev.kuku.taskinator.domains.task.internal.ProjectTasksTable
-import org.jetbrains.exposed.v1.core.*
 import org.jetbrains.exposed.v1.jdbc.*
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test

@@ -5,11 +5,16 @@ import com.netflix.graphql.dgs.DgsComponent
 import com.netflix.graphql.dgs.DgsData
 import com.netflix.graphql.dgs.InputArgument
 import dev.kuku.taskinator.domains.project.ProjectEvent
+import dev.kuku.taskinator.domains.project.ProjectService
 import dev.kuku.taskinator.generated.DgsConstants
 import dev.kuku.taskinator.generated.types.*
+import kotlinx.datetime.UtcOffset
 import org.springframework.kafka.core.KafkaTemplate
 import org.springframework.web.bind.annotation.RequestHeader
 import java.time.Instant
+import java.time.OffsetDateTime
+import java.time.OffsetTime
+import java.time.ZoneOffset
 
 /**
  * ProjectMutationFetcher implements the "Ingest" phase for Project mutations.
@@ -19,50 +24,49 @@ import java.time.Instant
  */
 @DgsComponent
 class ProjectMutationFetcher(
-    private val kafkaTemplate: KafkaTemplate<String, Any>
+    private val kafkaTemplate: KafkaTemplate<String, Any>,
+    private val projectService: ProjectService
 ) {
 
-    @DgsData(parentType = DgsConstants.PROJECTMUTATION.TYPE_NAME, field = DgsConstants.PROJECTMUTATION.CreateProject)
+    @DgsData(parentType = DgsConstants.PROJECTMUTATION.TYPE_NAME)
     fun createProject(
         @InputArgument("input") input: CreateProjectInput,
         @RequestHeader("X-User-Id") userId: String
     ): CreateProjectResponse {
-        
         /**
-         * 1. ID-FIRST ARCHITECTURE
-         * We generate the Project ID immediately. This allows the client 
-         * to start creating teams and tasks for this project without 
-         * waiting for the database confirmation.
+         * 1. Create the project synchronously as projects are not created often
+         * 2. Fire an event to kafka.
+         * 3. [Yet to define consumers]
          */
-        val projectId = UuidCreator.getTimeOrderedWithRandom().toString()
-        val idempotencyKey = UuidCreator.getTimeOrderedWithRandom().toString()
+        /**
+         * 1. Create the project synchronously as projects are not created often
+         * 2. Fire an event to kafka.
+         * 3. [Yet to define consumers]
+         */
+        val createdProject = projectService.createProject(userId, input.name, input.description)
+            ?: throw RuntimeException("Failed to create project!")
 
-        // 2. CONSTRUCT EVENT (The Intent)
+        val idempotencyKey = UuidCreator.getTimeOrderedWithRandom().toString()
         val event = ProjectEvent.ProjectCreated(
-            projectId = projectId,
+            projectId = createdProject.id,
+            timestamp = OffsetDateTime.now(ZoneOffset.UTC).toInstant(), //TODO util function
             userId = userId,
             name = input.name,
             description = input.description ?: "",
             idempotencyKey = idempotencyKey
         )
-
-        /**
-         * 3. UNIFIED ENTITY STREAM
-         * We push to the 'workspace-activity' topic and use 'projectId' 
-         * as the Kafka partition key to ensure causal ordering.
-         */
-        kafkaTemplate.send("workspace-activity", projectId, event)
+        kafkaTemplate.send("workspace-activity", createdProject.id, event)
 
         // 4. RETURN "ACCEPTED" (HTTP 202 Flow)
         return CreateProjectResponse(
             success = true,
-            message = "Project creation queued",
+            message = "Project created successfully",
             response = Project(
-                id = projectId,
+                id = createdProject.id,
                 name = input.name,
                 owner = User(id = userId, projects = emptyList()),
                 description = input.description,
-                createdAt = Instant.now().toString(),
+                createdAt = createdProject.createdAt.toString(),
                 teams = emptyList(),
                 members = emptyList(),
                 tasks = emptyList()
@@ -70,7 +74,7 @@ class ProjectMutationFetcher(
         )
     }
 
-    @DgsData(parentType = DgsConstants.PROJECTMUTATION.TYPE_NAME, field = DgsConstants.PROJECTMUTATION.RenameProject)
+    @DgsData(parentType = DgsConstants.PROJECTMUTATION.TYPE_NAME)
     fun renameProject(
         @InputArgument("input") input: RenameProjectInput,
         @RequestHeader("X-User-Id") userId: String
@@ -82,13 +86,13 @@ class ProjectMutationFetcher(
             description = input.description,
             version = input.version.toLong()
         )
-        
+
         kafkaTemplate.send("workspace-activity", input.projectId, event)
-        
+
         return GenericResponse(success = true, message = "Project rename queued")
     }
 
-    @DgsData(parentType = DgsConstants.PROJECTMUTATION.TYPE_NAME, field = DgsConstants.PROJECTMUTATION.DeleteProject)
+    @DgsData(parentType = DgsConstants.PROJECTMUTATION.TYPE_NAME)
     fun deleteProject(
         @InputArgument("input") input: DeleteProjectInput,
         @RequestHeader("X-User-Id") userId: String
@@ -98,13 +102,13 @@ class ProjectMutationFetcher(
             userId = userId,
             version = input.version.toLong()
         )
-        
+
         kafkaTemplate.send("workspace-activity", input.projectId, event)
-        
+
         return GenericResponse(success = true, message = "Project deletion queued")
     }
 
-    @DgsData(parentType = DgsConstants.PROJECTMUTATION.TYPE_NAME, field = DgsConstants.PROJECTMUTATION.AddProjectMembers)
+    @DgsData(parentType = DgsConstants.PROJECTMUTATION.TYPE_NAME)
     fun addProjectMembers(
         @InputArgument("input") input: AddProjectMembersInput,
         @RequestHeader("X-User-Id") userId: String
@@ -114,13 +118,13 @@ class ProjectMutationFetcher(
             userId = userId,
             memberIds = input.memberIds
         )
-        
+
         kafkaTemplate.send("workspace-activity", input.projectId, event)
-        
+
         return GenericResponse(success = true, message = "Member addition queued")
     }
 
-    @DgsData(parentType = DgsConstants.PROJECTMUTATION.TYPE_NAME, field = DgsConstants.PROJECTMUTATION.RemoveProjectMembers)
+    @DgsData(parentType = DgsConstants.PROJECTMUTATION.TYPE_NAME)
     fun removeProjectMembers(
         @InputArgument("input") input: RemoveProjectMembersInput,
         @RequestHeader("X-User-Id") userId: String
@@ -130,9 +134,9 @@ class ProjectMutationFetcher(
             userId = userId,
             memberIds = input.memberIds
         )
-        
+
         kafkaTemplate.send("workspace-activity", input.projectId, event)
-        
+
         return GenericResponse(success = true, message = "Member removal queued")
     }
 }

@@ -1,9 +1,11 @@
 package dev.kuku.taskinator.domains.project.internal
 
+import com.github.f4b6a3.uuid.UuidCreator
 import dev.kuku.taskinator.domains.project.*
 import io.github.oshai.kotlinlogging.KotlinLogging
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import java.util.UUID
 
 private val log = KotlinLogging.logger {}
 
@@ -25,12 +27,22 @@ class ProjectServiceImpl(private val projectRepo: ProjectQueries) : ProjectServi
      */
     private val MAX_LIMIT = 100
 
-    override fun createProject(userId: String, projectName: String, projectDescription: String, projectId: String?): ProjectInfo? {
+    override fun createProject(
+        userId: String,
+        projectName: String,
+        projectDescription: String?,
+        projectId: String?
+    ): ProjectInfo? {
         log.info { "Creating Project $projectName for user $userId" }
         try {
-            val finalId = projectId ?: com.github.f4b6a3.uuid.UuidCreator.getTimeOrderedWithRandom().toString()
-            // Manual calls get a random key
-            return projectRepo.insertProject(finalId, projectName, userId, projectDescription, java.util.UUID.randomUUID().toString())
+            val finalId = projectId ?: UuidCreator.getTimeOrderedWithRandom().toString()
+            return projectRepo.insertProject(
+                finalId,
+                projectName,
+                userId,
+                projectDescription,
+                UUID.randomUUID().toString()
+            )
         } catch (e: ProjectNameConflictException) {
             log.warn { "Creation failed: duplicate name" }
             throw e
@@ -47,6 +59,7 @@ class ProjectServiceImpl(private val projectRepo: ProjectQueries) : ProjectServi
             when (e) {
                 is ProjectConcurrencyException,
                 is ProjectNameConflictException -> throw e
+
                 else -> throw e
             }
         }
@@ -61,7 +74,7 @@ class ProjectServiceImpl(private val projectRepo: ProjectQueries) : ProjectServi
         try {
             // The repository handles ownership validation and batching in 1 call.
             projectRepo.insertProjectMembers(projectId, userId, memberIds)
-            
+
             // ASYNC: Move stat updates (members_count) out of the critical request path.
             log.info { "TODO: Fire PROJECT_MEMBERS_ADDED event" }
         } catch (e: Exception) {
@@ -89,14 +102,14 @@ class ProjectServiceImpl(private val projectRepo: ProjectQueries) : ProjectServi
     override fun deleteProject(projectId: String, userId: String, version: Long): Boolean {
         //Simple delete operation, no need for optimistic locking if we do nothing if failed to delete
         val deletedRows = projectRepo.deleteProject(projectId, userId, version)
-        
+
         if (deletedRows == 0) {
             throw ProjectConcurrencyException("Delete failed: version mismatch.")
         }
-        
+
         // CASCADE DELETION: The event-listener will clean up associated data.
         log.info { "TODO: Fire PROJECT_DELETED event for background cleanup" }
-        
+
         return true
     }
 

@@ -2,6 +2,8 @@ package dev.kuku.taskinator.controllers
 
 import com.netflix.graphql.dgs.DgsComponent
 import com.netflix.graphql.dgs.DgsData
+import com.netflix.graphql.dgs.DgsMutation
+import com.netflix.graphql.dgs.DgsQuery
 import com.netflix.graphql.dgs.InputArgument
 import dev.kuku.taskinator.domains.project.ProjectService
 import dev.kuku.taskinator.domains.team.TeamService
@@ -18,7 +20,7 @@ class RootDataFetcher(
     private val teamService: TeamService
 ) {
 
-    @DgsData(parentType = DgsConstants.QUERY_TYPE, field = DgsConstants.QUERY.Project)
+    @DgsQuery
     fun getProject(
         @InputArgument(DgsConstants.QUERY.PROJECT_INPUT_ARGUMENT.Input) input: ProjectInput,
         @RequestHeader("X-User-Id") userId: String
@@ -38,7 +40,7 @@ class RootDataFetcher(
         }
     }
 
-    @DgsData(parentType = DgsConstants.QUERY_TYPE, field = DgsConstants.QUERY.Team)
+    @DgsQuery
     fun getTeam(
         @InputArgument(DgsConstants.QUERY.TEAM_INPUT_ARGUMENT.Input) input: TeamInput,
         @RequestHeader("X-User-Id") userId: String
@@ -56,7 +58,7 @@ class RootDataFetcher(
         }
     }
 
-    @DgsData(parentType = DgsConstants.Mutation_TYPE, field = DgsConstants.MUTATION.Project)
+    @DgsMutation
     fun projectMutation(): ProjectMutation {
         return ProjectMutation(
             createProject = CreateProjectResponse(false),
@@ -67,7 +69,7 @@ class RootDataFetcher(
         )
     }
 
-    @DgsData(parentType = DgsConstants.Mutation_TYPE, field = DgsConstants.MUTATION.Team)
+    @DgsMutation
     fun teamMutation(): TeamMutation {
         return TeamMutation(
             createTeam = CreateTeamResponse(false),
@@ -78,7 +80,7 @@ class RootDataFetcher(
         )
     }
 
-    @DgsData(parentType = DgsConstants.Mutation_TYPE, field = DgsConstants.MUTATION.Task)
+    @DgsMutation
     fun taskMutation(): TaskMutation {
         return TaskMutation(
             createTask = CreateTaskResponse(false),

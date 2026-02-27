@@ -33,7 +33,7 @@ class TaskMutationFetcher(
      * createTask handles the initial ingest of a new task.
      * It follows "Exactly-Once" semantics by generating IDs before the message is sent.
      */
-    @DgsData(parentType = DgsConstants.TASKMUTATION.TYPE_NAME, field = DgsConstants.TASKMUTATION.CreateTask)
+    @DgsData(parentType = DgsConstants.TASKMUTATION.TYPE_NAME)
     fun createTask(
         @InputArgument("input") input: CreateTaskInput,
         @RequestHeader("X-User-Id") userId: String
@@ -101,7 +101,7 @@ class TaskMutationFetcher(
     /**
      * updateTaskStatus handles asynchronous status updates.
      */
-    @DgsData(parentType = DgsConstants.TASKMUTATION.TYPE_NAME, field = DgsConstants.TASKMUTATION.UpdateTaskStatus)
+    @DgsData(parentType = DgsConstants.TASKMUTATION.TYPE_NAME)
     fun updateTaskStatus(
         @InputArgument("input") input: UpdateTaskStatusInput,
         @RequestHeader("X-User-Id") userId: String
@@ -123,7 +123,7 @@ class TaskMutationFetcher(
     /**
      * deleteTask handles asynchronous task deletion.
      */
-    @DgsData(parentType = DgsConstants.TASKMUTATION.TYPE_NAME, field = DgsConstants.TASKMUTATION.DeleteTask)
+    @DgsData(parentType = DgsConstants.TASKMUTATION.TYPE_NAME)
     fun deleteTask(
         @InputArgument("input") input: DeleteTaskInput,
         @RequestHeader("X-User-Id") userId: String
