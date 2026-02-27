@@ -5,6 +5,7 @@ import com.netflix.graphql.dgs.DgsComponent
 import com.netflix.graphql.dgs.DgsData
 import com.netflix.graphql.dgs.InputArgument
 import dev.kuku.taskinator.domains.team.TeamEvent
+import dev.kuku.taskinator.domains.team.TeamService
 import dev.kuku.taskinator.generated.DgsConstants
 import dev.kuku.taskinator.generated.types.*
 import org.springframework.kafka.core.KafkaTemplate
@@ -19,7 +20,8 @@ import java.time.Instant
  */
 @DgsComponent
 class TeamMutationFetcher(
-    private val kafkaTemplate: KafkaTemplate<String, Any>
+    private val kafkaTemplate: KafkaTemplate<String, Any>,
+    private val teamService: TeamService
 ) {
 
     @DgsData(parentType = DgsConstants.TEAMMUTATION.TYPE_NAME)
@@ -35,7 +37,16 @@ class TeamMutationFetcher(
         val teamId = UuidCreator.getTimeOrderedWithRandom().toString()
         val idempotencyKey = UuidCreator.getTimeOrderedWithRandom().toString()
 
-        // 2. CONSTRUCT TEAM EVENT
+        // 2. CREATE TEAM SYNCHRONOUSLY
+        val createdTeam = teamService.createTeam(
+            projectId = input.projectId,
+            userId = userId,
+            teamName = input.name,
+            parentTeamId = input.parentTeamId,
+            teamId = teamId
+        ) ?: throw RuntimeException("Failed to create team!")
+
+        // 3. CONSTRUCT TEAM EVENT for background tasks (hierarchy computation)
         val event = TeamEvent.TeamCreated(
             projectId = input.projectId,
             userId = userId,
@@ -45,19 +56,19 @@ class TeamMutationFetcher(
             idempotencyKey = idempotencyKey
         )
 
-        // 3. PRODUCE TO UNIFIED STREAM (Partitioned by Project)
+        // 4. PRODUCE TO UNIFIED STREAM (Partitioned by Project)
         kafkaTemplate.send("workspace-activity", input.projectId, event)
 
-        // 4. RETURN ACCEPTED
+        // 5. RETURN CREATED
         return CreateTeamResponse(
             success = true,
-            message = "Team creation queued",
+            message = "Team created successfully",
             response = Team(
                 id = teamId,
                 name = input.name,
                 projectId = input.projectId,
                 parentTeamId = input.parentTeamId,
-                createdAt = Instant.now().toString(),
+                createdAt = createdTeam.createdAt.toString(),
                 members = emptyList(),
                 tasks = emptyList()
             )
@@ -69,6 +80,17 @@ class TeamMutationFetcher(
         @InputArgument("input") input: UpdateTeamInput,
         @RequestHeader("X-User-Id") userId: String
     ): GenericResponse {
+        teamService.updateTeam(
+            projectId = input.projectId,
+            userId = userId,
+            teamId = input.teamId,
+            toUpdate = dev.kuku.taskinator.domains.team.UpdateTeamFields(
+                version = input.version.toLong(),
+                teamName = input.name,
+                parentTeamId = input.parentTeamId
+            )
+        )
+
         val event = TeamEvent.TeamRenamed(
             projectId = input.projectId,
             userId = userId,
@@ -79,7 +101,7 @@ class TeamMutationFetcher(
         
         kafkaTemplate.send("workspace-activity", input.projectId, event)
         
-        return GenericResponse(success = true, message = "Team update queued")
+        return GenericResponse(success = true, message = "Team updated successfully")
     }
 
     @DgsData(parentType = DgsConstants.TEAMMUTATION.TYPE_NAME)
@@ -87,6 +109,8 @@ class TeamMutationFetcher(
         @InputArgument("input") input: DeleteTeamInput,
         @RequestHeader("X-User-Id") userId: String
     ): GenericResponse {
+        teamService.deleteTeam(input.projectId, userId, input.teamId, input.version.toLong())
+
         val event = TeamEvent.TeamDeleted(
             projectId = input.projectId,
             userId = userId,
@@ -96,7 +120,7 @@ class TeamMutationFetcher(
         
         kafkaTemplate.send("workspace-activity", input.projectId, event)
         
-        return GenericResponse(success = true, message = "Team deletion queued")
+        return GenericResponse(success = true, message = "Team deleted successfully")
     }
 
     @DgsData(parentType = DgsConstants.TEAMMUTATION.TYPE_NAME)
@@ -104,6 +128,8 @@ class TeamMutationFetcher(
         @InputArgument("input") input: AddTeamMembersInput,
         @RequestHeader("X-User-Id") userId: String
     ): GenericResponse {
+        teamService.addTeamMembers(input.projectId, userId, input.teamId, input.memberIds)
+
         val event = TeamEvent.TeamMembersAdded(
             projectId = input.projectId,
             userId = userId,
@@ -113,7 +139,7 @@ class TeamMutationFetcher(
         
         kafkaTemplate.send("workspace-activity", input.projectId, event)
         
-        return GenericResponse(success = true, message = "Member addition queued")
+        return GenericResponse(success = true, message = "Members added successfully")
     }
 
     @DgsData(parentType = DgsConstants.TEAMMUTATION.TYPE_NAME)
@@ -121,6 +147,8 @@ class TeamMutationFetcher(
         @InputArgument("input") input: RemoveTeamMembersInput,
         @RequestHeader("X-User-Id") userId: String
     ): GenericResponse {
+        teamService.removeTeamMembers(input.projectId, userId, input.teamId, input.memberIds)
+
         val event = TeamEvent.TeamMembersRemoved(
             projectId = input.projectId,
             userId = userId,
@@ -130,6 +158,6 @@ class TeamMutationFetcher(
         
         kafkaTemplate.send("workspace-activity", input.projectId, event)
         
-        return GenericResponse(success = true, message = "Member removal queued")
+        return GenericResponse(success = true, message = "Members removed successfully")
     }
 }
