@@ -21,40 +21,35 @@ import java.time.Instant
  */
 @DgsComponent
 class TaskMutationFetcher(
-    /**
-     * KafkaTemplate is the core Spring utility for sending messages to Kafka.
-     * We use String for the Key (ProjectId) to ensure all events for one project land in the same partition.
-     * We use Any for the Value, which will be serialized to JSON by our configured JsonSerializer.
-     */
-    private val kafkaTemplate: KafkaTemplate<String, Any>
+    private val kafkaTemplate: KafkaTemplate<String, Any>,
+    private val taskService: TaskService
 ) {
 
-    /**
-     * createTask handles the initial ingest of a new task.
-     * It follows "Exactly-Once" semantics by generating IDs before the message is sent.
-     */
     @DgsData(parentType = DgsConstants.TASKMUTATION.TYPE_NAME)
     fun createTask(
         @InputArgument("input") input: CreateTaskInput,
         @RequestHeader("X-User-Id") userId: String
     ): CreateTaskResponse {
         
-        // 1. GENERATE THE TASK ID (ID-First Architecture)
-        // We generate a UUID v7 (time-ordered) using the uuid-creator library.
-        // This allows the API to return the final ID to the client immediately, 
-        // even though the record hasn't hit the database yet.
         val taskId = UuidCreator.getTimeOrderedWithRandom().toString()
-
-        // 2. GENERATE THE IDEMPOTENCY KEY
-        // This is a unique fingerprint for this specific REQUEST.
-        // If the worker receives the same event twice (e.g., due to a network retry),
-        // it will use this key to avoid creating duplicate rows in the DB.
         val idempotencyKey = UuidCreator.getTimeOrderedWithRandom().toString()
 
-        // 3. CONSTRUCT THE EVENT
-        // We map the GraphQL input into our internal TaskEvent schema.
+        // 1. CREATE TASK SYNCHRONOUSLY
+        val createdTask = taskService.createTask(
+            userId = userId,
+            toCreate = dev.kuku.taskinator.domains.task.TaskToCreateParam(
+                title = input.title,
+                description = input.description,
+                projectId = input.projectId,
+                parentTaskId = input.parentTaskId,
+                assignedTeam = input.assignedTeamId,
+                assignedMember = input.assignedMemberId
+            )
+        ) ?: throw RuntimeException("Failed to create task!")
+
+        // 2. CONSTRUCT THE EVENT for background processing (notifications, indexing)
         val event = TaskEvent.TaskCreated(
-            taskId = taskId,
+            taskId = createdTask.id,
             projectId = input.projectId,
             userId = userId,
             title = input.title,
@@ -65,47 +60,72 @@ class TaskMutationFetcher(
             idempotencyKey = idempotencyKey
         )
 
-        /**
-         * 4. PRODUCE TO KAFKA
-         * TOPIC: "workspace-activity" (Unified Entity Stream)
-         * KEY: input.projectId (Guarantees ordering for all events within a project)
-         * VALUE: event (Serialized to JSON)
-         */
+        // 3. PRODUCE TO KAFKA
         kafkaTemplate.send("workspace-activity", input.projectId, event)
 
-        /**
-         * 5. RETURN "ACCEPTED" RESPONSE
-         * We return a success=true status and the generated taskId.
-         * The status is set to "PENDING" because the task is currently in the Kafka buffer.
-         * Fields like 'path' and 'lexoRank' are returned empty as they are calculated by the worker.
-         */
+        // 4. RETURN CREATED
         return CreateTaskResponse(
             success = true,
-            message = "Task creation queued",
+            message = "Task created successfully",
             response = Task(
-                id = taskId,
-                projectId = input.projectId,
-                parentTaskId = input.parentTaskId,
-                createdBy = userId,
-                title = input.title,
-                description = input.description,
-                status = "PENDING",
-                version = 0,
-                path = "", 
-                lexoRank = "", 
-                createdAt = Instant.now().toString()
+                id = createdTask.id,
+                projectId = createdTask.projectId,
+                parentTaskId = createdTask.parentTaskId,
+                createdBy = createdTask.createdBy,
+                title = createdTask.title,
+                description = createdTask.description,
+                status = createdTask.status,
+                version = createdTask.version.toInt(),
+                path = createdTask.path, 
+                lexoRank = createdTask.lexoRank, 
+                createdAt = createdTask.createdAt.toString()
             )
         )
     }
 
-    /**
-     * updateTaskStatus handles asynchronous status updates.
-     */
+    @DgsData(parentType = DgsConstants.TASKMUTATION.TYPE_NAME)
+    fun assignTask(
+        @InputArgument("input") input: AssignTaskInput,
+        @RequestHeader("X-User-Id") userId: String
+    ): GenericResponse {
+        taskService.assignTask(
+            projectId = input.projectId,
+            userId = userId,
+            taskId = input.taskId,
+            version = input.version.toLong(),
+            assignTo = dev.kuku.taskinator.domains.task.AssignTaskParam(
+                teamId = input.teamId,
+                teamMemberId = input.teamMemberId
+            )
+        )
+
+        val event = TaskEvent.TaskAssigned(
+            projectId = input.projectId,
+            taskId = input.taskId,
+            userId = userId,
+            teamId = input.teamId,
+            teamMemberId = input.teamMemberId,
+            version = input.version.toLong()
+        )
+
+        kafkaTemplate.send("workspace-activity", input.projectId, event)
+
+        return GenericResponse(success = true, message = "Task assigned successfully")
+    }
+
     @DgsData(parentType = DgsConstants.TASKMUTATION.TYPE_NAME)
     fun updateTaskStatus(
         @InputArgument("input") input: UpdateTaskStatusInput,
         @RequestHeader("X-User-Id") userId: String
     ): GenericResponse {
+        taskService.updateTaskStatus(
+            projectId = input.projectId,
+            userId = userId,
+            taskId = input.taskId,
+            version = input.version.toLong(),
+            status = input.status
+        )
+
         val event = TaskEvent.TaskStatusUpdated(
             projectId = input.projectId,
             taskId = input.taskId,
@@ -114,20 +134,23 @@ class TaskMutationFetcher(
             version = input.version.toLong()
         )
         
-        // Push to Kafka for background processing
         kafkaTemplate.send("workspace-activity", input.projectId, event)
         
-        return GenericResponse(success = true, message = "Status update queued")
+        return GenericResponse(success = true, message = "Status updated successfully")
     }
 
-    /**
-     * deleteTask handles asynchronous task deletion.
-     */
     @DgsData(parentType = DgsConstants.TASKMUTATION.TYPE_NAME)
     fun deleteTask(
         @InputArgument("input") input: DeleteTaskInput,
         @RequestHeader("X-User-Id") userId: String
     ): GenericResponse {
+        taskService.deleteTask(
+            projectId = input.projectId,
+            userId = userId,
+            taskId = input.taskId,
+            version = input.version.toLong()
+        )
+
         val event = TaskEvent.TaskDeleted(
             projectId = input.projectId,
             taskId = input.taskId,
@@ -135,9 +158,9 @@ class TaskMutationFetcher(
             version = input.version.toLong()
         )
         
-        // The worker will handle deleting sub-tasks recursively
         kafkaTemplate.send("workspace-activity", input.projectId, event)
         
-        return GenericResponse(success = true, message = "Delete request queued")
+        return GenericResponse(success = true, message = "Task deleted successfully")
     }
+}
 }
