@@ -54,6 +54,7 @@ sealed class TaskEvent {
         override val timestamp: Instant = Instant.now(),
         val taskId: String,
         val userId: String,
+        val path: String, // CAPTURED SCOPE: Used for chunky delete of sub-tasks
         val version: Long
     ) : TaskEvent()
 }

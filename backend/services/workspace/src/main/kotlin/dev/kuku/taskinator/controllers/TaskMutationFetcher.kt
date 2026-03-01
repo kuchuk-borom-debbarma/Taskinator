@@ -145,6 +145,9 @@ class TaskMutationFetcher(
         @InputArgument("input") input: DeleteTaskInput,
         @RequestHeader("X-User-Id") userId: String
     ): GenericResponse {
+        val task = taskService.getTaskById(input.projectId, userId, input.taskId)
+            ?: throw RuntimeException("Task not found")
+
         taskService.deleteTask(
             projectId = input.projectId,
             userId = userId,
@@ -156,6 +159,7 @@ class TaskMutationFetcher(
             projectId = input.projectId,
             taskId = input.taskId,
             userId = userId,
+            path = task.path,
             version = input.version.toLong()
         )
         

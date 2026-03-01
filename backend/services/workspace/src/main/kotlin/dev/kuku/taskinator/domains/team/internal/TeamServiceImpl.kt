@@ -74,20 +74,21 @@ class TeamServiceImpl(private val teamRepo: TeamQueries) : TeamService {
         /**
          * SECURE DELETE:
          * - Uses [version] to ensure user is deleting the correct state.
-         * - Hierarchy cleanup happens synchronously in the repository to maintain integrity.
+         * - Captures descendant IDs via closure table BEFORE deleting the root team.
          */
-        override fun deleteTeam(projectId: String, userId: String, teamId: String, version: Long): Boolean {
+        override fun deleteTeam(projectId: String, userId: String, teamId: String, version: Long): List<String> {
             log.info { "Deleting team $teamId with version $version" }
+            
+            // CAPTURE SCOPE: Get descendants before they are unlinked
+            val descendantIds = teamRepo.getDescendantTeamIds(projectId, teamId)
+            
             val deletedRows = teamRepo.deleteTeam(projectId, teamId, version)
             
             if (deletedRows == 0) {
                 throw TeamConcurrencyException("Delete failed: version mismatch.")
             }
             
-            // Background cleanup of members and sub-tasks
-            log.info { "TODO: Fire TEAM_DELETED event" }
-            
-            return true
+            return descendantIds
         }
     
         override fun getTeamsByProject(projectId: String, userId: String, limit: Int, offset: Int): List<ProjectTeam> {

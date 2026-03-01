@@ -148,8 +148,8 @@ class TeamDomainTests @Autowired constructor(
         teamService.createTeam(projectId, ownerId, "To Delete", null)
         val teamId = teamService.getTeamsByProject(projectId, ownerId, 1, 0)[0].id
         
-        val deleted = teamService.deleteTeam(projectId, ownerId, teamId, 0)
-        assertTrue(deleted)
+        val descendants = teamService.deleteTeam(projectId, ownerId, teamId, 0)
+        assertTrue(descendants.isEmpty())
         
         val teams = teamService.getTeamsByProject(projectId, ownerId, 10, 0)
         assertTrue(teams.none { it.id == teamId })

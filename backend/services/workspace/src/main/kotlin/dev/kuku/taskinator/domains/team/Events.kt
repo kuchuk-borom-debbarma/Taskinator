@@ -35,6 +35,7 @@ sealed class TeamEvent {
         override val timestamp: Instant = Instant.now(),
         val userId: String,
         val teamId: String,
+        val descendantTeamIds: List<String>, // CAPTURED SCOPE: Used for chunky delete of sub-teams
         val version: Long
     ) : TeamEvent()
 

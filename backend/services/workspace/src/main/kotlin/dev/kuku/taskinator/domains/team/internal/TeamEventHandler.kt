@@ -11,8 +11,8 @@ private val log = KotlinLogging.logger {}
 /**
  * TeamEventHandler is the background worker (Consumer) for the Team domain.
  * 
- * It manages the asynchronous lifecycle of teams, including hierarchy 
- * persistence and member management.
+ * Handles the Universal Cascade logic for Team deletions, Sub-tree deletions, 
+ * and Member cleanups.
  */
 @Component
 class TeamEventHandler(
@@ -24,27 +24,33 @@ class TeamEventHandler(
     private val TOPIC = "workspace-activity"
     private val DELETE_BATCH_SIZE = 1000
 
-    /**
-     * Routes incoming TeamEvents to the correct persistence logic.
-     */
     fun handle(event: TeamEvent) {
         try {
             when (event) {
-                is TeamEvent.TeamCreated -> {
-                    log.info { "TeamConsumer: Processing background hierarchy for TeamCreated: ${event.teamId}" }
-                }
-                is TeamEvent.TeamRenamed -> {
-                    log.info { "TeamConsumer: Processing background sync for TeamRenamed: ${event.teamId}" }
-                }
                 is TeamEvent.TeamDeleted -> {
-                    log.info { "TeamConsumer: Processing background cleanup for TeamDeleted: ${event.teamId}" }
+                    log.info { "TeamConsumer: Orchestrating cleanup fan-out for deleted team ${event.teamId}" }
+                    
+                    // Route to chunky sub-team deletion
+                    if (event.descendantTeamIds.isNotEmpty()) {
+                        kafkaTemplate.send(TOPIC, event.projectId, CleanupEvent.SubTeamsPurgeRequested(
+                            projectId = event.projectId,
+                            userId = event.userId,
+                            teamIds = event.descendantTeamIds
+                        ))
+                    }
+                    
+                    // Route to task domain to unassign tasks for the root team AND its descendants
+                    val allAffectedTeams = event.descendantTeamIds + event.teamId
+                    kafkaTemplate.send(TOPIC, event.projectId, CleanupEvent.TeamTasksUnassignRequested(
+                        projectId = event.projectId,
+                        userId = event.userId,
+                        teamIds = allAffectedTeams
+                    ))
                 }
-                is TeamEvent.TeamMembersAdded -> {
-                    log.info { "TeamConsumer: Processing background stats for TeamMembersAdded: ${event.teamId}" }
-                }
-                is TeamEvent.TeamMembersRemoved -> {
-                    log.info { "TeamConsumer: Processing background stats for TeamMembersRemoved: ${event.teamId}" }
-                }
+                is TeamEvent.TeamCreated -> log.info { "TeamConsumer: Processing TeamCreated: ${event.teamId}" }
+                is TeamEvent.TeamRenamed -> log.info { "TeamConsumer: Processing TeamRenamed: ${event.teamId}" }
+                is TeamEvent.TeamMembersAdded -> log.info { "TeamConsumer: Processing TeamMembersAdded" }
+                is TeamEvent.TeamMembersRemoved -> log.info { "TeamConsumer: Processing TeamMembersRemoved" }
             }
         } catch (e: Exception) {
             log.error(e) { "Error in TeamEventHandler for event: $event" }
@@ -52,28 +58,32 @@ class TeamEventHandler(
         }
     }
 
-    /**
-     * CHUNKY DELETE:
-     * Deletes teams and their associated closure tables/members in batches.
-     * Re-emits the event if the batch limit was reached, indicating 
-     * more teams may need cleanup.
-     */
-    fun handleCleanup(event: CleanupEvent.TeamsRequested) {
-        log.info { "TeamConsumer: Processing chunky cleanup for project ${event.projectId}" }
-        
-        try {
-            val deletedCount = teamRepo.deleteTeamsByProjectBatch(event.projectId, DELETE_BATCH_SIZE)
-            log.info { "TeamConsumer: Deleted $deletedCount teams (including members/closure) in this batch" }
+    // --- CASCADE HANDLERS ---
 
-            if (deletedCount >= DELETE_BATCH_SIZE) {
-                log.info { "TeamConsumer: More teams may exist, re-emitting CleanupEvent" }
-                kafkaTemplate.send(TOPIC, event.projectId, event)
-            } else {
-                log.info { "TeamConsumer: Completed team cleanup for project ${event.projectId}" }
-            }
-        } catch (e: Exception) {
-            log.error(e) { "TeamConsumer: Failed to process team cleanup for project ${event.projectId}" }
-            throw e
+    fun handleCleanup(event: CleanupEvent.ProjectTeamsPurgeRequested) {
+        log.info { "TeamConsumer: Processing FULL chunky cleanup for project ${event.projectId}" }
+        val deletedCount = teamRepo.deleteTeamsByProjectBatch(event.projectId, DELETE_BATCH_SIZE)
+        if (deletedCount >= DELETE_BATCH_SIZE) {
+            log.info { "TeamConsumer: More teams may exist, re-emitting ProjectTeamsPurgeRequested" }
+            kafkaTemplate.send(TOPIC, event.projectId, event)
+        }
+    }
+
+    fun handleSubTeamsPurge(event: CleanupEvent.SubTeamsPurgeRequested) {
+        log.info { "TeamConsumer: Processing SUB-TREE chunky cleanup for project ${event.projectId}" }
+        val deletedCount = teamRepo.deleteSpecificTeamsBatch(event.projectId, event.teamIds, DELETE_BATCH_SIZE)
+        if (deletedCount >= DELETE_BATCH_SIZE) {
+            log.info { "TeamConsumer: More sub-teams may exist, re-emitting SubTeamsPurgeRequested" }
+            kafkaTemplate.send(TOPIC, event.projectId, event)
+        }
+    }
+
+    fun handleMemberCleanup(event: CleanupEvent.MemberCleanupRequested) {
+        log.info { "TeamConsumer: Processing MEMBER chunky cleanup for project ${event.projectId}" }
+        val deletedCount = teamRepo.deleteTeamMembersForMembersBatch(event.projectId, event.memberIds, DELETE_BATCH_SIZE)
+        if (deletedCount >= DELETE_BATCH_SIZE) {
+            log.info { "TeamConsumer: More team memberships may exist, re-emitting MemberCleanupRequested" }
+            kafkaTemplate.send(TOPIC, event.projectId, event)
         }
     }
 }

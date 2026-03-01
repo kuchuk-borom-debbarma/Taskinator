@@ -274,22 +274,78 @@ class TaskQueriesExposed(private val jdbcTemplate: JdbcTemplate) : TaskQueries {
     }
 
     @OptIn(ExperimentalUuidApi::class)
-    override fun deleteTasksByProjectBatch(projectId: String, limit: Int): Int {
+    override fun deleteTasksByProjectBatch(projectId: String, parentPath: String?, limit: Int): Int {
         val projectUuid = Uuid.parse(projectId).toJavaUuid()
         
-        /**
-         * CHUNKY DELETE: Using a CTE with LIMIT to perform a fast, non-blocking delete.
-         * This targets the primary key (id) for maximum efficiency.
-         */
+        return if (parentPath == null) {
+            val sql = """
+                DELETE FROM project_tasks 
+                WHERE id IN (
+                    SELECT id FROM project_tasks 
+                    WHERE fk_project_id = ?::uuid 
+                    LIMIT ?
+                )
+            """.trimIndent()
+            jdbcTemplate.update(sql, projectUuid, limit)
+        } else {
+            val sql = """
+                DELETE FROM project_tasks 
+                WHERE id IN (
+                    SELECT id FROM project_tasks 
+                    WHERE fk_project_id = ?::uuid AND path LIKE ? 
+                    LIMIT ?
+                )
+            """.trimIndent()
+            // The path already includes the parent ID, so children will be "$parentPath/%"
+            jdbcTemplate.update(sql, projectUuid, "$parentPath/%", limit)
+        }
+    }
+
+    @OptIn(ExperimentalUuidApi::class)
+    override fun unassignTasksForMembersBatch(projectId: String, memberIds: List<String>, limit: Int): Int {
+        if (memberIds.isEmpty()) return 0
+        val projectUuid = Uuid.parse(projectId).toJavaUuid()
+        val memberUuids = memberIds.map { Uuid.parse(it).toJavaUuid() }.toTypedArray()
+        
         val sql = """
-            DELETE FROM project_tasks 
+            UPDATE project_tasks 
+            SET fk_assigned_team_member = NULL, updated_at = ?, version = version + 1
             WHERE id IN (
                 SELECT id FROM project_tasks 
-                WHERE fk_project_id = ?::uuid 
+                WHERE fk_project_id = ?::uuid AND fk_assigned_team_member = ANY(?)
                 LIMIT ?
             )
         """.trimIndent()
 
-        return jdbcTemplate.update(sql, projectUuid, limit)
+        return jdbcTemplate.update(sql) { ps ->
+            ps.setTimestamp(1, java.sql.Timestamp.valueOf(LocalDateTime.now(ZoneOffset.UTC)))
+            ps.setObject(2, projectUuid)
+            ps.setArray(3, ps.connection.createArrayOf("uuid", memberUuids))
+            ps.setInt(4, limit)
+        }
+    }
+
+    @OptIn(ExperimentalUuidApi::class)
+    override fun unassignTasksForTeamsBatch(projectId: String, teamIds: List<String>, limit: Int): Int {
+        if (teamIds.isEmpty()) return 0
+        val projectUuid = Uuid.parse(projectId).toJavaUuid()
+        val teamUuids = teamIds.map { Uuid.parse(it).toJavaUuid() }.toTypedArray()
+        
+        val sql = """
+            UPDATE project_tasks 
+            SET fk_assigned_team = NULL, fk_assigned_team_member = NULL, updated_at = ?, version = version + 1
+            WHERE id IN (
+                SELECT id FROM project_tasks 
+                WHERE fk_project_id = ?::uuid AND fk_assigned_team = ANY(?)
+                LIMIT ?
+            )
+        """.trimIndent()
+
+        return jdbcTemplate.update(sql) { ps ->
+            ps.setTimestamp(1, java.sql.Timestamp.valueOf(LocalDateTime.now(ZoneOffset.UTC)))
+            ps.setObject(2, projectUuid)
+            ps.setArray(3, ps.connection.createArrayOf("uuid", teamUuids))
+            ps.setInt(4, limit)
+        }
     }
 }

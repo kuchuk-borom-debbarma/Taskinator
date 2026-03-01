@@ -82,4 +82,19 @@ interface TeamQueries {
      * for a given project.
      */
     fun deleteTeamsByProjectBatch(projectId: String, limit: Int): Int
+
+    /**
+     * Fetches all descendant team IDs for a given team using the closure table.
+     */
+    fun getDescendantTeamIds(projectId: String, teamId: String): List<String>
+
+    /**
+     * Deletes a specific batch of teams, their members, and closure paths.
+     */
+    fun deleteSpecificTeamsBatch(projectId: String, teamIds: List<String>, limit: Int): Int
+
+    /**
+     * Removes specific project members from all teams they belong to.
+     */
+    fun deleteTeamMembersForMembersBatch(projectId: String, memberIds: List<String>, limit: Int): Int
 }

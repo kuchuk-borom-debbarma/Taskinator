@@ -44,13 +44,19 @@ class TaskServiceImpl(private val taskQueries: TaskQueries) : TaskService {
         // TODO: Fire TASK_STATUS_UPDATED event
     }
 
-    override fun deleteTask(projectId: String, userId: String, taskId: String, version: Long) {
+    override fun deleteTask(projectId: String, userId: String, taskId: String, version: Long): String {
         log.info { "Deleting task $taskId" }
+        
+        // CAPTURE SCOPE: Get path before deletion
+        val task = taskQueries.findTaskById(projectId, taskId) 
+            ?: throw IllegalArgumentException("Task not found.")
+            
         val deletedRows = taskQueries.deleteTask(projectId, userId, taskId, version)
         if (deletedRows == 0) {
             throw IllegalArgumentException("Delete failed. Task not found, unauthorized, or version mismatch.")
         }
-        // TODO: Fire TASK_DELETED event (for async subtask cleanup)
+        
+        return task.path
     }
 
     override fun getTaskById(projectId: String, userId: String, taskId: String): ProjectTask? {

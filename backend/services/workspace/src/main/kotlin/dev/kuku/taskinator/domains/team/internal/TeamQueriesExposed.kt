@@ -424,13 +424,6 @@ class TeamQueriesExposed(private val jdbcTemplate: JdbcTemplate) : TeamQueries {
     override fun deleteTeamsByProjectBatch(projectId: String, limit: Int): Int {
         val projectUuid = Uuid.parse(projectId).toJavaUuid()
 
-        /**
-         * CHUNKY TEAM DELETE:
-         * 1. Target a batch of team IDs.
-         * 2. Delete their members.
-         * 3. Delete their closure paths (both as ancestor and child).
-         * 4. Delete the teams themselves.
-         */
         val sql = """
             WITH target_teams AS (
                 SELECT id FROM project_teams 
@@ -451,5 +444,69 @@ class TeamQueriesExposed(private val jdbcTemplate: JdbcTemplate) : TeamQueries {
         """.trimIndent()
 
         return jdbcTemplate.update(sql, projectUuid, limit)
+    }
+
+    @OptIn(ExperimentalUuidApi::class)
+    override fun getDescendantTeamIds(projectId: String, teamId: String): List<String> {
+        val projectUuid = Uuid.parse(projectId)
+        val teamUuid = Uuid.parse(teamId)
+        
+        return ProjectTeamClosure.selectAll()
+            .where { (ProjectTeamClosure.projectId eq projectUuid) and (ProjectTeamClosure.teamId eq teamUuid) and (ProjectTeamClosure.childId neq teamUuid) }
+            .map { it[ProjectTeamClosure.childId].toString() }
+    }
+
+    @OptIn(ExperimentalUuidApi::class)
+    override fun deleteSpecificTeamsBatch(projectId: String, teamIds: List<String>, limit: Int): Int {
+        if (teamIds.isEmpty()) return 0
+        val projectUuid = Uuid.parse(projectId).toJavaUuid()
+        val teamUuids = teamIds.map { Uuid.parse(it).toJavaUuid() }.toTypedArray()
+
+        val sql = """
+            WITH target_teams AS (
+                SELECT id FROM project_teams 
+                WHERE fk_project_id = ?::uuid AND id = ANY(?) 
+                LIMIT ?
+            ),
+            deleted_members AS (
+                DELETE FROM project_team_members 
+                WHERE fk_team_id IN (SELECT id FROM target_teams)
+            ),
+            deleted_closure AS (
+                DELETE FROM project_team_closure 
+                WHERE fk_team_id IN (SELECT id FROM target_teams) 
+                OR fk_child_id IN (SELECT id FROM target_teams)
+            )
+            DELETE FROM project_teams 
+            WHERE id IN (SELECT id FROM target_teams)
+        """.trimIndent()
+
+        return jdbcTemplate.update(sql) { ps ->
+            ps.setObject(1, projectUuid)
+            ps.setArray(2, ps.connection.createArrayOf("uuid", teamUuids))
+            ps.setInt(3, limit)
+        }
+    }
+
+    @OptIn(ExperimentalUuidApi::class)
+    override fun deleteTeamMembersForMembersBatch(projectId: String, memberIds: List<String>, limit: Int): Int {
+        if (memberIds.isEmpty()) return 0
+        val projectUuid = Uuid.parse(projectId).toJavaUuid()
+        val memberUuids = memberIds.map { Uuid.parse(it).toJavaUuid() }.toTypedArray()
+
+        val sql = """
+            DELETE FROM project_team_members 
+            WHERE id IN (
+                SELECT id FROM project_team_members 
+                WHERE fk_project_id = ?::uuid AND fk_member_id = ANY(?) 
+                LIMIT ?
+            )
+        """.trimIndent()
+
+        return jdbcTemplate.update(sql) { ps ->
+            ps.setObject(1, projectUuid)
+            ps.setArray(2, ps.connection.createArrayOf("uuid", memberUuids))
+            ps.setInt(3, limit)
+        }
     }
 }

@@ -32,35 +32,30 @@ class ProjectEventHandler(
                 is ProjectEvent.ProjectDeleted -> {
                     log.info { "ProjectConsumer: Orchestrating cleanup fan-out for project ${event.projectId}" }
                     
-                    // 1. Core Metadata Cleanup (Memberships)
                     projectRepo.deleteProjectMembersByProject(event.projectId)
                     
-                    // 2. Fan-out: Trigger async cleanup for Teams and Tasks
-                    // We use the same partition key (projectId) to maintain causal order 
-                    // within the project's own stream.
-                    kafkaTemplate.send(TOPIC, event.projectId, CleanupEvent.TeamsRequested(
+                    kafkaTemplate.send(TOPIC, event.projectId, CleanupEvent.ProjectTeamsPurgeRequested(
                         projectId = event.projectId,
                         userId = event.userId
                     ))
                     
-                    kafkaTemplate.send(TOPIC, event.projectId, CleanupEvent.TasksRequested(
+                    kafkaTemplate.send(TOPIC, event.projectId, CleanupEvent.ProjectTasksPurgeRequested(
                         projectId = event.projectId,
                         userId = event.userId
                     ))
-
-                    log.info { "ProjectConsumer: Dispatched CleanupEvents for Teams and Tasks" }
                 }
                 is ProjectEvent.ProjectMembersAdded -> {
                     log.info { "ProjectConsumer: Processing ProjectMembersAdded: ${event.projectId}" }
                     projectService.addProjectMembers(event.projectId, event.userId, event.memberIds)
                 }
                 is ProjectEvent.ProjectMembersRemoved -> {
-                    log.info { "ProjectConsumer: Processing background cleanup for ProjectMembersRemoved: ${event.projectId}" }
-                    /**
-                     * TODO: CROSS-DOMAIN CLEANUP
-                     * 1. Remove these members from all Teams in this project.
-                     * 2. Unassign any Tasks assigned to these members in this project.
-                     */
+                    log.info { "ProjectConsumer: Orchestrating member cleanup for project ${event.projectId}" }
+                    
+                    kafkaTemplate.send(TOPIC, event.projectId, CleanupEvent.MemberCleanupRequested(
+                        projectId = event.projectId,
+                        userId = event.userId,
+                        memberIds = event.memberIds
+                    ))
                 }
                 else -> {
                     log.debug { "ProjectConsumer: Skipping background processing for event: ${event::class.simpleName}" }

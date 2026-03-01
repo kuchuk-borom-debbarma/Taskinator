@@ -43,8 +43,8 @@ interface TaskService {
     /// Update the status of a given task. Any team member can update the task if no member assigned, if member is assigned then only that person can.
     fun updateTaskStatus(projectId: String, userId: String, taskId: String, version: Long, status: String)
 
-    /// Delete a task. Sub tasks will have to be deleted in async manner too
-    fun deleteTask(projectId: String, userId: String, taskId: String, version: Long)
+    /// Delete a task. Returns the materialized path of the deleted task to enable async sub-task cleanup.
+    fun deleteTask(projectId: String, userId: String, taskId: String, version: Long): String
 
     /// get the task by Id as long as authorized
     fun getTaskById(projectId: String, userId: String, taskId: String): ProjectTask?

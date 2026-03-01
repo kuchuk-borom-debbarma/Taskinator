@@ -46,8 +46,18 @@ class WorkspaceConsumer(
                     is TaskEvent -> taskHandler.handle(event)
                     is CleanupEvent -> {
                         when (event) {
-                            is CleanupEvent.TeamsRequested -> teamHandler.handleCleanup(event)
-                            is CleanupEvent.TasksRequested -> taskHandler.handleCleanup(event)
+                            is CleanupEvent.ProjectTeamsPurgeRequested -> teamHandler.handleCleanup(event)
+                            is CleanupEvent.SubTeamsPurgeRequested -> teamHandler.handleSubTeamsPurge(event)
+                            
+                            is CleanupEvent.ProjectTasksPurgeRequested -> taskHandler.handleCleanup(event)
+                            is CleanupEvent.SubTasksPurgeRequested -> taskHandler.handleSubTasksPurge(event)
+                            is CleanupEvent.TeamTasksUnassignRequested -> taskHandler.handleTeamUnassign(event)
+                            
+                            // Member cleanup affects both domains
+                            is CleanupEvent.MemberCleanupRequested -> {
+                                teamHandler.handleMemberCleanup(event)
+                                taskHandler.handleMemberCleanup(event)
+                            }
                         }
                     }
                     else -> log.warn { "Unknown event type encountered in stream: ${event::class.simpleName}" }

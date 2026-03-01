@@ -25,7 +25,17 @@ interface TaskQueries {
 
     /**
      * Deletes a batch of tasks for a given project.
-     * Used for the "Chunky Delete" pattern to avoid massive DB locks.
+     * If [parentPath] is provided, it only deletes tasks within that specific sub-tree.
      */
-    fun deleteTasksByProjectBatch(projectId: String, limit: Int): Int
+    fun deleteTasksByProjectBatch(projectId: String, parentPath: String? = null, limit: Int): Int
+    
+    /**
+     * Unassigns tasks for a batch of deleted project members.
+     */
+    fun unassignTasksForMembersBatch(projectId: String, memberIds: List<String>, limit: Int): Int
+    
+    /**
+     * Unassigns tasks for a batch of deleted teams.
+     */
+    fun unassignTasksForTeamsBatch(projectId: String, teamIds: List<String>, limit: Int): Int
 }

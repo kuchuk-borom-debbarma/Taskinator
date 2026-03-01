@@ -109,12 +109,13 @@ class TeamMutationFetcher(
         @InputArgument("input") input: DeleteTeamInput,
         @RequestHeader("X-User-Id") userId: String
     ): GenericResponse {
-        teamService.deleteTeam(input.projectId, userId, input.teamId, input.version.toLong())
+        val descendantIds = teamService.deleteTeam(input.projectId, userId, input.teamId, input.version.toLong())
 
         val event = TeamEvent.TeamDeleted(
             projectId = input.projectId,
             userId = userId,
             teamId = input.teamId,
+            descendantTeamIds = descendantIds,
             version = input.version.toLong()
         )
         

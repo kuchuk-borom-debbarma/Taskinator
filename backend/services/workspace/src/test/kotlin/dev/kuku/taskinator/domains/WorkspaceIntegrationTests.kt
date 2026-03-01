@@ -52,6 +52,9 @@ class WorkspaceIntegrationTests @Autowired constructor(
 
     @BeforeEach
     fun setup() {
+        org.mockito.Mockito.`when`(kafkaTemplate.send(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any()))
+            .thenReturn(java.util.concurrent.CompletableFuture.completedFuture(null))
+
         transaction {
             SchemaUtils.drop(ProjectTasksTable, ProjectTeamMembers, ProjectTeamClosure, ProjectTeams, ProjectMembers, Projects)
             SchemaUtils.create(Projects, ProjectMembers, ProjectTeams, ProjectTeamMembers, ProjectTeamClosure, ProjectTasksTable)
@@ -94,22 +97,22 @@ class WorkspaceIntegrationTests @Autowired constructor(
         verify(kafkaTemplate).send(
             org.mockito.ArgumentMatchers.eq("workspace-activity"),
             org.mockito.ArgumentMatchers.eq(projectId),
-            org.mockito.ArgumentMatchers.isA(dev.kuku.taskinator.domains.CleanupEvent.TeamsRequested::class.java)
+            org.mockito.ArgumentMatchers.isA(dev.kuku.taskinator.domains.CleanupEvent.ProjectTeamsPurgeRequested::class.java)
         )
         verify(kafkaTemplate).send(
             org.mockito.ArgumentMatchers.eq("workspace-activity"),
             org.mockito.ArgumentMatchers.eq(projectId),
-            org.mockito.ArgumentMatchers.isA(dev.kuku.taskinator.domains.CleanupEvent.TasksRequested::class.java)
+            org.mockito.ArgumentMatchers.isA(dev.kuku.taskinator.domains.CleanupEvent.ProjectTasksPurgeRequested::class.java)
         )
 
         // AND: When the consumer processes the Cleanup events
-        val cleanupTeamsEvent = dev.kuku.taskinator.domains.CleanupEvent.TeamsRequested(
+        val cleanupTeamsEvent = dev.kuku.taskinator.domains.CleanupEvent.ProjectTeamsPurgeRequested(
             eventId = UUID.randomUUID(),
             projectId = projectId,
             timestamp = java.time.Instant.now(),
             userId = userId
         )
-        val cleanupTasksEvent = dev.kuku.taskinator.domains.CleanupEvent.TasksRequested(
+        val cleanupTasksEvent = dev.kuku.taskinator.domains.CleanupEvent.ProjectTasksPurgeRequested(
             eventId = UUID.randomUUID(),
             projectId = projectId,
             timestamp = java.time.Instant.now(),
@@ -136,7 +139,7 @@ class WorkspaceIntegrationTests @Autowired constructor(
         ))
         val taskId = createdTask?.id ?: throw IllegalStateException("Task creation failed")
 
-        val cleanupEvent = dev.kuku.taskinator.domains.CleanupEvent.TasksRequested(
+        val cleanupEvent = dev.kuku.taskinator.domains.CleanupEvent.ProjectTasksPurgeRequested(
             eventId = UUID.randomUUID(),
             projectId = projectId,
             timestamp = java.time.Instant.now(),
