@@ -25,10 +25,19 @@ class TeamDataFetcher(
     @DgsData(parentType = DgsConstants.TEAM.TYPE_NAME)
     fun members(
         dfe: DgsDataFetchingEnvironment,
-        @InputArgument(DgsConstants.TEAM.MEMBERS_INPUT_ARGUMENT.Input) input: PaginationInput?
+        @InputArgument(DgsConstants.TEAM.MEMBERS_INPUT_ARGUMENT.Input) input: PaginationInput?,
+        @RequestHeader("X-User-Id") userId: String
     ): List<TeamMember> {
         val team = dfe.getSource<Team>()!!
-        return emptyList()
+        val limit = input?.limit ?: 10
+        val offset = input?.offset ?: 0
+        
+        return teamService.getTeamMembers(team.projectId, userId, team.id, limit, offset).map {
+            TeamMember(
+                user = dev.kuku.taskinator.generated.types.User(id = it.memberId, projects = emptyList()),
+                createdAt = it.createdAt.toString()
+            )
+        }
     }
 
     @DgsData(parentType = DgsConstants.TEAM.TYPE_NAME)
@@ -36,7 +45,7 @@ class TeamDataFetcher(
         dfe: DgsDataFetchingEnvironment,
         @InputArgument(DgsConstants.TEAM.TASKS_INPUT_ARGUMENT.Input) input: PaginationInput?,
         @RequestHeader("X-User-Id") userId: String
-    ): List<Task> {
+    ): List<dev.kuku.taskinator.domains.task.ProjectTask> {
         val team = dfe.getSource<Team>()!!
         val limit = input?.limit ?: 10
         val offset = input?.offset ?: 0
@@ -49,21 +58,6 @@ class TeamDataFetcher(
                 limit = limit,
                 offset = offset
             )
-        ).map {
-            Task(
-                id = it.id,
-                projectId = it.projectId,
-                parentTaskId = it.parentTaskId,
-                rootId = it.rootId,
-                path = it.path,
-                createdBy = it.createdBy,
-                title = it.title,
-                description = it.description,
-                status = it.status,
-                lexoRank = it.lexoRank,
-                version = it.version.toInt(),
-                createdAt = ""
-            )
-        }
+        )
     }
 }

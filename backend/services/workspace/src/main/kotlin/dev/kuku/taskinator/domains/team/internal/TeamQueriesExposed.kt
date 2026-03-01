@@ -509,4 +509,24 @@ class TeamQueriesExposed(private val jdbcTemplate: JdbcTemplate) : TeamQueries {
             ps.setInt(3, limit)
         }
     }
+
+    @OptIn(ExperimentalUuidApi::class)
+    override fun findTeamMembers(projectId: String, teamId: String, limit: Int, offset: Int): List<dev.kuku.taskinator.domains.team.ProjectTeamMember> {
+        val projectUuid = Uuid.parse(projectId)
+        val teamUuid = Uuid.parse(teamId)
+        return ProjectTeamMembers.selectAll()
+            .where { (ProjectTeamMembers.projectId eq projectUuid) and (ProjectTeamMembers.teamId eq teamUuid) }
+            .orderBy(ProjectTeamMembers.createdAt to SortOrder.DESC, ProjectTeamMembers.id to SortOrder.ASC)
+            .limit(limit)
+            .offset(offset.toLong())
+            .map {
+                dev.kuku.taskinator.domains.team.ProjectTeamMember(
+                    id = it[ProjectTeamMembers.id].value.toString(),
+                    memberId = it[ProjectTeamMembers.memberId].toString(),
+                    teamId = it[ProjectTeamMembers.teamId].toString(),
+                    createdAt = Date.from(it[ProjectTeamMembers.createdAt].toInstant(ZoneOffset.UTC)),
+                    updatedAt = it[ProjectTeamMembers.updatedAt]?.let { d -> Date.from(d.toInstant(ZoneOffset.UTC)) }
+                )
+            }
+    }
 }

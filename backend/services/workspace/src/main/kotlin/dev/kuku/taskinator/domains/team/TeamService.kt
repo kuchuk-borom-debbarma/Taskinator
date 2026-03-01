@@ -37,5 +37,7 @@ interface TeamService {
 
     fun getTeamById(projectId: String,userId:String, teamId: String): ProjectTeam?
 
+    fun getTeamMembers(projectId: String, userId: String, teamId: String, limit: Int, offset: Int): List<ProjectTeamMember>
+
     fun getChildren(projectId:String, userId: String, teamId: String, limit: Int, offset: Int): List<ProjectTeam>
 }

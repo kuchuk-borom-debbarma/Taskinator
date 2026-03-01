@@ -128,6 +128,11 @@ class TeamServiceImpl(private val teamRepo: TeamQueries) : TeamService {
             return teamRepo.findTeamById(projectId, teamId)
         }
 
+        override fun getTeamMembers(projectId: String, userId: String, teamId: String, limit: Int, offset: Int): List<dev.kuku.taskinator.domains.team.ProjectTeamMember> {
+            val enforcedLimit = limit.coerceAtMost(MAX_LIMIT)
+            return teamRepo.findTeamMembers(projectId, teamId, enforcedLimit, offset)
+        }
+
     override fun getChildren(
         projectId: String,
         userId: String,

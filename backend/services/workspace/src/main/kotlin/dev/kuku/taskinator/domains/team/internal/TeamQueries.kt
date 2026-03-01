@@ -62,6 +62,11 @@ interface TeamQueries {
     )
 
     /**
+     * Finds members of a specific team with pagination.
+     */
+    fun findTeamMembers(projectId: String, teamId: String, limit: Int, offset: Int): List<dev.kuku.taskinator.domains.team.ProjectTeamMember>
+
+    /**
      * Checks which of the provided IDs are actually members of the parent project.
      */
     fun filterProjectMembers(projectId: String, memberIds: List<String>): List<String>

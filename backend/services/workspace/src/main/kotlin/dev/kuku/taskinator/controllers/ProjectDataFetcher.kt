@@ -82,7 +82,7 @@ class ProjectDataFetcher(
         dfe: DgsDataFetchingEnvironment,
         @InputArgument(DgsConstants.PROJECT.TASKS_INPUT_ARGUMENT.Input) input: PaginationInput?,
         @RequestHeader("X-User-Id") userId: String
-    ): List<Task> {
+    ): List<dev.kuku.taskinator.domains.task.ProjectTask> {
         val project = dfe.getSource<Project>()!!
         val limit = input?.limit ?: 10
         val offset = input?.offset ?: 0
@@ -95,21 +95,6 @@ class ProjectDataFetcher(
                 limit = limit,
                 offset = offset
             )
-        ).map {
-            Task(
-                id = it.id,
-                projectId = it.projectId,
-                parentTaskId = it.parentTaskId,
-                rootId = it.rootId,
-                path = it.path,
-                createdBy = it.createdBy,
-                title = it.title,
-                description = it.description,
-                status = it.status,
-                lexoRank = it.lexoRank,
-                version = it.version.toInt(),
-                createdAt = it.createdAt.toString() //TODO consistency UTC second
-            )
-        }
+        )
     }
 }
