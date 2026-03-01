@@ -39,6 +39,24 @@ spring:
       enabled: true
       path: /graphiql
 
+---
+spring:
+  config:
+    activate:
+      on-profile: no-kafka
+  kafka:
+    listener:
+      auto-startup: false
+    producer:
+      properties:
+        max.block.ms: 500 # Don't block the API for long if Kafka is down
+        reconnect.backoff.ms: 10000 # Stop aggressive reconnection loops
+        reconnect.backoff.max.ms: 30000
+    consumer:
+      properties:
+        reconnect.backoff.ms: 10000
+        reconnect.backoff.max.ms: 30000
+
 server:
   port: 8080
 

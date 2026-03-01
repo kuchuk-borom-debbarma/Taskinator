@@ -21,7 +21,7 @@ class RootDataFetcher(
 ) {
 
     @DgsQuery
-    fun getProject(
+    fun project(
         @InputArgument(DgsConstants.QUERY.PROJECT_INPUT_ARGUMENT.Input) input: ProjectInput,
         @RequestHeader("X-User-Id") userId: String
     ): Project? {
@@ -41,7 +41,7 @@ class RootDataFetcher(
     }
 
     @DgsQuery
-    fun getTeam(
+    fun team(
         @InputArgument(DgsConstants.QUERY.TEAM_INPUT_ARGUMENT.Input) input: TeamInput,
         @RequestHeader("X-User-Id") userId: String
     ): Team? {
@@ -59,7 +59,7 @@ class RootDataFetcher(
     }
 
     @DgsMutation
-    fun projectMutation(): ProjectMutation = ProjectMutation(
+    fun project(): ProjectMutation = ProjectMutation(
         createProject = CreateProjectResponse(false),
         renameProject = GenericResponse(false),
         deleteProject = GenericResponse(false),
@@ -68,7 +68,7 @@ class RootDataFetcher(
     )
 
     @DgsMutation
-    fun teamMutation(): TeamMutation = TeamMutation(
+    fun team(): TeamMutation = TeamMutation(
         createTeam = CreateTeamResponse(false),
         updateTeam = GenericResponse(false),
         deleteTeam = GenericResponse(false),
@@ -77,7 +77,7 @@ class RootDataFetcher(
     )
 
     @DgsMutation
-    fun taskMutation(): TaskMutation = TaskMutation(
+    fun task(): TaskMutation = TaskMutation(
         createTask = CreateTaskResponse(false),
         assignTask = GenericResponse(false),
         updateTaskStatus = GenericResponse(false),
