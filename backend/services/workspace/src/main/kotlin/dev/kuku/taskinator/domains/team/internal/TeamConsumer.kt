@@ -8,6 +8,9 @@ import org.springframework.kafka.core.KafkaTemplate
 import org.springframework.kafka.support.Acknowledgment
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import dev.kuku.taskinator.util.KafkaConstants.BATCH_SIZE_TEAM
+import dev.kuku.taskinator.util.KafkaConstants.GROUP_ID_TEAM
+import dev.kuku.taskinator.util.KafkaConstants.TOPIC_WORKSPACE_ACTIVITY
 
 private val log = KotlinLogging.logger {}
 
@@ -21,11 +24,8 @@ class TeamConsumer(
     private val kafkaTemplate: KafkaTemplate<String, Any>
 ) {
 
-    private val TOPIC = "workspace-activity"
-    private val BATCH_SIZE = 1000
-
     @Transactional
-    @KafkaListener(topics = ["workspace-activity"], groupId = "team-service-group")
+    @KafkaListener(topics = [TOPIC_WORKSPACE_ACTIVITY], groupId = GROUP_ID_TEAM)
     fun consume(events: List<Any>, ack: Acknowledgment) {
         try {
             events.forEach { event ->
@@ -36,7 +36,7 @@ class TeamConsumer(
                             
                             // 1. Purge descendants
                             if (event.descendantTeamIds.isNotEmpty()) {
-                                kafkaTemplate.send(TOPIC, event.projectId, TeamEvent.SubTeamsPurgeRequested(
+                                kafkaTemplate.send(TOPIC_WORKSPACE_ACTIVITY, event.projectId, TeamEvent.SubTeamsPurgeRequested(
                                     projectId = event.projectId,
                                     userId = event.userId,
                                     teamIds = event.descendantTeamIds
@@ -45,7 +45,7 @@ class TeamConsumer(
                             
                             // 2. Trigger task unassignment for the whole tree
                             val allAffectedTeams = event.descendantTeamIds + event.teamId
-                            kafkaTemplate.send(TOPIC, event.projectId, TaskEvent.TeamTasksUnassignRequested(
+                            kafkaTemplate.send(TOPIC_WORKSPACE_ACTIVITY, event.projectId, TaskEvent.TeamTasksUnassignRequested(
                                 projectId = event.projectId,
                                 userId = event.userId,
                                 teamIds = allAffectedTeams
@@ -66,17 +66,17 @@ class TeamConsumer(
     }
 
     private fun handleProjectPurge(event: TeamEvent.ProjectTeamsPurgeRequested) {
-        val deleted = teamRepo.deleteTeamsByProjectBatch(event.projectId, BATCH_SIZE)
-        if (deleted >= BATCH_SIZE) kafkaTemplate.send(TOPIC, event.projectId, event)
+        val deleted = teamRepo.deleteTeamsByProjectBatch(event.projectId, BATCH_SIZE_TEAM)
+        if (deleted >= BATCH_SIZE_TEAM) kafkaTemplate.send(TOPIC_WORKSPACE_ACTIVITY, event.projectId, event)
     }
 
     private fun handleSubTeamsPurge(event: TeamEvent.SubTeamsPurgeRequested) {
-        val deleted = teamRepo.deleteSpecificTeamsBatch(event.projectId, event.teamIds, BATCH_SIZE)
-        if (deleted >= BATCH_SIZE) kafkaTemplate.send(TOPIC, event.projectId, event)
+        val deleted = teamRepo.deleteSpecificTeamsBatch(event.projectId, event.teamIds, BATCH_SIZE_TEAM)
+        if (deleted >= BATCH_SIZE_TEAM) kafkaTemplate.send(TOPIC_WORKSPACE_ACTIVITY, event.projectId, event)
     }
 
     private fun handleMemberCleanup(event: TeamEvent.MemberTeamCleanupRequested) {
-        val deleted = teamRepo.deleteTeamMembersForMembersBatch(event.projectId, event.memberIds, BATCH_SIZE)
-        if (deleted >= BATCH_SIZE) kafkaTemplate.send(TOPIC, event.projectId, event)
+        val deleted = teamRepo.deleteTeamMembersForMembersBatch(event.projectId, event.memberIds, BATCH_SIZE_TEAM)
+        if (deleted >= BATCH_SIZE_TEAM) kafkaTemplate.send(TOPIC_WORKSPACE_ACTIVITY, event.projectId, event)
     }
 }

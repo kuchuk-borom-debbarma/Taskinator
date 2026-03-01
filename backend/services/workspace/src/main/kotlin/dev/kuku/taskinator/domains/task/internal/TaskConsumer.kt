@@ -7,6 +7,9 @@ import org.springframework.kafka.core.KafkaTemplate
 import org.springframework.kafka.support.Acknowledgment
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import dev.kuku.taskinator.util.KafkaConstants.BATCH_SIZE_TASK
+import dev.kuku.taskinator.util.KafkaConstants.GROUP_ID_TASK
+import dev.kuku.taskinator.util.KafkaConstants.TOPIC_WORKSPACE_ACTIVITY
 
 private val log = KotlinLogging.logger {}
 
@@ -20,11 +23,8 @@ class TaskConsumer(
     private val kafkaTemplate: KafkaTemplate<String, Any>
 ) {
 
-    private val TOPIC = "workspace-activity"
-    private val BATCH_SIZE = 5000
-
     @Transactional
-    @KafkaListener(topics = ["workspace-activity"], groupId = "task-service-group")
+    @KafkaListener(topics = [TOPIC_WORKSPACE_ACTIVITY], groupId = GROUP_ID_TASK)
     fun consume(events: List<Any>, ack: Acknowledgment) {
         try {
             events.forEach { event ->
@@ -32,7 +32,7 @@ class TaskConsumer(
                     when (event) {
                         is TaskEvent.TaskDeleted -> {
                             log.info { "TaskConsumer: Orchestrating cleanup for deleted task ${event.taskId}" }
-                            kafkaTemplate.send(TOPIC, event.projectId, TaskEvent.SubTasksPurgeRequested(
+                            kafkaTemplate.send(TOPIC_WORKSPACE_ACTIVITY, event.projectId, TaskEvent.SubTasksPurgeRequested(
                                 projectId = event.projectId,
                                 userId = event.userId,
                                 parentPath = event.path
@@ -54,22 +54,22 @@ class TaskConsumer(
     }
 
     private fun handleProjectPurge(event: TaskEvent.ProjectTasksPurgeRequested) {
-        val deleted = taskQueries.deleteTasksByProjectBatch(event.projectId, null, BATCH_SIZE)
-        if (deleted >= BATCH_SIZE) kafkaTemplate.send(TOPIC, event.projectId, event)
+        val deleted = taskQueries.deleteTasksByProjectBatch(event.projectId, null, BATCH_SIZE_TASK)
+        if (deleted >= BATCH_SIZE_TASK) kafkaTemplate.send(TOPIC_WORKSPACE_ACTIVITY, event.projectId, event)
     }
 
     private fun handleSubTasksPurge(event: TaskEvent.SubTasksPurgeRequested) {
-        val deleted = taskQueries.deleteTasksByProjectBatch(event.projectId, event.parentPath, BATCH_SIZE)
-        if (deleted >= BATCH_SIZE) kafkaTemplate.send(TOPIC, event.projectId, event)
+        val deleted = taskQueries.deleteTasksByProjectBatch(event.projectId, event.parentPath, BATCH_SIZE_TASK)
+        if (deleted >= BATCH_SIZE_TASK) kafkaTemplate.send(TOPIC_WORKSPACE_ACTIVITY, event.projectId, event)
     }
 
     private fun handleTeamUnassign(event: TaskEvent.TeamTasksUnassignRequested) {
-        val updated = taskQueries.unassignTasksForTeamsBatch(event.projectId, event.teamIds, BATCH_SIZE)
-        if (updated >= BATCH_SIZE) kafkaTemplate.send(TOPIC, event.projectId, event)
+        val updated = taskQueries.unassignTasksForTeamsBatch(event.projectId, event.teamIds, BATCH_SIZE_TASK)
+        if (updated >= BATCH_SIZE_TASK) kafkaTemplate.send(TOPIC_WORKSPACE_ACTIVITY, event.projectId, event)
     }
 
     private fun handleMemberCleanup(event: TaskEvent.MemberTaskCleanupRequested) {
-        val updated = taskQueries.unassignTasksForMembersBatch(event.projectId, event.memberIds, BATCH_SIZE)
-        if (updated >= BATCH_SIZE) kafkaTemplate.send(TOPIC, event.projectId, event)
+        val updated = taskQueries.unassignTasksForMembersBatch(event.projectId, event.memberIds, BATCH_SIZE_TASK)
+        if (updated >= BATCH_SIZE_TASK) kafkaTemplate.send(TOPIC_WORKSPACE_ACTIVITY, event.projectId, event)
     }
 }

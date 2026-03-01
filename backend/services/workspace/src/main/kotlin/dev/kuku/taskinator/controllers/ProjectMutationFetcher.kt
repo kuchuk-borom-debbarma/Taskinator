@@ -8,6 +8,7 @@ import dev.kuku.taskinator.domains.project.ProjectEvent
 import dev.kuku.taskinator.domains.project.ProjectService
 import dev.kuku.taskinator.generated.DgsConstants
 import dev.kuku.taskinator.generated.types.*
+import dev.kuku.taskinator.util.KafkaConstants.TOPIC_WORKSPACE_ACTIVITY
 import org.springframework.kafka.core.KafkaTemplate
 import org.springframework.web.bind.annotation.RequestHeader
 
@@ -43,7 +44,7 @@ class ProjectMutationFetcher(
             description = input.description ?: "",
             idempotencyKey = idempotencyKey
         )
-        kafkaTemplate.send("workspace-activity", createdProject.id, event)
+        kafkaTemplate.send(TOPIC_WORKSPACE_ACTIVITY, createdProject.id, event)
 
         // 4. RETURN "ACCEPTED" (HTTP 202 Flow)
         return CreateProjectResponse(
@@ -85,7 +86,7 @@ class ProjectMutationFetcher(
             version = input.version.toLong()
         )
 
-        kafkaTemplate.send("workspace-activity", input.projectId, event)
+        kafkaTemplate.send(TOPIC_WORKSPACE_ACTIVITY, input.projectId, event)
 
         return GenericResponse(success = true, message = "Project renamed successfully")
     }
@@ -103,7 +104,7 @@ class ProjectMutationFetcher(
             version = input.version.toLong()
         )
 
-        kafkaTemplate.send("workspace-activity", input.projectId, event)
+        kafkaTemplate.send(TOPIC_WORKSPACE_ACTIVITY, input.projectId, event)
 
         return GenericResponse(success = true, message = "Project deleted successfully")
     }
@@ -121,7 +122,7 @@ class ProjectMutationFetcher(
             memberIds = input.memberIds
         )
 
-        kafkaTemplate.send("workspace-activity", input.projectId, event)
+        kafkaTemplate.send(TOPIC_WORKSPACE_ACTIVITY, input.projectId, event)
 
         return GenericResponse(success = true, message = "Members added successfully")
     }
@@ -139,7 +140,7 @@ class ProjectMutationFetcher(
             memberIds = input.memberIds
         )
 
-        kafkaTemplate.send("workspace-activity", input.projectId, event)
+        kafkaTemplate.send(TOPIC_WORKSPACE_ACTIVITY, input.projectId, event)
 
         return GenericResponse(success = true, message = "Members removed successfully")
     }

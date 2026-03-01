@@ -8,6 +8,7 @@ import dev.kuku.taskinator.domains.task.TaskEvent
 import dev.kuku.taskinator.domains.task.TaskService
 import dev.kuku.taskinator.generated.DgsConstants
 import dev.kuku.taskinator.generated.types.*
+import dev.kuku.taskinator.util.KafkaConstants.TOPIC_WORKSPACE_ACTIVITY
 import org.springframework.kafka.core.KafkaTemplate
 import org.springframework.web.bind.annotation.RequestHeader
 import java.time.Instant
@@ -62,7 +63,7 @@ class TaskMutationFetcher(
         )
 
         // 3. PRODUCE TO KAFKA
-        kafkaTemplate.send("workspace-activity", input.projectId, event)
+        kafkaTemplate.send(TOPIC_WORKSPACE_ACTIVITY, input.projectId, event)
 
         // 4. RETURN CREATED
         return CreateTaskResponse(
@@ -109,7 +110,7 @@ class TaskMutationFetcher(
             version = input.version.toLong()
         )
 
-        kafkaTemplate.send("workspace-activity", input.projectId, event)
+        kafkaTemplate.send(TOPIC_WORKSPACE_ACTIVITY, input.projectId, event)
 
         return GenericResponse(success = true, message = "Task assigned successfully")
     }
@@ -135,7 +136,7 @@ class TaskMutationFetcher(
             version = input.version.toLong()
         )
         
-        kafkaTemplate.send("workspace-activity", input.projectId, event)
+        kafkaTemplate.send(TOPIC_WORKSPACE_ACTIVITY, input.projectId, event)
         
         return GenericResponse(success = true, message = "Status updated successfully")
     }
@@ -163,7 +164,7 @@ class TaskMutationFetcher(
             version = input.version.toLong()
         )
         
-        kafkaTemplate.send("workspace-activity", input.projectId, event)
+        kafkaTemplate.send(TOPIC_WORKSPACE_ACTIVITY, input.projectId, event)
         
         return GenericResponse(success = true, message = "Task deleted successfully")
     }

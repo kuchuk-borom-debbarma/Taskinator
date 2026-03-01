@@ -34,6 +34,8 @@ import kotlin.test.assertNotNull
 import kotlin.uuid.ExperimentalUuidApi
 import kotlin.uuid.Uuid
 
+import dev.kuku.taskinator.util.KafkaConstants.TOPIC_WORKSPACE_ACTIVITY
+
 @OptIn(ExperimentalUuidApi::class)
 @SpringBootTest(
     properties = [
@@ -91,12 +93,12 @@ class WorkspaceIntegrationTests @Autowired constructor(
 
         // THEN: Fan-out events triggered
         verify(kafkaTemplate).send(
-            org.mockito.ArgumentMatchers.eq("workspace-activity"),
+            org.mockito.ArgumentMatchers.eq(TOPIC_WORKSPACE_ACTIVITY),
             org.mockito.ArgumentMatchers.eq(projectId),
             org.mockito.ArgumentMatchers.isA(TeamEvent.ProjectTeamsPurgeRequested::class.java)
         )
         verify(kafkaTemplate).send(
-            org.mockito.ArgumentMatchers.eq("workspace-activity"),
+            org.mockito.ArgumentMatchers.eq(TOPIC_WORKSPACE_ACTIVITY),
             org.mockito.ArgumentMatchers.eq(projectId),
             org.mockito.ArgumentMatchers.isA(TaskEvent.ProjectTasksPurgeRequested::class.java)
         )

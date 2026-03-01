@@ -9,6 +9,8 @@ import org.springframework.kafka.core.KafkaTemplate
 import org.springframework.kafka.support.Acknowledgment
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
+import dev.kuku.taskinator.util.KafkaConstants.GROUP_ID_PROJECT
+import dev.kuku.taskinator.util.KafkaConstants.TOPIC_WORKSPACE_ACTIVITY
 
 private val log = KotlinLogging.logger {}
 
@@ -22,10 +24,8 @@ class ProjectConsumer(
     private val kafkaTemplate: KafkaTemplate<String, Any>
 ) {
 
-    private val TOPIC = "workspace-activity"
-
     @Transactional
-    @KafkaListener(topics = ["workspace-activity"], groupId = "project-service-group")
+    @KafkaListener(topics = [TOPIC_WORKSPACE_ACTIVITY], groupId = GROUP_ID_PROJECT)
     fun consume(events: List<Any>, ack: Acknowledgment) {
         try {
             events.forEach { event ->
@@ -38,11 +38,11 @@ class ProjectConsumer(
                             projectRepo.deleteProjectMembersByProject(event.projectId)
                             
                             // 2. Trigger async cleanup in Team and Task domains
-                            kafkaTemplate.send(TOPIC, event.projectId, TeamEvent.ProjectTeamsPurgeRequested(
+                            kafkaTemplate.send(TOPIC_WORKSPACE_ACTIVITY, event.projectId, TeamEvent.ProjectTeamsPurgeRequested(
                                 projectId = event.projectId,
                                 userId = event.userId
                             ))
-                            kafkaTemplate.send(TOPIC, event.projectId, TaskEvent.ProjectTasksPurgeRequested(
+                            kafkaTemplate.send(TOPIC_WORKSPACE_ACTIVITY, event.projectId, TaskEvent.ProjectTasksPurgeRequested(
                                 projectId = event.projectId,
                                 userId = event.userId
                             ))
@@ -51,12 +51,12 @@ class ProjectConsumer(
                             log.info { "ProjectConsumer: Orchestrating member cleanup for project ${event.projectId}" }
                             
                             // Trigger async member purge in Teams and Tasks
-                            kafkaTemplate.send(TOPIC, event.projectId, TeamEvent.MemberTeamCleanupRequested(
+                            kafkaTemplate.send(TOPIC_WORKSPACE_ACTIVITY, event.projectId, TeamEvent.MemberTeamCleanupRequested(
                                 projectId = event.projectId,
                                 userId = event.userId,
                                 memberIds = event.memberIds
                             ))
-                            kafkaTemplate.send(TOPIC, event.projectId, TaskEvent.MemberTaskCleanupRequested(
+                            kafkaTemplate.send(TOPIC_WORKSPACE_ACTIVITY, event.projectId, TaskEvent.MemberTaskCleanupRequested(
                                 projectId = event.projectId,
                                 userId = event.userId,
                                 memberIds = event.memberIds
