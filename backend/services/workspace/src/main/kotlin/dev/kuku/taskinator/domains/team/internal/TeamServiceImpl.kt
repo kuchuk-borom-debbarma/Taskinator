@@ -133,8 +133,7 @@ class TeamServiceImpl(private val teamRepo: TeamQueries) : TeamService {
         limit: Int,
         offset: Int
     ): List<ProjectTeam> {
-        val children: List<ProjectTeam> = teamRepo.getChildrenTeam(projectId,userId, teamId, limit, offset)
-        TODO("Not yet implemented")
+        return teamRepo.getChildrenTeam(projectId, userId, teamId, limit, offset)
     }
 }
     

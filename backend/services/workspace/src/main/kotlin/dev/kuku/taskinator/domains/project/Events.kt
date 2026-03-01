@@ -52,13 +52,4 @@ sealed class ProjectEvent {
         val memberIds: List<String>
     ) : ProjectEvent()
 
-    // --- INTERNAL ORCHESTRATION EVENTS ---
-
-    data class InternalMemberCleanupRequested(
-        override val eventId: UUID = UUID.randomUUID(),
-        override val projectId: String,
-        override val timestamp: Instant = Instant.now(),
-        val userId: String,
-        val memberIds: List<String>
-    ) : ProjectEvent()
 }
