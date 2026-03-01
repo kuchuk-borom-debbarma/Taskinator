@@ -59,6 +59,9 @@ spring:
 
 server:
   port: 8080
+  tomcat:
+    socket-properties:
+      so-linger: -1 # Disable so-linger to fix SocketException on macOS
 
 dgs:
   graphql:
