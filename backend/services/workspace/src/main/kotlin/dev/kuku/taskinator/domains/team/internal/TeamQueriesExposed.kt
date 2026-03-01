@@ -419,4 +419,37 @@ class TeamQueriesExposed(private val jdbcTemplate: JdbcTemplate) : TeamQueries {
         createdAt = Date.from(this[ProjectTeams.createdAt].toInstant(ZoneOffset.UTC)),
         updatedAt = this[ProjectTeams.updatedAt]?.let { Date.from(it.toInstant(ZoneOffset.UTC)) }
     )
+
+    @OptIn(ExperimentalUuidApi::class)
+    override fun deleteTeamsByProjectBatch(projectId: String, limit: Int): Int {
+        val projectUuid = Uuid.parse(projectId).toJavaUuid()
+
+        /**
+         * CHUNKY TEAM DELETE:
+         * 1. Target a batch of team IDs.
+         * 2. Delete their members.
+         * 3. Delete their closure paths (both as ancestor and child).
+         * 4. Delete the teams themselves.
+         */
+        val sql = """
+            WITH target_teams AS (
+                SELECT id FROM project_teams 
+                WHERE fk_project_id = ?::uuid 
+                LIMIT ?
+            ),
+            deleted_members AS (
+                DELETE FROM project_team_members 
+                WHERE fk_team_id IN (SELECT id FROM target_teams)
+            ),
+            deleted_closure AS (
+                DELETE FROM project_team_closure 
+                WHERE fk_team_id IN (SELECT id FROM target_teams) 
+                OR fk_child_id IN (SELECT id FROM target_teams)
+            )
+            DELETE FROM project_teams 
+            WHERE id IN (SELECT id FROM target_teams)
+        """.trimIndent()
+
+        return jdbcTemplate.update(sql, projectUuid, limit)
+    }
 }

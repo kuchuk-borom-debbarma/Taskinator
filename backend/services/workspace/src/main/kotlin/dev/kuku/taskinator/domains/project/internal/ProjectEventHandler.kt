@@ -1,60 +1,69 @@
 package dev.kuku.taskinator.domains.project.internal
 
+import dev.kuku.taskinator.domains.CleanupEvent
 import dev.kuku.taskinator.domains.project.*
 import io.github.oshai.kotlinlogging.KotlinLogging
+import org.springframework.kafka.core.KafkaTemplate
 import org.springframework.stereotype.Component
 
 private val log = KotlinLogging.logger {}
 
 /**
- * ProjectEventHandler is the background worker for the Project domain.
+ * ProjectEventHandler is the background worker (Consumer) for the Project domain.
  * 
- * It receives events from the Unified Workspace Stream and performs the 
- * final database persistence. This decoupling ensures the API stays 
- * responsive (<10ms) even during heavy DB load.
+ * It receives events from the Unified Workspace Stream and orchestrates 
+ * high-level domain cleanup.
  */
 @Component
 class ProjectEventHandler(
     private val projectService: ProjectService,
-    private val projectRepo: ProjectQueries
+    private val projectRepo: ProjectQueries,
+    private val kafkaTemplate: KafkaTemplate<String, Any>
 ) {
+
+    private val TOPIC = "workspace-activity"
 
     /**
      * Routes the incoming ProjectEvent to the appropriate repository method.
-     * 
-     * NOTE: We call projectRepo directly for 'Created' events to preserve 
-     * the 'idempotencyKey' which is not exposed in the public ProjectService.
      */
     fun handle(event: ProjectEvent) {
         try {
             when (event) {
                 is ProjectEvent.ProjectDeleted -> {
-                    log.info { "Processing background cleanup for ProjectDeleted: ${event.projectId}" }
-                    /**
-                     * TODO: BACKGROUND CLEANUP
-                     * 1. Delete all Teams associated with this project.
-                     * 2. Delete all Tasks associated with this project.
-                     * 3. Clean up denormalized values (if any).
-                     * 4. Notify other services if necessary.
-                     */
+                    log.info { "ProjectConsumer: Orchestrating cleanup fan-out for project ${event.projectId}" }
+                    
+                    // 1. Core Metadata Cleanup (Memberships)
+                    projectRepo.deleteProjectMembersByProject(event.projectId)
+                    
+                    // 2. Fan-out: Trigger async cleanup for Teams and Tasks
+                    // We use the same partition key (projectId) to maintain causal order 
+                    // within the project's own stream.
+                    kafkaTemplate.send(TOPIC, event.projectId, CleanupEvent.TeamsRequested(
+                        projectId = event.projectId,
+                        userId = event.userId
+                    ))
+                    
+                    kafkaTemplate.send(TOPIC, event.projectId, CleanupEvent.TasksRequested(
+                        projectId = event.projectId,
+                        userId = event.userId
+                    ))
+
+                    log.info { "ProjectConsumer: Dispatched CleanupEvents for Teams and Tasks" }
                 }
                 is ProjectEvent.ProjectMembersAdded -> {
-                    log.info { "Processing ProjectMembersAdded: ${event.projectId}" }
+                    log.info { "ProjectConsumer: Processing ProjectMembersAdded: ${event.projectId}" }
                     projectService.addProjectMembers(event.projectId, event.userId, event.memberIds)
                 }
                 is ProjectEvent.ProjectMembersRemoved -> {
-                    log.info { "Processing background cleanup for ProjectMembersRemoved: ${event.projectId}, members: ${event.memberIds}" }
+                    log.info { "ProjectConsumer: Processing background cleanup for ProjectMembersRemoved: ${event.projectId}" }
                     /**
-                     * TODO: BACKGROUND CLEANUP
+                     * TODO: CROSS-DOMAIN CLEANUP
                      * 1. Remove these members from all Teams in this project.
                      * 2. Unassign any Tasks assigned to these members in this project.
-                     * 3. Update denormalized member counts.
                      */
                 }
                 else -> {
-                    // Other events like ProjectCreated/ProjectRenamed are handled synchronously 
-                    // and don't require background processing in this service yet.
-                    log.debug { "Skipping background processing for event: ${event::class.simpleName}" }
+                    log.debug { "ProjectConsumer: Skipping background processing for event: ${event::class.simpleName}" }
                 }
             }
         } catch (e: Exception) {

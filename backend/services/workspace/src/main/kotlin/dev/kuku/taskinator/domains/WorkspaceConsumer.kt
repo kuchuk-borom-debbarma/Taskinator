@@ -44,6 +44,12 @@ class WorkspaceConsumer(
                     is ProjectEvent -> projectHandler.handle(event)
                     is TeamEvent -> teamHandler.handle(event)
                     is TaskEvent -> taskHandler.handle(event)
+                    is CleanupEvent -> {
+                        when (event) {
+                            is CleanupEvent.TeamsRequested -> teamHandler.handleCleanup(event)
+                            is CleanupEvent.TasksRequested -> taskHandler.handleCleanup(event)
+                        }
+                    }
                     else -> log.warn { "Unknown event type encountered in stream: ${event::class.simpleName}" }
                 }
             }

@@ -272,4 +272,24 @@ class TaskQueriesExposed(private val jdbcTemplate: JdbcTemplate) : TaskQueries {
             )
         }, Uuid.parse(taskId).toJavaUuid(), Uuid.parse(projectId).toJavaUuid()).firstOrNull()
     }
+
+    @OptIn(ExperimentalUuidApi::class)
+    override fun deleteTasksByProjectBatch(projectId: String, limit: Int): Int {
+        val projectUuid = Uuid.parse(projectId).toJavaUuid()
+        
+        /**
+         * CHUNKY DELETE: Using a CTE with LIMIT to perform a fast, non-blocking delete.
+         * This targets the primary key (id) for maximum efficiency.
+         */
+        val sql = """
+            DELETE FROM project_tasks 
+            WHERE id IN (
+                SELECT id FROM project_tasks 
+                WHERE fk_project_id = ?::uuid 
+                LIMIT ?
+            )
+        """.trimIndent()
+
+        return jdbcTemplate.update(sql, projectUuid, limit)
+    }
 }

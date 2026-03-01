@@ -76,4 +76,10 @@ interface TeamQueries {
      */
     fun findProjectOwner(projectId: String): String?
     fun getChildrenTeam(projectId: String, userId: String, teamId: String, limit: Int, offset: Int): List<ProjectTeam>
+
+    /**
+     * Performs a cascading chunky delete of all teams, members, and closure paths 
+     * for a given project.
+     */
+    fun deleteTeamsByProjectBatch(projectId: String, limit: Int): Int
 }

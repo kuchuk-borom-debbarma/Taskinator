@@ -22,4 +22,10 @@ interface TaskQueries {
         limit: Int, 
         offset: Int
     ): List<ProjectTask>
+
+    /**
+     * Deletes a batch of tasks for a given project.
+     * Used for the "Chunky Delete" pattern to avoid massive DB locks.
+     */
+    fun deleteTasksByProjectBatch(projectId: String, limit: Int): Int
 }

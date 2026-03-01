@@ -266,4 +266,11 @@ class ProjectQueriesExposed(private val jdbcTemplate: JdbcTemplate) : ProjectQue
             Date.from(it.toInstant(ZoneOffset.UTC))
         }
     )
+
+    @OptIn(ExperimentalUuidApi::class)
+    override fun deleteProjectMembersByProject(projectId: String): Int {
+        val projectUuid = Uuid.parse(projectId).toJavaUuid()
+        val sql = "DELETE FROM project_members WHERE fk_project_id = ?"
+        return jdbcTemplate.update(sql, projectUuid)
+    }
 }

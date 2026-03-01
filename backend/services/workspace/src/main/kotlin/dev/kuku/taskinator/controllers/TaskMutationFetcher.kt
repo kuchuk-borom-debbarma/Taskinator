@@ -5,6 +5,7 @@ import com.netflix.graphql.dgs.DgsComponent
 import com.netflix.graphql.dgs.DgsData
 import com.netflix.graphql.dgs.InputArgument
 import dev.kuku.taskinator.domains.task.TaskEvent
+import dev.kuku.taskinator.domains.task.TaskService
 import dev.kuku.taskinator.generated.DgsConstants
 import dev.kuku.taskinator.generated.types.*
 import org.springframework.kafka.core.KafkaTemplate
@@ -162,5 +163,4 @@ class TaskMutationFetcher(
         
         return GenericResponse(success = true, message = "Task deleted successfully")
     }
-}
 }

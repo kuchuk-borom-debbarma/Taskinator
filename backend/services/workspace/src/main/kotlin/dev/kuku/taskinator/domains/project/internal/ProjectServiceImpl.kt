@@ -3,6 +3,7 @@ package dev.kuku.taskinator.domains.project.internal
 import com.github.f4b6a3.uuid.UuidCreator
 import dev.kuku.taskinator.domains.project.*
 import io.github.oshai.kotlinlogging.KotlinLogging
+import org.springframework.kafka.core.KafkaTemplate
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import java.util.UUID
@@ -11,20 +12,15 @@ private val log = KotlinLogging.logger {}
 
 /**
  * PROJECT DOMAIN SERVICE: Business Logic & Guardrails
- * 
- * CORE RESPONSIBILITIES:
- * 1. Security: Verifies ownership before performing sensitive operations.
- * 2. Stability: Enforces hard limits on pagination to prevent DoS attacks.
- * 3. Scalability: Fires events for non-critical stat updates (Eventual Consistency).
  */
 @Service
 @Transactional
-class ProjectServiceImpl(private val projectRepo: ProjectQueries) : ProjectService {
+class ProjectServiceImpl(
+    private val projectRepo: ProjectQueries,
+    private val kafkaTemplate: KafkaTemplate<String, Any>
+) : ProjectService {
 
-    /**
-     * DoS PROTECTION: Limits the maximum rows returned per request.
-     * Prevents OOM (Out Of Memory) crashes if a user requests a limit of 1,000,000.
-     */
+    private val TOPIC = "workspace-activity"
     private val MAX_LIMIT = 100
 
     override fun createProject(
@@ -52,31 +48,34 @@ class ProjectServiceImpl(private val projectRepo: ProjectQueries) : ProjectServi
     override fun renameProject(userId: String, projectId: String, toUpdate: ProjectFieldsToUpdate) {
         log.info { "Renaming project $projectId" }
         try {
-            //Simple single table update
             projectRepo.updateProject(projectId, userId, toUpdate)
-            //TODO fire event
+            
+            // Fire event for sync with other services
+            kafkaTemplate.send(TOPIC, projectId, ProjectEvent.ProjectRenamed(
+                projectId = projectId,
+                userId = userId,
+                name = toUpdate.name,
+                description = toUpdate.description,
+                version = toUpdate.version
+            ))
         } catch (e: Exception) {
             when (e) {
                 is ProjectConcurrencyException,
                 is ProjectNameConflictException -> throw e
-
                 else -> throw e
             }
         }
     }
 
-    /**
-     * SECURE MEMBER ADDITION:
-     * - Verifies project ownership and performs batch insertion in a single atomic DB call.
-     * - Prevents unauthorized member injection via SQL-level validation.
-     */
     override fun addProjectMembers(projectId: String, userId: String, memberIds: List<String>) {
         try {
-            // The repository handles ownership validation and batching in 1 call.
             projectRepo.insertProjectMembers(projectId, userId, memberIds)
-
-            // ASYNC: Move stat updates (members_count) out of the critical request path.
-            log.info { "TODO: Fire PROJECT_MEMBERS_ADDED event" }
+            
+            kafkaTemplate.send(TOPIC, projectId, ProjectEvent.ProjectMembersAdded(
+                projectId = projectId,
+                userId = userId,
+                memberIds = memberIds
+            ))
         } catch (e: Exception) {
             log.error(e) { "Failed to add project members" }
             throw e
@@ -85,31 +84,40 @@ class ProjectServiceImpl(private val projectRepo: ProjectQueries) : ProjectServi
 
     override fun removeProjectMembers(projectId: String, userId: String, memberIds: List<String>) {
         try {
-            //Simple delete operation, no need optimistic locking
             projectRepo.deleteProjectMembers(projectId, userId, memberIds)
-            log.info { "TODO: Fire PROJECT_MEMBERS_REMOVED event" }
+            
+            kafkaTemplate.send(TOPIC, projectId, ProjectEvent.ProjectMembersRemoved(
+                projectId = projectId,
+                userId = userId,
+                memberIds = memberIds
+            ))
         } catch (e: Exception) {
             log.error(e) { "Failed to remove project members" }
             throw e
         }
     }
 
-    /**
-     * LEAN DELETE:
-     * - Synchronously deletes the Project record using Optimistic Locking.
-     * - Defers heavy cleanup (Members, Teams, Tasks) to an async worker.
-     */
     override fun deleteProject(projectId: String, userId: String, version: Long): Boolean {
-        //Simple delete operation, no need for optimistic locking if we do nothing if failed to delete
+        // We do NOT perform a hard delete of the project metadata here.
+        // Instead, we verify ownership/version and trigger the ASYNC cleanup.
+        // In a real high-scale system, you might mark it as status = 'DELETED' first.
+        
+        // For now, we perform the metadata delete and member delete synchronously 
+        // as they are small tables, but fire the event for the HEAVY data (Teams/Tasks).
         val deletedRows = projectRepo.deleteProject(projectId, userId, version)
 
         if (deletedRows == 0) {
-            throw ProjectConcurrencyException("Delete failed: version mismatch.")
+            throw ProjectConcurrencyException("Delete failed: version mismatch or unauthorized.")
         }
 
-        // CASCADE DELETION: The event-listener will clean up associated data.
-        log.info { "TODO: Fire PROJECT_DELETED event for background cleanup" }
+        // HEAVY CASCADE: Trigger async cleanup of Teams and Tasks
+        kafkaTemplate.send(TOPIC, projectId, ProjectEvent.ProjectDeleted(
+            projectId = projectId,
+            userId = userId,
+            version = version
+        ))
 
+        log.info { "ProjectService: Initiated cascading cleanup for project $projectId" }
         return true
     }
 

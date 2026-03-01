@@ -32,4 +32,6 @@ interface ProjectQueries {
         offset: Int,
         limit: Int
     ): List<ProjectMember>
+
+    fun deleteProjectMembersByProject(projectId: String): Int
 }
