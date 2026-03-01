@@ -32,7 +32,6 @@ class TaskServiceImpl(private val taskQueries: TaskQueries) : TaskService {
         if (!success) {
             throw IllegalArgumentException("Assignment failed. Ensure you have permissions, the task exists, and the version matches.")
         }
-        // TODO: Fire TASK_ASSIGNED event
     }
 
     override fun updateTaskStatus(projectId: String, userId: String, taskId: String, version: Long, status: String) {
@@ -41,7 +40,6 @@ class TaskServiceImpl(private val taskQueries: TaskQueries) : TaskService {
         if (!success) {
             throw IllegalArgumentException("Status update failed. Ensure you have permissions, the task exists, and the version matches.")
         }
-        // TODO: Fire TASK_STATUS_UPDATED event
     }
 
     override fun deleteTask(projectId: String, userId: String, taskId: String, version: Long): String {

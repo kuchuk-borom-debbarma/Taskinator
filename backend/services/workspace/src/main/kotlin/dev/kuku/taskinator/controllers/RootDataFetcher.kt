@@ -59,34 +59,11 @@ class RootDataFetcher(
     }
 
     @DgsMutation
-    fun projectMutation(): ProjectMutation {
-        return ProjectMutation(
-            createProject = CreateProjectResponse(false),
-            renameProject = GenericResponse(false),
-            deleteProject = GenericResponse(false),
-            addProjectMembers = GenericResponse(false),
-            removeProjectMembers = GenericResponse(false)
-        )
-    }
+    fun projectMutation(): ProjectMutation = ProjectMutation()
 
     @DgsMutation
-    fun teamMutation(): TeamMutation {
-        return TeamMutation(
-            createTeam = CreateTeamResponse(false),
-            updateTeam = GenericResponse(false),
-            deleteTeam = GenericResponse(false),
-            addTeamMembers = GenericResponse(false),
-            removeTeamMembers = GenericResponse(false)
-        )
-    }
+    fun teamMutation(): TeamMutation = TeamMutation()
 
     @DgsMutation
-    fun taskMutation(): TaskMutation {
-        return TaskMutation(
-            createTask = CreateTaskResponse(false),
-            assignTask = GenericResponse(false),
-            updateTaskStatus = GenericResponse(false),
-            deleteTask = GenericResponse(false)
-        )
-    }
+    fun taskMutation(): TaskMutation = TaskMutation()
 }

@@ -8,13 +8,8 @@ import dev.kuku.taskinator.domains.project.ProjectEvent
 import dev.kuku.taskinator.domains.project.ProjectService
 import dev.kuku.taskinator.generated.DgsConstants
 import dev.kuku.taskinator.generated.types.*
-import kotlinx.datetime.UtcOffset
 import org.springframework.kafka.core.KafkaTemplate
 import org.springframework.web.bind.annotation.RequestHeader
-import java.time.Instant
-import java.time.OffsetDateTime
-import java.time.OffsetTime
-import java.time.ZoneOffset
 
 /**
  * ProjectMutationFetcher implements the "Ingest" phase for Project mutations.
@@ -36,7 +31,6 @@ class ProjectMutationFetcher(
         /**
          * 1. Create the project synchronously as projects are not created often
          * 2. Fire an event to kafka.
-         * 3. [Yet to define consumers]
          */
         val createdProject = projectService.createProject(userId, input.name, input.description)
             ?: throw RuntimeException("Failed to create project!")
@@ -44,7 +38,6 @@ class ProjectMutationFetcher(
         val idempotencyKey = UuidCreator.getTimeOrderedWithRandom().toString()
         val event = ProjectEvent.ProjectCreated(
             projectId = createdProject.id,
-            timestamp = OffsetDateTime.now(ZoneOffset.UTC).toInstant(), //TODO util function
             userId = userId,
             name = input.name,
             description = input.description ?: "",

@@ -37,9 +37,6 @@ class TeamServiceImpl(private val teamRepo: TeamQueries) : TeamService {
             val team = teamRepo.insertTeam(projectId, userId, finalTeamId, teamName, parentTeamId, java.util.UUID.randomUUID().toString())
             if (team != null) {
                 log.info { "Team created. Firing async hierarchy computation." }
-                
-                // Trigger background inheritance logic in TeamQueries.computeTeamHierarchy
-                log.info { "TODO: Fire TEAM_CREATED(projectId, teamId, parentTeamId) event" }
             } else {
                 throw IllegalArgumentException("Failed to create team. Ensure project and parent team are valid.")
             }
@@ -60,7 +57,6 @@ class TeamServiceImpl(private val teamRepo: TeamQueries) : TeamService {
                 
                 if (toUpdate.parentTeamId != null) {
                     // If a root team was just linked to a parent, its full hierarchy must be rebuilt.
-                    log.info { "TODO: Fire TEAM_LINKED(projectId, teamId, parentTeamId) event" }
                 }
             } catch (e: Exception) {
                 when (e) {
@@ -106,8 +102,6 @@ class TeamServiceImpl(private val teamRepo: TeamQueries) : TeamService {
             try {
                 // Verifies against the Project container context before writing.
                 teamRepo.insertTeamMembers(projectId, teamId, memberIds)
-                
-                log.info { "TODO: Fire TEAM_MEMBERS_ADDED event" }
             } catch (e: Exception) {
                 log.error(e) { "Failed to add team members" }
                 throw e
@@ -117,7 +111,6 @@ class TeamServiceImpl(private val teamRepo: TeamQueries) : TeamService {
         override fun removeTeamMembers(projectId: String, userId: String, teamId: String, memberIds: List<String>) {
             try {
                 teamRepo.deleteTeamMembers(projectId, teamId, memberIds)
-                log.info { "TODO: Fire TEAM_MEMBERS_REMOVED event" }
             } catch (e: Exception) {
                 log.error(e) { "Failed to remove team members" }
                 throw e
