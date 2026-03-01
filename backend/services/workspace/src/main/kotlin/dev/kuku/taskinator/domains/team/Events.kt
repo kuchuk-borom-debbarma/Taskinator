@@ -56,4 +56,29 @@ sealed class TeamEvent {
         val teamId: String,
         val memberIds: List<String>
     ) : TeamEvent()
+
+    // --- INTERNAL CLEANUP EVENTS ---
+
+    data class ProjectTeamsPurgeRequested(
+        override val eventId: UUID = UUID.randomUUID(),
+        override val projectId: String,
+        override val timestamp: Instant = Instant.now(),
+        val userId: String
+    ) : TeamEvent()
+
+    data class SubTeamsPurgeRequested(
+        override val eventId: UUID = UUID.randomUUID(),
+        override val projectId: String,
+        override val timestamp: Instant = Instant.now(),
+        val userId: String,
+        val teamIds: List<String>
+    ) : TeamEvent()
+
+    data class MemberTeamCleanupRequested(
+        override val eventId: UUID = UUID.randomUUID(),
+        override val projectId: String,
+        override val timestamp: Instant = Instant.now(),
+        val userId: String,
+        val memberIds: List<String>
+    ) : TeamEvent()
 }

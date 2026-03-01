@@ -57,4 +57,37 @@ sealed class TaskEvent {
         val path: String, // CAPTURED SCOPE: Used for chunky delete of sub-tasks
         val version: Long
     ) : TaskEvent()
+
+    // --- INTERNAL CLEANUP EVENTS ---
+
+    data class ProjectTasksPurgeRequested(
+        override val eventId: UUID = UUID.randomUUID(),
+        override val projectId: String,
+        override val timestamp: Instant = Instant.now(),
+        val userId: String
+    ) : TaskEvent()
+
+    data class SubTasksPurgeRequested(
+        override val eventId: UUID = UUID.randomUUID(),
+        override val projectId: String,
+        override val timestamp: Instant = Instant.now(),
+        val userId: String,
+        val parentPath: String
+    ) : TaskEvent()
+
+    data class MemberTaskCleanupRequested(
+        override val eventId: UUID = UUID.randomUUID(),
+        override val projectId: String,
+        override val timestamp: Instant = Instant.now(),
+        val userId: String,
+        val memberIds: List<String>
+    ) : TaskEvent()
+
+    data class TeamTasksUnassignRequested(
+        override val eventId: UUID = UUID.randomUUID(),
+        override val projectId: String,
+        override val timestamp: Instant = Instant.now(),
+        val userId: String,
+        val teamIds: List<String>
+    ) : TaskEvent()
 }

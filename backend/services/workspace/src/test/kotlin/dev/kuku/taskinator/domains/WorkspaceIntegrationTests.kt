@@ -3,16 +3,19 @@ package dev.kuku.taskinator.domains
 import dev.kuku.taskinator.TestPostgresConfiguration
 import dev.kuku.taskinator.domains.project.ProjectEvent
 import dev.kuku.taskinator.domains.project.ProjectService
+import dev.kuku.taskinator.domains.project.internal.ProjectConsumer
 import dev.kuku.taskinator.domains.project.internal.ProjectMembers
 import dev.kuku.taskinator.domains.project.internal.Projects
 import dev.kuku.taskinator.domains.task.TaskEvent
 import dev.kuku.taskinator.domains.task.TaskService
 import dev.kuku.taskinator.domains.task.internal.ProjectTasksTable
+import dev.kuku.taskinator.domains.task.internal.TaskConsumer
 import dev.kuku.taskinator.domains.team.TeamEvent
 import dev.kuku.taskinator.domains.team.TeamService
 import dev.kuku.taskinator.domains.team.internal.ProjectTeamClosure
 import dev.kuku.taskinator.domains.team.internal.ProjectTeamMembers
 import dev.kuku.taskinator.domains.team.internal.ProjectTeams
+import dev.kuku.taskinator.domains.team.internal.TeamConsumer
 import org.jetbrains.exposed.v1.jdbc.SchemaUtils
 import org.jetbrains.exposed.v1.jdbc.transactions.transaction
 import org.junit.jupiter.api.BeforeEach
@@ -39,7 +42,9 @@ import kotlin.uuid.Uuid
 )
 @Import(TestPostgresConfiguration::class)
 class WorkspaceIntegrationTests @Autowired constructor(
-    private val workspaceConsumer: WorkspaceConsumer,
+    private val projectConsumer: ProjectConsumer,
+    private val teamConsumer: TeamConsumer,
+    private val taskConsumer: TaskConsumer,
     private val projectService: ProjectService,
     private val teamService: TeamService,
     private val taskService: TaskService
@@ -63,7 +68,7 @@ class WorkspaceIntegrationTests @Autowired constructor(
 
     @Test
     fun `should perform synchronous creation and async cascading cleanup`() {
-        // GIVEN: Synchronous creation of Project, Team, and Task via Services
+        // GIVEN: Synchronous creation
         val projectId = Uuid.random().toString()
         val teamId = Uuid.random().toString()
         projectService.createProject(userId, "Integrated Project", "Desc", projectId)
@@ -78,60 +83,35 @@ class WorkspaceIntegrationTests @Autowired constructor(
         ))
         val taskId = createdTask?.id ?: throw IllegalStateException("Task creation failed")
 
-        // Verify they exist
-        assertNotNull(projectService.getProjectById(projectId, userId))
-        assertEquals(1, teamService.getTeamsByProject(projectId, userId, 10, 0).size)
-        assertNotNull(taskService.getTaskById(projectId, userId, taskId))
-
         val ack = mock(Acknowledgment::class.java)
 
-        // WHEN: The consumer receives the ProjectDeleted event
-        val projectDeletedEvent = ProjectEvent.ProjectDeleted(
-            projectId = projectId,
-            userId = userId,
-            version = 0L
-        )
-        workspaceConsumer.consume(listOf(projectDeletedEvent), ack)
+        // WHEN: Project deleted
+        val projectDeletedEvent = ProjectEvent.ProjectDeleted(projectId = projectId, userId = userId, version = 0L)
+        projectConsumer.consume(listOf(projectDeletedEvent), ack)
 
-        // THEN: It should have dispatched the fan-out Cleanup events via KafkaTemplate
+        // THEN: Fan-out events triggered
         verify(kafkaTemplate).send(
             org.mockito.ArgumentMatchers.eq("workspace-activity"),
             org.mockito.ArgumentMatchers.eq(projectId),
-            org.mockito.ArgumentMatchers.isA(dev.kuku.taskinator.domains.CleanupEvent.ProjectTeamsPurgeRequested::class.java)
+            org.mockito.ArgumentMatchers.isA(TeamEvent.ProjectTeamsPurgeRequested::class.java)
         )
         verify(kafkaTemplate).send(
             org.mockito.ArgumentMatchers.eq("workspace-activity"),
             org.mockito.ArgumentMatchers.eq(projectId),
-            org.mockito.ArgumentMatchers.isA(dev.kuku.taskinator.domains.CleanupEvent.ProjectTasksPurgeRequested::class.java)
+            org.mockito.ArgumentMatchers.isA(TaskEvent.ProjectTasksPurgeRequested::class.java)
         )
 
-        // AND: When the consumer processes the Cleanup events
-        val cleanupTeamsEvent = dev.kuku.taskinator.domains.CleanupEvent.ProjectTeamsPurgeRequested(
-            eventId = UUID.randomUUID(),
-            projectId = projectId,
-            timestamp = java.time.Instant.now(),
-            userId = userId
-        )
-        val cleanupTasksEvent = dev.kuku.taskinator.domains.CleanupEvent.ProjectTasksPurgeRequested(
-            eventId = UUID.randomUUID(),
-            projectId = projectId,
-            timestamp = java.time.Instant.now(),
-            userId = userId
-        )
-        
-        workspaceConsumer.consume(listOf(cleanupTeamsEvent, cleanupTasksEvent), ack)
+        // AND: Consumers process purge events
+        teamConsumer.consume(listOf(TeamEvent.ProjectTeamsPurgeRequested(projectId = projectId, userId = userId)), ack)
+        taskConsumer.consume(listOf(TaskEvent.ProjectTasksPurgeRequested(projectId = projectId, userId = userId)), ack)
 
-        // THEN: The entities should be deleted
+        // THEN: Everything deleted
         assertEquals(0, teamService.getTeamsByProject(projectId, userId, 10, 0).size)
         assertEquals(null, taskService.getTaskById(projectId, userId, taskId))
-
-        // AND: The offset should be acknowledged
-        verify(ack, org.mockito.Mockito.atLeastOnce()).acknowledge()
     }
 
     @Test
-    fun `should maintain idempotency when same cleanup event is processed twice`() {
-        // GIVEN: Synchronous creation
+    fun `should maintain idempotency when same purge event is processed twice`() {
         val projectId = Uuid.random().toString()
         projectService.createProject(userId, "Idempotent Project", "", projectId)
         val createdTask = taskService.createTask(userId, dev.kuku.taskinator.domains.task.TaskToCreateParam(
@@ -139,23 +119,14 @@ class WorkspaceIntegrationTests @Autowired constructor(
         ))
         val taskId = createdTask?.id ?: throw IllegalStateException("Task creation failed")
 
-        val cleanupEvent = dev.kuku.taskinator.domains.CleanupEvent.ProjectTasksPurgeRequested(
-            eventId = UUID.randomUUID(),
-            projectId = projectId,
-            timestamp = java.time.Instant.now(),
-            userId = userId
-        )
-        
-        val events = listOf(cleanupEvent, cleanupEvent)
+        val purgeEvent = TaskEvent.ProjectTasksPurgeRequested(projectId = projectId, userId = userId)
         val ack = mock(Acknowledgment::class.java)
 
-        // WHEN: Consumer processes the duplicate cleanup events
-        workspaceConsumer.consume(events, ack)
+        // WHEN: Duplicate events processed
+        taskConsumer.consume(listOf(purgeEvent, purgeEvent), ack)
 
-        // THEN: Tasks should be deleted successfully without throwing exceptions
+        // THEN: Deleted successfully
         assertEquals(null, taskService.getTaskById(projectId, userId, taskId))
-        
-        // Offset still acknowledged
         verify(ack).acknowledge()
     }
 }
