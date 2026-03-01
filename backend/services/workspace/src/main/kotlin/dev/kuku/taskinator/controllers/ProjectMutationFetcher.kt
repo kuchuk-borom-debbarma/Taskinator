@@ -113,6 +113,8 @@ class ProjectMutationFetcher(
         @InputArgument("input") input: AddProjectMembersInput,
         @RequestHeader("X-User-Id") userId: String
     ): GenericResponse {
+        projectService.addProjectMembers(input.projectId, userId, input.memberIds)
+
         val event = ProjectEvent.ProjectMembersAdded(
             projectId = input.projectId,
             userId = userId,
@@ -121,7 +123,7 @@ class ProjectMutationFetcher(
 
         kafkaTemplate.send("workspace-activity", input.projectId, event)
 
-        return GenericResponse(success = true, message = "Member addition queued")
+        return GenericResponse(success = true, message = "Members added successfully")
     }
 
     @DgsData(parentType = DgsConstants.PROJECTMUTATION.TYPE_NAME)

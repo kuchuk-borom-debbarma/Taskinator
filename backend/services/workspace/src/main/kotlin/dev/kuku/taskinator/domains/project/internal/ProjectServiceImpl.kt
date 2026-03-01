@@ -16,11 +16,9 @@ private val log = KotlinLogging.logger {}
 @Service
 @Transactional
 class ProjectServiceImpl(
-    private val projectRepo: ProjectQueries,
-    private val kafkaTemplate: KafkaTemplate<String, Any>
+    private val projectRepo: ProjectQueries
 ) : ProjectService {
 
-    private val TOPIC = "workspace-activity"
     private val MAX_LIMIT = 100
 
     override fun createProject(
@@ -29,7 +27,7 @@ class ProjectServiceImpl(
         projectDescription: String?,
         projectId: String?
     ): ProjectInfo? {
-        log.info { "Creating Project $projectName for user $userId" }
+        log.info { "Creating Project ${projectName} for user $userId" }
         try {
             val finalId = projectId ?: UuidCreator.getTimeOrderedWithRandom().toString()
             return projectRepo.insertProject(
@@ -49,15 +47,6 @@ class ProjectServiceImpl(
         log.info { "Renaming project $projectId" }
         try {
             projectRepo.updateProject(projectId, userId, toUpdate)
-            
-            // Fire event for sync with other services
-            kafkaTemplate.send(TOPIC, projectId, ProjectEvent.ProjectRenamed(
-                projectId = projectId,
-                userId = userId,
-                name = toUpdate.name,
-                description = toUpdate.description,
-                version = toUpdate.version
-            ))
         } catch (e: Exception) {
             when (e) {
                 is ProjectConcurrencyException,
@@ -70,12 +59,6 @@ class ProjectServiceImpl(
     override fun addProjectMembers(projectId: String, userId: String, memberIds: List<String>) {
         try {
             projectRepo.insertProjectMembers(projectId, userId, memberIds)
-            
-            kafkaTemplate.send(TOPIC, projectId, ProjectEvent.ProjectMembersAdded(
-                projectId = projectId,
-                userId = userId,
-                memberIds = memberIds
-            ))
         } catch (e: Exception) {
             log.error(e) { "Failed to add project members" }
             throw e
@@ -85,12 +68,6 @@ class ProjectServiceImpl(
     override fun removeProjectMembers(projectId: String, userId: String, memberIds: List<String>) {
         try {
             projectRepo.deleteProjectMembers(projectId, userId, memberIds)
-            
-            kafkaTemplate.send(TOPIC, projectId, ProjectEvent.ProjectMembersRemoved(
-                projectId = projectId,
-                userId = userId,
-                memberIds = memberIds
-            ))
         } catch (e: Exception) {
             log.error(e) { "Failed to remove project members" }
             throw e
@@ -103,21 +80,15 @@ class ProjectServiceImpl(
         // In a real high-scale system, you might mark it as status = 'DELETED' first.
         
         // For now, we perform the metadata delete and member delete synchronously 
-        // as they are small tables, but fire the event for the HEAVY data (Teams/Tasks).
+        // as they are small tables, but the HEAVY data (Teams/Tasks) will be 
+        // handled via the event fired from the controller.
         val deletedRows = projectRepo.deleteProject(projectId, userId, version)
 
         if (deletedRows == 0) {
             throw ProjectConcurrencyException("Delete failed: version mismatch or unauthorized.")
         }
 
-        // HEAVY CASCADE: Trigger async cleanup of Teams and Tasks
-        kafkaTemplate.send(TOPIC, projectId, ProjectEvent.ProjectDeleted(
-            projectId = projectId,
-            userId = userId,
-            version = version
-        ))
-
-        log.info { "ProjectService: Initiated cascading cleanup for project $projectId" }
+        log.info { "ProjectService: Metadata deleted for project $projectId" }
         return true
     }
 
