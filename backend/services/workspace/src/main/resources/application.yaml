@@ -39,6 +39,17 @@ spring:
       enabled: true
       path: /graphiql
 
+server:
+  port: 8080
+  tomcat:
+    socket-properties:
+      so-linger: -1 # Disable so-linger to fix SocketException on macOS
+
+dgs:
+  graphql:
+    schema-locations:
+      - classpath:graphql/**/*.graphql*
+
 ---
 spring:
   config:
@@ -56,14 +67,3 @@ spring:
       properties:
         reconnect.backoff.ms: 10000
         reconnect.backoff.max.ms: 30000
-
-server:
-  port: 8080
-  tomcat:
-    socket-properties:
-      so-linger: -1 # Disable so-linger to fix SocketException on macOS
-
-dgs:
-  graphql:
-    schema-locations:
-      - classpath:graphql/**/*.graphql*
