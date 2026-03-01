@@ -27,8 +27,8 @@ spring:
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
       properties:
-        # Security requirement for JsonDeserializer
-        spring.json.trusted.packages: "dev.kuku.taskinator.domains.task"
+        # Security requirement for JsonDeserializer - Trust all domain events
+        spring.json.trusted.packages: "dev.kuku.taskinator.domains.*"
     
     listener:
       type: batch # Critical for the "Drain" phase: allows processing 5,000 records at once
