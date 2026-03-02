@@ -26,6 +26,8 @@ repositories {
 }
 
 dependencies {
+    implementation("org.flywaydb:flyway-core")
+    implementation("org.flywaydb:flyway-database-postgresql")
     implementation("org.jetbrains.exposed:exposed-spring-boot4-starter:1.0.0")
     implementation("org.jetbrains.exposed:exposed-java-time:1.0.0")
     implementation("org.springframework.boot:spring-boot-starter-kafka")
