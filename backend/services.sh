@@ -49,16 +49,27 @@ else
         sleep 2
     done
     echo -e "\n${GREEN}Databases are healthy!${NC}"
+
+    echo -e "${BLUE}2. Running Database Migrations...${NC}"
+    # Workspace Service Migrations (Flyway runs on start, but we can call it explicitly)
+    echo -e "${BLUE}   - Workspace Migrations...${NC}"
+    cd "$BACKEND_DIR/services/workspace" && ./gradlew flywayMigrate > /dev/null 2>&1 || echo -e "${RED}Workspace migrations might need manual check, skipping...${NC}"
+
+    # Identity Service Migrations (Drizzle)
+    echo -e "${BLUE}   - Identity Migrations...${NC}"
+    cd "$BACKEND_DIR/services/identity" && DATABASE_URL="postgresql://user:password@localhost:5433/identity" bun run db:migrate > /dev/null 2>&1
+    
+    echo -e "${GREEN}Migrations complete!${NC}"
 fi
 
-echo -e "${BLUE}2. Starting Workspace Service (Gradle)...${NC}"
+echo -e "${BLUE}3. Starting Workspace Service (Gradle)...${NC}"
 GRADLE_ARGS=""
 if [ "$PROFILE" == "no-kafka" ]; then
     GRADLE_ARGS="--args='--spring.profiles.active=no-kafka'"
 fi
 cd "$BACKEND_DIR/services/workspace" && ./gradlew bootRun $GRADLE_ARGS > "$BACKEND_DIR/workspace.log" 2>&1 &
 
-echo -e "${BLUE}3. Starting Identity Service (Bun/Wrangler)...${NC}"
+echo -e "${BLUE}4. Starting Identity Service (Bun/Wrangler)...${NC}"
 cd "$BACKEND_DIR/services/identity" && bun run dev > "$BACKEND_DIR/identity.log" 2>&1 &
 
 echo -e "${BLUE}Waiting for subgraphs to initialize...${NC}"

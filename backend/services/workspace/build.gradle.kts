@@ -4,8 +4,16 @@ plugins {
     id("org.springframework.boot") version "4.0.2"
     id("io.spring.dependency-management") version "1.1.7"
     id("com.netflix.dgs.codegen") version "8.3.0"
+    id("org.flywaydb.flyway") version "10.10.0"
 }
 val netflixDgsVersion by extra("11.0.0")
+
+flyway {
+    url = "jdbc:postgresql://localhost:5432/workspace"
+    user = "user"
+    password = "password"
+    baselineOnMigrate = true
+}
 
 group = "dev.kuku"
 version = "0.0.1-SNAPSHOT"
