@@ -14,8 +14,15 @@ BACKEND_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 ROOT_DIR="$( dirname "$BACKEND_DIR" )"
 
 echo -e "${BLUE}Stopping any existing services...${NC}"
-# Kill processes on ports 8080, 8787, 4000
-lsof -ti :8080,8787,4000 | xargs kill -9 2>/dev/null || true
+# Kill processes on ports 8080 (Workspace), 8787 (Identity), 4000 (Gateway), 5432 (Workspace DB), 5433 (Identity DB), 8081 (Kafka UI)
+PORTS="8080 8787 4000 5432 5433 8081"
+for PORT in $PORTS; do
+    PID=$(lsof -ti :$PORT)
+    if [ ! -z "$PID" ]; then
+        echo -e "${RED}Killing process $PID on port $PORT...${NC}"
+        kill -9 $PID 2>/dev/null || true
+    fi
+done
 
 cleanup() {
     echo -e "\n${BLUE}Shutting down all services...${NC}"
