@@ -3,6 +3,7 @@ package dev.kuku.taskinator.controllers
 import com.netflix.graphql.dgs.DgsComponent
 import com.netflix.graphql.dgs.DgsData
 import com.netflix.graphql.dgs.DgsDataFetchingEnvironment
+import com.netflix.graphql.dgs.DgsEntityFetcher
 import com.netflix.graphql.dgs.InputArgument
 import dev.kuku.taskinator.domains.task.TaskService
 import dev.kuku.taskinator.generated.DgsConstants
@@ -21,6 +22,23 @@ class TeamDataFetcher(
     private val teamService: dev.kuku.taskinator.domains.team.TeamService,
     private val taskService: TaskService
 ) {
+
+    @DgsEntityFetcher(name = DgsConstants.TEAM.TYPE_NAME)
+    fun fetchTeam(values: Map<String, Any>, @RequestHeader("X-User-Id") userId: String): Team? {
+        val id = values["id"] as String
+        // Note: ProjectId is unknown here, so we pass empty string as shard key (which TeamService should handle if it can lookup by ID)
+        return teamService.getTeamById("", userId, id)?.let {
+            Team(
+                id = it.id,
+                name = it.name,
+                projectId = it.projectId,
+                parentTeamId = it.parentTeamId,
+                createdAt = it.createdAt.toString(),
+                members = emptyList(),
+                tasks = emptyList()
+            )
+        }
+    }
 
     @DgsData(parentType = DgsConstants.TEAM.TYPE_NAME)
     fun members(

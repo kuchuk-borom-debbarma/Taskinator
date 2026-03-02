@@ -3,6 +3,7 @@ package dev.kuku.taskinator.controllers
 import com.netflix.graphql.dgs.DgsComponent
 import com.netflix.graphql.dgs.DgsData
 import com.netflix.graphql.dgs.DgsDataFetchingEnvironment
+import com.netflix.graphql.dgs.DgsEntityFetcher
 import com.netflix.graphql.dgs.InputArgument
 import dev.kuku.taskinator.domains.project.ProjectMemberSortKey
 import dev.kuku.taskinator.domains.project.ProjectService
@@ -23,6 +24,24 @@ class ProjectDataFetcher(
     private val teamService: TeamService,
     private val taskService: TaskService
 ) {
+
+    @DgsEntityFetcher(name = DgsConstants.PROJECT.TYPE_NAME)
+    fun fetchProject(values: Map<String, Any>, @RequestHeader("X-User-Id") userId: String): Project? {
+        val id = values["id"] as String
+        return projectService.getProjectById(id, userId)?.let {
+            Project(
+                id = it.id,
+                name = it.name,
+                owner = User(id = it.owner, projects = emptyList()),
+                description = it.description,
+                createdAt = it.createdAt.toString(),
+                updatedAt = it.updatedAt.toString(),
+                teams = emptyList(),
+                members = emptyList(),
+                tasks = emptyList()
+            )
+        }
+    }
 
     @DgsData(parentType = DgsConstants.PROJECT.TYPE_NAME)
     fun owner(dfe: DgsDataFetchingEnvironment): User {

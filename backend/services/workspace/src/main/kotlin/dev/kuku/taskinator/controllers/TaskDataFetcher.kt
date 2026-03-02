@@ -3,15 +3,28 @@ package dev.kuku.taskinator.controllers
 import com.netflix.graphql.dgs.DgsComponent
 import com.netflix.graphql.dgs.DgsData
 import com.netflix.graphql.dgs.DgsDataFetchingEnvironment
+import com.netflix.graphql.dgs.DgsEntityFetcher
 import dev.kuku.taskinator.domains.task.ProjectTask
+import dev.kuku.taskinator.domains.task.TaskService
 import dev.kuku.taskinator.domains.team.TeamService
 import dev.kuku.taskinator.generated.DgsConstants
 import dev.kuku.taskinator.generated.types.Team
 import dev.kuku.taskinator.generated.types.User
+import dev.kuku.taskinator.generated.types.Task
 import org.springframework.web.bind.annotation.RequestHeader
 
 @DgsComponent
-class TaskDataFetcher(private val teamService: TeamService) {
+class TaskDataFetcher(
+    private val teamService: TeamService,
+    private val taskService: TaskService
+) {
+
+    @DgsEntityFetcher(name = DgsConstants.TASK.TYPE_NAME)
+    fun fetchTask(values: Map<String, Any>, @RequestHeader("X-User-Id") userId: String): ProjectTask? {
+        val id = values["id"] as String
+        // Note: projectId is unknown here
+        return taskService.getTaskById("", userId, id)
+    }
 
     @DgsData(parentType = DgsConstants.TASK.TYPE_NAME)
     fun assignedTeam(
