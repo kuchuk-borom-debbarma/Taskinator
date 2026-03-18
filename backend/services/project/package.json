@@ -5,6 +5,7 @@
   "private": true,
   "devDependencies": {
     "@types/bun": "latest",
+    "@types/express": "^5.0.6",
     "@types/pg": "^8.18.0",
     "drizzle-kit": "^0.31.9"
   },
@@ -14,6 +15,7 @@
   "dependencies": {
     "drizzle-orm": "^0.45.1",
     "express": "^5.2.1",
+    "kafkajs": "^2.2.4",
     "pg": "^8.20.0"
   }
 }
