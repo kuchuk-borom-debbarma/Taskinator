@@ -2,10 +2,18 @@ export type Project = {
     id: string;
     userId: string;
     name: string;
-    description?: string;
+    description: string | null;
     createdAt: Date;
     updatedAt?: Date;
-}
+};
+
+export type ProjectMember = {
+    id: string;
+    projectId: string;
+    userId: string;
+    createdAt: Date;
+    updatedAt: Date;
+};
 
 export interface CreateProjectParam {
     name: string;
@@ -14,14 +22,33 @@ export interface CreateProjectParam {
 }
 
 export interface ProjectService {
-
     /**
      * Create single project
      */
-    createProject(data: CreateProjectParam): Promise<Project>;
+    createProject(data: CreateProjectParam): Promise<Project | null>;
 
     /**
      * Create Multiple project
      */
-    createProjects(data: CreateProjectParam[]): Promise<Project[]>
+    createProjects(data: CreateProjectParam[]): Promise<Project[]>;
+
+    deleteProjects(data: {
+        userId: string;
+        projectIds: string[];
+    }): Promise<void>;
+
+    /**
+     * Add members to a project
+     */
+    addProjectMembers(data: {
+        userId: string;
+        projectId: string;
+        usersToAdd: string[];
+    }): Promise<ProjectMember[]>;
+
+    deleteProjectMembers(data: {
+        userId: string;
+        projectId: string;
+        memberIds: string[];
+    }): Promise<void>;
 }
