@@ -1,4 +1,4 @@
-# Dev Journal — Entry 1
+# Dev Journal — Entry 1 (Base Tech Stack)
 
 ## Architecture Decision
 
@@ -21,3 +21,29 @@ The core domains — Projects, Teams, Tasks, and the Event Engine — are well-d
 **Redis** — Fast ephemeral storage for caching and rate-limiting.
 
 **Kafka + Spring Kafka** — Durable, ordered event streaming for handling task completion events asynchronously at scale.
+
+---
+
+# Dev Journal — Entry 2 (Kafka Design Pt-1)
+
+## Partition Key
+
+`projectId` is the partition key across all topics. Everything — teams, tasks, members — is scoped under a project, so ordering needs to be consistent within a project.
+
+## Topic Structure
+
+One topic per domain entity keeps consumers decoupled and focused. A single `project` topic would force every consumer to filter out events it doesn't care about.
+
+**`project-events`** — project created, updated, deleted
+
+**`team-events`** — team created, deleted
+
+**`task-events`** — task created, updated, completed, deleted
+
+**`member-events`** — member added, removed
+
+## Cascade Deletes
+
+When a project is deleted and teams, members, and tasks need to be cleaned up, this is handled via the **Saga pattern**. The `project-events` consumer listens for `project.deleted` and publishes downstream events to the relevant topics. Each consumer handles its own cleanup — no single consumer owns the full cascade.
+
+This keeps the dependency chain choreographed through events rather than hardcoded.
