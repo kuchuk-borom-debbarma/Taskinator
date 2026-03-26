@@ -47,3 +47,23 @@ One topic per domain entity keeps consumers decoupled and focused. A single `pro
 When a project is deleted and teams, members, and tasks need to be cleaned up, this is handled via the **Saga pattern**. The `project-events` consumer listens for `project.deleted` and publishes downstream events to the relevant topics. Each consumer handles its own cleanup — no single consumer owns the full cascade.
 
 This keeps the dependency chain choreographed through events rather than hardcoded.
+
+---
+
+# Dev Journal — Entry 3 (Database Schema Pt-1)
+
+## Scope
+
+Starting with the Project domain only — `projects` and `project_members`. No premature optimization; just a clean normalized schema to get the foundation right.
+
+## Design Decisions
+
+**No soft deletes for now** — hard deletes keep the schema and queries simple at this stage. Can be revisited if audit trails become a requirement.
+
+**Optimistic locking on `projects`** — projects are read-heavy with infrequent writes, making optimistic locking a natural fit. Avoids the overhead of pessimistic locks while still protecting against concurrent update conflicts.
+
+**No denormalization yet** — keeping the schema normalized at this stage. Denormalization is an optimization decision that should be driven by real query patterns, not assumptions.
+
+## Access Patterns
+
+Both `projects` and `project_members` are read-heavy. Members are added infrequently — reads will vastly outnumber writes, which aligns well with the caching strategy via Redis.
