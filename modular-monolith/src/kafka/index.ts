@@ -1,6 +1,8 @@
-import { Kafka } from 'kafkajs';
+import {Kafka} from 'kafkajs';
 
 export const kafka = new Kafka({
     clientId: 'taskinator-expressjs',
-    brokers: [''],
+    brokers: [
+        "localhost:9092"
+    ],
 });
