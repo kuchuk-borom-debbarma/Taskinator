@@ -1,3 +1,5 @@
+import type { BaseService } from './index.ts';
+
 export type Project = {
     id: string;
     userId: string;
@@ -21,7 +23,7 @@ export interface CreateProjectParam {
     userId: string;
 }
 
-export interface ProjectService {
+export interface ProjectService extends BaseService {
     /**
      * Create single project
      */

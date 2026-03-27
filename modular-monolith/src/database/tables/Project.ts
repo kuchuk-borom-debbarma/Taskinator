@@ -41,3 +41,5 @@ export interface ProjectMemberTable {
 export type ProjectMember = Selectable<ProjectMemberTable>;
 export type NewProjectMember = Insertable<ProjectMemberTable>;
 export type ProjectMemberUpdate = Updateable<ProjectMemberTable>;
+
+//TODO idempotent eventId key to prevent duplicate events.
