@@ -73,7 +73,7 @@ export const insertTeamMembers = async (data: {
      * and the length check below will throw Unauthorized.
      */
     const result = await sql<TeamMember>`
-        INSERT INTO team_member (fk_team_id, fk_user_id, fk_project_id)
+        INSERT INTO project_team_member (fk_team_id, fk_user_id, fk_project_id)
         SELECT ${data.teamId},
                unnest(${data.members}::text[]),
                ${data.projectId} WHERE EXISTS (

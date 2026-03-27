@@ -1,7 +1,7 @@
 import { jest, describe, it, expect, beforeEach } from '@jest/globals';
 
 // Use unstable_mockModule for ESM
-jest.unstable_mockModule('../../../../../database/index.ts', () => ({
+jest.unstable_mockModule('../../../../database/index.ts', () => ({
     db: {
         insertInto: jest.fn(),
         with: jest.fn(),
@@ -36,12 +36,12 @@ describe('ProjectQueries', () => {
                 updated_at: null,
             };
 
-            const mockExecute = (jest.fn() as any).mockResolvedValue([
+            const mockExecuteTakeFirst = (jest.fn() as any).mockResolvedValue(
                 mockProject,
-            ]);
+            );
             const mockReturningAll = jest
                 .fn()
-                .mockReturnValue({ execute: mockExecute });
+                .mockReturnValue({ executeTakeFirst: mockExecuteTakeFirst });
             const mockValues = jest
                 .fn()
                 .mockReturnValue({ returningAll: mockReturningAll });

@@ -8,7 +8,7 @@ import {
 } from '@jest/globals';
 
 // Use unstable_mockModule for ESM
-jest.unstable_mockModule('../queries/ProjectQueries.ts', () => ({
+jest.unstable_mockModule('../ProjectQueries.ts', () => ({
     insertProject: jest.fn(),
     insertProjects: jest.fn(),
     insertProjectMembers: jest.fn(),
