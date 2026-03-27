@@ -3,7 +3,7 @@ import type {
     Project,
     ProjectMember,
 } from '../../ProjectService.ts';
-import { db } from '../../../../database/Kysely.ts';
+import {db} from "../../../../database";
 
 export const insertProject = async (
     data: CreateProjectParam,
