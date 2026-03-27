@@ -1,11 +1,11 @@
-import {v4} from "uuid";
+import { v4 } from 'uuid';
 
 export function buildKafkaMessage({
-                               key,
-                               type,
-                               source,
-                               data,
-                           }: {
+    key,
+    type,
+    source,
+    data,
+}: {
     key: string;
     type: string;
     source: string;
@@ -38,9 +38,13 @@ export const KAFKA_EVENTS = {
         ADDED: 'PROJECT_MEMBER_ADDED',
         DELETED: 'PROJECT_MEMBER_DELETED',
     },
+    PROJECT_TEAM: {
+        ADDED: 'PROJECT_TEAM_ADDED',
+    },
 } as const;
 
 export const KAFKA_TOPICS = {
     PROJECT: 'project-events',
-    PROJECT_MEMBER: 'project-member',
+    PROJECT_MEMBER: 'project-member-events',
+    PROJECT_TEAM: 'project-team-events',
 } as const;

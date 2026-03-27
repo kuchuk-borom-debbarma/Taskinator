@@ -1,10 +1,12 @@
 import type { ProjectMemberTable, ProjectTable } from './tables/Project.ts';
 import { Kysely, PostgresDialect } from 'kysely';
 import { Pool } from 'pg';
+import type { ProjectTeamTable } from './tables/ProjectTeam.ts';
 
 export interface Database {
     project: ProjectTable;
     projectMember: ProjectMemberTable;
+    projectTeam: ProjectTeamTable;
 }
 
 const dialect = new PostgresDialect({

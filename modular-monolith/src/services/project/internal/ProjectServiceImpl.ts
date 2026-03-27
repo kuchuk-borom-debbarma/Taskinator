@@ -11,12 +11,12 @@ import {
     insertProject,
     insertProjectMembers,
     insertProjects,
-} from './queries/ProjectQueries.ts';
+} from './ProjectQueries.ts';
 
-import {KAFKA_TOPICS, KAFKA_EVENTS} from "../../../utils/kafka.ts";
-import type {Producer} from 'kafkajs';
-import {buildKafkaMessage} from "../../../utils/kafka.ts";
-import {kafka} from "../../../kafka";
+import { KAFKA_TOPICS, KAFKA_EVENTS } from '../../../utils/kafka.ts';
+import type { Producer } from 'kafkajs';
+import { buildKafkaMessage } from '../../../utils/kafka.ts';
+import { kafka } from '../../../kafka';
 
 export class ProjectServiceImpl implements ProjectService {
     producer: Producer;
@@ -28,8 +28,9 @@ export class ProjectServiceImpl implements ProjectService {
         });
     }
 
-    destroy(): Promise<void> {
-        return Promise.resolve();
+    async destroy(): Promise<void> {
+        console.log(`Disconnecting kafka producer ${this.constructor.name}`);
+        await this.producer.disconnect();
     }
 
     async init() {

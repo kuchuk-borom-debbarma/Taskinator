@@ -1,4 +1,11 @@
-import { jest, describe, it, expect, beforeEach, afterEach } from '@jest/globals';
+import {
+    jest,
+    describe,
+    it,
+    expect,
+    beforeEach,
+    afterEach,
+} from '@jest/globals';
 
 // Use unstable_mockModule for ESM
 jest.unstable_mockModule('../queries/ProjectQueries.ts', () => ({
@@ -23,8 +30,10 @@ jest.unstable_mockModule('../../../../kafka/index.ts', () => {
 });
 
 // Dynamic imports AFTER mockModule
-const { ProjectServiceImpl } = (await import('../ProjectServiceImpl.ts')) as any;
-const ProjectQueries = (await import('../queries/ProjectQueries.ts')) as any;
+const { ProjectServiceImpl } = (await import(
+    '../ProjectServiceImpl.ts'
+)) as any;
+const ProjectQueries = (await import('../ProjectQueries.ts')) as any;
 const { kafka } = (await import('../../../../kafka/index.ts')) as any;
 const { KAFKA_TOPICS } = (await import('../../../../utils/kafka.ts')) as any;
 
@@ -66,7 +75,9 @@ describe('ProjectServiceImpl', () => {
 
             const result = await projectService.createProject(createParam);
 
-            expect(mockedQueries.insertProject).toHaveBeenCalledWith(createParam);
+            expect(mockedQueries.insertProject).toHaveBeenCalledWith(
+                createParam,
+            );
             expect(mockProducer.send).toHaveBeenCalledWith(
                 expect.objectContaining({
                     topic: KAFKA_TOPICS.PROJECT,
@@ -83,10 +94,12 @@ describe('ProjectServiceImpl', () => {
         it('should throw an error if project creation fails', async () => {
             mockedQueries.insertProject.mockResolvedValue(null);
 
-            await expect(projectService.createProject({
-                name: 'Fail',
-                userId: 'user-1',
-            })).rejects.toThrow('Failed to create project');
+            await expect(
+                projectService.createProject({
+                    name: 'Fail',
+                    userId: 'user-1',
+                }),
+            ).rejects.toThrow('Failed to create project');
 
             expect(mockProducer.send).not.toHaveBeenCalled();
         });
@@ -101,15 +114,29 @@ describe('ProjectServiceImpl', () => {
             };
 
             const mockMembers = [
-                { id: 'm1', projectId: 'project-1', userId: 'user-A', createdAt: new Date(), updatedAt: new Date() },
-                { id: 'm2', projectId: 'project-1', userId: 'user-B', createdAt: new Date(), updatedAt: new Date() },
+                {
+                    id: 'm1',
+                    projectId: 'project-1',
+                    userId: 'user-A',
+                    createdAt: new Date(),
+                    updatedAt: new Date(),
+                },
+                {
+                    id: 'm2',
+                    projectId: 'project-1',
+                    userId: 'user-B',
+                    createdAt: new Date(),
+                    updatedAt: new Date(),
+                },
             ];
 
             mockedQueries.insertProjectMembers.mockResolvedValue(mockMembers);
 
             const result = await projectService.addProjectMembers(data);
 
-            expect(mockedQueries.insertProjectMembers).toHaveBeenCalledWith(data);
+            expect(mockedQueries.insertProjectMembers).toHaveBeenCalledWith(
+                data,
+            );
             expect(mockProducer.send).toHaveBeenCalledWith(
                 expect.objectContaining({
                     topic: KAFKA_TOPICS.PROJECT_MEMBER,
@@ -123,11 +150,13 @@ describe('ProjectServiceImpl', () => {
         it('should throw an error if no members are added', async () => {
             mockedQueries.insertProjectMembers.mockResolvedValue([]);
 
-            await expect(projectService.addProjectMembers({
-                userId: 'owner-1',
-                projectId: 'project-1',
-                usersToAdd: [],
-            })).rejects.toThrow('Failed to add any project members');
+            await expect(
+                projectService.addProjectMembers({
+                    userId: 'owner-1',
+                    projectId: 'project-1',
+                    usersToAdd: [],
+                }),
+            ).rejects.toThrow('Failed to add any project members');
 
             expect(mockProducer.send).not.toHaveBeenCalled();
         });
@@ -141,11 +170,25 @@ describe('ProjectServiceImpl', () => {
             };
 
             const deletedProjects = [
-                { id: 'p1', userId: 'owner-1', name: 'P1', description: null, createdAt: new Date() },
-                { id: 'p2', userId: 'owner-1', name: 'P2', description: null, createdAt: new Date() },
+                {
+                    id: 'p1',
+                    userId: 'owner-1',
+                    name: 'P1',
+                    description: null,
+                    createdAt: new Date(),
+                },
+                {
+                    id: 'p2',
+                    userId: 'owner-1',
+                    name: 'P2',
+                    description: null,
+                    createdAt: new Date(),
+                },
             ];
 
-            mockedQueries.deleteProjects.mockResolvedValue(deletedProjects as any);
+            mockedQueries.deleteProjects.mockResolvedValue(
+                deletedProjects as any,
+            );
 
             await projectService.deleteProjects(data);
 
@@ -162,10 +205,12 @@ describe('ProjectServiceImpl', () => {
         it('should throw an error if no projects are deleted', async () => {
             mockedQueries.deleteProjects.mockResolvedValue([]);
 
-            await expect(projectService.deleteProjects({
-                userId: 'owner-1',
-                projectIds: ['p1'],
-            })).rejects.toThrow('Failed to delete any project');
+            await expect(
+                projectService.deleteProjects({
+                    userId: 'owner-1',
+                    projectIds: ['p1'],
+                }),
+            ).rejects.toThrow('Failed to delete any project');
         });
     });
 
@@ -201,14 +246,24 @@ describe('ProjectServiceImpl', () => {
             };
 
             const deletedMembers = [
-                { id: 'm1', userId: 'user-A', projectId: 'project-1', createdAt: new Date(), updatedAt: new Date() },
+                {
+                    id: 'm1',
+                    userId: 'user-A',
+                    projectId: 'project-1',
+                    createdAt: new Date(),
+                    updatedAt: new Date(),
+                },
             ];
 
-            mockedQueries.deleteProjectMembers.mockResolvedValue(deletedMembers as any);
+            mockedQueries.deleteProjectMembers.mockResolvedValue(
+                deletedMembers as any,
+            );
 
             await projectService.deleteProjectMembers(data);
 
-            expect(mockedQueries.deleteProjectMembers).toHaveBeenCalledWith(data);
+            expect(mockedQueries.deleteProjectMembers).toHaveBeenCalledWith(
+                data,
+            );
             expect(mockProducer.send).toHaveBeenCalled();
         });
     });
