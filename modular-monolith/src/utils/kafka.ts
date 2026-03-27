@@ -40,6 +40,11 @@ export const KAFKA_EVENTS = {
     },
     PROJECT_TEAM: {
         ADDED: 'PROJECT_TEAM_ADDED',
+        DELETED: 'PROJECT_TEAM_DELETED',
+    },
+    PROJECT_TEAM_MEMBER: {
+        ADDED: 'PROJECT_TEAM_MEMBER_ADDED',
+        DELETED: 'PROJECT_TEAM_MEMBER_DELETED',
     },
 } as const;
 
@@ -47,4 +52,5 @@ export const KAFKA_TOPICS = {
     PROJECT: 'project-events',
     PROJECT_MEMBER: 'project-member-events',
     PROJECT_TEAM: 'project-team-events',
+    PROJECT_TEAM_MEMBER: 'project-team-member-events',
 } as const;

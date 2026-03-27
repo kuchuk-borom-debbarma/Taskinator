@@ -9,6 +9,15 @@ export type Team = {
     updatedAt: Date;
 };
 
+export type TeamMember = {
+    id: string;
+    projectId: string;
+    teamId: string;
+    userId: string;
+    createdAt: Date;
+    updatedAt: Date;
+};
+
 export interface TeamService extends BaseService {
     /**
      * Create teams. Can be created by any member and project owner
@@ -27,7 +36,7 @@ export interface TeamService extends BaseService {
         userId: string;
         projectId: string;
         teamIds: string[];
-    }): Promise<Team[]>;
+    }): Promise<string[]>;
 
     /**
      * Add members to a team. Members must be part of the project. Deleter should be project owner or team creator.
@@ -36,8 +45,9 @@ export interface TeamService extends BaseService {
     addTeamMembers(data: {
         userId: string;
         projectId: string;
+        teamId: string;
         members: string[];
-    }): Promise<Team[]>;
+    }): Promise<TeamMember[]>;
 
     /**
      * Delete team members. Members must be part of the project. And deleter should be project owner or team creator
@@ -46,6 +56,7 @@ export interface TeamService extends BaseService {
     deleteTeamMembers(data: {
         userId: string;
         projectId: string;
+        teamId: string;
         members: string[];
-    }): Promise<Team[]>;
+    }): Promise<string[]>;
 }
