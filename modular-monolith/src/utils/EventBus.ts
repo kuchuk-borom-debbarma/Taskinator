@@ -5,8 +5,29 @@ import type { Producer, Consumer } from 'kafkajs';
 interface Bus {
     publish(topic: string, message: any | any[]): Promise<void>;
     subscribe(topic: string, groupId: string, handler: (event: any) => Promise<void>): Promise<void>;
+    subscribeBatch(topic: string, groupId: string, handler: (events: any[]) => Promise<void>): Promise<void>;
     init(): Promise<void>;
     destroy(): Promise<void>;
+}
+
+function parseKafkaMessage(messageValue: Buffer | null | undefined): any {
+    const content = messageValue?.toString();
+    if (!content) return null;
+    
+    try {
+        const event = JSON.parse(content);
+        if (event.value && typeof event.value === 'string') {
+            try {
+                const inner = JSON.parse(event.value);
+                return { ...event, ...inner };
+            } catch (e) {
+                return event;
+            }
+        }
+        return event;
+    } catch (e) {
+        return null;
+    }
 }
 
 class MemoryBus implements Bus {
@@ -27,15 +48,8 @@ class MemoryBus implements Bus {
             // In Kafka, messages are usually stringified
             const stringified = JSON.stringify(msg);
             setTimeout(() => {
-                const event = JSON.parse(stringified);
-                if (event.value && typeof event.value === 'string') {
-                    try {
-                        const inner = JSON.parse(event.value);
-                        this.emitter.emit(topic, { ...event, ...inner });
-                    } catch (e) {
-                        this.emitter.emit(topic, event);
-                    }
-                } else {
+                const event = parseKafkaMessage(Buffer.from(stringified));
+                if (event) {
                     this.emitter.emit(topic, event);
                 }
             }, 10);
@@ -44,6 +58,13 @@ class MemoryBus implements Bus {
 
     async subscribe(topic: string, _groupId: string, handler: (event: any) => Promise<void>) {
         this.emitter.on(topic, handler);
+    }
+
+    async subscribeBatch(topic: string, _groupId: string, handler: (events: any[]) => Promise<void>) {
+        // MemoryBus simple implementation: wrap each event in an array
+        this.emitter.on(topic, async (event) => {
+            await handler([event]);
+        });
     }
 }
 
@@ -88,21 +109,36 @@ class KafkaBus implements Bus {
         await consumer.subscribe({ topic, fromBeginning: false });
         await consumer.run({
             eachMessage: async ({ message }) => {
-                const content = message.value?.toString();
-                if (content) {
-                    const event = JSON.parse(content);
-                    // If the event has a 'value' string, it's likely from buildKafkaMessage
-                    if (event.value && typeof event.value === 'string') {
-                        try {
-                            const inner = JSON.parse(event.value);
-                            await handler({ ...event, ...inner });
-                        } catch (e) {
-                            await handler(event);
-                        }
-                    } else {
-                        await handler(event);
-                    }
+                const event = parseKafkaMessage(message.value);
+                if (event) {
+                    await handler(event);
                 }
+            },
+        });
+        this.consumers.set(groupId, consumer);
+    }
+
+    async subscribeBatch(topic: string, groupId: string, handler: (events: any[]) => Promise<void>) {
+        const consumer = kafka.consumer({ groupId });
+        await consumer.connect();
+        await consumer.subscribe({ topic, fromBeginning: false });
+        await consumer.run({
+            eachBatch: async ({ batch, resolveOffset, heartbeat, isRunning, isStale }) => {
+                const events: any[] = [];
+                for (const message of batch.messages) {
+                    if (!isRunning() || isStale()) break;
+                    const event = parseKafkaMessage(message.value);
+                    if (event) events.push(event);
+                }
+
+                if (events.length > 0) {
+                    await handler(events);
+                }
+
+                for (const message of batch.messages) {
+                    resolveOffset(message.offset);
+                }
+                await heartbeat();
             },
         });
         this.consumers.set(groupId, consumer);
