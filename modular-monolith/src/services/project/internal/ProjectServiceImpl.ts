@@ -43,8 +43,9 @@ export class ProjectServiceImpl implements ProjectService {
                 type: KAFKA_EVENTS.PROJECT_MEMBER.DELETED,
                 source: `${this.constructor.name}.deleteProjectMembers`,
                 data: {
-                    userId: data.userId,
+                    userId: v.userId,
                     projectId: data.projectId,
+                    actorId: data.userId,
                     memberId: v.id,
                 },
             }),
@@ -95,8 +96,9 @@ export class ProjectServiceImpl implements ProjectService {
                 source: `${this.constructor.name}.addProjectMembers`,
                 data: {
                     projectId: data.projectId,
-                    userId: data.userId,
-                    memberId: member.userId,
+                    userId: member.userId,
+                    actorId: data.userId,
+                    memberId: member.id,
                 },
             }),
         );

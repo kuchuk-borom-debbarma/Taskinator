@@ -102,7 +102,7 @@ export const deleteTeamMembers = async (
      * If neither condition is met, WHERE clause matches no rows
      * and an empty array is returned.
      */
-    const result = await sql<{ id: string }>`
+    const result = await sql<{ userId: string }>`
         DELETE
         FROM project_team_member
         WHERE fk_team_id = ${data.teamId}
@@ -119,12 +119,12 @@ export const deleteTeamMembers = async (
                              AND fk_project_id = ${data.projectId}
                              AND fk_user_id = ${data.userId})
             )
-            RETURNING id
+            RETURNING fk_user_id AS "userId"
     `.execute(db);
     if (result.rows.length !== data.members.length) {
         throw new Error('Unauthorized or some members not found');
     }
-    return result.rows.map((r) => r.id);
+    return result.rows.map((r) => r.userId);
 };
 
 export const deleteAllProjectTeams = async (projectId: string) => {
@@ -139,5 +139,13 @@ export const removeUserFromAllTeams = async (projectId: string, userId: string) 
         .deleteFrom('projectTeamMember')
         .where('fk_project_id', '=', projectId)
         .where('fk_user_id', '=', userId)
+        .execute();
+};
+
+export const deleteAllTeamMembers = async (projectId: string, teamId: string) => {
+    await db
+        .deleteFrom('projectTeamMember')
+        .where('fk_project_id', '=', projectId)
+        .where('fk_team_id', '=', teamId)
         .execute();
 };

@@ -137,7 +137,7 @@ describe('TeamQueries', () => {
                 members: ['u1', 'u2'],
             };
 
-            const mockRows = [{ id: 'u1' }, { id: 'u2' }];
+            const mockRows = [{ userId: 'u1' }, { userId: 'u2' }];
 
             const mockExecute = (jest.fn() as any).mockResolvedValue({
                 rows: mockRows,

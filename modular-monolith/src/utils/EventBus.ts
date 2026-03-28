@@ -24,7 +24,17 @@ class MemoryBus implements Bus {
         // In Kafka, messages are usually stringified
         const stringified = JSON.stringify(message);
         setTimeout(() => {
-            this.emitter.emit(topic, JSON.parse(stringified));
+            const event = JSON.parse(stringified);
+            if (event.value && typeof event.value === 'string') {
+                try {
+                    const inner = JSON.parse(event.value);
+                    this.emitter.emit(topic, { ...event, ...inner });
+                } catch (e) {
+                    this.emitter.emit(topic, event);
+                }
+            } else {
+                this.emitter.emit(topic, event);
+            }
         }, 10);
     }
 
@@ -74,7 +84,18 @@ class KafkaBus implements Bus {
             eachMessage: async ({ message }) => {
                 const content = message.value?.toString();
                 if (content) {
-                    await handler(JSON.parse(content));
+                    const event = JSON.parse(content);
+                    // If the event has a 'value' string, it's likely from buildKafkaMessage
+                    if (event.value && typeof event.value === 'string') {
+                        try {
+                            const inner = JSON.parse(event.value);
+                            await handler({ ...event, ...inner });
+                        } catch (e) {
+                            await handler(event);
+                        }
+                    } else {
+                        await handler(event);
+                    }
                 }
             },
         });
