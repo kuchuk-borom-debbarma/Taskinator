@@ -166,3 +166,23 @@ To allow for rapid development and testing without requiring a local Kafka broke
 1. **Speed**: Tests no longer wait for network handshakes or broker rebalances.
 2. **Reliability**: We can now verify that `ProjectService` emits the correct event and that `TaskListener` reacts by cleaning up the database, all within a standard Jest environment.
 3. **Flexibility**: The system can easily swap message brokers (e.g., to RabbitMQ or AWS SNS) by simply implementing a new `Bus` class, without touching any business logic in the services or listeners.
+
+---
+
+# Entry 11: Cascading Cleanup for Teams and Team Members
+
+## Refined Event-Driven Consistency
+
+To maintain strict data integrity as users move in and out of teams, we expanded the **Choreography Pattern** to handle team-level deletions and membership changes.
+
+### Architectural Improvements:
+- **Team Deletion Cleanup**: When a team is deleted (`PROJECT_TEAM_DELETED`), two independent listeners now trigger:
+  1. **Task Service**: Unassigns both the `teamId` and `memberId` (sets them to `null`) for all tasks previously assigned to that team.
+  2. **Team Service**: Deletes all member associations for that team from the `project_team_member` table.
+- **Team Member Removal Cleanup**: When a specific user is removed from a team (`PROJECT_TEAM_MEMBER_DELETED`), a new listener in the **Task Service** unassigns only that user from tasks within that specific team.
+
+### Systemic Bug Fixes & Refinement:
+- **EventBus Flattening**: Refactored the `EventBus` (both `KafkaBus` and `MemoryBus`) to automatically unwrap and flatten the `value` property from `buildKafkaMessage`. This ensures all listeners receive event properties like `type` and `data` at the top level, fixing a systemic issue where listeners were receiving `undefined` for these fields.
+- **Service Standardization**: Refactored `TeamServiceImpl` to use the unified `EventBus` abstraction, eliminating double-stringification bugs and bringing it in line with the Project and Task services.
+- **Actor vs. Subject Distinction**: Corrected the `ProjectService` to properly distinguish between the **Actor** (the admin performing the action) and the **Subject** (the user being added or removed) in Kafka payloads. This ensures listeners correctly target the subject for cleanup rather than the actor.
+
