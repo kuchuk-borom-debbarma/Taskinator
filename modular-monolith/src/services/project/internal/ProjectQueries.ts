@@ -69,14 +69,14 @@ export const insertProjectMembers = async (
     data: AddProjectMembersParam,
 ): Promise<ProjectMember[]> => {
     const result = await sql<ProjectMember>`
+        WITH auth_check AS (
+            SELECT 1 FROM project WHERE id = ${data.projectId} AND fk_user_id = ${data.userId}
+        )
         INSERT INTO project_member (fk_user_id, fk_project_id)
         SELECT unnest(${data.usersToAdd}::text[]),
-               ${data.projectId} WHERE EXISTS (
-            SELECT 1 FROM project
-            WHERE id = ${data.projectId}
-            AND fk_user_id = ${data.userId}
-            )
-            RETURNING
+               ${data.projectId}
+        WHERE EXISTS (SELECT 1 FROM auth_check)
+        RETURNING
             id, 
             fk_user_id    AS "userId", 
             fk_project_id AS "projectId", 
@@ -120,15 +120,15 @@ export const deleteProjectMembers = async (
     data: DeleteProjectMembersParam,
 ) => {
     const result = await sql<ProjectMember>`
+        WITH auth_check AS (
+            SELECT 1 FROM project WHERE id = ${data.projectId} AND fk_user_id = ${data.userId}
+        )
         DELETE
         FROM project_member
         WHERE fk_project_id = ${data.projectId}
           AND id = ANY (${data.memberIds}::text[])
-          AND EXISTS (SELECT 1
-                      FROM project
-                      WHERE id = ${data.projectId}
-                        AND fk_user_id = ${data.userId})
-            RETURNING
+          AND EXISTS (SELECT 1 FROM auth_check)
+        RETURNING
             id,
             fk_user_id    AS "userId",
             fk_project_id AS "projectId",

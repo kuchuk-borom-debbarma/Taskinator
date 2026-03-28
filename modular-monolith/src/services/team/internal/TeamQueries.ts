@@ -12,24 +12,17 @@ import { sql } from 'kysely';
 
 export const insertTeam = async (data: CreateTeamsParam): Promise<Team[]> => {
     const added = await sql<Team>`
+        WITH auth_check AS (
+            SELECT 1 FROM project WHERE id = ${data.projectId} AND fk_user_id = ${data.userId}
+        )
         INSERT INTO project_team (fk_project_id, name, created_at, fk_user_id)
         SELECT ${data.projectId},
                unnest(${data.teams}::text[]),
                ${getTimeString()},
-               ${data.userId} WHERE EXISTS (
-            SELECT 1 FROM project
-            WHERE id = ${data.projectId}
-            AND fk_user_id = ${data.userId}
-            )
-            RETURNING
-            id, 
-            name, 
-            fk_project_id AS "projectId", 
-            fk_user_id    AS "createdBy", 
-            version,
-            last_event_id AS "lastEventId",
-            created_at    AS "createdAt", 
-            updated_at    AS "updatedAt"
+               ${data.userId}
+        WHERE EXISTS (SELECT 1 FROM auth_check)
+        RETURNING
+            id, name, fk_project_id AS "projectId", fk_user_id AS "createdBy", version, last_event_id AS "lastEventId", created_at AS "createdAt", updated_at AS "updatedAt"
     `.execute(db);
     return added.rows;
 };
@@ -37,26 +30,19 @@ export const insertTeam = async (data: CreateTeamsParam): Promise<Team[]> => {
 export const deleteTeams = async (
     data: DeleteTeamsParam,
 ): Promise<string[]> => {
-    /*
-     * Delete teams by ID scoped to the project.
-     * Auth rule: userId must be either the project owner (EXISTS check)
-     * or the creator of the team (fk_user_id check) to delete.
-     * If neither condition is met, the WHERE clause matches no rows,
-     * and the length check below will throw Unauthorized.
-     */
     const result = await sql<{ id: string }>`
+        WITH auth_check AS (
+            SELECT 1 FROM project WHERE id = ${data.projectId} AND fk_user_id = ${data.userId}
+        )
         DELETE
         FROM project_team
         WHERE fk_project_id = ${data.projectId}
           AND id = ANY (${data.teamIds}::text[])
           AND (
             fk_user_id = ${data.userId}
-                OR EXISTS (SELECT 1
-                           FROM project
-                           WHERE id = ${data.projectId}
-                             AND fk_user_id = ${data.userId})
-            )
-            RETURNING id
+            OR EXISTS (SELECT 1 FROM auth_check)
+          )
+        RETURNING id
     `.execute(db);
     if (result.rows.length !== data.teamIds.length) {
         throw new Error('Unauthorized or some teams not found');
@@ -67,39 +53,20 @@ export const deleteTeams = async (
 export const insertTeamMembers = async (
     data: AddTeamMembersParam,
 ): Promise<TeamMember[]> => {
-    /*
-     * Insert members into a team scoped to the project.
-     * Auth rule: userId must be either the project owner (project EXISTS check)
-     * or the creator of the team (team EXISTS check) to add members.
-     * If neither condition is met, WHERE EXISTS returns no rows
-     * and the length check below will throw Unauthorized.
-     */
     const result = await sql<TeamMember>`
+        WITH auth_check AS (
+            SELECT 1 FROM project WHERE id = ${data.projectId} AND fk_user_id = ${data.userId}
+            UNION ALL
+            SELECT 1 FROM project_team WHERE id = ${data.teamId} AND fk_project_id = ${data.projectId} AND fk_user_id = ${data.userId}
+            LIMIT 1
+        )
         INSERT INTO project_team_member (fk_team_id, fk_user_id, fk_project_id)
         SELECT ${data.teamId},
                unnest(${data.members}::text[]),
-               ${data.projectId} WHERE EXISTS (
-            SELECT 1 FROM project_team
-            WHERE id = ${data.teamId}
-            AND fk_project_id = ${data.projectId}
-            AND (
-            fk_user_id = ${data.userId}
-            OR EXISTS (
-            SELECT 1 FROM project
-            WHERE id = ${data.projectId}
-            AND fk_user_id = ${data.userId}
-            )
-            )
-            )
-            RETURNING
-            id, 
-            fk_team_id    AS "teamId", 
-            fk_user_id    AS "userId", 
-            fk_project_id AS "projectId", 
-            version,
-            last_event_id AS "lastEventId",
-            created_at    AS "createdAt", 
-            updated_at    AS "updatedAt"
+               ${data.projectId}
+        WHERE EXISTS (SELECT 1 FROM auth_check)
+        RETURNING
+            id, fk_team_id AS "teamId", fk_user_id AS "userId", fk_project_id AS "projectId", version, last_event_id AS "lastEventId", created_at AS "createdAt", updated_at AS "updatedAt"
     `.execute(db);
     if (result.rows.length === 0)
         throw new Error('Unauthorized or team not found');
@@ -109,31 +76,20 @@ export const insertTeamMembers = async (
 export const deleteTeamMembers = async (
     data: DeleteTeamMembersParam,
 ): Promise<string[]> => {
-    /*
-     * Delete members from a team scoped to the project.
-     * Auth rule: userId must be either the project owner (project EXISTS check)
-     * or the creator of the team (project_team EXISTS check) to delete members.
-     * If neither condition is met, WHERE clause matches no rows
-     * and an empty array is returned.
-     */
     const result = await sql<{ userId: string }>`
+        WITH auth_check AS (
+            SELECT 1 FROM project WHERE id = ${data.projectId} AND fk_user_id = ${data.userId}
+            UNION ALL
+            SELECT 1 FROM project_team WHERE id = ${data.teamId} AND fk_project_id = ${data.projectId} AND fk_user_id = ${data.userId}
+            LIMIT 1
+        )
         DELETE
         FROM project_team_member
         WHERE fk_team_id = ${data.teamId}
           AND fk_project_id = ${data.projectId}
           AND fk_user_id = ANY (${data.members}::text[])
-          AND (
-            EXISTS (SELECT 1
-                    FROM project
-                    WHERE id = ${data.projectId}
-                      AND fk_user_id = ${data.userId})
-                OR EXISTS (SELECT 1
-                           FROM project_team
-                           WHERE id = ${data.teamId}
-                             AND fk_project_id = ${data.projectId}
-                             AND fk_user_id = ${data.userId})
-            )
-            RETURNING fk_user_id AS "userId"
+          AND EXISTS (SELECT 1 FROM auth_check)
+        RETURNING fk_user_id AS "userId"
     `.execute(db);
     if (result.rows.length !== data.members.length) {
         throw new Error('Unauthorized or some members not found');
