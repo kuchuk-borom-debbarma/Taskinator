@@ -5,7 +5,6 @@ const router = Router();
 
 // Get Projects
 router.get('/', async (req, res) => {
-    console.log('[REST] GET /projects request received for userId:', req.query.userId);
     try {
         const { userId } = req.query;
         if (!userId) throw new Error('userId is required');
@@ -34,6 +33,20 @@ router.get('/:projectId', async (req, res) => {
         res.status(200).json(project);
     } catch (error: any) {
         console.error('[REST] Error fetching project:', error);
+        res.status(400).json({ error: error.message });
+    }
+});
+
+// Get Project Members
+router.get('/:projectId/members', async (req, res) => {
+    try {
+        const { projectId } = req.params;
+        const { userId } = req.query;
+        if (!userId) throw new Error('userId is required');
+        const members = await projectService.getProjectMembers(userId as string, projectId);
+        res.status(200).json(members);
+    } catch (error: any) {
+        console.error('[REST] Error fetching project members:', error);
         res.status(400).json({ error: error.message });
     }
 });

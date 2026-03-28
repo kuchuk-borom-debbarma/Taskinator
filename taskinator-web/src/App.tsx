@@ -39,6 +39,12 @@ const Workspace: React.FC = () => {
         enabled: !!selectedProjectId && !!userId.trim(),
     });
 
+    const { data: projectMembers = [] } = useQuery({
+        queryKey: ['project-members', selectedProjectId, userId],
+        queryFn: () => projectApi.getProjectMembers(userId.trim(), selectedProjectId!),
+        enabled: isProjectSettingsOpen && !!selectedProjectId && !!userId.trim(),
+    });
+
     const { data: teamMembers = [] } = useQuery({
         queryKey: ['team-members', selectedProjectId, selectedTeamId],
         queryFn: () => teamApi.getTeamMembers(userId.trim(), selectedProjectId!, selectedTeamId!),
@@ -49,7 +55,7 @@ const Workspace: React.FC = () => {
     const createTaskMutation = useMutation({
         mutationFn: (data: { title: string; parentTaskId?: string }) => 
             taskApi.createTask({
-                userId,
+                userId: userId.trim(),
                 projectId: selectedProjectId!,
                 title: data.title,
                 description: '',
@@ -61,12 +67,12 @@ const Workspace: React.FC = () => {
 
     const updateTaskMutation = useMutation({
         mutationFn: (updates: { id: string; version: number; status?: string; title?: string; description?: string; teamId?: string | null; memberId?: string | null }) => 
-            taskApi.updateTasks(userId, selectedProjectId!, [updates]),
+            taskApi.updateTasks(userId.trim(), selectedProjectId!, [updates]),
         onSuccess: () => qc.invalidateQueries({ queryKey: ['tasks', selectedProjectId, userId] }),
     });
 
     const deleteTasksMutation = useMutation({
-        mutationFn: (taskIds: string[]) => taskApi.deleteTasks(userId, selectedProjectId!, taskIds),
+        mutationFn: (taskIds: string[]) => taskApi.deleteTasks(userId.trim(), selectedProjectId!, taskIds),
         onSuccess: () => {
             setSelectedTaskId(null);
             qc.invalidateQueries({ queryKey: ['tasks', selectedProjectId, userId] });
@@ -74,12 +80,12 @@ const Workspace: React.FC = () => {
     });
 
     const createProjectMutation = useMutation({
-        mutationFn: (name: string) => projectApi.createProject({ name, userId }),
+        mutationFn: (name: string) => projectApi.createProject({ name, userId: userId.trim() }),
         onSuccess: () => qc.invalidateQueries({ queryKey: ['projects', userId] }),
     });
 
     const deleteProjectMutation = useMutation({
-        mutationFn: (id: string) => projectApi.deleteProjects(userId, [id]),
+        mutationFn: (id: string) => projectApi.deleteProjects(userId.trim(), [id]),
         onSuccess: () => {
             setSelectedProjectId(undefined);
             setIsProjectSettingsOpen(false);
@@ -87,13 +93,31 @@ const Workspace: React.FC = () => {
         },
     });
 
+    const addProjectMemberMutation = useMutation({
+        mutationFn: (targetUserId: string) => projectApi.addProjectMembers({ 
+            userId: userId.trim(), 
+            projectId: selectedProjectId!, 
+            usersToAdd: [targetUserId] 
+        }),
+        onSuccess: () => qc.invalidateQueries({ queryKey: ['project-members', selectedProjectId, userId] }),
+    });
+
+    const removeProjectMemberMutation = useMutation({
+        mutationFn: (memberId: string) => projectApi.deleteProjectMembers({ 
+            userId: userId.trim(), 
+            projectId: selectedProjectId!, 
+            memberIds: [memberId] 
+        }),
+        onSuccess: () => qc.invalidateQueries({ queryKey: ['project-members', selectedProjectId, userId] }),
+    });
+
     const createTeamMutation = useMutation({
-        mutationFn: (name: string) => teamApi.createTeams({ userId, projectId: selectedProjectId!, teams: [name] }),
+        mutationFn: (name: string) => teamApi.createTeams({ userId: userId.trim(), projectId: selectedProjectId!, teams: [name] }),
         onSuccess: () => qc.invalidateQueries({ queryKey: ['teams', selectedProjectId, userId] }),
     });
 
     const deleteTeamMutation = useMutation({
-        mutationFn: (id: string) => teamApi.deleteTeams(userId, selectedProjectId!, [id]),
+        mutationFn: (id: string) => teamApi.deleteTeams(userId.trim(), selectedProjectId!, [id]),
         onSuccess: () => {
             setSelectedTeamId(null);
             qc.invalidateQueries({ queryKey: ['teams', selectedProjectId, userId] });
@@ -102,7 +126,7 @@ const Workspace: React.FC = () => {
 
     const addTeamMemberMutation = useMutation({
         mutationFn: (targetUserId: string) => teamApi.addTeamMembers({ 
-            userId, 
+            userId: userId.trim(), 
             projectId: selectedProjectId!, 
             teamId: selectedTeamId!, 
             members: [targetUserId] 
@@ -114,7 +138,7 @@ const Workspace: React.FC = () => {
         mutationFn: (memberId: string) => {
             const member = teamMembers.find(m => m.id === memberId);
             return teamApi.deleteTeamMembers({ 
-                userId, 
+                userId: userId.trim(), 
                 projectId: selectedProjectId!, 
                 teamId: selectedTeamId!, 
                 members: [member!.userId] 
@@ -298,6 +322,14 @@ const Workspace: React.FC = () => {
                             <p className="text-xs text-muted mt-1">{selectedProject?.description || 'No description'}</p>
                         </div>
                     </div>
+
+                    <MemberManager 
+                        title="Project Members"
+                        members={projectMembers}
+                        onAdd={(uid) => addProjectMemberMutation.mutate(uid)}
+                        onRemove={(id) => removeProjectMemberMutation.mutate(id)}
+                        placeholder="Enter User ID to invite..."
+                    />
 
                     <div className="pt-4 border-t border-border">
                         <button 

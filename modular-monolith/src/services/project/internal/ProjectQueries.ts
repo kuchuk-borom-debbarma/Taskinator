@@ -190,3 +190,29 @@ export const getProject = async (
         createdAt: p.created_at,
     };
 };
+
+export const getProjectMembers = async (
+    userId: string,
+    projectId: string,
+): Promise<ProjectMember[]> => {
+    const result = await sql<ProjectMember>`
+        WITH auth_check AS (
+            SELECT 1 FROM project WHERE id = ${projectId}::uuid AND fk_user_id = ${userId}
+            UNION ALL
+            SELECT 1 FROM project_member WHERE fk_project_id = ${projectId}::uuid AND fk_user_id = ${userId}
+            LIMIT 1
+        )
+        SELECT 
+            id, 
+            fk_user_id AS "userId", 
+            fk_project_id AS "projectId", 
+            version, 
+            last_event_id AS "lastEventId", 
+            created_at AS "createdAt", 
+            updated_at AS "updatedAt"
+        FROM project_member
+        WHERE fk_project_id = ${projectId}::uuid
+          AND EXISTS (SELECT 1 FROM auth_check)
+    `.execute(db);
+    return result.rows;
+};

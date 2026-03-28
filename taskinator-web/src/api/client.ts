@@ -14,6 +14,9 @@ export const projectApi = {
     getProject: (userId: string, projectId: string) => 
         api.get<Project>(`/projects/${projectId}`, { params: { userId } }).then(res => res.data),
     
+    getProjectMembers: (userId: string, projectId: string) =>
+        api.get<ProjectMember[]>(`/projects/${projectId}/members`, { params: { userId } }).then(res => res.data),
+
     createProject: (data: { name: string; description?: string; userId: string }) => 
         api.post<Project>('/projects', data).then(res => res.data),
 

@@ -11,6 +11,7 @@ import {
     deleteProjectMembers,
     deleteProjects,
     getProject,
+    getProjectMembers,
     getProjects,
     insertProject,
     insertProjectMembers,
@@ -35,6 +36,10 @@ export class ProjectServiceImpl implements ProjectService {
         projectId: string,
     ): Promise<Project | null> {
         return getProject(userId, projectId);
+    }
+
+    async getProjectMembers(userId: string, projectId: string): Promise<ProjectMember[]> {
+        return getProjectMembers(userId, projectId);
     }
 
     async destroy(): Promise<void> {
