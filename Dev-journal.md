@@ -427,3 +427,34 @@ Across the Project, Team, and Task services, we have established a set of standa
 ### Summary
 By moving logic from the Application layer into the Database layer via CTEs and Atomic statements, we reduced the average number of DB round-trips per request from ~4 down to 1. This is the foundation of our high-performance architecture.
 
+
+---
+
+# Entry 21: RESTful API Layer and Transport Separation
+
+## Decoupling Logic from Delivery
+
+To allow external interaction with our modular monolith, we introduced a RESTful API layer. This layer is strictly separated from the core business logic, following the **Ports and Adapters** (Hexagonal) architecture principles.
+
+### 1. Modular Route Structure
+Instead of a monolithic routes file, we established a domain-aligned directory structure:
+*   `src/restful/routes/project.routes.ts`
+*   `src/restful/routes/team.routes.ts`
+*   `src/restful/routes/task.routes.ts`
+
+This mirrors our `src/services` structure, making it intuitive to find and extend endpoints for specific domains.
+
+### 2. Transport Layer Responsibility
+The REST controllers (Express routes) have a single responsibility: **Translating HTTP into Domain Commands**.
+*   They handle request parsing, parameter validation, and HTTP status codes.
+*   They delegate all complex logic and data manipulation to the underlying Services (`projectService`, `taskService`, etc.).
+*   This setup ensures that when we add GraphQL or a CLI adapter in the future, the core business logic remains untouched.
+
+### 3. Integrated Health Checks
+Added a `/health` root endpoint to provide visibility into the application state, essential for container orchestration and automated monitoring in a 10k RPS production environment.
+
+### 4. Implementation Details
+*   **Framework**: Express 5.x on Bun.
+*   **Type Safety**: Full end-to-end type safety from Express request handlers down to Kysely database queries.
+*   **Initialization**: The REST server is initialized in `src/index.ts` alongside Kafka consumers and service connections, ensuring all systems are ready before accepting traffic.
+
