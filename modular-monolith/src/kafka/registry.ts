@@ -5,6 +5,8 @@ import { memberCleanupListener as memberProjectCleanup } from '../services/proje
 import { projectMemberDeletedListener as taskMemberCleanup } from '../services/task/internal/listeners/ProjectMemberDeletedListener';
 import { projectMemberDeletedListener as teamMemberCleanup } from '../services/team/internal/listeners/ProjectMemberDeletedListener';
 
+export { taskProjectCleanup, teamProjectCleanup, memberProjectCleanup, taskMemberCleanup, teamMemberCleanup };
+
 export const startConsumers = async () => {
     console.log('Starting Kafka Consumers...');
     await Promise.all([
