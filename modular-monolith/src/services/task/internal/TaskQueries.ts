@@ -199,8 +199,17 @@ export const updateTask = async (data: UpdateTaskParam): Promise<string | null> 
 
 export const deleteAllProjectTasks = async (projectId: string) => {
     await db
-        .deleteFrom('project_task')
+        .deleteFrom('projectTask')
         .where('fk_project_id', '=', projectId)
+        .execute();
+};
+
+export const unassignMemberFromAllTasks = async (projectId: string, memberId: string) => {
+    await db
+        .updateTable('projectTask')
+        .set({ fk_member_id: null })
+        .where('fk_project_id', '=', projectId)
+        .where('fk_member_id', '=', memberId)
         .execute();
 };
 

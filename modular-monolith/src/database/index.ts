@@ -1,13 +1,14 @@
 import type {ProjectMemberTable, ProjectTable} from './tables/Project.ts';
 import {Kysely, PostgresDialect} from 'kysely';
 import {Pool} from 'pg';
-import type {ProjectTeamTable} from './tables/ProjectTeam.ts';
+import type {ProjectTeamTable, ProjectTeamMemberTable} from './tables/ProjectTeam.ts';
 import type {ProjectTaskTable} from "./tables/Task.ts";
 
 export interface Database {
     project: ProjectTable;
     projectMember: ProjectMemberTable;
     projectTeam: ProjectTeamTable;
+    projectTeamMember: ProjectTeamMemberTable;
     projectTask: ProjectTaskTable
 }
 

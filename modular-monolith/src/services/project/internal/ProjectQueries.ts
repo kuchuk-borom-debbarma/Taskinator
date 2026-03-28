@@ -129,7 +129,7 @@ export const deleteProjectMembers = async (
 
 export const deleteAllProjectMembers = async (projectId: string) => {
     await db
-        .deleteFrom('project_member')
+        .deleteFrom('projectMember')
         .where('fk_project_id', '=', projectId)
         .execute();
 };
