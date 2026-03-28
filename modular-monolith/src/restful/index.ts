@@ -1,4 +1,5 @@
 import express from 'express';
+import cors from 'cors';
 import projectRoutes from './routes/project.routes';
 import teamRoutes from './routes/team.routes';
 import taskRoutes from './routes/task.routes';
@@ -6,6 +7,7 @@ import taskRoutes from './routes/task.routes';
 export const startRestServer = (port: number = 3000) => {
     const app = express();
 
+    app.use(cors());
     app.use(express.json());
 
     // Root Health Check

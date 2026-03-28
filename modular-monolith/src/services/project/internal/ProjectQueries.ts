@@ -147,3 +147,47 @@ export const deleteAllProjectMembers = async (projectId: string) => {
         .where('fk_project_id', '=', projectId)
         .execute();
 };
+
+export const getProjects = async (userId: string): Promise<Project[]> => {
+    const projects = await db
+        .selectFrom('project')
+        .selectAll()
+        .where('fk_user_id', '=', userId)
+        .execute();
+
+    return projects.map((p) => ({
+        userId: p.fk_user_id,
+        updatedAt: p.updated_at,
+        name: p.name,
+        id: p.id,
+        version: p.version,
+        lastEventId: p.last_event_id,
+        description: p.description,
+        createdAt: p.created_at,
+    }));
+};
+
+export const getProject = async (
+    userId: string,
+    projectId: string,
+): Promise<Project | null> => {
+    const p = await db
+        .selectFrom('project')
+        .selectAll()
+        .where('id', '=', projectId)
+        .where('fk_user_id', '=', userId)
+        .executeTakeFirst();
+
+    if (!p) return null;
+
+    return {
+        userId: p.fk_user_id,
+        updatedAt: p.updated_at,
+        name: p.name,
+        id: p.id,
+        version: p.version,
+        lastEventId: p.last_event_id,
+        description: p.description,
+        createdAt: p.created_at,
+    };
+};

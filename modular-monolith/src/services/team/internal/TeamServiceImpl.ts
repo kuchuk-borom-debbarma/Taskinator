@@ -17,11 +17,25 @@ import {
     deleteTeams,
     insertTeamMembers,
     deleteTeamMembers,
+    getTeams,
+    getTeamMembers,
 } from './TeamQueries.ts';
 import { eventBus } from '../../../utils/EventBus.ts';
 import _ from 'lodash';
 
 export class TeamServiceImpl implements TeamService {
+    async getTeams(userId: string, projectId: string): Promise<Team[]> {
+        return getTeams(userId, projectId);
+    }
+
+    async getTeamMembers(
+        userId: string,
+        projectId: string,
+        teamId: string,
+    ): Promise<TeamMember[]> {
+        return getTeamMembers(userId, projectId, teamId);
+    }
+
     async addTeamMembers(data: AddTeamMembersParam): Promise<TeamMember[]> {
         const added = await insertTeamMembers(data);
 

@@ -215,3 +215,38 @@ export const unassignMemberFromTeamTasks = async (projectId: string, teamId: str
         .execute();
 };
 
+export const getTasks = async (
+    userId: string,
+    projectId: string,
+): Promise<ProjectTask[]> => {
+    const result = await sql<ProjectTask>`
+        WITH auth_check AS (
+            SELECT 1 FROM project WHERE id = ${projectId} AND fk_user_id = ${userId}
+            UNION ALL
+            SELECT 1 FROM project_member WHERE fk_project_id = ${projectId} AND fk_user_id = ${userId}
+            LIMIT 1
+        )
+        SELECT 
+            id,
+            fk_project_id AS "projectId",
+            fk_team_id AS "teamId",
+            fk_member_id AS "memberId",
+            fk_parent_task_id AS "parentTaskId",
+            title,
+            description,
+            status,
+            materialized_path AS "materializedPath",
+            version,
+            last_event_id AS "lastEventId",
+            created_by AS "createdBy",
+            updated_by AS "updatedBy",
+            created_at AS "createdAt",
+            updated_at AS "updatedAt"
+        FROM project_task
+        WHERE fk_project_id = ${projectId}
+          AND EXISTS (SELECT 1 FROM auth_check)
+        ORDER BY created_at ASC
+    `.execute(db);
+    return result.rows;
+};
+

@@ -3,6 +3,35 @@ import { projectService } from '../../services/project';
 
 const router = Router();
 
+// Get Projects
+router.get('/', async (req, res) => {
+    try {
+        const { userId } = req.query;
+        if (!userId) throw new Error('userId is required');
+        const projects = await projectService.getProjects(userId as string);
+        res.status(200).json(projects);
+    } catch (error: any) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+// Get Project
+router.get('/:projectId', async (req, res) => {
+    try {
+        const { projectId } = req.params;
+        const { userId } = req.query;
+        if (!userId) throw new Error('userId is required');
+        const project = await projectService.getProject(userId as string, projectId);
+        if (!project) {
+            res.status(404).json({ error: 'Project not found' });
+            return;
+        }
+        res.status(200).json(project);
+    } catch (error: any) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
 // Create Project
 router.post('/', async (req, res) => {
     try {

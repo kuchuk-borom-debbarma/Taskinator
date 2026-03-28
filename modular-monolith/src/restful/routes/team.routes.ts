@@ -3,6 +3,31 @@ import { teamService } from '../../services/team';
 
 const router = Router();
 
+// Get Teams
+router.get('/', async (req, res) => {
+    try {
+        const { userId, projectId } = req.query;
+        if (!userId || !projectId) throw new Error('userId and projectId are required');
+        const teams = await teamService.getTeams(userId as string, projectId as string);
+        res.status(200).json(teams);
+    } catch (error: any) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+// Get Team Members
+router.get('/:teamId/members', async (req, res) => {
+    try {
+        const { teamId } = req.params;
+        const { userId, projectId } = req.query;
+        if (!userId || !projectId) throw new Error('userId and projectId are required');
+        const members = await teamService.getTeamMembers(userId as string, projectId as string, teamId);
+        res.status(200).json(members);
+    } catch (error: any) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
 // Create Teams
 router.post('/', async (req, res) => {
     try {

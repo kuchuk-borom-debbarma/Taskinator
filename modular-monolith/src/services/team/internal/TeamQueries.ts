@@ -119,3 +119,59 @@ export const deleteAllTeamMembers = async (projectId: string, teamId: string) =>
         .where('fk_team_id', '=', teamId)
         .execute();
 };
+
+export const getTeams = async (
+    userId: string,
+    projectId: string,
+): Promise<Team[]> => {
+    const result = await sql<Team>`
+        WITH auth_check AS (
+            SELECT 1 FROM project WHERE id = ${projectId} AND fk_user_id = ${userId}
+            UNION ALL
+            SELECT 1 FROM project_member WHERE fk_project_id = ${projectId} AND fk_user_id = ${userId}
+            LIMIT 1
+        )
+        SELECT 
+            id, 
+            name, 
+            fk_project_id AS "projectId", 
+            fk_user_id AS "createdBy", 
+            version, 
+            last_event_id AS "lastEventId", 
+            created_at AS "createdAt", 
+            updated_at AS "updatedAt"
+        FROM project_team
+        WHERE fk_project_id = ${projectId}
+          AND EXISTS (SELECT 1 FROM auth_check)
+    `.execute(db);
+    return result.rows;
+};
+
+export const getTeamMembers = async (
+    userId: string,
+    projectId: string,
+    teamId: string,
+): Promise<TeamMember[]> => {
+    const result = await sql<TeamMember>`
+        WITH auth_check AS (
+            SELECT 1 FROM project WHERE id = ${projectId} AND fk_user_id = ${userId}
+            UNION ALL
+            SELECT 1 FROM project_member WHERE fk_project_id = ${projectId} AND fk_user_id = ${userId}
+            LIMIT 1
+        )
+        SELECT 
+            id, 
+            fk_team_id AS "teamId", 
+            fk_user_id AS "userId", 
+            fk_project_id AS "projectId", 
+            version, 
+            last_event_id AS "lastEventId", 
+            created_at AS "createdAt", 
+            updated_at AS "updatedAt"
+        FROM project_team_member
+        WHERE fk_team_id = ${teamId}
+          AND fk_project_id = ${projectId}
+          AND EXISTS (SELECT 1 FROM auth_check)
+    `.execute(db);
+    return result.rows;
+};

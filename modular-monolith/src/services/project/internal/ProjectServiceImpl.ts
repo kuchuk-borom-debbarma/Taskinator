@@ -10,6 +10,8 @@ import type {
 import {
     deleteProjectMembers,
     deleteProjects,
+    getProject,
+    getProjects,
     insertProject,
     insertProjectMembers,
     insertProjects,
@@ -19,6 +21,14 @@ import { KAFKA_TOPICS, KAFKA_EVENTS, createEvent } from '../../../utils/kafka.ts
 import { eventBus } from '../../../utils/EventBus.ts';
 
 export class ProjectServiceImpl implements ProjectService {
+    async getProjects(userId: string): Promise<Project[]> {
+        return getProjects(userId);
+    }
+
+    async getProject(userId: string, projectId: string): Promise<Project | null> {
+        return getProject(userId, projectId);
+    }
+
     async destroy(): Promise<void> {
         console.log(`Disconnecting event bus ${this.constructor.name}`);
         await eventBus.destroy();

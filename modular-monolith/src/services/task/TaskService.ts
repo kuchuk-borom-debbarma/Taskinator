@@ -50,9 +50,11 @@ export interface UpdateTasksParam {
 }
 
 export interface TaskService extends BaseService {
-    createTask(data: CreateTaskParam): Promise<ProjectTask[]>
+    createTask(data: CreateTaskParam): Promise<ProjectTask>
 
     deleteTask(data: DeleteTasksParam): Promise<string[]>
 
     updateTasks(data: UpdateTasksParam): Promise<string[]>;
+
+    getTasks(userId: string, projectId: string): Promise<ProjectTask[]>;
 }

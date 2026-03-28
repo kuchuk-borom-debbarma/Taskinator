@@ -3,6 +3,18 @@ import { taskService } from '../../services/task';
 
 const router = Router();
 
+// Get Tasks
+router.get('/', async (req, res) => {
+    try {
+        const { userId, projectId } = req.query;
+        if (!userId || !projectId) throw new Error('userId and projectId are required');
+        const tasks = await taskService.getTasks(userId as string, projectId as string);
+        res.status(200).json(tasks);
+    } catch (error: any) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
 // Create Task
 router.post('/', async (req, res) => {
     try {

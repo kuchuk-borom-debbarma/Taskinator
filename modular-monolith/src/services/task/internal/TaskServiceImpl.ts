@@ -6,10 +6,14 @@ import type {
     UpdateTasksParam,
 } from "../TaskService.ts";
 import {createEvent, KAFKA_EVENTS, KAFKA_TOPICS} from "../../../utils/kafka.ts";
-import {deleteTasks, insertTask, updateTask} from "./TaskQueries.ts";
+import {deleteTasks, getTasks, insertTask, updateTask} from "./TaskQueries.ts";
 import {eventBus} from "../../../utils/EventBus.ts";
 
 export class TaskServiceImpl implements TaskService {
+    async getTasks(userId: string, projectId: string): Promise<ProjectTask[]> {
+        return getTasks(userId, projectId);
+    }
+
     async init(): Promise<void> {
         console.log(`Initializing event bus ${this.constructor.name}`);
         await eventBus.init();
@@ -20,7 +24,7 @@ export class TaskServiceImpl implements TaskService {
         await eventBus.destroy();
     }
 
-    async createTask(data: CreateTaskParam): Promise<ProjectTask[]> {
+    async createTask(data: CreateTaskParam): Promise<ProjectTask> {
         const task = await insertTask(data);
 
         await eventBus.emit(
@@ -33,7 +37,7 @@ export class TaskServiceImpl implements TaskService {
             })
         );
 
-        return [task];
+        return task;
     }
 
     async deleteTask(data: DeleteTasksParam): Promise<string[]> {

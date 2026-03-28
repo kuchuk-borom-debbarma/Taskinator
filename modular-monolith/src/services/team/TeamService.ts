@@ -71,4 +71,12 @@ export interface TeamService extends BaseService {
      * @param data
      */
     deleteTeamMembers(data: DeleteTeamMembersParam): Promise<string[]>;
+
+    getTeams(userId: string, projectId: string): Promise<Team[]>;
+
+    getTeamMembers(
+        userId: string,
+        projectId: string,
+        teamId: string,
+    ): Promise<TeamMember[]>;
 }
