@@ -5,6 +5,8 @@ export type Project = {
     userId: string;
     name: string;
     description: string | null;
+    version: number;
+    lastEventId: string | null;
     createdAt: Date;
     updatedAt?: Date;
 };
@@ -13,6 +15,8 @@ export type ProjectMember = {
     id: string;
     projectId: string;
     userId: string;
+    version: number;
+    lastEventId: string | null;
     createdAt: Date;
     updatedAt: Date;
 };
@@ -26,6 +30,7 @@ export interface CreateProjectParam {
 export interface DeleteProjectsParam {
     userId: string;
     projectIds: string[];
+    // Version is omitted for bulk deletes but could be added for single project updates in future.
 }
 
 export interface AddProjectMembersParam {

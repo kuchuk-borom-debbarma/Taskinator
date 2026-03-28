@@ -5,6 +5,8 @@ export type Team = {
     name: string;
     projectId: string;
     createdBy: string;
+    version: number;
+    lastEventId: string | null;
     createdAt: Date;
     updatedAt: Date;
 };
@@ -14,6 +16,8 @@ export type TeamMember = {
     projectId: string;
     teamId: string;
     userId: string;
+    version: number;
+    lastEventId: string | null;
     createdAt: Date;
     updatedAt: Date;
 };

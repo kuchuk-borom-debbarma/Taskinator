@@ -22,7 +22,14 @@ export const insertTeam = async (data: CreateTeamsParam): Promise<Team[]> => {
             AND fk_user_id = ${data.userId}
             )
             RETURNING
-            id, name, fk_project_id AS "projectId", fk_user_id AS "createdBy", created_at AS "createdAt", updated_at AS "updatedAt"
+            id, 
+            name, 
+            fk_project_id AS "projectId", 
+            fk_user_id    AS "createdBy", 
+            version,
+            last_event_id AS "lastEventId",
+            created_at    AS "createdAt", 
+            updated_at    AS "updatedAt"
     `.execute(db);
     return added.rows;
 };
@@ -85,7 +92,14 @@ export const insertTeamMembers = async (
             )
             )
             RETURNING
-            id, fk_team_id AS "teamId", fk_user_id AS "userId", fk_project_id AS "projectId", created_at AS "createdAt", updated_at AS "updatedAt"
+            id, 
+            fk_team_id    AS "teamId", 
+            fk_user_id    AS "userId", 
+            fk_project_id AS "projectId", 
+            version,
+            last_event_id AS "lastEventId",
+            created_at    AS "createdAt", 
+            updated_at    AS "updatedAt"
     `.execute(db);
     if (result.rows.length === 0)
         throw new Error('Unauthorized or team not found');

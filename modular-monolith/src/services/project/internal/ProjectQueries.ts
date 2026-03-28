@@ -30,6 +30,8 @@ export const insertProject = async (
         description: added.description,
         id: added.id,
         name: added.name,
+        version: added.version,
+        lastEventId: added.last_event_id,
         updatedAt: added.updated_at,
         userId: added.fk_user_id,
     };
@@ -56,6 +58,8 @@ export const insertProjects = async (
         updatedAt: p.updated_at,
         name: p.name,
         id: p.id,
+        version: p.version,
+        lastEventId: p.last_event_id,
         description: p.description,
         createdAt: p.created_at,
     }));
@@ -73,7 +77,13 @@ export const insertProjectMembers = async (
             AND fk_user_id = ${data.userId}
             )
             RETURNING
-            id, fk_user_id AS "userId", fk_project_id AS "projectId", created_at AS "createdAt", updated_at AS "updatedAt"
+            id, 
+            fk_user_id    AS "userId", 
+            fk_project_id AS "projectId", 
+            version,
+            last_event_id AS "lastEventId",
+            created_at    AS "createdAt", 
+            updated_at    AS "updatedAt"
     `.execute(db);
 
     if (result.rows.length === 0)
@@ -99,6 +109,8 @@ export const deleteProjects = async (data: DeleteProjectsParam) => {
         name: p.name,
         description: p.description,
         userId: p.fk_user_id,
+        version: p.version,
+        lastEventId: p.last_event_id,
         createdAt: p.created_at,
         updatedAt: p.updated_at,
     }));
@@ -120,6 +132,8 @@ export const deleteProjectMembers = async (
             id,
             fk_user_id    AS "userId",
             fk_project_id AS "projectId",
+            version,
+            last_event_id AS "lastEventId",
             created_at    AS "createdAt",
             updated_at    AS "updatedAt"
     `.execute(db);
