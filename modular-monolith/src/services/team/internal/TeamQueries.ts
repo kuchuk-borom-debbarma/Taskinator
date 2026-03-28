@@ -126,3 +126,10 @@ export const deleteTeamMembers = async (
     }
     return result.rows.map((r) => r.id);
 };
+
+export const deleteAllProjectTeams = async (projectId: string) => {
+    await db
+        .deleteFrom('project_team')
+        .where('fk_project_id', '=', projectId)
+        .execute();
+};

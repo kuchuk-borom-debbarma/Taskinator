@@ -97,3 +97,19 @@ To enforce strict domain boundaries, each module follows a structured **Service 
 2. **Service Implementation (`*ServiceImpl.ts`)**: Orchestrates business logic, calls query objects, and handles Kafka event emission.
 3. **Query Objects (`*Queries.ts`)**: Encapsulates all database interactions. Complex authorization and validation rules are implemented directly in SQL to ensure performance and atomicity.
 4. **Internal Testing**: Jest with ESM mocking is used to verify both service and query logic in isolation, ensuring each module's behavior is consistent before it's integrated.
+---
+
+# Entry 6: Kafka Consumer Design (Cleanup Pattern)
+
+## Decoupled Cleanup via Independent Consumer Groups
+
+To handle the side effects of a `PROJECT_DELETED` event (deleting members, teams, and tasks), the system uses three **independent Kafka Consumer Groups**. 
+
+### Implementation Details:
+- **Isolation**: Each cleanup task (Members, Teams, Tasks) runs in its own consumer group (`member-cleanup-group`, `team-cleanup-group`, `task-cleanup-group`). 
+- **Resilience**: If the Task database is temporarily unavailable, the Member and Team cleanups will still succeed. The Task consumer will retry independently once the database is back online without blocking other services.
+- **Domain Ownership**: Each consumer is located within its respective service (`src/services/<domain>/internal/listeners/`). This ensures that the domain logic for "how to delete a task" remains encapsulated within the Task service.
+- **Registry Pattern**: A central `src/kafka/registry.ts` bootstraps all consumers at application startup (`src/index.ts`), providing a single point of visibility for all active background listeners.
+
+### Benefits:
+This approach follows the **Choreography Pattern**. The Project service simply broadcasts that a project was deleted; it doesn't need to know who is listening or what they need to do. This makes the system highly extensible—if a new "Notification" service needs to send emails when a project is deleted, we just add a new consumer group without touching existing code.

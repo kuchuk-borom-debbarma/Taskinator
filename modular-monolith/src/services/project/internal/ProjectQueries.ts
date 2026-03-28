@@ -124,9 +124,12 @@ export const deleteProjectMembers = async (
             updated_at    AS "updatedAt"
     `.execute(db);
 
-    if (result.rows.length !== data.memberIds.length) {
-        throw new Error('Unauthorized or some members not found');
-    }
-
     return result.rows;
+};
+
+export const deleteAllProjectMembers = async (projectId: string) => {
+    await db
+        .deleteFrom('project_member')
+        .where('fk_project_id', '=', projectId)
+        .execute();
 };

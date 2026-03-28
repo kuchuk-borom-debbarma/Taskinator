@@ -197,3 +197,10 @@ export const updateTask = async (data: UpdateTaskParam): Promise<string | null> 
     return result.rows[0]?.id ?? null;
 };
 
+export const deleteAllProjectTasks = async (projectId: string) => {
+    await db
+        .deleteFrom('project_task')
+        .where('fk_project_id', '=', projectId)
+        .execute();
+};
+
