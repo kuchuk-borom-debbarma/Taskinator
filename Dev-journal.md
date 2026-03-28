@@ -291,3 +291,26 @@ Kafka guarantees order per partition, but distributed systems can still experien
 *   **`version` Column**: Manages Producer concurrency ("Am I overwriting someone?").
 *   **`last_event_id` Column**: Records Entity identity ("Which event made me this way?").
 
+
+---
+
+# Entry 16: High-Performance Batch Event Publishing
+
+## Reducing I/O Overhead for 10k RPS
+
+To achieve our 10,000 RPS target, we optimized how events are published to Kafka. Instead of awaiting multiple individual network requests for each event in a bulk operation, we implemented **Batch Publishing**.
+
+### 1. Unified Bus Interface Update
+The `EventBus` interface was upgraded to support both single and array-based message publishing (`publish(topic: string, message: any | any[])`). This allows the caller to remain agnostic of the underlying batching logic.
+
+### 2. KafkaBus Optimization
+The `KafkaBus` now maps arrays of domain events directly into a single `producer.send()` call. This significantly reduces the number of round-trips to the Kafka brokers, lowering latency and decreasing the CPU overhead on both the producer and the broker.
+
+### 3. Service-Level Integration
+All core services (Project, Team, Task) were refactored to collect events into local arrays during bulk operations (like `createProjects` or `updateTasks`) and publish them in a single, atomic-like batch at the end of the operation.
+
+### Benefits:
+*   **Network Efficiency**: Dramatically fewer network packets and handshakes.
+*   **Reduced Latency**: Bulk operations that previously took (N)$ network wait time now take (1)$.
+*   **Consistency**: Publishing as a batch makes it easier to reason about the event sequence for a single user request.
+
