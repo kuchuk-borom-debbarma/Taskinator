@@ -12,11 +12,11 @@ The core domains — Projects, Teams, Tasks, and the Event Engine — are well-d
 
 ## Tech Stack
 
-**Express.js + Node.js** — Lightweight and unopinionated. Gives full control over middleware and routing without framework magic getting in the way.
+**Bun** — Chosen for high performance and its built-in tooling (testing, bundling, runtime).
 
 **PostgreSQL** — The data model is relational and structured. Projects, teams, tasks, and their relationships benefit from strict schemas and foreign key constraints.
 
-**Kysely (mostly raw queries)** — Used primarily as a query builder for type safety and composability, but raw SQL is preferred where clarity or performance demands it. Keeps queries close to the metal.
+**Kysely (with raw SQL for complex validation)** — Used as a query builder for type safety, but complex authorization and validation rules (e.g., checking project membership before task creation) are enforced via **raw SQL with `WHERE EXISTS` clauses**. This ensures atomicity and keeps domain rules close to the data.
 
 **JWT** — Stateless authentication; straightforward to implement and well-suited for high-throughput workloads.
 
@@ -38,21 +38,23 @@ One topic per domain entity keeps consumers decoupled and narrowly focused. A si
 
 **`project-events`** — project created, updated, deleted
 
-**`team-events`** — team created, deleted
+**`project-member-events`** — member added, removed
 
-**`task-events`** — task created, updated, completed, deleted
+**`project-team-events`** — team created, deleted
+
+**`project-team-member-events`** — team member added, removed
+
+**`project-task-events`** — task created, updated, deleted
 
 Events carry an idempotent `eventId` which consumers verify before processing, guarding against duplicate delivery.
 
 ## Batching
 
-Events are published to Kafka in batches rather than one at a time. This reduces producer overhead and improves throughput, particularly under write-heavy bursts like bulk task creation or cascade deletes. Consumers are also batch-aware, processing records in bulk rather than handling each message individually.
+Events are published to Kafka in batches rather than one at a time. This reduces producer overhead and improves throughput, particularly under write-heavy bursts like bulk task creation or cascade deletes.
 
-## Cascade Deletes
+## Implementation Details
 
-When a project is deleted, downstream cleanup of teams, members, and tasks is handled via the **Saga pattern**. The `project-events` consumer listens for `project.deleted` and publishes downstream events to the relevant topics. Each consumer is responsible for its own cleanup — no single consumer owns the full cascade.
-
-This keeps the dependency chain choreographed through events rather than hardcoded into a single handler.
+Kafka producers are integrated directly into the `ServiceImpl` classes. Messages are emitted immediately after successful database operations, ensuring the system broadcasts domain state changes efficiently.
 
 ---
 
@@ -78,8 +80,15 @@ Both `projects` and `project_members` are read-heavy. Members are added infreque
 
 # Entry 4: Database Schema (Part 2 — Task Table)
 
-Tasks are hierarchical, so the schema needs to represent parent-child relationships efficiently. Two main options were considered: **closure table** and **materialized path**.
+Tasks are hierarchical. While a **Materialized path** was considered for its read efficiency, the current implementation uses an **Adjacency List (`fk_parent_task_id`)**. This keeps the initial schema simple and avoids the path-update overhead while the domain model is still evolving.
 
-**Closure table** was ruled out — with a high volume of tasks, the number of rows it generates becomes excessive and wastes storage.
+---
 
-**Materialized path** is the better fit. It's space-efficient and fast to read. The known tradeoff is that updating paths — when a subtree is moved — is slower, but writes are infrequent enough that this is acceptable.
+# Entry 5: Modular Monolith Service Pattern
+
+To enforce strict domain boundaries, each module follows a structured **Service -> Query** pattern:
+
+1. **Service Interface (`*Service.ts`)**: Defines the public API for the domain.
+2. **Service Implementation (`*ServiceImpl.ts`)**: Orchestrates business logic, calls query objects, and handles Kafka event emission.
+3. **Query Objects (`*Queries.ts`)**: Encapsulates all database interactions. Complex authorization and validation rules are implemented directly in SQL to ensure performance and atomicity.
+4. **Internal Testing**: Jest with ESM mocking is used to verify both service and query logic in isolation, ensuring each module's behavior is consistent before it's integrated.
