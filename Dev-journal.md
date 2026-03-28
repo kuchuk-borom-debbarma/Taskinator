@@ -458,3 +458,25 @@ Added a `/health` root endpoint to provide visibility into the application state
 *   **Type Safety**: Full end-to-end type safety from Express request handlers down to Kysely database queries.
 *   **Initialization**: The REST server is initialized in `src/index.ts` alongside Kafka consumers and service connections, ensuring all systems are ready before accepting traffic.
 
+
+---
+
+# Entry 22: RESTful API Verification and Local Testing Mode
+
+## Closing the Loop from Client to Database
+
+We verified the new RESTful API layer and introduced a "Local-First" testing mode to allow rapid development without requiring a full infrastructure stack (Kafka/Postgres).
+
+### 1. API Verification
+The Express server was successfully initialized and verified via the `/health` endpoint. This confirms that our transport layer is correctly wired to the application lifecycle and can accept incoming HTTP traffic.
+
+### 2. The "USE_MEMORY_BUS" Toggle
+To solve the "Kafka Dependency" problem for local development and CI, we updated the `EventBus` factory to support an override:
+*   **Command**: `USE_MEMORY_BUS=true bun run src/index.ts`
+*   **How it works**: By setting this environment variable, the system swaps the `KafkaBus` for the `MemoryBus` at runtime. All domain logic remains identical, but events are routed through a local `EventEmitter` instead of a remote broker.
+
+### 3. Benefits for Velocity
+*   **Instant Startup**: Developers can boot the entire API stack in milliseconds without Docker.
+*   **Infrastructure Agnostic**: The core business logic is now proven to be truly decoupled from the transport and messaging infrastructure.
+*   **Easier Debugging**: Local event flows can be traced easily within a single process while still adhering to our high-performance architectural patterns.
+
