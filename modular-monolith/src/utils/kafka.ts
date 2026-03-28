@@ -46,6 +46,11 @@ export const KAFKA_EVENTS = {
         ADDED: 'PROJECT_TEAM_MEMBER_ADDED',
         DELETED: 'PROJECT_TEAM_MEMBER_DELETED',
     },
+    PROJECT_TASK: {
+        CREATED: 'PROJECT_TASK_CREATED',
+        UPDATED: 'PROJECT_TASK_UPDATED',
+        DELETED: 'PROJECT_TASK_DELETED',
+    },
 } as const;
 
 export const KAFKA_TOPICS = {
@@ -53,4 +58,5 @@ export const KAFKA_TOPICS = {
     PROJECT_MEMBER: 'project-member-events',
     PROJECT_TEAM: 'project-team-events',
     PROJECT_TEAM_MEMBER: 'project-team-member-events',
+    PROJECT_TASK: 'project-task-events',
 } as const;

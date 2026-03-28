@@ -26,6 +26,7 @@
     },
     "scripts": {
         "format": "biome format --write .",
+        "check-types": "bun x tsc --noEmit",
         "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js"
     }
 }
