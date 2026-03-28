@@ -1,70 +1,38 @@
 import { EventEmitter } from 'events';
 import { kafka } from '../kafka';
 import type { Producer, Consumer } from 'kafkajs';
+import type { DomainEvent } from './kafka';
+import { withBatchIdempotency } from './idempotency';
 
+/**
+ * A thin, type-safe wrapper around Kafka.
+ * Handles batching and idempotency automatically.
+ */
 interface Bus {
-    publish(topic: string, message: any | any[]): Promise<void>;
-    subscribe(topic: string, groupId: string, handler: (event: any) => Promise<void>): Promise<void>;
-    subscribeBatch(topic: string, groupId: string, handler: (events: any[]) => Promise<void>): Promise<void>;
+    emit(topic: string, event: DomainEvent | DomainEvent[]): Promise<void>;
+    on(topic: string, groupId: string, handlers: Record<string, (data: any) => Promise<void>>): Promise<void>;
     init(): Promise<void>;
     destroy(): Promise<void>;
-}
-
-function parseKafkaMessage(messageValue: Buffer | null | undefined): any {
-    const content = messageValue?.toString();
-    if (!content) return null;
-    
-    try {
-        const event = JSON.parse(content);
-        if (event.value && typeof event.value === 'string') {
-            try {
-                const inner = JSON.parse(event.value);
-                return { ...event, ...inner };
-            } catch (e) {
-                return event;
-            }
-        }
-        return event;
-    } catch (e) {
-        return null;
-    }
 }
 
 class MemoryBus implements Bus {
     private emitter = new EventEmitter();
 
-    async init() {
-        console.log('--- MemoryBus Initialized (Test Mode) ---');
-    }
-    
-    async destroy() {
-        this.emitter.removeAllListeners();
-    }
+    async init() {}
+    async destroy() { this.emitter.removeAllListeners(); }
 
-    async publish(topic: string, message: any | any[]) {
-        const messages = Array.isArray(message) ? message : [message];
-        
-        for (const msg of messages) {
-            // In Kafka, messages are usually stringified
-            const stringified = JSON.stringify(msg);
-            setTimeout(() => {
-                const event = parseKafkaMessage(Buffer.from(stringified));
-                if (event) {
-                    this.emitter.emit(topic, event);
-                }
-            }, 10);
+    async emit(topic: string, event: DomainEvent | DomainEvent[]) {
+        const events = Array.isArray(event) ? event : [event];
+        for (const e of events) {
+            // Simulate async Kafka behavior
+            setTimeout(() => this.emitter.emit(`${topic}:${e.type}`, e.data), 10);
         }
     }
 
-    async subscribe(topic: string, _groupId: string, handler: (event: any) => Promise<void>) {
-        this.emitter.on(topic, handler);
-    }
-
-    async subscribeBatch(topic: string, _groupId: string, handler: (events: any[]) => Promise<void>) {
-        // MemoryBus simple implementation: wrap each event in an array
-        this.emitter.on(topic, async (event) => {
-            await handler([event]);
-        });
+    async on(topic: string, _groupId: string, handlers: Record<string, (data: any) => Promise<void>>) {
+        for (const [type, handler] of Object.entries(handlers)) {
+            this.emitter.on(`${topic}:${type}`, handler);
+        }
     }
 }
 
@@ -73,71 +41,45 @@ class KafkaBus implements Bus {
     private consumers: Map<string, Consumer> = new Map();
 
     constructor() {
-        this.producer = kafka.producer({
-            allowAutoTopicCreation: true,
-            idempotent: true,
-        });
+        this.producer = kafka.producer({ allowAutoTopicCreation: true, idempotent: true });
     }
 
-    async init() {
-        await this.producer.connect();
-    }
+    async init() { await this.producer.connect(); }
 
     async destroy() {
         await this.producer.disconnect();
-        for (const consumer of this.consumers.values()) {
-            await consumer.disconnect();
-        }
+        for (const c of this.consumers.values()) await c.disconnect();
     }
 
-    async publish(topic: string, message: any | any[]) {
-        const messages = Array.isArray(message) ? message : [message];
-        
+    async emit(topic: string, event: DomainEvent | DomainEvent[]) {
+        const events = Array.isArray(event) ? event : [event];
         await this.producer.send({
             topic,
-            messages: messages.map(msg => ({ 
-                key: msg.key, 
-                value: JSON.stringify(msg),
-                headers: msg.headers
-            })),
+            messages: events.map(e => ({ key: e.key, value: JSON.stringify(e) })),
         });
     }
 
-    async subscribe(topic: string, groupId: string, handler: (event: any) => Promise<void>) {
+    async on(topic: string, groupId: string, handlers: Record<string, (data: any) => Promise<void>>) {
         const consumer = kafka.consumer({ groupId });
         await consumer.connect();
         await consumer.subscribe({ topic, fromBeginning: false });
-        await consumer.run({
-            eachMessage: async ({ message }) => {
-                const event = parseKafkaMessage(message.value);
-                if (event) {
-                    await handler(event);
-                }
-            },
-        });
-        this.consumers.set(groupId, consumer);
-    }
-
-    async subscribeBatch(topic: string, groupId: string, handler: (events: any[]) => Promise<void>) {
-        const consumer = kafka.consumer({ groupId });
-        await consumer.connect();
-        await consumer.subscribe({ topic, fromBeginning: false });
+        
         await consumer.run({
             eachBatch: async ({ batch, resolveOffset, heartbeat, isRunning, isStale }) => {
-                const events: any[] = [];
-                for (const message of batch.messages) {
-                    if (!isRunning() || isStale()) break;
-                    const event = parseKafkaMessage(message.value);
-                    if (event) events.push(event);
+                const allEvents: DomainEvent[] = batch.messages
+                    .map(m => JSON.parse(m.value?.toString() || '{}'))
+                    .filter(e => handlers[e.type]);
+
+                if (allEvents.length > 0) {
+                    await withBatchIdempotency(allEvents, groupId, async (unprocessed) => {
+                        for (const e of unprocessed) {
+                            if (!isRunning() || isStale()) break;
+                            await handlers[e.type](e.data);
+                        }
+                    });
                 }
 
-                if (events.length > 0) {
-                    await handler(events);
-                }
-
-                for (const message of batch.messages) {
-                    resolveOffset(message.offset);
-                }
+                for (const m of batch.messages) resolveOffset(m.offset);
                 await heartbeat();
             },
         });

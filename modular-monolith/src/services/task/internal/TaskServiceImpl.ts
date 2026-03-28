@@ -5,7 +5,7 @@ import type {
     TaskService,
     UpdateTasksParam,
 } from "../TaskService.ts";
-import {buildKafkaMessage, KAFKA_EVENTS, KAFKA_TOPICS} from "../../../utils/kafka.ts";
+import {createEvent, KAFKA_EVENTS, KAFKA_TOPICS} from "../../../utils/kafka.ts";
 import {deleteTasks, insertTask, updateTask} from "./TaskQueries.ts";
 import {eventBus} from "../../../utils/EventBus.ts";
 
@@ -23,19 +23,14 @@ export class TaskServiceImpl implements TaskService {
     async createTask(data: CreateTaskParam): Promise<ProjectTask[]> {
         const task = await insertTask(data);
 
-        await eventBus.publish(
+        await eventBus.emit(
             KAFKA_TOPICS.PROJECT_TASK,
-            buildKafkaMessage({
-                key: task.id,
-                type: KAFKA_EVENTS.PROJECT_TASK.CREATED,
-                source: `${this.constructor.name}.createTask`,
-                data: {
-                    taskId: task.id,
-                    projectId: task.projectId,
-                    userId: data.userId,
-                    title: task.title,
-                },
-            }),
+            createEvent(KAFKA_EVENTS.PROJECT_TASK.CREATED, task.id, {
+                taskId: task.id,
+                projectId: task.projectId,
+                userId: data.userId,
+                title: task.title,
+            })
         );
 
         return [task];
@@ -44,27 +39,22 @@ export class TaskServiceImpl implements TaskService {
     async deleteTask(data: DeleteTasksParam): Promise<string[]> {
         const deletedIds = await deleteTasks(data);
 
-        const messages = deletedIds.map((taskId: string) =>
-            buildKafkaMessage({
-                key: taskId,
-                type: KAFKA_EVENTS.PROJECT_TASK.DELETED,
-                source: `${this.constructor.name}.deleteTask`,
-                data: {
-                    taskId,
-                    projectId: data.projectId,
-                    userId: data.userId,
-                },
-            }),
+        const events = deletedIds.map((taskId: string) =>
+            createEvent(KAFKA_EVENTS.PROJECT_TASK.DELETED, taskId, {
+                taskId,
+                projectId: data.projectId,
+                userId: data.userId,
+            })
         );
 
-        await eventBus.publish(KAFKA_TOPICS.PROJECT_TASK, messages);
+        await eventBus.emit(KAFKA_TOPICS.PROJECT_TASK, events);
 
         return deletedIds;
     }
 
     async updateTasks(data: UpdateTasksParam): Promise<string[]> {
         const updatedIds: string[] = [];
-        const messages: any[] = [];
+        const events: any[] = [];
 
         for (const taskUpdate of data.tasks) {
             const result = await updateTask({
@@ -82,18 +72,13 @@ export class TaskServiceImpl implements TaskService {
             if (result) {
                 updatedIds.push(result);
 
-                messages.push(
-                    buildKafkaMessage({
-                        key: result,
-                        type: KAFKA_EVENTS.PROJECT_TASK.UPDATED,
-                        source: `${this.constructor.name}.updateTasks`,
-                        data: {
-                            taskId: result,
-                            projectId: data.projectId,
-                            userId: data.userId,
-                            updates: taskUpdate,
-                        },
-                    }),
+                events.push(
+                    createEvent(KAFKA_EVENTS.PROJECT_TASK.UPDATED, result, {
+                        taskId: result,
+                        projectId: data.projectId,
+                        userId: data.userId,
+                        updates: taskUpdate,
+                    })
                 );
             }
         }
@@ -102,8 +87,8 @@ export class TaskServiceImpl implements TaskService {
             throw new Error('Unauthorized, some tasks not found, or version conflict');
         }
 
-        if (messages.length > 0) {
-            await eventBus.publish(KAFKA_TOPICS.PROJECT_TASK, messages);
+        if (events.length > 0) {
+            await eventBus.emit(KAFKA_TOPICS.PROJECT_TASK, events);
         }
 
         return updatedIds;

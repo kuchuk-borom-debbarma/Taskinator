@@ -1,4 +1,3 @@
-console.log('Hello via Bun!');
 import { projectService } from './services/project';
 import { teamService } from './services/team';
 import { taskService } from './services/task';

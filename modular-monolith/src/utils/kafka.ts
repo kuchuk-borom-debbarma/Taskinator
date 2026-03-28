@@ -1,34 +1,5 @@
 import { v4 } from 'uuid';
 
-export function buildKafkaMessage({
-    key,
-    type,
-    source,
-    data,
-}: {
-    key: string;
-    type: string;
-    source: string;
-    data: unknown;
-}) {
-    const eventId = v4();
-
-    return {
-        key,
-        headers: {
-            eventType: type,
-            eventId,
-            source,
-        },
-        value: JSON.stringify({
-            eventId,
-            type,
-            data,
-        }),
-        timestamp: Date.now().toString(),
-    };
-}
-
 export const KAFKA_EVENTS = {
     PROJECT: {
         CREATED: 'PROJECT_CREATED',
@@ -60,3 +31,24 @@ export const KAFKA_TOPICS = {
     PROJECT_TEAM_MEMBER: 'project-team-member-events',
     PROJECT_TASK: 'project-task-events',
 } as const;
+
+export interface DomainEvent<T = any> {
+    eventId: string;
+    type: string;
+    key: string;
+    data: T;
+    timestamp: string;
+}
+
+/**
+ * Creates a clean event object. No JSON nesting.
+ */
+export function createEvent(type: string, key: string, data: any): DomainEvent {
+    return {
+        eventId: v4(),
+        type,
+        key,
+        data,
+        timestamp: new Date().toISOString(),
+    };
+}
