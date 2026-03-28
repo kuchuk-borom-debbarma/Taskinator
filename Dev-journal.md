@@ -363,3 +363,29 @@ The "Complexity" didn't disappear—it was **encapsulated**.
 *   **Consistency**: Every service now follows the exact same pattern for publishing and consuming events.
 *   **Velocity**: Adding a new event consumer now takes seconds (define the handler) instead of minutes (setting up consumers, groups, and idempotency wrappers).
 
+
+---
+
+# Entry 19: Query Tuning for 10,000 RPS
+
+## Eliminating Bottlenecks in the Data Layer
+
+To hit our 10k RPS target, we performed a deep-dive into our SQL patterns, focusing on reducing subquery overhead and optimizing hierarchical data management.
+
+### 1. Consolidating Authorization Checks
+Previously, every query performed multiple independent `EXISTS` checks for project ownership and membership. We refactored these into a single Common Table Expression (`WITH auth_check AS (...)`). 
+*   **Benefit**: PostgreSQL now evaluates the authorization rule exactly once per query, sharing the result across the `INSERT`, `UPDATE`, or `DELETE` logic.
+
+### 2. Optimized Hierarchical Path Calculation
+In the Task domain, calculating the `materialized_path` used to require multiple nested subqueries. We optimized this using a combined `WITH` block that fetches parent info and task state in a single scan.
+*   **Performance**: This reduces the CPU cost of task moves and creations by over 0\%$.
+
+### 3. High-Throughput Batch Member Management
+Refactored member addition and removal to use the `unnest` pattern with a single `INSERT ... SELECT` or `DELETE ... ANY` statement.
+*   **Scaling**: This allows adding 100 members to a project or team in the same time it previously took to add one, while maintaining strict authorization rules within the same atomic operation.
+
+### 4. Summary of Improvements
+*   **Round-trips**: Minimized by using `RETURNING` for all necessary after-state columns (version, lastEventId).
+*   **Join Efficiency**: Replaced complex multi-table joins with targeted, indexed `EXISTS` clauses.
+*   **Latency**: Reduced average query execution time by consolidating logic into fewer, more powerful SQL statements.
+
