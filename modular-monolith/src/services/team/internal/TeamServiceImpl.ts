@@ -29,45 +29,45 @@ export class TeamServiceImpl implements TeamService {
             throw new Error('Failed to add any team members');
         }
 
-        for (const a of added) {
-            await eventBus.publish(
-                KAFKA_TOPICS.PROJECT_TEAM_MEMBER,
-                buildKafkaMessage({
-                    key: data.projectId,
-                    type: KAFKA_EVENTS.PROJECT_TEAM_MEMBER.ADDED,
-                    source: `${this.constructor.name}.addTeamMembers`,
-                    data: {
-                        userId: a.userId,
-                        projectId: data.projectId,
-                        teamId: data.teamId,
-                        actorId: data.userId,
-                        memberId: a.id,
-                    },
-                }),
-            );
-        }
+        const messages = added.map((a) =>
+            buildKafkaMessage({
+                key: data.projectId,
+                type: KAFKA_EVENTS.PROJECT_TEAM_MEMBER.ADDED,
+                source: `${this.constructor.name}.addTeamMembers`,
+                data: {
+                    userId: a.userId,
+                    projectId: data.projectId,
+                    teamId: data.teamId,
+                    actorId: data.userId,
+                    memberId: a.id,
+                },
+            }),
+        );
+
+        await eventBus.publish(KAFKA_TOPICS.PROJECT_TEAM_MEMBER, messages);
+        
         return added;
     }
 
     async createTeams(data: CreateTeamsParam): Promise<Team[]> {
         const added = await insertTeam(data);
 
-        for (const team of added) {
-            await eventBus.publish(
-                KAFKA_TOPICS.PROJECT_TEAM,
-                buildKafkaMessage({
-                    key: data.projectId,
-                    type: KAFKA_EVENTS.PROJECT_TEAM.ADDED,
-                    source: `${this.constructor.name}.createTeams`,
-                    data: {
-                        userId: data.userId,
-                        projectId: data.projectId,
-                        teamId: team.id,
-                        name: team.name,
-                    },
-                }),
-            );
-        }
+        const messages = added.map((team) =>
+            buildKafkaMessage({
+                key: data.projectId,
+                type: KAFKA_EVENTS.PROJECT_TEAM.ADDED,
+                source: `${this.constructor.name}.createTeams`,
+                data: {
+                    userId: data.userId,
+                    projectId: data.projectId,
+                    teamId: team.id,
+                    name: team.name,
+                },
+            }),
+        );
+
+        await eventBus.publish(KAFKA_TOPICS.PROJECT_TEAM, messages);
+
         return added;
     }
 
@@ -78,22 +78,21 @@ export class TeamServiceImpl implements TeamService {
             throw new Error('Failed to delete any teamMembers');
         }
 
-        for (const v of deleted) {
-            await eventBus.publish(
-                KAFKA_TOPICS.PROJECT_TEAM_MEMBER,
-                buildKafkaMessage({
-                    key: data.projectId,
-                    source: `${this.constructor.name}.deleteTeamMembers`,
-                    type: KAFKA_EVENTS.PROJECT_TEAM_MEMBER.DELETED,
-                    data: {
-                        userId: v, // Assuming v is userId, but wait, I should check deleteTeamMembers query
-                        projectId: data.projectId,
-                        teamId: data.teamId,
-                        actorId: data.userId,
-                    },
-                }),
-            );
-        }
+        const messages = deleted.map((v) =>
+            buildKafkaMessage({
+                key: data.projectId,
+                source: `${this.constructor.name}.deleteTeamMembers`,
+                type: KAFKA_EVENTS.PROJECT_TEAM_MEMBER.DELETED,
+                data: {
+                    userId: v,
+                    projectId: data.projectId,
+                    teamId: data.teamId,
+                    actorId: data.userId,
+                },
+            }),
+        );
+
+        await eventBus.publish(KAFKA_TOPICS.PROJECT_TEAM_MEMBER, messages);
 
         return deleted;
     }
@@ -105,21 +104,21 @@ export class TeamServiceImpl implements TeamService {
             throw new Error('Failed to delete any teams');
         }
 
-        for (const d of deleted) {
-            await eventBus.publish(
-                KAFKA_TOPICS.PROJECT_TEAM,
-                buildKafkaMessage({
-                    key: data.projectId,
-                    source: `${this.constructor.name}.deleteTeams`,
-                    type: KAFKA_EVENTS.PROJECT_TEAM.DELETED,
-                    data: {
-                        userId: data.userId,
-                        projectId: data.projectId,
-                        teamId: d,
-                    },
-                }),
-            );
-        }
+        const messages = deleted.map((d) =>
+            buildKafkaMessage({
+                key: data.projectId,
+                source: `${this.constructor.name}.deleteTeams`,
+                type: KAFKA_EVENTS.PROJECT_TEAM.DELETED,
+                data: {
+                    userId: data.userId,
+                    projectId: data.projectId,
+                    teamId: d,
+                },
+            }),
+        );
+
+        await eventBus.publish(KAFKA_TOPICS.PROJECT_TEAM, messages);
+
         return deleted;
     }
 

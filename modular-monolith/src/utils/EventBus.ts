@@ -3,7 +3,7 @@ import { kafka } from '../kafka';
 import type { Producer, Consumer } from 'kafkajs';
 
 interface Bus {
-    publish(topic: string, message: any): Promise<void>;
+    publish(topic: string, message: any | any[]): Promise<void>;
     subscribe(topic: string, groupId: string, handler: (event: any) => Promise<void>): Promise<void>;
     init(): Promise<void>;
     destroy(): Promise<void>;
@@ -20,22 +20,26 @@ class MemoryBus implements Bus {
         this.emitter.removeAllListeners();
     }
 
-    async publish(topic: string, message: any) {
-        // In Kafka, messages are usually stringified
-        const stringified = JSON.stringify(message);
-        setTimeout(() => {
-            const event = JSON.parse(stringified);
-            if (event.value && typeof event.value === 'string') {
-                try {
-                    const inner = JSON.parse(event.value);
-                    this.emitter.emit(topic, { ...event, ...inner });
-                } catch (e) {
+    async publish(topic: string, message: any | any[]) {
+        const messages = Array.isArray(message) ? message : [message];
+        
+        for (const msg of messages) {
+            // In Kafka, messages are usually stringified
+            const stringified = JSON.stringify(msg);
+            setTimeout(() => {
+                const event = JSON.parse(stringified);
+                if (event.value && typeof event.value === 'string') {
+                    try {
+                        const inner = JSON.parse(event.value);
+                        this.emitter.emit(topic, { ...event, ...inner });
+                    } catch (e) {
+                        this.emitter.emit(topic, event);
+                    }
+                } else {
                     this.emitter.emit(topic, event);
                 }
-            } else {
-                this.emitter.emit(topic, event);
-            }
-        }, 10);
+            }, 10);
+        }
     }
 
     async subscribe(topic: string, _groupId: string, handler: (event: any) => Promise<void>) {
@@ -65,14 +69,16 @@ class KafkaBus implements Bus {
         }
     }
 
-    async publish(topic: string, message: any) {
+    async publish(topic: string, message: any | any[]) {
+        const messages = Array.isArray(message) ? message : [message];
+        
         await this.producer.send({
             topic,
-            messages: [{ 
-                key: message.key, 
-                value: JSON.stringify(message),
-                headers: message.headers
-            }],
+            messages: messages.map(msg => ({ 
+                key: msg.key, 
+                value: JSON.stringify(msg),
+                headers: msg.headers
+            })),
         });
     }
 

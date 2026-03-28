@@ -51,9 +51,7 @@ export class ProjectServiceImpl implements ProjectService {
             }),
         );
 
-        for (const msg of messages) {
-            await eventBus.publish(KAFKA_TOPICS.PROJECT_MEMBER, msg);
-        }
+        await eventBus.publish(KAFKA_TOPICS.PROJECT_MEMBER, messages);
     }
 
     async deleteProjects(data: DeleteProjectsParam): Promise<void> {
@@ -75,9 +73,7 @@ export class ProjectServiceImpl implements ProjectService {
             }),
         );
 
-        for (const msg of messages) {
-            await eventBus.publish(KAFKA_TOPICS.PROJECT, msg);
-        }
+        await eventBus.publish(KAFKA_TOPICS.PROJECT, messages);
     }
 
     async addProjectMembers(
@@ -103,9 +99,7 @@ export class ProjectServiceImpl implements ProjectService {
             }),
         );
 
-        for (const msg of messages) {
-            await eventBus.publish(KAFKA_TOPICS.PROJECT_MEMBER, msg);
-        }
+        await eventBus.publish(KAFKA_TOPICS.PROJECT_MEMBER, messages);
 
         return added;
     }
@@ -154,9 +148,7 @@ export class ProjectServiceImpl implements ProjectService {
             }),
         );
 
-        for (const msg of messages) {
-            await eventBus.publish(KAFKA_TOPICS.PROJECT, msg);
-        }
+        await eventBus.publish(KAFKA_TOPICS.PROJECT, messages);
 
         return projects;
     }

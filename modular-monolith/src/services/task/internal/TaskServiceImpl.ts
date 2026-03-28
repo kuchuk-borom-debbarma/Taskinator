@@ -57,15 +57,14 @@ export class TaskServiceImpl implements TaskService {
             }),
         );
 
-        for (const msg of messages) {
-            await eventBus.publish(KAFKA_TOPICS.PROJECT_TASK, msg);
-        }
+        await eventBus.publish(KAFKA_TOPICS.PROJECT_TASK, messages);
 
         return deletedIds;
     }
 
     async updateTasks(data: UpdateTasksParam): Promise<string[]> {
         const updatedIds: string[] = [];
+        const messages: any[] = [];
 
         for (const taskUpdate of data.tasks) {
             const result = await updateTask({
@@ -83,8 +82,7 @@ export class TaskServiceImpl implements TaskService {
             if (result) {
                 updatedIds.push(result);
 
-                await eventBus.publish(
-                    KAFKA_TOPICS.PROJECT_TASK,
+                messages.push(
                     buildKafkaMessage({
                         key: result,
                         type: KAFKA_EVENTS.PROJECT_TASK.UPDATED,
@@ -102,6 +100,10 @@ export class TaskServiceImpl implements TaskService {
 
         if (updatedIds.length !== data.tasks.length) {
             throw new Error('Unauthorized, some tasks not found, or version conflict');
+        }
+
+        if (messages.length > 0) {
+            await eventBus.publish(KAFKA_TOPICS.PROJECT_TASK, messages);
         }
 
         return updatedIds;
