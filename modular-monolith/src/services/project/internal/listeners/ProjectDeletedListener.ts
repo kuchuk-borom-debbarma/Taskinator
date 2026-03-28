@@ -7,9 +7,11 @@ export class MemberCleanupListener {
         await eventBus.on(KAFKA_TOPICS.PROJECT, 'member-cleanup-group', {
             [KAFKA_EVENTS.PROJECT.DELETED]: async (data) => {
                 const { projectId } = data;
-                console.log(`[Project Service] Cleaning up members for project: ${projectId}`);
+                console.log(
+                    `[Project Service] Cleaning up members for project: ${projectId}`,
+                );
                 await deleteAllProjectMembers(projectId);
-            }
+            },
         });
         console.log('[Project Service] MemberCleanupListener started');
     }

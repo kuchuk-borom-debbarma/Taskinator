@@ -1,9 +1,12 @@
-import type {ProjectMemberTable, ProjectTable} from './tables/Project.ts';
-import {Kysely, PostgresDialect} from 'kysely';
-import {Pool} from 'pg';
-import type {ProjectTeamTable, ProjectTeamMemberTable} from './tables/ProjectTeam.ts';
-import type {ProjectTaskTable} from "./tables/Task.ts";
-import type {ProcessedEventTable} from "./tables/ProcessedEvent.ts";
+import type { ProjectMemberTable, ProjectTable } from './tables/Project.ts';
+import { Kysely, PostgresDialect } from 'kysely';
+import { Pool } from 'pg';
+import type {
+    ProjectTeamTable,
+    ProjectTeamMemberTable,
+} from './tables/ProjectTeam.ts';
+import type { ProjectTaskTable } from './tables/Task.ts';
+import type { ProcessedEventTable } from './tables/ProcessedEvent.ts';
 
 export interface Database {
     project: ProjectTable;
@@ -23,7 +26,6 @@ const dialect = new PostgresDialect({
         max: 10,
     }),
 });
-
 
 export const db = new Kysely<Database>({
     dialect,

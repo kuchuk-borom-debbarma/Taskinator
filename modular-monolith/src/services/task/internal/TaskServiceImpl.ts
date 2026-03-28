@@ -4,10 +4,19 @@ import type {
     ProjectTask,
     TaskService,
     UpdateTasksParam,
-} from "../TaskService.ts";
-import {createEvent, KAFKA_EVENTS, KAFKA_TOPICS} from "../../../utils/kafka.ts";
-import {deleteTasks, getTasks, insertTask, updateTask} from "./TaskQueries.ts";
-import {eventBus} from "../../../utils/EventBus.ts";
+} from '../TaskService.ts';
+import {
+    createEvent,
+    KAFKA_EVENTS,
+    KAFKA_TOPICS,
+} from '../../../utils/kafka.ts';
+import {
+    deleteTasks,
+    getTasks,
+    insertTask,
+    updateTask,
+} from './TaskQueries.ts';
+import { eventBus } from '../../../utils/EventBus.ts';
 
 export class TaskServiceImpl implements TaskService {
     async getTasks(userId: string, projectId: string): Promise<ProjectTask[]> {
@@ -34,7 +43,7 @@ export class TaskServiceImpl implements TaskService {
                 projectId: task.projectId,
                 userId: data.userId,
                 title: task.title,
-            })
+            }),
         );
 
         return task;
@@ -48,7 +57,7 @@ export class TaskServiceImpl implements TaskService {
                 taskId,
                 projectId: data.projectId,
                 userId: data.userId,
-            })
+            }),
         );
 
         await eventBus.emit(KAFKA_TOPICS.PROJECT_TASK, events);
@@ -82,13 +91,15 @@ export class TaskServiceImpl implements TaskService {
                         projectId: data.projectId,
                         userId: data.userId,
                         updates: taskUpdate,
-                    })
+                    }),
                 );
             }
         }
 
         if (updatedIds.length !== data.tasks.length) {
-            throw new Error('Unauthorized, some tasks not found, or version conflict');
+            throw new Error(
+                'Unauthorized, some tasks not found, or version conflict',
+            );
         }
 
         if (events.length > 0) {

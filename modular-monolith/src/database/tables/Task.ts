@@ -1,4 +1,4 @@
-import type {ProjectTeamTable} from "./ProjectTeam.ts";
+import type { ProjectTeamTable } from './ProjectTeam.ts';
 import type {
     ColumnType,
     Generated,
@@ -24,7 +24,6 @@ export interface ProjectTaskTable {
     created_at: ColumnType<Date, string | undefined, never>;
     updated_at: ColumnType<Date, undefined>;
 }
-
 
 export type ProjectTask = Selectable<ProjectTaskTable>;
 export type NewProjectTask = Insertable<ProjectTaskTable>;

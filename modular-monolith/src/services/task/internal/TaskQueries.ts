@@ -2,12 +2,14 @@ import type {
     CreateTaskParam,
     DeleteTasksParam,
     ProjectTask,
-} from "../TaskService.ts";
-import {sql} from "kysely";
-import {db} from "../../../database";
-import {getTimeString} from "../../../utils/utils.ts";
+} from '../TaskService.ts';
+import { sql } from 'kysely';
+import { db } from '../../../database';
+import { getTimeString } from '../../../utils/utils.ts';
 
-export const insertTask = async (data: CreateTaskParam): Promise<ProjectTask> => {
+export const insertTask = async (
+    data: CreateTaskParam,
+): Promise<ProjectTask> => {
     const result = await sql<ProjectTask>`
         WITH parent_info AS (
             SELECT materialized_path, id
@@ -79,7 +81,9 @@ export const insertTask = async (data: CreateTaskParam): Promise<ProjectTask> =>
     return result.rows[0]!;
 };
 
-export const deleteTasks = async (data: DeleteTasksParam): Promise<string[]> => {
+export const deleteTasks = async (
+    data: DeleteTasksParam,
+): Promise<string[]> => {
     const result = await sql<{ id: string }>`
         DELETE
         FROM project_task
@@ -111,7 +115,9 @@ export interface UpdateTaskParam {
     parentTaskId?: string;
 }
 
-export const updateTask = async (data: UpdateTaskParam): Promise<string | null> => {
+export const updateTask = async (
+    data: UpdateTaskParam,
+): Promise<string | null> => {
     // Optimized for 10k RPS: Consolidating subqueries into one WITH block
     const result = await sql<{ id: string }>`
         WITH current_task AS (
@@ -184,7 +190,10 @@ export const deleteAllProjectTasks = async (projectId: string) => {
         .execute();
 };
 
-export const unassignMemberFromAllTasks = async (projectId: string, memberId: string) => {
+export const unassignMemberFromAllTasks = async (
+    projectId: string,
+    memberId: string,
+) => {
     await db
         .updateTable('projectTask')
         .set({ fk_member_id: null })
@@ -193,7 +202,10 @@ export const unassignMemberFromAllTasks = async (projectId: string, memberId: st
         .execute();
 };
 
-export const unassignTeamFromAllTasks = async (projectId: string, teamId: string) => {
+export const unassignTeamFromAllTasks = async (
+    projectId: string,
+    teamId: string,
+) => {
     await db
         .updateTable('projectTask')
         .set({
@@ -205,7 +217,11 @@ export const unassignTeamFromAllTasks = async (projectId: string, teamId: string
         .execute();
 };
 
-export const unassignMemberFromTeamTasks = async (projectId: string, teamId: string, memberId: string) => {
+export const unassignMemberFromTeamTasks = async (
+    projectId: string,
+    teamId: string,
+    memberId: string,
+) => {
     await db
         .updateTable('projectTask')
         .set({ fk_member_id: null })
@@ -249,4 +265,3 @@ export const getTasks = async (
     `.execute(db);
     return result.rows;
 };
-

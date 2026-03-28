@@ -17,7 +17,11 @@ import {
     insertProjects,
 } from './ProjectQueries.ts';
 
-import { KAFKA_TOPICS, KAFKA_EVENTS, createEvent } from '../../../utils/kafka.ts';
+import {
+    KAFKA_TOPICS,
+    KAFKA_EVENTS,
+    createEvent,
+} from '../../../utils/kafka.ts';
 import { eventBus } from '../../../utils/EventBus.ts';
 
 export class ProjectServiceImpl implements ProjectService {
@@ -25,7 +29,10 @@ export class ProjectServiceImpl implements ProjectService {
         return getProjects(userId);
     }
 
-    async getProject(userId: string, projectId: string): Promise<Project | null> {
+    async getProject(
+        userId: string,
+        projectId: string,
+    ): Promise<Project | null> {
         return getProject(userId, projectId);
     }
 
@@ -52,7 +59,7 @@ export class ProjectServiceImpl implements ProjectService {
                 projectId: data.projectId,
                 actorId: data.userId,
                 memberId: v.id,
-            })
+            }),
         );
 
         await eventBus.emit(KAFKA_TOPICS.PROJECT_MEMBER, events);
@@ -69,7 +76,7 @@ export class ProjectServiceImpl implements ProjectService {
             createEvent(KAFKA_EVENTS.PROJECT.DELETED, project.id, {
                 userId: data.userId,
                 projectId: project.id,
-            })
+            }),
         );
 
         await eventBus.emit(KAFKA_TOPICS.PROJECT, events);
@@ -90,7 +97,7 @@ export class ProjectServiceImpl implements ProjectService {
                 userId: member.userId,
                 actorId: data.userId,
                 memberId: member.id,
-            })
+            }),
         );
 
         await eventBus.emit(KAFKA_TOPICS.PROJECT_MEMBER, events);
@@ -111,7 +118,7 @@ export class ProjectServiceImpl implements ProjectService {
                 projectId: project.id,
                 userId: data.userId,
                 name: project.name,
-            })
+            }),
         );
 
         return project;
@@ -129,7 +136,7 @@ export class ProjectServiceImpl implements ProjectService {
                 projectId: project.id,
                 userId: project.userId,
                 name: project.name,
-            })
+            }),
         );
 
         await eventBus.emit(KAFKA_TOPICS.PROJECT, events);

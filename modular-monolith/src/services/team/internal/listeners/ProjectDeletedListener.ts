@@ -7,9 +7,11 @@ export class TeamCleanupListener {
         await eventBus.on(KAFKA_TOPICS.PROJECT, 'team-cleanup-group', {
             [KAFKA_EVENTS.PROJECT.DELETED]: async (data) => {
                 const { projectId } = data;
-                console.log(`[Team Service] Cleaning up teams for project: ${projectId}`);
+                console.log(
+                    `[Team Service] Cleaning up teams for project: ${projectId}`,
+                );
                 await deleteAllProjectTeams(projectId);
-            }
+            },
         });
         console.log('[Team Service] TeamCleanupListener started');
     }

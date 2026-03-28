@@ -4,13 +4,19 @@ import { eventBus } from '../../../../utils/EventBus';
 
 export class ProjectTeamDeletedListener {
     async init() {
-        await eventBus.on(KAFKA_TOPICS.PROJECT_TEAM, 'team-member-cleanup-group', {
-            [KAFKA_EVENTS.PROJECT_TEAM.DELETED]: async (data) => {
-                const { projectId, teamId } = data;
-                console.log(`[Team Service] Deleting members for team ${teamId} in project ${projectId}`);
-                await deleteAllTeamMembers(projectId, teamId);
-            }
-        });
+        await eventBus.on(
+            KAFKA_TOPICS.PROJECT_TEAM,
+            'team-member-cleanup-group',
+            {
+                [KAFKA_EVENTS.PROJECT_TEAM.DELETED]: async (data) => {
+                    const { projectId, teamId } = data;
+                    console.log(
+                        `[Team Service] Deleting members for team ${teamId} in project ${projectId}`,
+                    );
+                    await deleteAllTeamMembers(projectId, teamId);
+                },
+            },
+        );
         console.log('[Team Service] ProjectTeamDeletedListener started');
     }
 

@@ -10,7 +10,11 @@ import { withBatchIdempotency } from './idempotency';
  */
 interface Bus {
     emit(topic: string, event: DomainEvent | DomainEvent[]): Promise<void>;
-    on(topic: string, groupId: string, handlers: Record<string, (data: any) => Promise<void>>): Promise<void>;
+    on(
+        topic: string,
+        groupId: string,
+        handlers: Record<string, (data: any) => Promise<void>>,
+    ): Promise<void>;
     init(): Promise<void>;
     destroy(): Promise<void>;
 }
@@ -19,17 +23,26 @@ class MemoryBus implements Bus {
     private emitter = new EventEmitter();
 
     async init() {}
-    async destroy() { this.emitter.removeAllListeners(); }
+    async destroy() {
+        this.emitter.removeAllListeners();
+    }
 
     async emit(topic: string, event: DomainEvent | DomainEvent[]) {
         const events = Array.isArray(event) ? event : [event];
         for (const e of events) {
             // Simulate async Kafka behavior
-            setTimeout(() => this.emitter.emit(`${topic}:${e.type}`, e.data), 10);
+            setTimeout(
+                () => this.emitter.emit(`${topic}:${e.type}`, e.data),
+                10,
+            );
         }
     }
 
-    async on(topic: string, _groupId: string, handlers: Record<string, (data: any) => Promise<void>>) {
+    async on(
+        topic: string,
+        _groupId: string,
+        handlers: Record<string, (data: any) => Promise<void>>,
+    ) {
         for (const [type, handler] of Object.entries(handlers)) {
             this.emitter.on(`${topic}:${type}`, handler);
         }
@@ -41,10 +54,15 @@ class KafkaBus implements Bus {
     private consumers: Map<string, Consumer> = new Map();
 
     constructor() {
-        this.producer = kafka.producer({ allowAutoTopicCreation: true, idempotent: true });
+        this.producer = kafka.producer({
+            allowAutoTopicCreation: true,
+            idempotent: true,
+        });
     }
 
-    async init() { await this.producer.connect(); }
+    async init() {
+        await this.producer.connect();
+    }
 
     async destroy() {
         await this.producer.disconnect();
@@ -55,31 +73,48 @@ class KafkaBus implements Bus {
         const events = Array.isArray(event) ? event : [event];
         await this.producer.send({
             topic,
-            messages: events.map(e => ({ key: e.key, value: JSON.stringify(e) })),
+            messages: events.map((e) => ({
+                key: e.key,
+                value: JSON.stringify(e),
+            })),
         });
     }
 
-    async on(topic: string, groupId: string, handlers: Record<string, (data: any) => Promise<void>>) {
+    async on(
+        topic: string,
+        groupId: string,
+        handlers: Record<string, (data: any) => Promise<void>>,
+    ) {
         const consumer = kafka.consumer({ groupId });
         await consumer.connect();
         await consumer.subscribe({ topic, fromBeginning: false });
-        
+
         await consumer.run({
-            eachBatch: async ({ batch, resolveOffset, heartbeat, isRunning, isStale }) => {
+            eachBatch: async ({
+                batch,
+                resolveOffset,
+                heartbeat,
+                isRunning,
+                isStale,
+            }) => {
                 const allEvents: DomainEvent[] = batch.messages
-                    .map(m => JSON.parse(m.value?.toString() || '{}'))
-                    .filter(e => handlers[e.type]);
+                    .map((m) => JSON.parse(m.value?.toString() || '{}'))
+                    .filter((e) => handlers[e.type]);
 
                 if (allEvents.length > 0) {
-                    await withBatchIdempotency(allEvents, groupId, async (unprocessed) => {
-                        for (const e of unprocessed) {
-                            if (!isRunning() || isStale()) break;
-                            const handler = handlers[e.type];
-                            if (handler) {
-                                await handler(e.data);
+                    await withBatchIdempotency(
+                        allEvents,
+                        groupId,
+                        async (unprocessed) => {
+                            for (const e of unprocessed) {
+                                if (!isRunning() || isStale()) break;
+                                const handler = handlers[e.type];
+                                if (handler) {
+                                    await handler(e.data);
+                                }
                             }
-                        }
-                    });
+                        },
+                    );
                 }
 
                 for (const m of batch.messages) resolveOffset(m.offset);
@@ -90,6 +125,7 @@ class KafkaBus implements Bus {
     }
 }
 
-export const eventBus: Bus = (process.env.NODE_ENV === 'test' || process.env.USE_MEMORY_BUS === 'true') 
-    ? new MemoryBus() 
-    : new KafkaBus();
+export const eventBus: Bus =
+    process.env.NODE_ENV === 'test' || process.env.USE_MEMORY_BUS === 'true'
+        ? new MemoryBus()
+        : new KafkaBus();

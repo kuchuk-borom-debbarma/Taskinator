@@ -63,7 +63,7 @@ describe('Project Cleanup Integration (In-Memory Event Bus)', () => {
                 .selectFrom('projectTask')
                 .where('fk_project_id', '=', projectId)
                 .execute();
-            
+
             expect(remainingTasks.length).toBe(0);
         });
     });

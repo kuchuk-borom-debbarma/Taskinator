@@ -7,9 +7,11 @@ export class ProjectDeletedListener {
         await eventBus.on(KAFKA_TOPICS.PROJECT, 'task-cleanup-group', {
             [KAFKA_EVENTS.PROJECT.DELETED]: async (data) => {
                 const { projectId } = data;
-                console.log(`[Task Service] Cleaning up tasks for project: ${projectId}`);
+                console.log(
+                    `[Task Service] Cleaning up tasks for project: ${projectId}`,
+                );
                 await deleteAllProjectTasks(projectId);
-            }
+            },
         });
         console.log('[Task Service] ProjectDeletedListener started');
     }

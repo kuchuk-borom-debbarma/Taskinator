@@ -21,7 +21,10 @@ router.get('/:projectId', async (req, res) => {
         const { projectId } = req.params;
         const { userId } = req.query;
         if (!userId) throw new Error('userId is required');
-        const project = await projectService.getProject(userId as string, projectId);
+        const project = await projectService.getProject(
+            userId as string,
+            projectId,
+        );
         if (!project) {
             res.status(404).json({ error: 'Project not found' });
             return;
@@ -36,7 +39,11 @@ router.get('/:projectId', async (req, res) => {
 router.post('/', async (req, res) => {
     try {
         const { name, description, userId } = req.body;
-        const project = await projectService.createProject({ name, description, userId });
+        const project = await projectService.createProject({
+            name,
+            description,
+            userId,
+        });
         res.status(201).json(project);
     } catch (error: any) {
         res.status(400).json({ error: error.message });
@@ -59,7 +66,11 @@ router.post('/:projectId/members', async (req, res) => {
     try {
         const { projectId } = req.params;
         const { userId, usersToAdd } = req.body;
-        const members = await projectService.addProjectMembers({ projectId, userId, usersToAdd });
+        const members = await projectService.addProjectMembers({
+            projectId,
+            userId,
+            usersToAdd,
+        });
         res.status(201).json(members);
     } catch (error: any) {
         res.status(400).json({ error: error.message });
@@ -71,7 +82,11 @@ router.delete('/:projectId/members', async (req, res) => {
     try {
         const { projectId } = req.params;
         const { userId, memberIds } = req.body;
-        await projectService.deleteProjectMembers({ projectId, userId, memberIds });
+        await projectService.deleteProjectMembers({
+            projectId,
+            userId,
+            memberIds,
+        });
         res.status(204).send();
     } catch (error: any) {
         res.status(400).json({ error: error.message });

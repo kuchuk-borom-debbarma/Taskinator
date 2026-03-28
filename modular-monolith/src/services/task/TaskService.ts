@@ -1,4 +1,4 @@
-import type {BaseService} from "../project";
+import type { BaseService } from '../project';
 
 export type ProjectTask = {
     id: string;
@@ -16,7 +16,7 @@ export type ProjectTask = {
     updatedBy: string;
     createdAt: Date;
     updatedAt: Date;
-}
+};
 
 export interface CreateTaskParam {
     userId: string;
@@ -50,9 +50,9 @@ export interface UpdateTasksParam {
 }
 
 export interface TaskService extends BaseService {
-    createTask(data: CreateTaskParam): Promise<ProjectTask>
+    createTask(data: CreateTaskParam): Promise<ProjectTask>;
 
-    deleteTask(data: DeleteTasksParam): Promise<string[]>
+    deleteTask(data: DeleteTasksParam): Promise<string[]>;
 
     updateTasks(data: UpdateTasksParam): Promise<string[]>;
 

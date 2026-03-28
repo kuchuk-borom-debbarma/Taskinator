@@ -44,17 +44,21 @@ export class TeamServiceImpl implements TeamService {
         }
 
         const events = added.map((a) =>
-            createEvent(KAFKA_EVENTS.PROJECT_TEAM_MEMBER.ADDED, data.projectId, {
-                userId: a.userId,
-                projectId: data.projectId,
-                teamId: data.teamId,
-                actorId: data.userId,
-                memberId: a.id,
-            })
+            createEvent(
+                KAFKA_EVENTS.PROJECT_TEAM_MEMBER.ADDED,
+                data.projectId,
+                {
+                    userId: a.userId,
+                    projectId: data.projectId,
+                    teamId: data.teamId,
+                    actorId: data.userId,
+                    memberId: a.id,
+                },
+            ),
         );
 
         await eventBus.emit(KAFKA_TOPICS.PROJECT_TEAM_MEMBER, events);
-        
+
         return added;
     }
 
@@ -67,7 +71,7 @@ export class TeamServiceImpl implements TeamService {
                 projectId: data.projectId,
                 teamId: team.id,
                 name: team.name,
-            })
+            }),
         );
 
         await eventBus.emit(KAFKA_TOPICS.PROJECT_TEAM, events);
@@ -83,12 +87,16 @@ export class TeamServiceImpl implements TeamService {
         }
 
         const events = deleted.map((v) =>
-            createEvent(KAFKA_EVENTS.PROJECT_TEAM_MEMBER.DELETED, data.projectId, {
-                userId: v,
-                projectId: data.projectId,
-                teamId: data.teamId,
-                actorId: data.userId,
-            })
+            createEvent(
+                KAFKA_EVENTS.PROJECT_TEAM_MEMBER.DELETED,
+                data.projectId,
+                {
+                    userId: v,
+                    projectId: data.projectId,
+                    teamId: data.teamId,
+                    actorId: data.userId,
+                },
+            ),
         );
 
         await eventBus.emit(KAFKA_TOPICS.PROJECT_TEAM_MEMBER, events);
@@ -108,7 +116,7 @@ export class TeamServiceImpl implements TeamService {
                 userId: data.userId,
                 projectId: data.projectId,
                 teamId: d,
-            })
+            }),
         );
 
         await eventBus.emit(KAFKA_TOPICS.PROJECT_TEAM, events);

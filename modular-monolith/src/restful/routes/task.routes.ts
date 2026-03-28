@@ -7,8 +7,12 @@ const router = Router();
 router.get('/', async (req, res) => {
     try {
         const { userId, projectId } = req.query;
-        if (!userId || !projectId) throw new Error('userId and projectId are required');
-        const tasks = await taskService.getTasks(userId as string, projectId as string);
+        if (!userId || !projectId)
+            throw new Error('userId and projectId are required');
+        const tasks = await taskService.getTasks(
+            userId as string,
+            projectId as string,
+        );
         res.status(200).json(tasks);
     } catch (error: any) {
         res.status(400).json({ error: error.message });
@@ -18,7 +22,16 @@ router.get('/', async (req, res) => {
 // Create Task
 router.post('/', async (req, res) => {
     try {
-        const { userId, projectId, title, description, teamId, memberId, parentTaskId, initialStatus } = req.body;
+        const {
+            userId,
+            projectId,
+            title,
+            description,
+            teamId,
+            memberId,
+            parentTaskId,
+            initialStatus,
+        } = req.body;
         const result = await taskService.createTask({
             userId,
             projectId,
@@ -27,7 +40,7 @@ router.post('/', async (req, res) => {
             teamId,
             memberId,
             parentTaskId,
-            initialStatus
+            initialStatus,
         });
         res.status(201).json(result);
     } catch (error: any) {
@@ -39,7 +52,11 @@ router.post('/', async (req, res) => {
 router.patch('/', async (req, res) => {
     try {
         const { userId, projectId, tasks } = req.body;
-        const result = await taskService.updateTasks({ userId, projectId, tasks });
+        const result = await taskService.updateTasks({
+            userId,
+            projectId,
+            tasks,
+        });
         res.status(200).json(result);
     } catch (error: any) {
         res.status(400).json({ error: error.message });
@@ -50,7 +67,11 @@ router.patch('/', async (req, res) => {
 router.delete('/', async (req, res) => {
     try {
         const { userId, projectId, taskIds } = req.body;
-        const result = await taskService.deleteTask({ userId, projectId, taskIds });
+        const result = await taskService.deleteTask({
+            userId,
+            projectId,
+            taskIds,
+        });
         res.status(200).json(result);
     } catch (error: any) {
         res.status(400).json({ error: error.message });

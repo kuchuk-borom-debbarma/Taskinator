@@ -116,7 +116,9 @@ describe('TaskServiceImpl', () => {
                 ],
             };
 
-            mockedQueries.updateTask.mockImplementation(async (params: any) => params.taskId);
+            mockedQueries.updateTask.mockImplementation(
+                async (params: any) => params.taskId,
+            );
 
             const result = await taskService.updateTasks(data);
 

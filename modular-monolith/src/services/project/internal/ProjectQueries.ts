@@ -116,9 +116,7 @@ export const deleteProjects = async (data: DeleteProjectsParam) => {
     }));
 };
 
-export const deleteProjectMembers = async (
-    data: DeleteProjectMembersParam,
-) => {
+export const deleteProjectMembers = async (data: DeleteProjectMembersParam) => {
     const result = await sql<ProjectMember>`
         WITH auth_check AS (
             SELECT 1 FROM project WHERE id = ${data.projectId} AND fk_user_id = ${data.userId}

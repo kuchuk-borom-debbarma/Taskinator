@@ -104,7 +104,10 @@ export const deleteAllProjectTeams = async (projectId: string) => {
         .execute();
 };
 
-export const removeUserFromAllTeams = async (projectId: string, userId: string) => {
+export const removeUserFromAllTeams = async (
+    projectId: string,
+    userId: string,
+) => {
     await db
         .deleteFrom('projectTeamMember')
         .where('fk_project_id', '=', projectId)
@@ -112,7 +115,10 @@ export const removeUserFromAllTeams = async (projectId: string, userId: string) 
         .execute();
 };
 
-export const deleteAllTeamMembers = async (projectId: string, teamId: string) => {
+export const deleteAllTeamMembers = async (
+    projectId: string,
+    teamId: string,
+) => {
     await db
         .deleteFrom('projectTeamMember')
         .where('fk_project_id', '=', projectId)
