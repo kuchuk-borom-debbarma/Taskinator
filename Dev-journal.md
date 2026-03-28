@@ -239,3 +239,32 @@ To ensure the `processed_event` table doesn't become a bottleneck:
 *   **Partitioning Recommendation**: For production, this table should be partitioned by `processed_at` (e.g., daily partitions). This keeps the active index in RAM and allows for instant purging of old data without vacuum overhead.
 *   **TTL Strategy**: Idempotency records only need to be kept as long as the Kafka retention period (e.g., 7 days). After that, the old partitions are simply dropped.
 
+
+---
+
+# Entry 14: Optimistic Locking for Concurrent Updates
+
+## Protecting Data Integrity at Scale
+
+In a system aiming for 10,000 RPS, multiple users or background processes will inevitably attempt to update the same record (e.g., a Task) simultaneously. To prevent "Lost Updates" without the performance penalty of database-level pessimistic locking, we implemented **Optimistic Locking**.
+
+### 1. The Version Column
+Every entity table (`Project`, `Team`, `Task`) now includes a `version` integer column. This version is automatically incremented on every successful update.
+
+### 2. The "Compare-and-Swap" Query
+All update queries now include a strict version check in their `WHERE` clause:
+
+```sql
+UPDATE project_task 
+SET title = 'New Title', 
+    version = version + 1 
+WHERE id = 'task-123' 
+  AND version = 5; -- The version the client originally read
+```
+
+### 3. Handling Conflicts
+If another process updated the task while the current process was working, the `version` in the database will have changed. The `WHERE` clause will fail to match any rows, the update will return 0 affected rows, and the system will throw a `version conflict` error. This forces the client to re-fetch the latest data and retry the operation, ensuring that no data is accidentally overwritten.
+
+### 4. Integration with Kafka
+By passing the `version` back and forth through our Kafka events, we extend this protection into our asynchronous flows. If an out-of-order event arrives with an old version, the database-level check will naturally reject it, maintaining perfect consistency across our modular monolith.
+
