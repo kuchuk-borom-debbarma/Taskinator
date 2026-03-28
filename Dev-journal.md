@@ -129,3 +129,40 @@ When a member is removed from a project (`PROJECT_MEMBER_DELETED`), the system m
 ### Technical Refinement:
 - **Kysely Integration**: Updated the central `Database` interface to include the `projectTeamMember` table definition and standardized on camelCase table naming conventions (`projectMember`, `projectTask`, `projectTeam`) to align with Kysely's type-safety requirements.
 - **Registry Expansion**: These listeners were added to the central Kafka registry, ensuring they start/stop with the main application lifecycle.
+
+---
+
+# Entry 8: Integration Testing Decoupled Systems
+
+## The "Spy & Poll" Strategy
+
+Testing decoupled systems requires moving beyond unit tests. Since Producers and Consumers operate asynchronously, we implemented an **Integration Test Pattern** (`src/services/project/internal/__tests__/ProjectCleanup.test.ts`) that verifies the entire cycle from event emission to database cleanup.
+
+### Key Principles:
+- **Real Components**: The test uses the actual `ProjectService` (Producer) and the `ProjectDeletedListener` (Consumer) connected to a real Kafka broker.
+- **The "waitFor" Helper**: Since Kafka delivery is eventual, the test uses a polling mechanism with a timeout. It repeatedly asserts against the database for up to 5 seconds to allow time for message processing.
+- **Targeted Bootstrapping**: By exporting individual listener instances in `src/kafka/registry.ts`, we can initialize only the specific consumer under test. This keeps tests fast and isolated from unrelated domain logic.
+- **Seed, Trigger, Assert**: 
+  1. **Seed**: Create a project and a dependent task.
+  2. **Trigger**: Call the public service method (`deleteProjects`).
+  3. **Assert**: Poll the database until the task is successfully removed by the background consumer.
+
+This pattern provides high confidence that our domain boundaries are respected while ensuring the choreography between services works as intended in a production-like environment.
+
+---
+
+# Entry 10: Polymorphic Event Bus for Infrastructure-Free Testing
+
+## Decoupling from Kafka Infrastructure
+
+To allow for rapid development and testing without requiring a local Kafka broker, we introduced a polymorphic **EventBus Abstraction** (`src/utils/EventBus.ts`). 
+
+### Architectural Components:
+- **Bus Interface**: A unified API for `publish`, `subscribe`, `init`, and `destroy`.
+- **MemoryBus (Test Mode)**: Activated when `process.env.NODE_ENV === 'test'`. It uses a native Node.js `EventEmitter` to handle message passing in-memory. This allows integration tests to verify decoupled service choreography in milliseconds with zero setup.
+- **KafkaBus (Production Mode)**: The default implementation that wraps `kafkajs`. It handles real network connections, topic subscriptions, and consumer groups.
+
+### Benefits:
+1. **Speed**: Tests no longer wait for network handshakes or broker rebalances.
+2. **Reliability**: We can now verify that `ProjectService` emits the correct event and that `TaskListener` reacts by cleaning up the database, all within a standard Jest environment.
+3. **Flexibility**: The system can easily swap message brokers (e.g., to RabbitMQ or AWS SNS) by simply implementing a new `Bus` class, without touching any business logic in the services or listeners.
