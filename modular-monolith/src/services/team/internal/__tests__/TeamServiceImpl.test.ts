@@ -60,8 +60,18 @@ describe('TeamServiceImpl', () => {
             };
 
             const mockTeams = [
-                { id: 't1', name: 'Team A', projectId: 'project-1', createdBy: 'user-1' },
-                { id: 't2', name: 'Team B', projectId: 'project-1', createdBy: 'user-1' },
+                {
+                    id: 't1',
+                    name: 'Team A',
+                    projectId: 'project-1',
+                    createdBy: 'user-1',
+                },
+                {
+                    id: 't2',
+                    name: 'Team B',
+                    projectId: 'project-1',
+                    createdBy: 'user-1',
+                },
             ];
 
             mockedQueries.insertTeam.mockResolvedValue(mockTeams);
@@ -100,11 +110,13 @@ describe('TeamServiceImpl', () => {
         it('should throw error if no teams deleted', async () => {
             mockedQueries.deleteTeams.mockResolvedValue([]);
 
-            await expect(teamService.deleteTeams({
-                userId: 'user-1',
-                projectId: 'project-1',
-                teamIds: ['t1'],
-            })).rejects.toThrow('Failed to delete any teams');
+            await expect(
+                teamService.deleteTeams({
+                    userId: 'user-1',
+                    projectId: 'project-1',
+                    teamIds: ['t1'],
+                }),
+            ).rejects.toThrow('Failed to delete any teams');
         });
     });
 
@@ -118,8 +130,18 @@ describe('TeamServiceImpl', () => {
             };
 
             const mockMembers = [
-                { id: 'tm1', teamId: 't1', userId: 'u1', projectId: 'project-1' },
-                { id: 'tm2', teamId: 't1', userId: 'u2', projectId: 'project-1' },
+                {
+                    id: 'tm1',
+                    teamId: 't1',
+                    userId: 'u1',
+                    projectId: 'project-1',
+                },
+                {
+                    id: 'tm2',
+                    teamId: 't1',
+                    userId: 'u2',
+                    projectId: 'project-1',
+                },
             ];
 
             mockedQueries.insertTeamMembers.mockResolvedValue(mockMembers);

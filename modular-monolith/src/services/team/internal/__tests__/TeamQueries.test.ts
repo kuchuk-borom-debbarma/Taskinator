@@ -45,7 +45,9 @@ describe('TeamQueries', () => {
                 },
             ];
 
-            const mockExecute = (jest.fn() as any).mockResolvedValue({ rows: mockRows });
+            const mockExecute = (jest.fn() as any).mockResolvedValue({
+                rows: mockRows,
+            });
             (sql as any).mockReturnValue({ execute: mockExecute });
 
             const result = await TeamQueries.insertTeam(data);
@@ -66,7 +68,9 @@ describe('TeamQueries', () => {
 
             const mockRows = [{ id: 't1' }, { id: 't2' }];
 
-            const mockExecute = (jest.fn() as any).mockResolvedValue({ rows: mockRows });
+            const mockExecute = (jest.fn() as any).mockResolvedValue({
+                rows: mockRows,
+            });
             (sql as any).mockReturnValue({ execute: mockExecute });
 
             const result = await TeamQueries.deleteTeams(data);
@@ -83,7 +87,9 @@ describe('TeamQueries', () => {
 
             const mockRows = [{ id: 't1' }]; // Only one found
 
-            const mockExecute = (jest.fn() as any).mockResolvedValue({ rows: mockRows });
+            const mockExecute = (jest.fn() as any).mockResolvedValue({
+                rows: mockRows,
+            });
             (sql as any).mockReturnValue({ execute: mockExecute });
 
             await expect(TeamQueries.deleteTeams(data)).rejects.toThrow(
@@ -111,7 +117,9 @@ describe('TeamQueries', () => {
                 },
             ];
 
-            const mockExecute = (jest.fn() as any).mockResolvedValue({ rows: mockRows });
+            const mockExecute = (jest.fn() as any).mockResolvedValue({
+                rows: mockRows,
+            });
             (sql as any).mockReturnValue({ execute: mockExecute });
 
             const result = await TeamQueries.insertTeamMembers(data);
@@ -131,7 +139,9 @@ describe('TeamQueries', () => {
 
             const mockRows = [{ id: 'u1' }, { id: 'u2' }];
 
-            const mockExecute = (jest.fn() as any).mockResolvedValue({ rows: mockRows });
+            const mockExecute = (jest.fn() as any).mockResolvedValue({
+                rows: mockRows,
+            });
             (sql as any).mockReturnValue({ execute: mockExecute });
 
             const result = await TeamQueries.deleteTeamMembers(data);

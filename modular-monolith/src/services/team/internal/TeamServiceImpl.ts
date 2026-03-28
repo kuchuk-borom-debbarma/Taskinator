@@ -1,12 +1,17 @@
-import type {Team, TeamMember, TeamService} from '../TeamService.ts';
-import type {Producer} from 'kafkajs';
-import {kafka} from '../../../kafka';
+import type { Team, TeamMember, TeamService } from '../TeamService.ts';
+import type { Producer } from 'kafkajs';
+import { kafka } from '../../../kafka';
 import {
     buildKafkaMessage,
     KAFKA_EVENTS,
     KAFKA_TOPICS,
 } from '../../../utils/kafka.ts';
-import {insertTeam, deleteTeams, insertTeamMembers, deleteTeamMembers} from './TeamQueries.ts';
+import {
+    insertTeam,
+    deleteTeams,
+    insertTeamMembers,
+    deleteTeamMembers,
+} from './TeamQueries.ts';
 import _ from 'lodash';
 
 export class TeamServiceImpl implements TeamService {
@@ -82,7 +87,7 @@ export class TeamServiceImpl implements TeamService {
         teamId: string;
         members: string[];
     }): Promise<string[]> {
-        const deleted = await deleteTeamMembers(data)
+        const deleted = await deleteTeamMembers(data);
 
         if (_.isEmpty(deleted)) {
             throw new Error('Failed to delete any teamMembers');
@@ -90,7 +95,8 @@ export class TeamServiceImpl implements TeamService {
 
         await this.producer.send({
             topic: KAFKA_TOPICS.PROJECT_TEAM_MEMBER,
-            messages: deleted.map((v) => buildKafkaMessage({
+            messages: deleted.map((v) =>
+                buildKafkaMessage({
                     key: data.projectId,
                     source: `${this.constructor.name}.deleteTeamMembers`,
                     type: KAFKA_EVENTS.PROJECT_TEAM_MEMBER.DELETED,
@@ -98,11 +104,11 @@ export class TeamServiceImpl implements TeamService {
                         userId: data.userId,
                         projectId: data.projectId,
                         teamId: data.teamId,
-                        memberId: v
-                    })
-                }
-            ))
-        })
+                        memberId: v,
+                    }),
+                }),
+            ),
+        });
 
         return deleted;
     }
@@ -117,6 +123,7 @@ export class TeamServiceImpl implements TeamService {
         if (_.isEmpty(deleted)) {
             throw new Error('Failed to delete any teams');
         }
+
         await this.producer.send({
             topic: KAFKA_TOPICS.PROJECT_TEAM,
             messages: deleted.map((d) =>

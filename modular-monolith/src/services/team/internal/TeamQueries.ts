@@ -21,7 +21,6 @@ export const insertTeam = async (data: {
             RETURNING
             id, name, fk_project_id AS "projectId", fk_user_id AS "createdBy", created_at AS "createdAt", updated_at AS "updatedAt"
     `.execute(db);
-
     return added.rows;
 };
 
@@ -51,11 +50,9 @@ export const deleteTeams = async (data: {
             )
             RETURNING id
     `.execute(db);
-
     if (result.rows.length !== data.teamIds.length) {
         throw new Error('Unauthorized or some teams not found');
     }
-
     return result.rows.map((r) => r.id);
 };
 
@@ -92,10 +89,8 @@ export const insertTeamMembers = async (data: {
             RETURNING
             id, fk_team_id AS "teamId", fk_user_id AS "userId", fk_project_id AS "projectId", created_at AS "createdAt", updated_at AS "updatedAt"
     `.execute(db);
-
     if (result.rows.length === 0)
         throw new Error('Unauthorized or team not found');
-
     return result.rows;
 };
 
@@ -131,10 +126,8 @@ export const deleteTeamMembers = async (data: {
             )
             RETURNING id
     `.execute(db);
-
     if (result.rows.length !== data.members.length) {
         throw new Error('Unauthorized or some members not found');
     }
-
     return result.rows.map((r) => r.id);
 };
