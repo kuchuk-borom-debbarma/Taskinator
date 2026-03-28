@@ -212,3 +212,30 @@ For sub-entity deletions (e.g., deleting a single Team or removing one Member), 
 ### Architectural Verdict
 This hybrid approach provides the best of both worlds: high-throughput bulk deletions for project-level actions and precise, decoupled consistency for day-to-day entity management. It maintains strict module boundaries while ensuring the system remains resilient to partial failures.
 
+
+---
+
+# Entry 13: Scalable Idempotency for 10k RPS
+
+## Solving Duplicate Delivery and Out-of-Order Events
+
+As the system scales to 10,000 RPS, traditional idempotency checks (like simple `last_event_id` columns) become insufficient. We implemented a robust, high-performance idempotency architecture.
+
+### 1. The "Processed Events" Table (Primary Check)
+We introduced a dedicated `processed_event` table that tracks `(event_id, consumer_group)`. This table acts as a **Transactional Inbox**, ensuring that no matter how many times Kafka delivers an event, it is only executed once by each logical consumer group.
+
+*   **Atomicity**: The check and the business logic are wrapped in a single database transaction using a `withIdempotency` helper.
+*   **Performance**: It uses `INSERT ... ON CONFLICT DO NOTHING RETURNING event_id` to achieve lightning-fast lookups and insertions in a single round-trip.
+*   **Support for Deletes**: Unlike entity columns, this separate table persists even after the main entity (like a Task) has been deleted, preventing duplicate delete logic.
+
+### 2. Entity-Level "last_event_id" (Secondary Check)
+We also added a `last_event_id` column to all main entity tables (`Project`, `Team`, `Task`). 
+
+*   **Purpose**: This provides a secondary layer of protection specifically for **Out-of-Order Updates**. It allows us to compare the incoming event's timestamp or version against the current record, ensuring an older event never overwrites newer data.
+
+### 3. Scaling to 10k RPS
+To ensure the `processed_event` table doesn't become a bottleneck:
+*   **Composite Primary Key**: Ensures the index lookup is O(log n).
+*   **Partitioning Recommendation**: For production, this table should be partitioned by `processed_at` (e.g., daily partitions). This keeps the active index in RAM and allows for instant purging of old data without vacuum overhead.
+*   **TTL Strategy**: Idempotency records only need to be kept as long as the Kafka retention period (e.g., 7 days). After that, the old partitions are simply dropped.
+
