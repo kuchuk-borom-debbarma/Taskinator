@@ -3,69 +3,124 @@ import { useQuery, useMutation, useQueryClient, QueryClient, QueryClientProvider
 import { projectApi, taskApi, teamApi } from './api/client';
 import { ProjectSidebar } from './components/ProjectSidebar';
 import { TaskTree } from './components/TaskTree';
-import { Project, Task } from './types';
-import { Layout, Users, Settings, Plus, Search, Bell } from 'lucide-react';
+import { Drawer } from './components/Drawer';
+import { MemberManager } from './components/MemberManager';
+import type { Project, Task, Team, ProjectMember, TeamMember } from './types';
+import { Layout, Users, Settings, Plus, Search, Bell, Trash2, FolderEdit, CheckCircle2, Circle, Type, AlignLeft, Users2, User as UserIcon } from 'lucide-react';
 import { cn } from './utils/cn';
 
 const queryClient = new QueryClient();
-const DEMO_USER_ID = 'demo-user';
 
 const Workspace: React.FC = () => {
+    const [userId, setUserId] = useState<string>('demo-user');
     const [selectedProjectId, setSelectedProjectId] = useState<string>();
+    const [isProjectSettingsOpen, setIsProjectSettingsOpen] = useState(false);
+    const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
+    const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+    
     const qc = useQueryClient();
 
     // Queries
-    const { data: projects = [], isLoading: isLoadingProjects } = useQuery({
-        queryKey: ['projects', DEMO_USER_ID],
-        queryFn: () => projectApi.getProjects(DEMO_USER_ID),
+    const { data: projects = [] } = useQuery({
+        queryKey: ['projects', userId],
+        queryFn: () => projectApi.getProjects(userId.trim()),
+        enabled: !!userId.trim(),
     });
 
-    const { data: tasks = [], isLoading: isLoadingTasks } = useQuery({
-        queryKey: ['tasks', selectedProjectId],
-        queryFn: () => taskApi.getTasks(DEMO_USER_ID, selectedProjectId!),
-        enabled: !!selectedProjectId,
+    const { data: tasks = [] } = useQuery({
+        queryKey: ['tasks', selectedProjectId, userId],
+        queryFn: () => taskApi.getTasks(userId.trim(), selectedProjectId!),
+        enabled: !!selectedProjectId && !!userId.trim(),
     });
 
     const { data: teams = [] } = useQuery({
-        queryKey: ['teams', selectedProjectId],
-        queryFn: () => teamApi.getTeams(DEMO_USER_ID, selectedProjectId!),
-        enabled: !!selectedProjectId,
+        queryKey: ['teams', selectedProjectId, userId],
+        queryFn: () => teamApi.getTeams(userId.trim(), selectedProjectId!),
+        enabled: !!selectedProjectId && !!userId.trim(),
+    });
+
+    const { data: teamMembers = [] } = useQuery({
+        queryKey: ['team-members', selectedProjectId, selectedTeamId],
+        queryFn: () => teamApi.getTeamMembers(userId.trim(), selectedProjectId!, selectedTeamId!),
+        enabled: !!selectedTeamId && !!selectedProjectId && !!userId.trim(),
     });
 
     // Mutations
     const createTaskMutation = useMutation({
         mutationFn: (data: { title: string; parentTaskId?: string }) => 
             taskApi.createTask({
-                userId: DEMO_USER_ID,
+                userId,
                 projectId: selectedProjectId!,
                 title: data.title,
                 description: '',
                 initialStatus: 'TODO',
                 parentTaskId: data.parentTaskId,
             }),
-        onSuccess: () => {
-            qc.invalidateQueries({ queryKey: ['tasks', selectedProjectId] });
-        },
+        onSuccess: () => qc.invalidateQueries({ queryKey: ['tasks', selectedProjectId, userId] }),
     });
 
-    const updateTaskStatusMutation = useMutation({
-        mutationFn: (task: Task) => 
-            taskApi.updateTasks(DEMO_USER_ID, selectedProjectId!, [{
-                id: task.id,
-                version: task.version,
-                status: task.status === 'DONE' ? 'TODO' : 'DONE',
-            }]),
+    const updateTaskMutation = useMutation({
+        mutationFn: (updates: { id: string; version: number; status?: string; title?: string; description?: string; teamId?: string | null; memberId?: string | null }) => 
+            taskApi.updateTasks(userId, selectedProjectId!, [updates]),
+        onSuccess: () => qc.invalidateQueries({ queryKey: ['tasks', selectedProjectId, userId] }),
+    });
+
+    const deleteTasksMutation = useMutation({
+        mutationFn: (taskIds: string[]) => taskApi.deleteTasks(userId, selectedProjectId!, taskIds),
         onSuccess: () => {
-            qc.invalidateQueries({ queryKey: ['tasks', selectedProjectId] });
+            setSelectedTaskId(null);
+            qc.invalidateQueries({ queryKey: ['tasks', selectedProjectId, userId] });
         },
     });
 
     const createProjectMutation = useMutation({
-        mutationFn: (name: string) => 
-            projectApi.createProject({ name, userId: DEMO_USER_ID }),
+        mutationFn: (name: string) => projectApi.createProject({ name, userId }),
+        onSuccess: () => qc.invalidateQueries({ queryKey: ['projects', userId] }),
+    });
+
+    const deleteProjectMutation = useMutation({
+        mutationFn: (id: string) => projectApi.deleteProjects(userId, [id]),
         onSuccess: () => {
-            qc.invalidateQueries({ queryKey: ['projects', DEMO_USER_ID] });
+            setSelectedProjectId(undefined);
+            setIsProjectSettingsOpen(false);
+            qc.invalidateQueries({ queryKey: ['projects', userId] });
         },
+    });
+
+    const createTeamMutation = useMutation({
+        mutationFn: (name: string) => teamApi.createTeams({ userId, projectId: selectedProjectId!, teams: [name] }),
+        onSuccess: () => qc.invalidateQueries({ queryKey: ['teams', selectedProjectId, userId] }),
+    });
+
+    const deleteTeamMutation = useMutation({
+        mutationFn: (id: string) => teamApi.deleteTeams(userId, selectedProjectId!, [id]),
+        onSuccess: () => {
+            setSelectedTeamId(null);
+            qc.invalidateQueries({ queryKey: ['teams', selectedProjectId, userId] });
+        },
+    });
+
+    const addTeamMemberMutation = useMutation({
+        mutationFn: (targetUserId: string) => teamApi.addTeamMembers({ 
+            userId, 
+            projectId: selectedProjectId!, 
+            teamId: selectedTeamId!, 
+            members: [targetUserId] 
+        }),
+        onSuccess: () => qc.invalidateQueries({ queryKey: ['team-members', selectedProjectId, selectedTeamId] }),
+    });
+
+    const removeTeamMemberMutation = useMutation({
+        mutationFn: (memberId: string) => {
+            const member = teamMembers.find(m => m.id === memberId);
+            return teamApi.deleteTeamMembers({ 
+                userId, 
+                projectId: selectedProjectId!, 
+                teamId: selectedTeamId!, 
+                members: [member!.userId] 
+            });
+        },
+        onSuccess: () => qc.invalidateQueries({ queryKey: ['team-members', selectedProjectId, selectedTeamId] }),
     });
 
     // Handlers
@@ -74,17 +129,27 @@ const Workspace: React.FC = () => {
         if (name) createProjectMutation.mutate(name);
     };
 
+    const handleCreateTeam = () => {
+        if (!selectedProjectId) return;
+        const name = prompt('Team name:');
+        if (name) createTeamMutation.mutate(name);
+    };
+
     const handleCreateTask = (parentTaskId?: string) => {
         const title = prompt('Task title:');
         if (title) createTaskMutation.mutate({ title, parentTaskId });
     };
 
     const selectedProject = projects.find(p => p.id === selectedProjectId);
+    const selectedTeam = teams.find(t => t.id === selectedTeamId);
+    const selectedTask = tasks.find(t => t.id === selectedTaskId);
 
     return (
         <div className="flex h-screen w-full bg-background text-foreground overflow-hidden">
             <ProjectSidebar 
                 projects={projects}
+                userId={userId}
+                onUserIdChange={setUserId}
                 selectedProjectId={selectedProjectId}
                 onSelectProject={setSelectedProjectId}
                 onCreateProject={handleCreateProject}
@@ -97,12 +162,19 @@ const Workspace: React.FC = () => {
                         <div className="flex items-center gap-2 text-sm font-medium">
                             <Layout size={16} className="text-muted" />
                             <span>{selectedProject?.name || 'Select a project'}</span>
+                            {selectedProjectId && (
+                                <button 
+                                    onClick={() => setIsProjectSettingsOpen(true)}
+                                    className="p-1 hover:bg-secondary rounded text-muted transition-colors"
+                                >
+                                    <Settings size={14} />
+                                </button>
+                            )}
                         </div>
                         <div className="h-4 w-px bg-border mx-2" />
                         <nav className="flex items-center gap-1">
                             <button className="px-3 py-1 rounded-md text-sm hover:bg-secondary transition-colors">Tasks</button>
                             <button className="px-3 py-1 rounded-md text-sm text-muted hover:text-foreground hover:bg-secondary transition-colors">Board</button>
-                            <button className="px-3 py-1 rounded-md text-sm text-muted hover:text-foreground hover:bg-secondary transition-colors">Teams</button>
                         </nav>
                     </div>
 
@@ -113,13 +185,13 @@ const Workspace: React.FC = () => {
                                 type="text" 
                                 placeholder="Search..." 
                                 className="bg-secondary/50 border border-transparent focus:border-primary/50 focus:bg-secondary rounded-md py-1.5 pl-9 pr-3 text-xs w-48 transition-all outline-none"
+                                autoComplete="off"
+                                data-1p-ignore
+                                data-lpignore="true"
                             />
                         </div>
                         <button className="p-2 hover:bg-secondary rounded-md text-muted hover:text-foreground transition-colors">
                             <Bell size={18} />
-                        </button>
-                        <button className="p-2 hover:bg-secondary rounded-md text-muted hover:text-foreground transition-colors">
-                            <Settings size={18} />
                         </button>
                     </div>
                 </header>
@@ -144,8 +216,10 @@ const Workspace: React.FC = () => {
                             {selectedProjectId ? (
                                 <TaskTree 
                                     tasks={tasks} 
-                                    onToggleStatus={(task) => updateTaskStatusMutation.mutate(task)}
+                                    onToggleStatus={(task) => updateTaskMutation.mutate({ id: task.id, version: task.version, status: task.status === 'DONE' ? 'TODO' : 'DONE' })}
                                     onCreateSubtask={(id) => handleCreateTask(id)}
+                                    onClickTask={(task) => setSelectedTaskId(task.id)}
+                                    onDeleteTask={(id) => deleteTasksMutation.mutate([id])}
                                 />
                             ) : (
                                 <div className="flex flex-col items-center justify-center h-full text-muted space-y-4">
@@ -158,30 +232,42 @@ const Workspace: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* Side Panel (Teams/Members) */}
+                    {/* Side Panel (Teams) */}
                     <aside className="w-80 shrink-0 bg-background/30 overflow-y-auto">
-                        <div className="p-4 border-b border-border flex items-center gap-2">
-                            <Users size={16} className="text-muted" />
-                            <h3 className="text-sm font-semibold">Teams & Members</h3>
+                        <div className="p-4 border-b border-border flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <Users size={16} className="text-muted" />
+                                <h3 className="text-sm font-semibold">Teams</h3>
+                            </div>
+                            <button 
+                                onClick={handleCreateTeam}
+                                disabled={!selectedProjectId}
+                                className="p-1 hover:bg-secondary rounded-md text-muted hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+                            >
+                                <Plus size={16} />
+                            </button>
                         </div>
                         
                         <div className="p-4 space-y-6">
                             {teams.length > 0 ? (
                                 teams.map(team => (
-                                    <div key={team.id} className="space-y-2">
+                                    <div 
+                                        key={team.id} 
+                                        onClick={() => setSelectedTeamId(team.id)}
+                                        className={cn(
+                                            "space-y-2 p-2 rounded-lg cursor-pointer transition-all",
+                                            selectedTeamId === team.id ? "bg-secondary" : "hover:bg-secondary/50"
+                                        )}
+                                    >
                                         <div className="flex items-center justify-between group">
                                             <h4 className="text-xs font-bold text-muted uppercase tracking-wider">{team.name}</h4>
-                                            <Plus size={12} className="text-muted opacity-0 group-hover:opacity-100 cursor-pointer" />
+                                            <Settings size={12} className="text-muted opacity-0 group-hover:opacity-100" />
                                         </div>
-                                        <div className="space-y-1">
-                                            {/* We don't have getTeamMembers in this simple loop yet, but we can show creators */}
-                                            <div className="flex items-center gap-2 py-1 px-2 rounded-md hover:bg-secondary/50 text-sm">
-                                                <div className="w-5 h-5 rounded-full bg-blue-500/20 text-blue-500 flex items-center justify-center text-[10px]">
-                                                    {team.createdBy.substring(0,2).toUpperCase()}
-                                                </div>
-                                                <span className="truncate">{team.createdBy}</span>
-                                                <span className="text-[10px] bg-secondary px-1 rounded text-muted ml-auto">Lead</span>
+                                        <div className="flex items-center gap-2 text-xs text-muted">
+                                            <div className="w-4 h-4 rounded-full bg-accent flex items-center justify-center text-[8px] font-bold">
+                                                {team.createdBy.substring(0,2).toUpperCase()}
                                             </div>
+                                            <span>Created by {team.createdBy}</span>
                                         </div>
                                     </div>
                                 ))
@@ -194,6 +280,174 @@ const Workspace: React.FC = () => {
                     </aside>
                 </div>
             </main>
+
+            {/* Project Settings Drawer */}
+            <Drawer 
+                isOpen={isProjectSettingsOpen} 
+                onClose={() => setIsProjectSettingsOpen(false)} 
+                title="Project Settings"
+            >
+                <div className="space-y-8">
+                    <div className="space-y-4">
+                        <h4 className="text-sm font-semibold flex items-center gap-2">
+                            <FolderEdit size={16} />
+                            Details
+                        </h4>
+                        <div className="p-4 bg-secondary/30 rounded-lg border border-border">
+                            <p className="text-sm font-medium">{selectedProject?.name}</p>
+                            <p className="text-xs text-muted mt-1">{selectedProject?.description || 'No description'}</p>
+                        </div>
+                    </div>
+
+                    <div className="pt-4 border-t border-border">
+                        <button 
+                            onClick={() => {
+                                if (confirm('Are you sure? This will delete all teams and tasks.')) {
+                                    deleteProjectMutation.mutate(selectedProjectId!);
+                                }
+                            }}
+                            className="w-full flex items-center justify-center gap-2 py-2 rounded-md border border-red-500/50 text-red-500 hover:bg-red-500 hover:text-white transition-all text-sm font-medium"
+                        >
+                            <Trash2 size={16} />
+                            Delete Project
+                        </button>
+                    </div>
+                </div>
+            </Drawer>
+
+            {/* Team Detail Drawer */}
+            <Drawer 
+                isOpen={!!selectedTeamId} 
+                onClose={() => setSelectedTeamId(null)} 
+                title={`Team: ${selectedTeam?.name}`}
+            >
+                <div className="space-y-8">
+                    <MemberManager 
+                        title="Team Members"
+                        members={teamMembers}
+                        onAdd={(userId) => addTeamMemberMutation.mutate(userId)}
+                        onRemove={(id) => removeTeamMemberMutation.mutate(id)}
+                    />
+
+                    <div className="pt-4 border-t border-border">
+                        <button 
+                            onClick={() => {
+                                if (confirm('Delete this team?')) {
+                                    deleteTeamMutation.mutate(selectedTeamId!);
+                                }
+                            }}
+                            className="w-full flex items-center justify-center gap-2 py-2 rounded-md border border-red-500/50 text-red-500 hover:bg-red-500 hover:text-white transition-all text-sm font-medium"
+                        >
+                            <Trash2 size={16} />
+                            Delete Team
+                        </button>
+                    </div>
+                </div>
+            </Drawer>
+
+            {/* Task Detail Drawer */}
+            <Drawer 
+                isOpen={!!selectedTaskId} 
+                onClose={() => setSelectedTaskId(null)} 
+                title="Task Details"
+            >
+                {selectedTask && (
+                    <div className="space-y-6">
+                        <div className="flex items-center gap-3 p-3 bg-secondary/20 rounded-lg border border-border">
+                            <button 
+                                onClick={() => updateTaskMutation.mutate({ id: selectedTask.id, version: selectedTask.version, status: selectedTask.status === 'DONE' ? 'TODO' : 'DONE' })}
+                                className="text-muted hover:text-primary transition-colors"
+                            >
+                                {selectedTask.status === 'DONE' ? <CheckCircle2 size={24} className="text-primary" /> : <Circle size={24} />}
+                            </button>
+                            <input 
+                                type="text"
+                                defaultValue={selectedTask.title}
+                                onBlur={(e) => {
+                                    if (e.target.value !== selectedTask.title) {
+                                        updateTaskMutation.mutate({ id: selectedTask.id, version: selectedTask.version, title: e.target.value });
+                                    }
+                                }}
+                                className="bg-transparent border-none text-lg font-semibold outline-none flex-1"
+                                autoComplete="off"
+                                data-1p-ignore
+                                data-lpignore="true"
+                            />
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="text-[10px] uppercase font-bold text-muted-foreground flex items-center gap-1">
+                                <AlignLeft size={12} />
+                                Description
+                            </label>
+                            <textarea 
+                                defaultValue={selectedTask.description}
+                                onBlur={(e) => {
+                                    if (e.target.value !== selectedTask.description) {
+                                        updateTaskMutation.mutate({ id: selectedTask.id, version: selectedTask.version, description: e.target.value });
+                                    }
+                                }}
+                                placeholder="Add a description..."
+                                className="w-full bg-secondary/30 border border-border rounded-md p-3 text-sm min-h-[100px] outline-none focus:border-primary/50 transition-all resize-none"
+                                autoComplete="off"
+                                data-1p-ignore
+                                data-lpignore="true"
+                            />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <label className="text-[10px] uppercase font-bold text-muted-foreground flex items-center gap-1">
+                                    <Users2 size={12} />
+                                    Team
+                                </label>
+                                <select 
+                                    value={selectedTask.teamId || ''}
+                                    onChange={(e) => updateTaskMutation.mutate({ id: selectedTask.id, version: selectedTask.version, teamId: e.target.value || null })}
+                                    className="w-full bg-secondary/30 border border-border rounded-md px-2 py-1.5 text-sm outline-none focus:border-primary/50"
+                                >
+                                    <option value="">Unassigned</option>
+                                    {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                                </select>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-[10px] uppercase font-bold text-muted-foreground flex items-center gap-1">
+                                    <UserIcon size={12} />
+                                    Assignee
+                                </label>
+                                <input 
+                                    type="text"
+                                    defaultValue={selectedTask.memberId || ''}
+                                    onBlur={(e) => {
+                                        if (e.target.value !== (selectedTask.memberId || '')) {
+                                            updateTaskMutation.mutate({ id: selectedTask.id, version: selectedTask.version, memberId: e.target.value || null });
+                                        }
+                                    }}
+                                    placeholder="User ID"
+                                    className="w-full bg-secondary/30 border border-border rounded-md px-2 py-1.5 text-sm outline-none focus:border-primary/50"
+                                    autoComplete="off"
+                                    data-1p-ignore
+                                    data-lpignore="true"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="pt-6 border-t border-border">
+                            <button 
+                                onClick={() => {
+                                    if (confirm('Delete this task?')) {
+                                        deleteTasksMutation.mutate([selectedTask.id]);
+                                    }
+                                }}
+                                className="flex items-center gap-2 text-xs text-red-500 hover:text-red-400 transition-colors"
+                            >
+                                <Trash2 size={14} />
+                                Delete Task
+                            </button>
+                        </div>
+                    </div>
+                )}
+            </Drawer>
         </div>
     );
 };

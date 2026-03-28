@@ -13,10 +13,13 @@ import { sql } from 'kysely';
 export const insertTeam = async (data: CreateTeamsParam): Promise<Team[]> => {
     const added = await sql<Team>`
         WITH auth_check AS (
-            SELECT 1 FROM project WHERE id = ${data.projectId} AND fk_user_id = ${data.userId}
+            SELECT 1 FROM project WHERE id = ${data.projectId}::uuid AND fk_user_id = ${data.userId}
+            UNION ALL
+            SELECT 1 FROM project_member WHERE fk_project_id = ${data.projectId}::uuid AND fk_user_id = ${data.userId}
+            LIMIT 1
         )
         INSERT INTO project_team (fk_project_id, name, created_at, fk_user_id)
-        SELECT ${data.projectId},
+        SELECT ${data.projectId}::uuid,
                unnest(${data.teams}::text[]),
                ${getTimeString()},
                ${data.userId}
@@ -32,12 +35,12 @@ export const deleteTeams = async (
 ): Promise<string[]> => {
     const result = await sql<{ id: string }>`
         WITH auth_check AS (
-            SELECT 1 FROM project WHERE id = ${data.projectId} AND fk_user_id = ${data.userId}
+            SELECT 1 FROM project WHERE id = ${data.projectId}::uuid AND fk_user_id = ${data.userId}
         )
         DELETE
         FROM project_team
-        WHERE fk_project_id = ${data.projectId}
-          AND id = ANY (${data.teamIds}::text[])
+        WHERE fk_project_id = ${data.projectId}::uuid
+          AND id = ANY (${data.teamIds}::uuid[])
           AND (
             fk_user_id = ${data.userId}
             OR EXISTS (SELECT 1 FROM auth_check)
@@ -55,21 +58,30 @@ export const insertTeamMembers = async (
 ): Promise<TeamMember[]> => {
     const result = await sql<TeamMember>`
         WITH auth_check AS (
-            SELECT 1 FROM project WHERE id = ${data.projectId} AND fk_user_id = ${data.userId}
+            SELECT 1 FROM project WHERE id = ${data.projectId}::uuid AND fk_user_id = ${data.userId}
             UNION ALL
-            SELECT 1 FROM project_team WHERE id = ${data.teamId} AND fk_project_id = ${data.projectId} AND fk_user_id = ${data.userId}
+            SELECT 1 FROM project_team WHERE id = ${data.teamId}::uuid AND fk_project_id = ${data.projectId}::uuid AND fk_user_id = ${data.userId}
             LIMIT 1
         )
         INSERT INTO project_team_member (fk_team_id, fk_user_id, fk_project_id)
-        SELECT ${data.teamId},
-               unnest(${data.members}::text[]),
-               ${data.projectId}
+        SELECT ${data.teamId}::uuid,
+               m.user_id,
+               ${data.projectId}::uuid
+        FROM unnest(${data.members}::text[]) AS m(user_id)
         WHERE EXISTS (SELECT 1 FROM auth_check)
+          -- CRITICAL: Member must be the project owner OR a project member
+          AND (
+            EXISTS (SELECT 1 FROM project WHERE id = ${data.projectId}::uuid AND fk_user_id = m.user_id)
+            OR
+            EXISTS (SELECT 1 FROM project_member WHERE fk_project_id = ${data.projectId}::uuid AND fk_user_id = m.user_id)
+          )
         RETURNING
             id, fk_team_id AS "teamId", fk_user_id AS "userId", fk_project_id AS "projectId", version, last_event_id AS "lastEventId", created_at AS "createdAt", updated_at AS "updatedAt"
     `.execute(db);
+    
     if (result.rows.length === 0)
-        throw new Error('Unauthorized or team not found');
+        throw new Error('Unauthorized, team not found, or members are not part of the project');
+        
     return result.rows;
 };
 
@@ -78,15 +90,15 @@ export const deleteTeamMembers = async (
 ): Promise<string[]> => {
     const result = await sql<{ userId: string }>`
         WITH auth_check AS (
-            SELECT 1 FROM project WHERE id = ${data.projectId} AND fk_user_id = ${data.userId}
+            SELECT 1 FROM project WHERE id = ${data.projectId}::uuid AND fk_user_id = ${data.userId}
             UNION ALL
-            SELECT 1 FROM project_team WHERE id = ${data.teamId} AND fk_project_id = ${data.projectId} AND fk_user_id = ${data.userId}
+            SELECT 1 FROM project_team WHERE id = ${data.teamId}::uuid AND fk_project_id = ${data.projectId}::uuid AND fk_user_id = ${data.userId}
             LIMIT 1
         )
         DELETE
         FROM project_team_member
-        WHERE fk_team_id = ${data.teamId}
-          AND fk_project_id = ${data.projectId}
+        WHERE fk_team_id = ${data.teamId}::uuid
+          AND fk_project_id = ${data.projectId}::uuid
           AND fk_user_id = ANY (${data.members}::text[])
           AND EXISTS (SELECT 1 FROM auth_check)
         RETURNING fk_user_id AS "userId"
@@ -99,8 +111,8 @@ export const deleteTeamMembers = async (
 
 export const deleteAllProjectTeams = async (projectId: string) => {
     await db
-        .deleteFrom('projectTeam')
-        .where('fk_project_id', '=', projectId)
+        .deleteFrom('project_team')
+        .where('fk_project_id', '=', sql`${projectId}::uuid`)
         .execute();
 };
 
@@ -109,8 +121,8 @@ export const removeUserFromAllTeams = async (
     userId: string,
 ) => {
     await db
-        .deleteFrom('projectTeamMember')
-        .where('fk_project_id', '=', projectId)
+        .deleteFrom('project_team_member')
+        .where('fk_project_id', '=', sql`${projectId}::uuid`)
         .where('fk_user_id', '=', userId)
         .execute();
 };
@@ -120,9 +132,9 @@ export const deleteAllTeamMembers = async (
     teamId: string,
 ) => {
     await db
-        .deleteFrom('projectTeamMember')
-        .where('fk_project_id', '=', projectId)
-        .where('fk_team_id', '=', teamId)
+        .deleteFrom('project_team_member')
+        .where('fk_project_id', '=', sql`${projectId}::uuid`)
+        .where('fk_team_id', '=', sql`${teamId}::uuid`)
         .execute();
 };
 
@@ -132,9 +144,9 @@ export const getTeams = async (
 ): Promise<Team[]> => {
     const result = await sql<Team>`
         WITH auth_check AS (
-            SELECT 1 FROM project WHERE id = ${projectId} AND fk_user_id = ${userId}
+            SELECT 1 FROM project WHERE id = ${projectId}::uuid AND fk_user_id = ${userId}
             UNION ALL
-            SELECT 1 FROM project_member WHERE fk_project_id = ${projectId} AND fk_user_id = ${userId}
+            SELECT 1 FROM project_member WHERE fk_project_id = ${projectId}::uuid AND fk_user_id = ${userId}
             LIMIT 1
         )
         SELECT 
@@ -147,7 +159,7 @@ export const getTeams = async (
             created_at AS "createdAt", 
             updated_at AS "updatedAt"
         FROM project_team
-        WHERE fk_project_id = ${projectId}
+        WHERE fk_project_id = ${projectId}::uuid
           AND EXISTS (SELECT 1 FROM auth_check)
     `.execute(db);
     return result.rows;
@@ -160,9 +172,9 @@ export const getTeamMembers = async (
 ): Promise<TeamMember[]> => {
     const result = await sql<TeamMember>`
         WITH auth_check AS (
-            SELECT 1 FROM project WHERE id = ${projectId} AND fk_user_id = ${userId}
+            SELECT 1 FROM project WHERE id = ${projectId}::uuid AND fk_user_id = ${userId}
             UNION ALL
-            SELECT 1 FROM project_member WHERE fk_project_id = ${projectId} AND fk_user_id = ${userId}
+            SELECT 1 FROM project_member WHERE fk_project_id = ${projectId}::uuid AND fk_user_id = ${userId}
             LIMIT 1
         )
         SELECT 
@@ -175,8 +187,8 @@ export const getTeamMembers = async (
             created_at AS "createdAt", 
             updated_at AS "updatedAt"
         FROM project_team_member
-        WHERE fk_team_id = ${teamId}
-          AND fk_project_id = ${projectId}
+        WHERE fk_team_id = ${teamId}::uuid
+          AND fk_project_id = ${projectId}::uuid
           AND EXISTS (SELECT 1 FROM auth_check)
     `.execute(db);
     return result.rows;

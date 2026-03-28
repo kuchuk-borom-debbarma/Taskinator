@@ -10,8 +10,15 @@ export const startRestServer = (port: number = 3000) => {
     app.use(cors());
     app.use(express.json());
 
+    // Request Logger
+    app.use((req, _res, next) => {
+        console.log(`[REST] ${new Date().toISOString()} - ${req.method} ${req.url}`);
+        next();
+    });
+
     // Root Health Check
     app.get('/health', (req, res) => {
+        console.log('[REST] Health check requested');
         res.json({ status: 'UP', timestamp: new Date().toISOString() });
     });
 

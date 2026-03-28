@@ -17,7 +17,7 @@ export async function withBatchIdempotency(
     await db.transaction().execute(async (trx) => {
         // 1. Attempt to record all events in the batch
         const results = await trx
-            .insertInto('processedEvent')
+            .insertInto('processed_event')
             .values(
                 events.map((event) => ({
                     event_id: event.eventId,

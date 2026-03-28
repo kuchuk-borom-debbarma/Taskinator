@@ -1,5 +1,5 @@
 export const getTimeString = () => {
-    return Date.now().toString();
+    return new Date().toISOString();
 };
 
 export const getTime = () => {

@@ -1,12 +1,14 @@
 import React, { useMemo } from 'react';
-import { Task } from '../types';
-import { CheckCircle2, Circle, Plus, ChevronDown, ChevronRight } from 'lucide-react';
+import type { Task } from '../types';
+import { CheckCircle2, Circle, Plus, ChevronDown, ChevronRight, Trash2 } from 'lucide-react';
 import { cn } from '../utils/cn';
 
 interface TaskTreeProps {
     tasks: Task[];
     onToggleStatus: (task: Task) => void;
     onCreateSubtask: (parentId: string) => void;
+    onClickTask: (task: Task) => void;
+    onDeleteTask: (taskId: string) => void;
 }
 
 interface TreeItemProps {
@@ -15,9 +17,13 @@ interface TreeItemProps {
     depth: number;
     onToggleStatus: (task: Task) => void;
     onCreateSubtask: (parentId: string) => void;
+    onClickTask: (task: Task) => void;
+    onDeleteTask: (taskId: string) => void;
 }
 
-const TreeItem: React.FC<TreeItemProps> = ({ task, children, depth, onToggleStatus, onCreateSubtask }) => {
+const TreeItem: React.FC<TreeItemProps> = ({ 
+    task, children, depth, onToggleStatus, onCreateSubtask, onClickTask, onDeleteTask 
+}) => {
     const [isExpanded, setIsExpanded] = React.useState(true);
     const hasChildren = children && children.length > 0;
 
@@ -25,44 +31,55 @@ const TreeItem: React.FC<TreeItemProps> = ({ task, children, depth, onToggleStat
         <div className="flex flex-col">
             <div 
                 className={cn(
-                    "flex items-center gap-2 group py-1.5 px-2 hover:bg-secondary/30 rounded-md transition-all",
+                    "flex items-center gap-2 group py-1.5 px-2 hover:bg-secondary/30 rounded-md transition-all cursor-pointer",
                     task.status === 'DONE' && "opacity-60"
                 )}
                 style={{ paddingLeft: `${depth * 16 + 8}px` }}
+                onClick={() => onClickTask(task)}
             >
                 <div className="flex items-center gap-2 flex-1">
                     {hasChildren ? (
-                        <button onClick={() => setIsExpanded(!isExpanded)} className="text-muted hover:text-foreground">
+                        <button 
+                            onClick={(e) => { e.stopPropagation(); setIsExpanded(!isExpanded); }} 
+                            className="text-muted hover:text-foreground p-0.5"
+                        >
                             {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                         </button>
                     ) : (
-                        <div className="w-[14px]" />
+                        <div className="w-[18px]" />
                     )}
                     
-                    <button onClick={() => onToggleStatus(task)} className="text-muted hover:text-primary transition-colors">
+                    <button 
+                        onClick={(e) => { e.stopPropagation(); onToggleStatus(task); }} 
+                        className="text-muted hover:text-primary transition-colors"
+                    >
                         {task.status === 'DONE' ? <CheckCircle2 size={18} className="text-primary" /> : <Circle size={18} />}
                     </button>
                     
                     <div className="flex flex-col">
                         <span className={cn(
                             "text-sm font-medium",
-                            task.status === 'DONE' && "line-through"
+                            task.status === 'DONE' && "line-through text-muted"
                         )}>
                             {task.title}
                         </span>
-                        {task.description && (
-                            <span className="text-[11px] text-muted line-clamp-1">{task.description}</span>
-                        )}
                     </div>
                 </div>
 
                 <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1">
                     <button 
-                        onClick={() => onCreateSubtask(task.id)}
+                        onClick={(e) => { e.stopPropagation(); onCreateSubtask(task.id); }}
                         className="p-1 hover:bg-secondary rounded-md text-muted hover:text-foreground"
                         title="Add subtask"
                     >
                         <Plus size={14} />
+                    </button>
+                    <button 
+                        onClick={(e) => { e.stopPropagation(); if (confirm('Delete task?')) onDeleteTask(task.id); }}
+                        className="p-1 hover:bg-red-500/10 rounded-md text-muted hover:text-red-500"
+                        title="Delete task"
+                    >
+                        <Trash2 size={14} />
                     </button>
                 </div>
             </div>
@@ -73,10 +90,12 @@ const TreeItem: React.FC<TreeItemProps> = ({ task, children, depth, onToggleStat
                         <TreeItem 
                             key={child.id} 
                             task={child} 
-                            children={undefined} // Correct children will be passed by the parent TreeView
+                            children={undefined} 
                             depth={depth + 1}
                             onToggleStatus={onToggleStatus}
                             onCreateSubtask={onCreateSubtask}
+                            onClickTask={onClickTask}
+                            onDeleteTask={onDeleteTask}
                         />
                     ))}
                 </div>
@@ -85,9 +104,10 @@ const TreeItem: React.FC<TreeItemProps> = ({ task, children, depth, onToggleStat
     );
 };
 
-export const TaskTree: React.FC<TaskTreeProps> = ({ tasks, onToggleStatus, onCreateSubtask }) => {
+export const TaskTree: React.FC<TaskTreeProps> = ({ 
+    tasks, onToggleStatus, onCreateSubtask, onClickTask, onDeleteTask 
+}) => {
     const rootTasks = useMemo(() => {
-        // Build the tree structure from flat list
         const treeMap: Record<string, Task[]> = {};
         const roots: Task[] = [];
 
@@ -100,26 +120,9 @@ export const TaskTree: React.FC<TaskTreeProps> = ({ tasks, onToggleStatus, onCre
             }
         });
 
-        const renderTree = (taskList: Task[], depth: number): React.ReactNode[] => {
-            return taskList.map(task => (
-                <TreeItem 
-                    key={task.id} 
-                    task={task} 
-                    children={treeMap[task.id]} 
-                    depth={depth}
-                    onToggleStatus={onToggleStatus}
-                    onCreateSubtask={onCreateSubtask}
-                >
-                    {treeMap[task.id] && renderTree(treeMap[task.id], depth + 1)}
-                </TreeItem>
-            ));
-        };
-
-        // We'll actually use a recursive component for the full tree
         return { roots, treeMap };
     }, [tasks]);
 
-    // Recursive component to handle the mapping properly
     const RecursiveTree = ({ currentTasks, depth }: { currentTasks: Task[], depth: number }) => {
         return (
             <>
@@ -131,6 +134,8 @@ export const TaskTree: React.FC<TaskTreeProps> = ({ tasks, onToggleStatus, onCre
                             depth={depth}
                             onToggleStatus={onToggleStatus}
                             onCreateSubtask={onCreateSubtask}
+                            onClickTask={onClickTask}
+                            onDeleteTask={onDeleteTask}
                         />
                         {rootTasks.treeMap[task.id] && (
                             <RecursiveTree currentTasks={rootTasks.treeMap[task.id]} depth={depth + 1} />

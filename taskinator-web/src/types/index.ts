@@ -9,6 +9,16 @@ export interface Project {
     updatedAt?: string;
 }
 
+export interface ProjectMember {
+    id: string;
+    projectId: string;
+    userId: string;
+    version: number;
+    lastEventId: string | null;
+    createdAt: string;
+    updatedAt: string;
+}
+
 export interface Team {
     id: string;
     name: string;
@@ -17,7 +27,18 @@ export interface Team {
     version: number;
     lastEventId: string | null;
     createdAt: string;
-    updatedAt?: string;
+    updatedAt: string;
+}
+
+export interface TeamMember {
+    id: string;
+    projectId: string;
+    teamId: string;
+    userId: string;
+    version: number;
+    lastEventId: string | null;
+    createdAt: string;
+    updatedAt: string;
 }
 
 export interface Task {

@@ -26,6 +26,7 @@ import { eventBus } from '../../../utils/EventBus.ts';
 
 export class ProjectServiceImpl implements ProjectService {
     async getProjects(userId: string): Promise<Project[]> {
+        console.log(`[Project Service] Getting projects for userId: ${userId}`);
         return getProjects(userId);
     }
 

@@ -10,11 +10,11 @@ import type { ProcessedEventTable } from './tables/ProcessedEvent.ts';
 
 export interface Database {
     project: ProjectTable;
-    projectMember: ProjectMemberTable;
-    projectTeam: ProjectTeamTable;
-    projectTeamMember: ProjectTeamMemberTable;
-    projectTask: ProjectTaskTable;
-    processedEvent: ProcessedEventTable;
+    project_member: ProjectMemberTable;
+    project_team: ProjectTeamTable;
+    project_team_member: ProjectTeamMemberTable;
+    project_task: ProjectTaskTable;
+    processed_event: ProcessedEventTable;
 }
 
 const dialect = new PostgresDialect({
@@ -22,6 +22,7 @@ const dialect = new PostgresDialect({
         database: 'test',
         host: 'localhost',
         user: 'admin',
+        password: 'password',
         port: 5434,
         max: 10,
     }),

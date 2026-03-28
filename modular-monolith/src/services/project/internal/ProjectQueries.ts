@@ -7,6 +7,7 @@ import type {
     ProjectMember,
 } from '../ProjectService.ts';
 import { db } from '../../../database';
+import { getTimeString } from '../../../utils/utils.ts';
 import { sql } from 'kysely';
 
 export const insertProject = async (
@@ -17,7 +18,7 @@ export const insertProject = async (
         .values({
             name: data.name,
             description: data.description,
-            created_at: new Date().toUTCString(),
+            created_at: getTimeString(),
             fk_user_id: data.userId,
         })
         .returningAll()
@@ -47,7 +48,7 @@ export const insertProjects = async (
                 fk_user_id: p.userId,
                 name: p.name,
                 description: p.description,
-                created_at: new Date().toUTCString(),
+                created_at: getTimeString(),
             })),
         )
         .returningAll()
@@ -70,11 +71,11 @@ export const insertProjectMembers = async (
 ): Promise<ProjectMember[]> => {
     const result = await sql<ProjectMember>`
         WITH auth_check AS (
-            SELECT 1 FROM project WHERE id = ${data.projectId} AND fk_user_id = ${data.userId}
+            SELECT 1 FROM project WHERE id = ${data.projectId}::uuid AND fk_user_id = ${data.userId}
         )
         INSERT INTO project_member (fk_user_id, fk_project_id)
         SELECT unnest(${data.usersToAdd}::text[]),
-               ${data.projectId}
+               ${data.projectId}::uuid
         WHERE EXISTS (SELECT 1 FROM auth_check)
         RETURNING
             id, 
@@ -95,7 +96,7 @@ export const insertProjectMembers = async (
 export const deleteProjects = async (data: DeleteProjectsParam) => {
     const deleted = await db
         .deleteFrom('project')
-        .where('id', 'in', data.projectIds)
+        .where('id', 'in', data.projectIds.map(id => sql`${id}::uuid`))
         .where('fk_user_id', '=', data.userId)
         .returningAll()
         .execute();
@@ -119,12 +120,12 @@ export const deleteProjects = async (data: DeleteProjectsParam) => {
 export const deleteProjectMembers = async (data: DeleteProjectMembersParam) => {
     const result = await sql<ProjectMember>`
         WITH auth_check AS (
-            SELECT 1 FROM project WHERE id = ${data.projectId} AND fk_user_id = ${data.userId}
+            SELECT 1 FROM project WHERE id = ${data.projectId}::uuid AND fk_user_id = ${data.userId}
         )
         DELETE
         FROM project_member
-        WHERE fk_project_id = ${data.projectId}
-          AND id = ANY (${data.memberIds}::text[])
+        WHERE fk_project_id = ${data.projectId}::uuid
+          AND id = ANY (${data.memberIds}::uuid[])
           AND EXISTS (SELECT 1 FROM auth_check)
         RETURNING
             id,
@@ -141,8 +142,8 @@ export const deleteProjectMembers = async (data: DeleteProjectMembersParam) => {
 
 export const deleteAllProjectMembers = async (projectId: string) => {
     await db
-        .deleteFrom('projectMember')
-        .where('fk_project_id', '=', projectId)
+        .deleteFrom('project_member')
+        .where('fk_project_id', '=', sql`${projectId}::uuid`)
         .execute();
 };
 
@@ -172,7 +173,7 @@ export const getProject = async (
     const p = await db
         .selectFrom('project')
         .selectAll()
-        .where('id', '=', projectId)
+        .where('id', '=', sql`${projectId}::uuid`)
         .where('fk_user_id', '=', userId)
         .executeTakeFirst();
 

@@ -480,3 +480,25 @@ To solve the "Kafka Dependency" problem for local development and CI, we updated
 *   **Infrastructure Agnostic**: The core business logic is now proven to be truly decoupled from the transport and messaging infrastructure.
 *   **Easier Debugging**: Local event flows can be traced easily within a single process while still adhering to our high-performance architectural patterns.
 
+---
+
+# Entry 23: Infrastructure Automation via Docker Compose
+
+## Standardizing the High-Performance Environment
+
+To ensure consistency between development, CI, and production-like environments, we introduced a unified infrastructure orchestration layer using **Docker Compose**.
+
+### 1. Unified Service Definition
+The `modular-monolith/docker-compose.yml` now defines the complete dependency stack required for the system:
+*   **PostgreSQL 16**: Configured on port `5434` to match our Kysely connection settings. Includes a health check to ensure the database is ready before the application attempts to connect.
+*   **Kafka 3.7 (KRaft Mode)**: By using KRaft, we eliminated the need for a separate Zookeeper container, reducing resource overhead and simplifying the network topology. It's exposed on port `9092` for the `KafkaBus` to connect.
+
+### 2. Persistence and Resilience
+*   **Named Volumes**: Used for both Postgres (`postgres_data`) and Kafka (`kafka_data`) to ensure that data persists across container restarts, which is essential for testing idempotency and event durability.
+*   **Health Awareness**: The Postgres container includes a `pg_isready` check, allowing future orchestration (like start scripts) to wait for the data layer to be fully operational.
+
+### 3. Benefits for the 10k RPS Architecture
+*   **Zero-Config Setup**: New developers can now spin up the entire infrastructure with a single command (`docker-compose up -d`), eliminating "it works on my machine" issues.
+*   **Network Isolation**: Docker provides a dedicated bridge network, ensuring our high-throughput event traffic is isolated from other local processes.
+*   **Production Parity**: By running real Kafka and Postgres instances locally, we can verify our batching and concurrency logic under realistic conditions.
+
