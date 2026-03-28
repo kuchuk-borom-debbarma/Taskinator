@@ -1,17 +1,21 @@
 import { KAFKA_TOPICS, KAFKA_EVENTS } from '../../../../utils/kafka';
 import { unassignMemberFromAllTasks } from '../TaskQueries';
 import { eventBus } from '../../../../utils/EventBus';
+import { withIdempotency } from '../../../../utils/idempotency';
 
 export class ProjectMemberDeletedListener {
     async init() {
+        const GROUP_ID = 'task-member-cleanup-group';
         await eventBus.subscribe(
             KAFKA_TOPICS.PROJECT_MEMBER,
-            'task-member-cleanup-group',
+            GROUP_ID,
             async (event: any) => {
                 if (event.type === KAFKA_EVENTS.PROJECT_MEMBER.DELETED) {
-                    const { projectId, userId } = event.data;
-                    console.log(`[Task Service] Unassigning member ${userId} from tasks in project ${projectId}`);
-                    await unassignMemberFromAllTasks(projectId, userId);
+                    await withIdempotency(event.eventId, GROUP_ID, async () => {
+                        const { projectId, userId } = event.data;
+                        console.log(`[Task Service] Unassigning member ${userId} from tasks in project ${projectId}`);
+                        await unassignMemberFromAllTasks(projectId, userId);
+                    });
                 }
             }
         );

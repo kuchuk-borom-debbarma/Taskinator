@@ -3,13 +3,15 @@ import {Kysely, PostgresDialect} from 'kysely';
 import {Pool} from 'pg';
 import type {ProjectTeamTable, ProjectTeamMemberTable} from './tables/ProjectTeam.ts';
 import type {ProjectTaskTable} from "./tables/Task.ts";
+import type {ProcessedEventTable} from "./tables/ProcessedEvent.ts";
 
 export interface Database {
     project: ProjectTable;
     projectMember: ProjectMemberTable;
     projectTeam: ProjectTeamTable;
     projectTeamMember: ProjectTeamMemberTable;
-    projectTask: ProjectTaskTable
+    projectTask: ProjectTaskTable;
+    processedEvent: ProcessedEventTable;
 }
 
 const dialect = new PostgresDialect({
