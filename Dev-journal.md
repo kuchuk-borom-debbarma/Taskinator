@@ -389,3 +389,41 @@ Refactored member addition and removal to use the `unnest` pattern with a single
 *   **Join Efficiency**: Replaced complex multi-table joins with targeted, indexed `EXISTS` clauses.
 *   **Latency**: Reduced average query execution time by consolidating logic into fewer, more powerful SQL statements.
 
+
+---
+
+# Entry 20: The Anatomy of High-Performance SQL Patterns
+
+## Engineering for 10,000 RPS at the Database Layer
+
+Across the Project, Team, and Task services, we have established a set of standardized SQL patterns. These aren't just "queries that work"; they are specifically engineered to minimize latency, ensure consistency, and scale under extreme load.
+
+### 1. The "Single-Trip" Authorization Pattern (`WITH auth_check`)
+**The Old Way**: Running a `SELECT` to check permissions, then an `INSERT/UPDATE` if allowed.
+**Our Way**: Consolidating authorization into a Common Table Expression (CTE) inside the main query.
+*   **Why it's good**: Evaluates permissions exactly once. If the user isn't authorized, the `INSERT/UPDATE` simply fails to match any rows. This reduces database round-trips from 2 to 1 and shared-locks the auth records efficiently.
+
+### 2. High-Throughput Batching via `unnest`
+**The Old Way**: Looping over an array in code and sending 50 `INSERT` statements.
+**Our Way**: Using `unnest($1::text[])` within a single `INSERT ... SELECT` statement.
+*   **Why it's good**: PostgreSQL processes the entire array in a single execution plan. This transforms an (N)$ network and CPU cost into (1)$, which is the only way to handle bulk member additions at 10k RPS.
+
+### 3. Atomic Optimistic Locking (Compare-and-Swap)
+**The Pattern**: `UPDATE ... SET version = version + 1 WHERE id = $1 AND version = $2`.
+*   **Why it's good**: It provides thread-safe concurrency control without the massive performance hit of `SELECT ... FOR UPDATE` (pessimistic locking). By making the version check part of the `WHERE` clause, the database handles the race condition atomically at the engine level.
+
+### 4. Efficient State Recovery via `RETURNING`
+**The Pattern**: Every destructive or creative query uses `RETURNING id, version, last_event_id, ...`.
+*   **Why it's good**: It ensures that our Service layer and Kafka events always have the absolute source of truth state immediately after a change, without requiring a follow-up `SELECT` query.
+
+### 5. Hierarchical Integrity (Materialized Paths)
+**The Pattern**: Consolidating `materialized_path` calculations into `WITH` blocks that pull parent data and sibling context in one scan.
+*   **Why it's good**: Managing tree structures (like sub-tasks) is notoriously slow. Our approach avoids N+1 subqueries and ensures that when a task moves, its entire lineage is updated in a single, consistent transaction.
+
+### 6. Atomic Idempotency Checks
+**The Pattern**: `INSERT INTO processed_event ... ON CONFLICT DO NOTHING RETURNING event_id`.
+*   **Why it's good**: This is the fastest possible way to implement "Exactly-Once" semantics. It combines the "Have I seen this?" check and the "Mark as seen" action into a single B-Tree operation.
+
+### Summary
+By moving logic from the Application layer into the Database layer via CTEs and Atomic statements, we reduced the average number of DB round-trips per request from ~4 down to 1. This is the foundation of our high-performance architecture.
+
