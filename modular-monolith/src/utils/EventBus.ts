@@ -90,4 +90,6 @@ class KafkaBus implements Bus {
     }
 }
 
-export const eventBus: Bus = process.env.NODE_ENV === 'test' ? new MemoryBus() : new KafkaBus();
+export const eventBus: Bus = (process.env.NODE_ENV === 'test' || process.env.USE_MEMORY_BUS === 'true') 
+    ? new MemoryBus() 
+    : new KafkaBus();
