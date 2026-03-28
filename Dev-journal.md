@@ -314,3 +314,27 @@ All core services (Project, Team, Task) were refactored to collect events into l
 *   **Reduced Latency**: Bulk operations that previously took (N)$ network wait time now take (1)$.
 *   **Consistency**: Publishing as a batch makes it easier to reason about the event sequence for a single user request.
 
+
+---
+
+# Entry 17: Optimized Batch Event Consumption
+
+## Closing the Loop for 10k RPS
+
+To complement our Batch Publishing, we refactored the `EventBus` and `withIdempotency` logic to support **Batch Consumption**. This ensures that the system doesn't bottleneck when receiving large bursts of events.
+
+### 1. Unified Batch Subscription
+The `Bus` interface now includes `subscribeBatch(topic, groupId, handler)`. In the `KafkaBus` implementation, this uses the high-performance `eachBatch` engine from `kafkajs`, allowing the service to process dozens or hundreds of messages in a single execution loop.
+
+### 2. High-Performance Batch Idempotency
+We introduced `withBatchIdempotency`, a specialized wrapper that:
+*   Takes an array of events.
+*   Performs a **single database query** to check which events are new: `INSERT ... ON CONFLICT DO NOTHING RETURNING event_id`.
+*   Filters the batch and only executes business logic for unprocessed events.
+*   Commits both the idempotency records and the business logic in a **single atomic transaction**.
+
+### 3. Impact on Scalability
+*   **DB Round-trips**: Reduced from (N)$ to (1)$ per batch.
+*   **Throughput**: By avoiding individual transaction overhead for every single message, the system can handle significantly higher event volumes with lower CPU and IO usage.
+*   **Reliability**: Atomic batch processing ensures that either the entire batch's work and its idempotency markers are committed, or none are, maintaining perfect consistency.
+
