@@ -1,18 +1,13 @@
-import type {ProjectTask} from "../TaskService.ts";
+import type {
+    CreateTaskParam,
+    DeleteTasksParam,
+    ProjectTask,
+} from "../TaskService.ts";
 import {sql} from "kysely";
 import {db} from "../../../database";
 import {getTimeString} from "../../../utils/utils.ts";
 
-export const insertTask = async (data: {
-    userId: string;
-    projectId: string;
-    title: string;
-    description: string;
-    teamId?: string;
-    memberId?: string;
-    parentTaskId?: string;
-    initialStatus: string;
-}): Promise<ProjectTask> => {
+export const insertTask = async (data: CreateTaskParam): Promise<ProjectTask> => {
     const result = await sql<ProjectTask>`
         INSERT INTO project_task (fk_project_id, fk_team_id, fk_member_id, fk_parent_task_id, title, description, status, created_by, updated_by, created_at)
         SELECT ${data.projectId},
@@ -65,12 +60,9 @@ export const insertTask = async (data: {
         throw new Error('Unauthorized or invalid parameters');
 
     return result.rows[0]!;
-    };
-    export const deleteTasks = async (data: {
-    userId: string;
-    projectId: string;
-    taskIds: string[];
-    }): Promise<string[]> => {
+};
+
+export const deleteTasks = async (data: DeleteTasksParam): Promise<string[]> => {
     const result = await sql<{ id: string }>`
         DELETE
         FROM project_task
@@ -88,9 +80,9 @@ export const insertTask = async (data: {
     }
 
     return result.rows.map((r) => r.id);
-    };
+};
 
-    export const updateTask = async (data: {
+export interface UpdateTaskParam {
     userId: string;
     projectId: string;
     taskId: string;
@@ -98,7 +90,9 @@ export const insertTask = async (data: {
     teamId?: string;
     memberId?: string;
     parentTaskId?: string;
-    }): Promise<string | null> => {
+}
+
+export const updateTask = async (data: UpdateTaskParam): Promise<string | null> => {
     const result = await sql<{ id: string }>`
         UPDATE project_task
         SET status            = CASE WHEN ${data.status !== undefined} THEN ${data.status} ELSE status END,
@@ -140,5 +134,4 @@ export const insertTask = async (data: {
     `.execute(db);
 
     return result.rows[0]?.id ?? null;
-    };
-
+};

@@ -1,4 +1,10 @@
-import type {ProjectTask, TaskService} from "../TaskService.ts";
+import type {
+    CreateTaskParam,
+    DeleteTasksParam,
+    ProjectTask,
+    TaskService,
+    UpdateTasksParam,
+} from "../TaskService.ts";
 import type {Producer} from "kafkajs";
 import {kafka} from "../../../kafka";
 import {buildKafkaMessage, KAFKA_EVENTS, KAFKA_TOPICS} from "../../../utils/kafka.ts";
@@ -25,16 +31,7 @@ export class TaskServiceImpl implements TaskService {
         await this.producer.disconnect();
     }
 
-    async createTask(data: {
-        userId: string;
-        projectId: string;
-        title: string;
-        description: string;
-        teamId?: string;
-        memberId?: string;
-        parentTaskId?: string;
-        initialStatus: string;
-    }): Promise<ProjectTask[]> {
+    async createTask(data: CreateTaskParam): Promise<ProjectTask[]> {
         const task = await insertTask(data);
 
         await this.producer.send({
@@ -57,11 +54,7 @@ export class TaskServiceImpl implements TaskService {
         return [task];
     }
 
-    async deleteTask(data: {
-        userId: string;
-        projectId: string;
-        taskIds: string[];
-    }): Promise<string[]> {
+    async deleteTask(data: DeleteTasksParam): Promise<string[]> {
         const deletedIds = await deleteTasks(data);
 
         await this.producer.send({
@@ -83,17 +76,7 @@ export class TaskServiceImpl implements TaskService {
         return deletedIds;
     }
 
-    async updateTasks(data: {
-        userId: string;
-        projectId: string;
-        tasks: {
-            id: string;
-            status?: string;
-            teamId?: string;
-            memberId?: string;
-            parentTaskId?: string;
-        }[];
-    }): Promise<string[]> {
+    async updateTasks(data: UpdateTasksParam): Promise<string[]> {
         const updatedIds: string[] = [];
 
         for (const taskUpdate of data.tasks) {

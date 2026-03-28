@@ -18,45 +18,53 @@ export type TeamMember = {
     updatedAt: Date;
 };
 
+export interface CreateTeamsParam {
+    userId: string;
+    projectId: string;
+    teams: string[];
+}
+
+export interface DeleteTeamsParam {
+    userId: string;
+    projectId: string;
+    teamIds: string[];
+}
+
+export interface AddTeamMembersParam {
+    userId: string;
+    projectId: string;
+    teamId: string;
+    members: string[];
+}
+
+export interface DeleteTeamMembersParam {
+    userId: string;
+    projectId: string;
+    teamId: string;
+    members: string[];
+}
+
 export interface TeamService extends BaseService {
     /**
      * Create teams. Can be created by any member and project owner
      */
-    createTeams(data: {
-        userId: string;
-        projectId: string;
-        teams: string[];
-    }): Promise<Team[]>;
+    createTeams(data: CreateTeamsParam): Promise<Team[]>;
 
     /**
      * Delete teams by Ids. Can only be deleted by team creator OR project owner
      * @param data
      */
-    deleteTeams(data: {
-        userId: string;
-        projectId: string;
-        teamIds: string[];
-    }): Promise<string[]>;
+    deleteTeams(data: DeleteTeamsParam): Promise<string[]>;
 
     /**
      * Add members to a team. Members must be part of the project. Deleter should be project owner or team creator.
      * @param data
      */
-    addTeamMembers(data: {
-        userId: string;
-        projectId: string;
-        teamId: string;
-        members: string[];
-    }): Promise<TeamMember[]>;
+    addTeamMembers(data: AddTeamMembersParam): Promise<TeamMember[]>;
 
     /**
      * Delete team members. Members must be part of the project. And deleter should be project owner or team creator
      * @param data
      */
-    deleteTeamMembers(data: {
-        userId: string;
-        projectId: string;
-        teamId: string;
-        members: string[];
-    }): Promise<string[]>;
+    deleteTeamMembers(data: DeleteTeamMembersParam): Promise<string[]>;
 }

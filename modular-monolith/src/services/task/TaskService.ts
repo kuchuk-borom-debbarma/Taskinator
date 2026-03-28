@@ -15,33 +15,39 @@ export type ProjectTask = {
     updatedAt: Date;
 }
 
-export interface TaskService extends BaseService {
-    createTask(data: {
-        userId: string;
-        projectId: string;
-        title: string;
-        description: string;
+export interface CreateTaskParam {
+    userId: string;
+    projectId: string;
+    title: string;
+    description: string;
+    teamId?: string;
+    memberId?: string;
+    parentTaskId?: string;
+    initialStatus: string;
+}
+
+export interface DeleteTasksParam {
+    userId: string;
+    projectId: string;
+    taskIds: string[];
+}
+
+export interface UpdateTasksParam {
+    userId: string;
+    projectId: string;
+    tasks: {
+        id: string;
+        status?: string;
         teamId?: string;
         memberId?: string;
         parentTaskId?: string;
-        initialStatus: string;
-    }): Promise<ProjectTask[]>
+    }[];
+}
 
-    deleteTask(data: {
-        userId: string;
-        projectId: string;
-        taskIds: string[];
-    }): Promise<string[]>
+export interface TaskService extends BaseService {
+    createTask(data: CreateTaskParam): Promise<ProjectTask[]>
 
-    updateTasks(data: {
-        userId: string;
-        projectId: string;
-        tasks: {
-            id: string;
-            status?: string;
-            teamId?: string;
-            memberId?: string;
-            parentTaskId?: string;
-        }[]
-    }): Promise<string[]>;
+    deleteTask(data: DeleteTasksParam): Promise<string[]>
+
+    updateTasks(data: UpdateTasksParam): Promise<string[]>;
 }

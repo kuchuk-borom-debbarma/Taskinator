@@ -1,13 +1,16 @@
 import { db } from '../../../database';
-import type { Team, TeamMember } from '../TeamService.ts';
+import type {
+    AddTeamMembersParam,
+    CreateTeamsParam,
+    DeleteTeamMembersParam,
+    DeleteTeamsParam,
+    Team,
+    TeamMember,
+} from '../TeamService.ts';
 import { getTimeString } from '../../../utils/utils.ts';
 import { sql } from 'kysely';
 
-export const insertTeam = async (data: {
-    userId: string;
-    projectId: string;
-    teams: string[];
-}): Promise<Team[]> => {
+export const insertTeam = async (data: CreateTeamsParam): Promise<Team[]> => {
     const added = await sql<Team>`
         INSERT INTO project_team (fk_project_id, name, created_at, fk_user_id)
         SELECT ${data.projectId},
@@ -24,11 +27,9 @@ export const insertTeam = async (data: {
     return added.rows;
 };
 
-export const deleteTeams = async (data: {
-    userId: string;
-    projectId: string;
-    teamIds: string[];
-}): Promise<string[]> => {
+export const deleteTeams = async (
+    data: DeleteTeamsParam,
+): Promise<string[]> => {
     /*
      * Delete teams by ID scoped to the project.
      * Auth rule: userId must be either the project owner (EXISTS check)
@@ -56,12 +57,9 @@ export const deleteTeams = async (data: {
     return result.rows.map((r) => r.id);
 };
 
-export const insertTeamMembers = async (data: {
-    userId: string;
-    projectId: string;
-    teamId: string;
-    members: string[];
-}): Promise<TeamMember[]> => {
+export const insertTeamMembers = async (
+    data: AddTeamMembersParam,
+): Promise<TeamMember[]> => {
     /*
      * Insert members into a team scoped to the project.
      * Auth rule: userId must be either the project owner (project EXISTS check)
@@ -94,12 +92,9 @@ export const insertTeamMembers = async (data: {
     return result.rows;
 };
 
-export const deleteTeamMembers = async (data: {
-    userId: string;
-    projectId: string;
-    teamId: string;
-    members: string[];
-}): Promise<string[]> => {
+export const deleteTeamMembers = async (
+    data: DeleteTeamMembersParam,
+): Promise<string[]> => {
     /*
      * Delete members from a team scoped to the project.
      * Auth rule: userId must be either the project owner (project EXISTS check)

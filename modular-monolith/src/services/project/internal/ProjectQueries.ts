@@ -1,5 +1,8 @@
 import type {
+    AddProjectMembersParam,
     CreateProjectParam,
+    DeleteProjectMembersParam,
+    DeleteProjectsParam,
     Project,
     ProjectMember,
 } from '../ProjectService.ts';
@@ -58,11 +61,9 @@ export const insertProjects = async (
     }));
 };
 
-export const insertProjectMembers = async (data: {
-    userId: string;
-    projectId: string;
-    usersToAdd: string[];
-}): Promise<ProjectMember[]> => {
+export const insertProjectMembers = async (
+    data: AddProjectMembersParam,
+): Promise<ProjectMember[]> => {
     const result = await sql<ProjectMember>`
         INSERT INTO project_member (fk_user_id, fk_project_id)
         SELECT unnest(${data.usersToAdd}::text[]),
@@ -81,10 +82,7 @@ export const insertProjectMembers = async (data: {
     return result.rows;
 };
 
-export const deleteProjects = async (data: {
-    userId: string;
-    projectIds: string[];
-}) => {
+export const deleteProjects = async (data: DeleteProjectsParam) => {
     const deleted = await db
         .deleteFrom('project')
         .where('id', 'in', data.projectIds)
@@ -106,11 +104,9 @@ export const deleteProjects = async (data: {
     }));
 };
 
-export const deleteProjectMembers = async (data: {
-    userId: string;
-    projectId: string;
-    memberIds: string[];
-}) => {
+export const deleteProjectMembers = async (
+    data: DeleteProjectMembersParam,
+) => {
     const result = await sql<ProjectMember>`
         DELETE
         FROM project_member

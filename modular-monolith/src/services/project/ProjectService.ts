@@ -23,6 +23,23 @@ export interface CreateProjectParam {
     userId: string;
 }
 
+export interface DeleteProjectsParam {
+    userId: string;
+    projectIds: string[];
+}
+
+export interface AddProjectMembersParam {
+    userId: string;
+    projectId: string;
+    usersToAdd: string[];
+}
+
+export interface DeleteProjectMembersParam {
+    userId: string;
+    projectId: string;
+    memberIds: string[];
+}
+
 export interface ProjectService extends BaseService {
     /**
      * Create single project
@@ -34,23 +51,12 @@ export interface ProjectService extends BaseService {
      */
     createProjects(data: CreateProjectParam[]): Promise<Project[]>;
 
-    deleteProjects(data: {
-        userId: string;
-        projectIds: string[];
-    }): Promise<void>;
+    deleteProjects(data: DeleteProjectsParam): Promise<void>;
 
     /**
      * Add members to a project
      */
-    addProjectMembers(data: {
-        userId: string;
-        projectId: string;
-        usersToAdd: string[];
-    }): Promise<ProjectMember[]>;
+    addProjectMembers(data: AddProjectMembersParam): Promise<ProjectMember[]>;
 
-    deleteProjectMembers(data: {
-        userId: string;
-        projectId: string;
-        memberIds: string[];
-    }): Promise<void>;
+    deleteProjectMembers(data: DeleteProjectMembersParam): Promise<void>;
 }

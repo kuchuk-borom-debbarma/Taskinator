@@ -1,4 +1,12 @@
-import type { Team, TeamMember, TeamService } from '../TeamService.ts';
+import type {
+    AddTeamMembersParam,
+    CreateTeamsParam,
+    DeleteTeamMembersParam,
+    DeleteTeamsParam,
+    Team,
+    TeamMember,
+    TeamService,
+} from '../TeamService.ts';
 import type { Producer } from 'kafkajs';
 import { kafka } from '../../../kafka';
 import {
@@ -24,12 +32,7 @@ export class TeamServiceImpl implements TeamService {
         });
     }
 
-    async addTeamMembers(data: {
-        userId: string;
-        projectId: string;
-        teamId: string;
-        members: string[];
-    }): Promise<TeamMember[]> {
+    async addTeamMembers(data: AddTeamMembersParam): Promise<TeamMember[]> {
         const added = await insertTeamMembers(data);
 
         if (_.isEmpty(added)) {
@@ -55,11 +58,7 @@ export class TeamServiceImpl implements TeamService {
         return added;
     }
 
-    async createTeams(data: {
-        userId: string;
-        projectId: string;
-        teams: string[];
-    }): Promise<Team[]> {
+    async createTeams(data: CreateTeamsParam): Promise<Team[]> {
         const added = await insertTeam(data);
         const addedTeams = added.map((value) => value.id);
 
@@ -81,12 +80,7 @@ export class TeamServiceImpl implements TeamService {
         return added;
     }
 
-    async deleteTeamMembers(data: {
-        userId: string;
-        projectId: string;
-        teamId: string;
-        members: string[];
-    }): Promise<string[]> {
+    async deleteTeamMembers(data: DeleteTeamMembersParam): Promise<string[]> {
         const deleted = await deleteTeamMembers(data);
 
         if (_.isEmpty(deleted)) {
@@ -113,11 +107,7 @@ export class TeamServiceImpl implements TeamService {
         return deleted;
     }
 
-    async deleteTeams(data: {
-        userId: string;
-        projectId: string;
-        teamIds: string[];
-    }): Promise<string[]> {
+    async deleteTeams(data: DeleteTeamsParam): Promise<string[]> {
         const deleted = await deleteTeams(data);
 
         if (_.isEmpty(deleted)) {

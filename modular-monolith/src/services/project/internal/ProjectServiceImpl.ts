@@ -1,5 +1,8 @@
 import type {
+    AddProjectMembersParam,
     CreateProjectParam,
+    DeleteProjectMembersParam,
+    DeleteProjectsParam,
     Project,
     ProjectMember,
     ProjectService,
@@ -38,11 +41,7 @@ export class ProjectServiceImpl implements ProjectService {
         console.log(`Connected producer ${this.constructor.name}`);
     }
 
-    async deleteProjectMembers(data: {
-        userId: string;
-        projectId: string;
-        memberIds: string[];
-    }): Promise<void> {
+    async deleteProjectMembers(data: DeleteProjectMembersParam): Promise<void> {
         const deleted = await deleteProjectMembers(data);
 
         if (!deleted.length) {
@@ -66,10 +65,7 @@ export class ProjectServiceImpl implements ProjectService {
         });
     }
 
-    async deleteProjects(data: {
-        userId: string;
-        projectIds: string[];
-    }): Promise<void> {
+    async deleteProjects(data: DeleteProjectsParam): Promise<void> {
         const deleted = await deleteProjects(data);
 
         if (!deleted.length) {
@@ -92,11 +88,9 @@ export class ProjectServiceImpl implements ProjectService {
         });
     }
 
-    async addProjectMembers(data: {
-        userId: string;
-        projectId: string;
-        usersToAdd: string[];
-    }): Promise<ProjectMember[]> {
+    async addProjectMembers(
+        data: AddProjectMembersParam,
+    ): Promise<ProjectMember[]> {
         const added = await insertProjectMembers(data);
 
         if (!added.length) {
