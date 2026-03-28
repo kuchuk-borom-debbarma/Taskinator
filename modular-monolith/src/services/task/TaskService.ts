@@ -9,6 +9,7 @@ export type ProjectTask = {
     title: string;
     description: string;
     status: string;
+    materializedPath: string;
     createdBy: string;
     updatedBy: string;
     createdAt: Date;

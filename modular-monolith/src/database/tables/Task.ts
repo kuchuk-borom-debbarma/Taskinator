@@ -16,6 +16,7 @@ export interface ProjectTaskTable {
     title: string;
     description: string;
     status: string;
+    materialized_path: string;
     created_by: string;
     updated_by: string;
     created_at: ColumnType<Date, string | undefined, never>;

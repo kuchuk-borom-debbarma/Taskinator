@@ -43,6 +43,7 @@ describe('TaskQueries', () => {
                 title: 'Task 1',
                 description: 'Desc 1',
                 status: 'TODO',
+                materializedPath: '',
                 createdBy: 'user-1',
                 updatedBy: 'user-1',
                 createdAt: new Date(),

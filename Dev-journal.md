@@ -80,7 +80,12 @@ Both `projects` and `project_members` are read-heavy. Members are added infreque
 
 # Entry 4: Database Schema (Part 2 — Task Table)
 
-Tasks are hierarchical. While a **Materialized path** was considered for its read efficiency, the current implementation uses an **Adjacency List (`fk_parent_task_id`)**. This keeps the initial schema simple and avoids the path-update overhead while the domain model is still evolving.
+Tasks are hierarchical. The system uses a **Materialized Path (`materialized_path`)** approach for high-performance subtree queries. 
+
+### Implementation Details:
+- **Insertions**: The path is automatically constructed during insertion by fetching the parent's path and appending the parent's ID.
+- **Updates**: When a task's parent is changed, the system uses a recursive-like atomic update (via SQL `WITH` and `LIKE` clauses) to recalculate the path for the task itself and all its descendants. This ensures that the entire subtree is moved correctly without breaking the path structure.
+- **Tradeoffs**: While updates (moving subtrees) are more complex, the read efficiency for fetching entire task trees or breadcrumbs is significantly improved, which aligns with the expected query patterns for task management.
 
 ---
 
