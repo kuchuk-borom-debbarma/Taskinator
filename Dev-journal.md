@@ -113,3 +113,19 @@ To handle the side effects of a `PROJECT_DELETED` event (deleting members, teams
 
 ### Benefits:
 This approach follows the **Choreography Pattern**. The Project service simply broadcasts that a project was deleted; it doesn't need to know who is listening or what they need to do. This makes the system highly extensible—if a new "Notification" service needs to send emails when a project is deleted, we just add a new consumer group without touching existing code.
+
+---
+
+# Entry 7: Project Member Cleanup Strategy
+
+## Automated Cascading Cleanups for Member Removal
+
+When a member is removed from a project (`PROJECT_MEMBER_DELETED`), the system must ensure data consistency across multiple domains. We implemented two new specialized listeners to handle this asynchronously.
+
+### Domain-Specific Actions:
+1. **Team Service**: A new listener in the Team domain (`team-member-cleanup-group`) automatically removes the user from all teams they belonged to within that specific project. This prevents ghost members in teams.
+2. **Task Service**: A listener in the Task domain (`task-member-cleanup-group`) unassigns the user from any tasks they were responsible for in that project by setting `fk_member_id` to `null`. This preserves the task data but clears the responsibility.
+
+### Technical Refinement:
+- **Kysely Integration**: Updated the central `Database` interface to include the `projectTeamMember` table definition and standardized on camelCase table naming conventions (`projectMember`, `projectTask`, `projectTeam`) to align with Kysely's type-safety requirements.
+- **Registry Expansion**: These listeners were added to the central Kafka registry, ensuring they start/stop with the main application lifecycle.
