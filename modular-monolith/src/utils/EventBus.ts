@@ -74,7 +74,10 @@ class KafkaBus implements Bus {
                     await withBatchIdempotency(allEvents, groupId, async (unprocessed) => {
                         for (const e of unprocessed) {
                             if (!isRunning() || isStale()) break;
-                            await handlers[e.type](e.data);
+                            const handler = handlers[e.type];
+                            if (handler) {
+                                await handler(e.data);
+                            }
                         }
                     });
                 }

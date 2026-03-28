@@ -1,4 +1,5 @@
 import type {BaseService} from "../project";
+
 export type ProjectTask = {
     id: string;
     projectId: string;
@@ -16,21 +17,17 @@ export type ProjectTask = {
     createdAt: Date;
     updatedAt: Date;
 }
-...
-export interface UpdateTasksParam {
+
+export interface CreateTaskParam {
     userId: string;
     projectId: string;
-    tasks: {
-        id: string;
-        version: number;
-        lastEventId?: string;
-        status?: string;
-        teamId?: string;
-        memberId?: string;
-        parentTaskId?: string;
-    }[];
+    title: string;
+    description: string;
+    teamId?: string;
+    memberId?: string;
+    parentTaskId?: string;
+    initialStatus: string;
 }
-
 
 export interface DeleteTasksParam {
     userId: string;
@@ -43,6 +40,8 @@ export interface UpdateTasksParam {
     projectId: string;
     tasks: {
         id: string;
+        version: number;
+        lastEventId?: string;
         status?: string;
         teamId?: string;
         memberId?: string;
