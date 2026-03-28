@@ -72,6 +72,8 @@ export class TaskServiceImpl implements TaskService {
                 userId: data.userId,
                 projectId: data.projectId,
                 taskId: taskUpdate.id,
+                version: taskUpdate.version,
+                lastEventId: taskUpdate.lastEventId,
                 status: taskUpdate.status,
                 teamId: taskUpdate.teamId,
                 memberId: taskUpdate.memberId,
@@ -99,7 +101,7 @@ export class TaskServiceImpl implements TaskService {
         }
 
         if (updatedIds.length !== data.tasks.length) {
-            throw new Error('Unauthorized or some tasks not found/invalid');
+            throw new Error('Unauthorized, some tasks not found, or version conflict');
         }
 
         return updatedIds;

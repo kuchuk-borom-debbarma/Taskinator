@@ -107,6 +107,8 @@ export interface UpdateTaskParam {
     userId: string;
     projectId: string;
     taskId: string;
+    version: number;
+    lastEventId?: string;
     status?: string;
     teamId?: string;
     memberId?: string;
@@ -143,10 +145,13 @@ export const updateTask = async (data: UpdateTaskParam): Promise<string | null> 
                                                  WHEN ${data.parentTaskId !== undefined} THEN ${data.parentTaskId}
                                                  ELSE fk_parent_task_id END,
                          materialized_path = (SELECT new_path FROM new_path_calculation),
+                         last_event_id = ${data.lastEventId ?? null},
+                         version = version + 1,
                          updated_by = ${data.userId},
                          updated_at = ${getTimeString()}
                      WHERE id = ${data.taskId}
                          AND fk_project_id = ${data.projectId}
+                         AND version = ${data.version}
                          -- Rule 1: Auth check (Project Owner or Project Member)
                          AND (
                              EXISTS (SELECT 1 FROM project WHERE id = ${data.projectId} AND fk_user_id = ${data.userId})

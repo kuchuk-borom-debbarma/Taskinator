@@ -12,6 +12,7 @@ export interface ProjectTeamTable {
     fk_project_id: string;
     fk_user_id: string; //The user who created this team
     last_event_id: string | null;
+    version: Generated<number>;
     created_at: ColumnType<Date, string | undefined, never>;
     updated_at: ColumnType<Date, undefined>;
 }
@@ -26,6 +27,7 @@ export interface ProjectTeamMemberTable {
     fk_user_id: string;
     fk_team_id: string;
     last_event_id: string | null;
+    version: Generated<number>;
     created_at: ColumnType<Date, string | undefined, never>;
     updated_at: ColumnType<Date, undefined>;
 }
