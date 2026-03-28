@@ -225,3 +225,13 @@ export const unassignTeamFromAllTasks = async (projectId: string, teamId: string
         .execute();
 };
 
+export const unassignMemberFromTeamTasks = async (projectId: string, teamId: string, memberId: string) => {
+    await db
+        .updateTable('projectTask')
+        .set({ fk_member_id: null })
+        .where('fk_project_id', '=', projectId)
+        .where('fk_team_id', '=', teamId)
+        .where('fk_member_id', '=', memberId)
+        .execute();
+};
+

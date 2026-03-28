@@ -8,6 +8,8 @@ import { projectMemberDeletedListener as teamMemberCleanup } from '../services/t
 import { projectTeamDeletedListener as taskTeamCleanup } from '../services/task/internal/listeners/ProjectTeamDeletedListener';
 import { projectTeamDeletedListener as teamTeamCleanup } from '../services/team/internal/listeners/ProjectTeamDeletedListener';
 
+import { projectTeamMemberDeletedListener as taskTeamMemberCleanup } from '../services/task/internal/listeners/ProjectTeamMemberDeletedListener';
+
 export {
     taskProjectCleanup,
     teamProjectCleanup,
@@ -16,6 +18,7 @@ export {
     teamMemberCleanup,
     taskTeamCleanup,
     teamTeamCleanup,
+    taskTeamMemberCleanup,
 };
 
 export const startConsumers = async () => {
@@ -30,6 +33,8 @@ export const startConsumers = async () => {
 
         taskTeamCleanup.init(),
         teamTeamCleanup.init(),
+
+        taskTeamMemberCleanup.init(),
     ]);
 };
 
@@ -45,5 +50,7 @@ export const stopConsumers = async () => {
 
         taskTeamCleanup.stop(),
         teamTeamCleanup.stop(),
+
+        taskTeamMemberCleanup.stop(),
     ]);
 };
