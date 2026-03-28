@@ -268,3 +268,26 @@ If another process updated the task while the current process was working, the `
 ### 4. Integration with Kafka
 By passing the `version` back and forth through our Kafka events, we extend this protection into our asynchronous flows. If an out-of-order event arrives with an old version, the database-level check will naturally reject it, maintaining perfect consistency across our modular monolith.
 
+
+---
+
+# Entry 15: Defense in Depth — The Role of last_event_id
+
+## Why we track the specific Event ID on the Entity
+
+While the `processed_event` table tells the Consumer "I have seen this message," the `last_event_id` on the Entity (Task, Project, etc.) tells the Record "This is the specific event that last changed me."
+
+### 1. Auditability & Forensic Debugging
+In a 10k RPS system, pinpointing the cause of a state change is critical. By storing the `last_event_id` directly on the row:
+*   **Instant Correlation**: We can map any database row back to its originating Kafka message without searching through millions of logs.
+*   **State Provenance**: We know exactly which event version is responsible for the current data.
+
+### 2. Out-of-Order Guardrails (Fencing)
+Kafka guarantees order per partition, but distributed systems can still experience out-of-order delivery during rebalances or manual replays. The `last_event_id` acts as a **Fencing Token**:
+*   It allows the database to reject an update if the incoming event is "older" than the one currently recorded, providing a secondary layer of protection alongside the `version` column.
+
+### 3. Summary of Synchronization Tools
+*   **`processed_event` Table**: Tracks Consumer memory ("Have I done this?").
+*   **`version` Column**: Manages Producer concurrency ("Am I overwriting someone?").
+*   **`last_event_id` Column**: Records Entity identity ("Which event made me this way?").
+
