@@ -186,3 +186,29 @@ To maintain strict data integrity as users move in and out of teams, we expanded
 - **Service Standardization**: Refactored `TeamServiceImpl` to use the unified `EventBus` abstraction, eliminating double-stringification bugs and bringing it in line with the Project and Task services.
 - **Actor vs. Subject Distinction**: Corrected the `ProjectService` to properly distinguish between the **Actor** (the admin performing the action) and the **Subject** (the user being added or removed) in Kafka payloads. This ensures listeners correctly target the subject for cleanup rather than the actor.
 
+
+---
+
+# Entry 12: Event Cleanup Strategy — Choreography vs. Orchestration
+
+## Global vs. Targeted Cleanup
+
+The system employs a hybrid event-driven strategy to handle data consistency across domain boundaries, balancing between **Event Choreography** and **Targeted Orchestration**.
+
+### 1. Global Cleanup (Choreography)
+For "Root" events like `PROJECT_DELETED`, we use a **Broadcast-and-React** pattern. Instead of a cascading chain (Project -> Team -> Member -> Task), every interested service listens directly to the `PROJECT_DELETED` signal.
+
+*   **Benefits**:
+    *   **Parallelism**: Services clean up their respective tables simultaneously, significantly reducing the total time for a project wipe.
+    *   **Resilience**: The Task service doesn't depend on the Team service to "forward" the deletion. If one service is down, others still complete their cleanup, preventing "zombie data."
+    *   **No Event Storms**: We avoid generating thousands of individual "Task Deleted" events when a single "Project Deleted" signal achieves the same goal more efficiently.
+
+### 2. Targeted Cleanup (Surgical Strike)
+For sub-entity deletions (e.g., deleting a single Team or removing one Member), we use a **Targeted Command** pattern.
+
+*   **Flow**: `TeamServiceImpl.deleteTeams` -> `PROJECT_TEAM_DELETED` -> `TaskService` unassigns only that team's tasks.
+*   **Logic**: This ensures that surgical changes in one domain are correctly reflected in others without requiring a full project-level sweep.
+
+### Architectural Verdict
+This hybrid approach provides the best of both worlds: high-throughput bulk deletions for project-level actions and precise, decoupled consistency for day-to-day entity management. It maintains strict module boundaries while ensuring the system remains resilient to partial failures.
+
