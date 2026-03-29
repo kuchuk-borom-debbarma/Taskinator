@@ -5,7 +5,7 @@ import type {
     ProjectTeamTable,
     ProjectTeamMemberTable,
 } from './tables/ProjectTeam.ts';
-import type { ProjectTaskTable } from './tables/Task.ts';
+import type {ProjectTaskTable, ProjectTaskTriggerTable} from './tables/Task.ts';
 import type { ProcessedEventTable } from './tables/ProcessedEvent.ts';
 
 export interface Database {
@@ -14,6 +14,7 @@ export interface Database {
     project_team: ProjectTeamTable;
     project_team_member: ProjectTeamMemberTable;
     project_task: ProjectTaskTable;
+    project_task_trigger_table: ProjectTaskTriggerTable;
     processed_event: ProcessedEventTable;
 }
 

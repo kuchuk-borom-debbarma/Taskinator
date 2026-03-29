@@ -1,4 +1,4 @@
-import type { ProjectTeamTable } from './ProjectTeam.ts';
+import type {ProjectTeamTable} from './ProjectTeam.ts';
 import type {
     ColumnType,
     Generated,
@@ -28,3 +28,12 @@ export interface ProjectTaskTable {
 export type ProjectTask = Selectable<ProjectTaskTable>;
 export type NewProjectTask = Insertable<ProjectTaskTable>;
 export type ProjectTaskUpdate = Updateable<ProjectTaskTable>;
+
+export interface ProjectTaskTriggerTable {
+    id: Generated<string>;
+    name: string;
+    fk_project_id: string;
+    fk_task_id: string;
+    trigger_type: string;
+    trigger_data: any; //JSONB
+}
