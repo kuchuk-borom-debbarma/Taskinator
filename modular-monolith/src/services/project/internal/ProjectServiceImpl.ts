@@ -18,12 +18,7 @@ import {
     insertProjects,
 } from './ProjectQueries.ts';
 
-import {
-    KAFKA_TOPICS,
-    KAFKA_EVENTS,
-    createEvent,
-} from '../../../utils/kafka.ts';
-import { eventBus } from '../../../utils/EventBus.ts';
+import { KAFKA_EVENTS, eventBus } from '../../../utils/EventBus.ts';
 
 export class ProjectServiceImpl implements ProjectService {
     async getProjects(userId: string): Promise<Project[]> {
@@ -38,7 +33,10 @@ export class ProjectServiceImpl implements ProjectService {
         return getProject(userId, projectId);
     }
 
-    async getProjectMembers(userId: string, projectId: string): Promise<ProjectMember[]> {
+    async getProjectMembers(
+        userId: string,
+        projectId: string,
+    ): Promise<ProjectMember[]> {
         return getProjectMembers(userId, projectId);
     }
 
@@ -59,16 +57,18 @@ export class ProjectServiceImpl implements ProjectService {
             throw new Error('Failed to delete any project members');
         }
 
-        const events = deleted.map((v) =>
-            createEvent(KAFKA_EVENTS.PROJECT_MEMBER.DELETED, data.projectId, {
-                userId: v.userId,
-                projectId: data.projectId,
-                actorId: data.userId,
-                memberId: v.id,
-            }),
+        await eventBus.publish(
+            KAFKA_EVENTS.PROJECT_MEMBER.DELETED,
+            deleted.map((v) => ({
+                key: data.projectId,
+                data: {
+                    userId: v.userId,
+                    projectId: data.projectId,
+                    actorId: data.userId,
+                    memberId: v.id,
+                },
+            })),
         );
-
-        await eventBus.emit(KAFKA_TOPICS.PROJECT_MEMBER, events);
     }
 
     async deleteProjects(data: DeleteProjectsParam): Promise<void> {
@@ -78,14 +78,16 @@ export class ProjectServiceImpl implements ProjectService {
             throw new Error('Failed to delete any project');
         }
 
-        const events = deleted.map((project) =>
-            createEvent(KAFKA_EVENTS.PROJECT.DELETED, project.id, {
-                userId: data.userId,
-                projectId: project.id,
-            }),
+        await eventBus.publish(
+            KAFKA_EVENTS.PROJECT.DELETED,
+            deleted.map((project) => ({
+                key: project.id,
+                data: {
+                    userId: data.userId,
+                    projectId: project.id,
+                },
+            })),
         );
-
-        await eventBus.emit(KAFKA_TOPICS.PROJECT, events);
     }
 
     async addProjectMembers(
@@ -97,16 +99,18 @@ export class ProjectServiceImpl implements ProjectService {
             throw new Error('Failed to add any project members');
         }
 
-        const events = added.map((member) =>
-            createEvent(KAFKA_EVENTS.PROJECT_MEMBER.ADDED, data.projectId, {
-                projectId: data.projectId,
-                userId: member.userId,
-                actorId: data.userId,
-                memberId: member.id,
-            }),
+        await eventBus.publish(
+            KAFKA_EVENTS.PROJECT_MEMBER.ADDED,
+            added.map((member) => ({
+                key: data.projectId,
+                data: {
+                    projectId: data.projectId,
+                    userId: member.userId,
+                    actorId: data.userId,
+                    memberId: member.id,
+                },
+            })),
         );
-
-        await eventBus.emit(KAFKA_TOPICS.PROJECT_MEMBER, events);
 
         return added;
     }
@@ -118,14 +122,14 @@ export class ProjectServiceImpl implements ProjectService {
             throw new Error('Failed to create project');
         }
 
-        await eventBus.emit(
-            KAFKA_TOPICS.PROJECT,
-            createEvent(KAFKA_EVENTS.PROJECT.CREATED, project.id, {
+        await eventBus.publish(KAFKA_EVENTS.PROJECT.CREATED, {
+            key: project.id,
+            data: {
                 projectId: project.id,
                 userId: data.userId,
                 name: project.name,
-            }),
-        );
+            },
+        });
 
         return project;
     }
@@ -137,15 +141,17 @@ export class ProjectServiceImpl implements ProjectService {
             throw new Error('Failed to create projects');
         }
 
-        const events = projects.map((project) =>
-            createEvent(KAFKA_EVENTS.PROJECT.CREATED, project.id, {
-                projectId: project.id,
-                userId: project.userId,
-                name: project.name,
-            }),
+        await eventBus.publish(
+            KAFKA_EVENTS.PROJECT.CREATED,
+            projects.map((project) => ({
+                key: project.id,
+                data: {
+                    projectId: project.id,
+                    userId: project.userId,
+                    name: project.name,
+                },
+            })),
         );
-
-        await eventBus.emit(KAFKA_TOPICS.PROJECT, events);
 
         return projects;
     }

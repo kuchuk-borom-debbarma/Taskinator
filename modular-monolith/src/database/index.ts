@@ -5,7 +5,10 @@ import type {
     ProjectTeamTable,
     ProjectTeamMemberTable,
 } from './tables/ProjectTeam.ts';
-import type {ProjectTaskTable, ProjectTaskTriggerTable} from './tables/Task.ts';
+import type {
+    ProjectTaskTable,
+    ProjectTaskTriggerTable,
+} from './tables/Task.ts';
 import type { ProcessedEventTable } from './tables/ProcessedEvent.ts';
 
 export interface Database {

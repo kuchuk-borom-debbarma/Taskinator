@@ -60,7 +60,7 @@ describe('Project Cleanup Integration (In-Memory Event Bus)', () => {
         // 3. Assert (Poll DB for cleanup)
         await waitFor(async () => {
             const remainingTasks = await db
-                .selectFrom('projectTask')
+                .selectFrom('project_task')
                 .where('fk_project_id', '=', projectId)
                 .execute();
 

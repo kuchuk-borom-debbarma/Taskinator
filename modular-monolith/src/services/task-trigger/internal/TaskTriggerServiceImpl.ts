@@ -1,4 +1,4 @@
-import type {TaskTriggerService} from "../TaskTriggerService.ts";
+import type { TaskTriggerService } from '../TaskTriggerService.ts';
 
 export class TaskTriggerServiceImpl implements TaskTriggerService {
     async addTriggerToTask(data: {

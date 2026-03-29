@@ -1,3 +1,3 @@
-import {TaskTriggerServiceImpl} from "./internal/TaskTriggerServiceImpl.ts";
+import { TaskTriggerServiceImpl } from './internal/TaskTriggerServiceImpl.ts';
 
-export const taskTriggerService = new TaskTriggerServiceImpl()
+export const taskTriggerService = new TaskTriggerServiceImpl();

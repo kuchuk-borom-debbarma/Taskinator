@@ -1,11 +1,10 @@
-import {eventBus} from "../../../../utils/EventBus.ts";
-import {KAFKA_EVENTS, KAFKA_TOPICS} from "../../../../utils/kafka.ts";
+import { KAFKA_EVENTS, eventBus } from '../../../../utils/EventBus.ts';
 
 export class TaskTriggerListener {
     async init() {
-        await eventBus.on(KAFKA_TOPICS.PROJECT_TASK, 'task-trigger-group', {
+        await eventBus.subscribe('task-trigger-group', {
             [KAFKA_EVENTS.PROJECT_TASK.UPDATED]: async (data) => {
-                const {taskId} = data;
+                const { taskId } = data;
                 console.log(
                     `[Task Trigger Service] Publishing event to trigger all trigger assigned to task ${taskId}`,
                 );
@@ -15,8 +14,7 @@ export class TaskTriggerListener {
         console.log('[Task Service] ProjectDeletedListener started');
     }
 
-    async stop() {
-    }
+    async stop() {}
 }
 
 export const taskTriggerListener = new TaskTriggerListener();

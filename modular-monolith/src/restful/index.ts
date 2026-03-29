@@ -12,7 +12,9 @@ export const startRestServer = (port: number = 3000) => {
 
     // Request Logger
     app.use((req, _res, next) => {
-        console.log(`[REST] ${new Date().toISOString()} - ${req.method} ${req.url}`);
+        console.log(
+            `[REST] ${new Date().toISOString()} - ${req.method} ${req.url}`,
+        );
         next();
     });
 

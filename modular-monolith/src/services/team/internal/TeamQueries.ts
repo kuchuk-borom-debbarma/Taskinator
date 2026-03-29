@@ -78,10 +78,12 @@ export const insertTeamMembers = async (
         RETURNING
             id, fk_team_id AS "teamId", fk_user_id AS "userId", fk_project_id AS "projectId", version, last_event_id AS "lastEventId", created_at AS "createdAt", updated_at AS "updatedAt"
     `.execute(db);
-    
+
     if (result.rows.length === 0)
-        throw new Error('Unauthorized, team not found, or members are not part of the project');
-        
+        throw new Error(
+            'Unauthorized, team not found, or members are not part of the project',
+        );
+
     return result.rows;
 };
 
@@ -112,7 +114,7 @@ export const deleteTeamMembers = async (
 export const deleteAllProjectTeams = async (projectId: string) => {
     await db
         .deleteFrom('project_team')
-        .where('fk_project_id', '=', sql`${projectId}::uuid`)
+        .where('fk_project_id', '=', sql`${projectId}::uuid` as any)
         .execute();
 };
 
@@ -122,7 +124,7 @@ export const removeUserFromAllTeams = async (
 ) => {
     await db
         .deleteFrom('project_team_member')
-        .where('fk_project_id', '=', sql`${projectId}::uuid`)
+        .where('fk_project_id', '=', sql`${projectId}::uuid` as any)
         .where('fk_user_id', '=', userId)
         .execute();
 };
@@ -133,8 +135,8 @@ export const deleteAllTeamMembers = async (
 ) => {
     await db
         .deleteFrom('project_team_member')
-        .where('fk_project_id', '=', sql`${projectId}::uuid`)
-        .where('fk_team_id', '=', sql`${teamId}::uuid`)
+        .where('fk_project_id', '=', sql`${projectId}::uuid` as any)
+        .where('fk_team_id', '=', sql`${teamId}::uuid` as any)
         .execute();
 };
 

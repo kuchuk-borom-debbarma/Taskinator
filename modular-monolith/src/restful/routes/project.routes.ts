@@ -43,7 +43,10 @@ router.get('/:projectId/members', async (req, res) => {
         const { projectId } = req.params;
         const { userId } = req.query;
         if (!userId) throw new Error('userId is required');
-        const members = await projectService.getProjectMembers(userId as string, projectId);
+        const members = await projectService.getProjectMembers(
+            userId as string,
+            projectId,
+        );
         res.status(200).json(members);
     } catch (error: any) {
         console.error('[REST] Error fetching project members:', error);

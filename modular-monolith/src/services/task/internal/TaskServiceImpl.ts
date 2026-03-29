@@ -5,18 +5,13 @@ import type {
     TaskService,
     UpdateTasksParam,
 } from '../TaskService.ts';
-import {
-    createEvent,
-    KAFKA_EVENTS,
-    KAFKA_TOPICS,
-} from '../../../utils/kafka.ts';
+import { KAFKA_EVENTS, eventBus } from '../../../utils/EventBus.ts';
 import {
     deleteTasks,
     getTasks,
     insertTask,
     updateTask,
 } from './TaskQueries.ts';
-import { eventBus } from '../../../utils/EventBus.ts';
 
 export class TaskServiceImpl implements TaskService {
     async getTasks(userId: string, projectId: string): Promise<ProjectTask[]> {
@@ -36,15 +31,15 @@ export class TaskServiceImpl implements TaskService {
     async createTask(data: CreateTaskParam): Promise<ProjectTask> {
         const task = await insertTask(data);
 
-        await eventBus.emit(
-            KAFKA_TOPICS.PROJECT_TASK,
-            createEvent(KAFKA_EVENTS.PROJECT_TASK.CREATED, task.id, {
+        await eventBus.publish(KAFKA_EVENTS.PROJECT_TASK.CREATED, {
+            key: task.id,
+            data: {
                 taskId: task.id,
                 projectId: task.projectId,
                 userId: data.userId,
                 title: task.title,
-            }),
-        );
+            },
+        });
 
         return task;
     }
@@ -52,22 +47,24 @@ export class TaskServiceImpl implements TaskService {
     async deleteTask(data: DeleteTasksParam): Promise<string[]> {
         const deletedIds = await deleteTasks(data);
 
-        const events = deletedIds.map((taskId: string) =>
-            createEvent(KAFKA_EVENTS.PROJECT_TASK.DELETED, taskId, {
-                taskId,
-                projectId: data.projectId,
-                userId: data.userId,
-            }),
+        await eventBus.publish(
+            KAFKA_EVENTS.PROJECT_TASK.DELETED,
+            deletedIds.map((taskId: string) => ({
+                key: taskId,
+                data: {
+                    taskId,
+                    projectId: data.projectId,
+                    userId: data.userId,
+                },
+            })),
         );
-
-        await eventBus.emit(KAFKA_TOPICS.PROJECT_TASK, events);
 
         return deletedIds;
     }
 
     async updateTasks(data: UpdateTasksParam): Promise<string[]> {
         const updatedIds: string[] = [];
-        const events: any[] = [];
+        const payloads: any[] = [];
 
         for (const taskUpdate of data.tasks) {
             const result = await updateTask({
@@ -85,14 +82,15 @@ export class TaskServiceImpl implements TaskService {
             if (result) {
                 updatedIds.push(result);
 
-                events.push(
-                    createEvent(KAFKA_EVENTS.PROJECT_TASK.UPDATED, result, {
+                payloads.push({
+                    key: result,
+                    data: {
                         taskId: result,
                         projectId: data.projectId,
                         userId: data.userId,
                         updates: taskUpdate,
-                    }),
-                );
+                    },
+                });
             }
         }
 
@@ -102,8 +100,8 @@ export class TaskServiceImpl implements TaskService {
             );
         }
 
-        if (events.length > 0) {
-            await eventBus.emit(KAFKA_TOPICS.PROJECT_TASK, events);
+        if (payloads.length > 0) {
+            await eventBus.publish(KAFKA_EVENTS.PROJECT_TASK.UPDATED, payloads);
         }
 
         return updatedIds;

@@ -7,8 +7,12 @@ const router = Router();
 router.get('/', async (req, res) => {
     try {
         const { userId, projectId } = req.query;
-        if (!userId || !projectId) throw new Error('userId and projectId are required');
-        const teams = await teamService.getTeams(userId as string, projectId as string);
+        if (!userId || !projectId)
+            throw new Error('userId and projectId are required');
+        const teams = await teamService.getTeams(
+            userId as string,
+            projectId as string,
+        );
         res.status(200).json(teams);
     } catch (error: any) {
         console.error('[REST] Error fetching teams:', error);
@@ -21,8 +25,13 @@ router.get('/:teamId/members', async (req, res) => {
     try {
         const { teamId } = req.params;
         const { userId, projectId } = req.query;
-        if (!userId || !projectId) throw new Error('userId and projectId are required');
-        const members = await teamService.getTeamMembers(userId as string, projectId as string, teamId);
+        if (!userId || !projectId)
+            throw new Error('userId and projectId are required');
+        const members = await teamService.getTeamMembers(
+            userId as string,
+            projectId as string,
+            teamId,
+        );
         res.status(200).json(members);
     } catch (error: any) {
         console.error('[REST] Error fetching team members:', error);
@@ -32,10 +41,17 @@ router.get('/:teamId/members', async (req, res) => {
 
 // Create Teams
 router.post('/', async (req, res) => {
-    console.log('[REST] POST /teams request body:', JSON.stringify(req.body, null, 2));
+    console.log(
+        '[REST] POST /teams request body:',
+        JSON.stringify(req.body, null, 2),
+    );
     try {
         const { userId, projectId, teams } = req.body;
-        const result = await teamService.createTeams({ userId, projectId, teams });
+        const result = await teamService.createTeams({
+            userId,
+            projectId,
+            teams,
+        });
         res.status(201).json(result);
     } catch (error: any) {
         console.error('[REST] Error creating teams:', error);
@@ -47,7 +63,11 @@ router.post('/', async (req, res) => {
 router.delete('/', async (req, res) => {
     try {
         const { userId, projectId, teamIds } = req.body;
-        const result = await teamService.deleteTeams({ userId, projectId, teamIds });
+        const result = await teamService.deleteTeams({
+            userId,
+            projectId,
+            teamIds,
+        });
         res.status(200).json(result);
     } catch (error: any) {
         console.error('[REST] Error deleting teams:', error);
@@ -60,7 +80,12 @@ router.post('/:teamId/members', async (req, res) => {
     try {
         const { teamId } = req.params;
         const { userId, projectId, members } = req.body;
-        const result = await teamService.addTeamMembers({ userId, projectId, teamId, members });
+        const result = await teamService.addTeamMembers({
+            userId,
+            projectId,
+            teamId,
+            members,
+        });
         res.status(201).json(members);
     } catch (error: any) {
         console.error('[REST] Error adding team members:', error);
@@ -73,7 +98,12 @@ router.delete('/:teamId/members', async (req, res) => {
     try {
         const { teamId } = req.params;
         const { userId, projectId, members } = req.body;
-        const result = await teamService.deleteTeamMembers({ userId, projectId, teamId, members });
+        const result = await teamService.deleteTeamMembers({
+            userId,
+            projectId,
+            teamId,
+            members,
+        });
         res.status(200).json(result);
     } catch (error: any) {
         console.error('[REST] Error deleting team members:', error);

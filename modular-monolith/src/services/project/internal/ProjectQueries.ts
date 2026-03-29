@@ -96,7 +96,11 @@ export const insertProjectMembers = async (
 export const deleteProjects = async (data: DeleteProjectsParam) => {
     const deleted = await db
         .deleteFrom('project')
-        .where('id', 'in', data.projectIds.map(id => sql`${id}::uuid`))
+        .where(
+            'id',
+            'in',
+            data.projectIds.map((id) => sql`${id}::uuid` as any),
+        )
         .where('fk_user_id', '=', data.userId)
         .returningAll()
         .execute();
@@ -143,7 +147,7 @@ export const deleteProjectMembers = async (data: DeleteProjectMembersParam) => {
 export const deleteAllProjectMembers = async (projectId: string) => {
     await db
         .deleteFrom('project_member')
-        .where('fk_project_id', '=', sql`${projectId}::uuid`)
+        .where('fk_project_id', '=', sql`${projectId}::uuid` as any)
         .execute();
 };
 
@@ -173,7 +177,7 @@ export const getProject = async (
     const p = await db
         .selectFrom('project')
         .selectAll()
-        .where('id', '=', sql`${projectId}::uuid`)
+        .where('id', '=', sql`${projectId}::uuid` as any)
         .where('fk_user_id', '=', userId)
         .executeTakeFirst();
 

@@ -1,4 +1,4 @@
-import type {ProjectTeamTable} from './ProjectTeam.ts';
+import type { ProjectTeamTable } from './ProjectTeam.ts';
 import type {
     ColumnType,
     Generated,
