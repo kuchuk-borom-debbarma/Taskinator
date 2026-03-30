@@ -1,8 +1,8 @@
-import { Kafka, type Producer, type Consumer } from 'kafkajs';
-import { EventEmitter } from 'events';
-import { v4 as uuid } from 'uuid';
-import { db } from '../database';
-import { getTimeString } from './utils';
+import {Kafka, type Producer, type Consumer} from 'kafkajs';
+import {EventEmitter} from 'events';
+import {v4 as uuid} from 'uuid';
+import {db} from '../database';
+import {getTimeString} from './utils';
 
 // --- 1. Constants & Types ---
 export const KAFKA_TOPICS = {
@@ -11,10 +11,11 @@ export const KAFKA_TOPICS = {
     PROJECT_TEAM: 'project-team-events',
     PROJECT_TEAM_MEMBER: 'project-team-member-events',
     PROJECT_TASK: 'project-task-events',
+    PROJECT_TASK_TRIGGER: "project-task-trigger-events"
 } as const;
 
 export const KAFKA_EVENTS = {
-    PROJECT: { CREATED: 'PROJECT_CREATED', DELETED: 'PROJECT_DELETED' },
+    PROJECT: {CREATED: 'PROJECT_CREATED', DELETED: 'PROJECT_DELETED'},
     PROJECT_MEMBER: {
         ADDED: 'PROJECT_MEMBER_ADDED',
         DELETED: 'PROJECT_MEMBER_DELETED',
@@ -32,6 +33,9 @@ export const KAFKA_EVENTS = {
         UPDATED: 'PROJECT_TASK_UPDATED',
         DELETED: 'PROJECT_TASK_DELETED',
     },
+    PROJECT_TASK_TRIGGER: {
+        TRIGGER: 'PROJECT_TASK_TRIGGER',
+    }
 } as const;
 
 /** Mapping of Event Types to Topics for automatic routing. */
@@ -44,10 +48,12 @@ const EVENT_TO_TOPIC: Record<string, string> = {
     [KAFKA_EVENTS.PROJECT_TEAM.DELETED]: KAFKA_TOPICS.PROJECT_TEAM,
     [KAFKA_EVENTS.PROJECT_TEAM_MEMBER.ADDED]: KAFKA_TOPICS.PROJECT_TEAM_MEMBER,
     [KAFKA_EVENTS.PROJECT_TEAM_MEMBER.DELETED]:
-        KAFKA_TOPICS.PROJECT_TEAM_MEMBER,
+    KAFKA_TOPICS.PROJECT_TEAM_MEMBER,
     [KAFKA_EVENTS.PROJECT_TASK.CREATED]: KAFKA_TOPICS.PROJECT_TASK,
     [KAFKA_EVENTS.PROJECT_TASK.UPDATED]: KAFKA_TOPICS.PROJECT_TASK,
     [KAFKA_EVENTS.PROJECT_TASK.DELETED]: KAFKA_TOPICS.PROJECT_TASK,
+    [KAFKA_EVENTS.PROJECT_TASK_TRIGGER.TRIGGER]:
+    KAFKA_TOPICS.PROJECT_TASK_TRIGGER,
 };
 
 export interface DomainEvent<T = any> {
@@ -78,10 +84,12 @@ export interface Bus {
     ): Promise<void>;
 
     init(): Promise<void>;
+
     destroy(): Promise<void>;
 
     // Legacy support for manual topic/event management
     emit(topic: string, event: DomainEvent | DomainEvent[]): Promise<void>;
+
     on(
         topic: string,
         groupId: string,
@@ -132,7 +140,10 @@ async function withIdempotency(
 // --- 4. Implementations ---
 class MemoryBus implements Bus {
     private emitter = new EventEmitter();
-    async init() {}
+
+    async init() {
+    }
+
     async destroy() {
         this.emitter.removeAllListeners();
     }
@@ -197,7 +208,7 @@ class KafkaBus implements Bus {
     private consumers: Consumer[] = [];
 
     constructor() {
-        this.producer = this.kafka.producer({ idempotent: true });
+        this.producer = this.kafka.producer({idempotent: true});
     }
 
     async init() {
@@ -255,17 +266,17 @@ class KafkaBus implements Bus {
         groupId: string,
         handlers: Record<string, (data: any) => Promise<void>>,
     ) {
-        const consumer = this.kafka.consumer({ groupId });
+        const consumer = this.kafka.consumer({groupId});
         await consumer.connect();
-        await consumer.subscribe({ topic, fromBeginning: false });
+        await consumer.subscribe({topic, fromBeginning: false});
         await consumer.run({
             eachBatch: async ({
-                batch,
-                isRunning,
-                isStale,
-                heartbeat,
-                resolveOffset,
-            }) => {
+                                  batch,
+                                  isRunning,
+                                  isStale,
+                                  heartbeat,
+                                  resolveOffset,
+                              }) => {
                 const allEvents: DomainEvent[] = batch.messages
                     .map((m) => JSON.parse(m.value?.toString() || '{}'))
                     .filter((e) => handlers[e.type]);

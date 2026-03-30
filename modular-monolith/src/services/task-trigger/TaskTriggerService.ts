@@ -1,4 +1,4 @@
-import type { BaseService } from '../project';
+import type {BaseService} from '../project';
 
 export type TaskTrigger = {
     id: string;
@@ -7,16 +7,20 @@ export type TaskTrigger = {
     taskId: string;
     createdAt: Date;
     updatedAt: Date;
-    taskType: string;
-    taskData: any;
+    triggerType: string;
+    triggerData: any;
 };
 
 export interface TaskTriggerService extends BaseService {
     addTriggerToTask(data: {
         userId: string;
+        name: string;
         projectId: string;
         taskId: string;
         triggerType: string;
-        triggerData: string;
+        triggerData: any;
     }): Promise<void>;
+    getTriggersForTask(data: {
+        taskId: string;
+    }): Promise<TaskTrigger[]>;
 }

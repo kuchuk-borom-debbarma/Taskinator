@@ -1,4 +1,4 @@
-import type { ProjectTeamTable } from './ProjectTeam.ts';
+import type {ProjectTeamTable} from './ProjectTeam.ts';
 import type {
     ColumnType,
     Generated,
@@ -36,4 +36,6 @@ export interface ProjectTaskTriggerTable {
     fk_task_id: string;
     trigger_type: string;
     trigger_data: any; //JSONB
+    created_at: ColumnType<Date, string | undefined, never>;
+    updated_at: ColumnType<Date, undefined>;
 }

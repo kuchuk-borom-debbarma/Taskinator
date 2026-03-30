@@ -1,21 +1,32 @@
-import type { TaskTriggerService } from '../TaskTriggerService.ts';
+import type {TaskTrigger, TaskTriggerService} from '../TaskTriggerService.ts';
+import {getTaskTriggersByTaskId, insertTaskTrigger} from "./TaskTriggerQueries.ts";
+import {eventBus} from "../../../utils/EventBus.ts";
 
 export class TaskTriggerServiceImpl implements TaskTriggerService {
     async addTriggerToTask(data: {
         userId: string;
+        name: string;
         projectId: string;
         taskId: string;
         triggerType: string;
-        triggerData: string;
+        triggerData: any;
     }): Promise<void> {
-        return Promise.resolve();
+        await insertTaskTrigger(data);
     }
 
-    destroy(): Promise<void> {
-        return Promise.resolve(undefined);
+    async getTriggersForTask(data: {
+        taskId: string;
+    }): Promise<TaskTrigger[]> {
+        return await getTaskTriggersByTaskId(data);
     }
 
-    init(): Promise<void> {
-        return Promise.resolve(undefined);
+    async destroy(): Promise<void> {
+        console.log(`Disconnecting event bus ${this.constructor.name}`);
+        await eventBus.destroy();
+    }
+
+    async init(): Promise<void> {
+        console.log(`Initializing event bus ${this.constructor.name}`);
+        await eventBus.init();
     }
 }
