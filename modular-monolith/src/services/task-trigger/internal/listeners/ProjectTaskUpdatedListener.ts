@@ -14,6 +14,7 @@ export class TaskUpdatedListener {
                     `[Task Trigger Service] Publishing event to trigger all trigger assigned to task ${taskId}`,
                 );
                 // Get triggers of the task
+                //TODO batching for edge case
                 const triggers = await getTaskTriggersByTaskId({taskId})
                 // Publish events for each trigger that will be consumed by trigger engine consumer
                 await eventBus.publish(KAFKA_EVENTS.PROJECT_TASK_TRIGGER.TRIGGER, {

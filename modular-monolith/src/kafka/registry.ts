@@ -22,8 +22,11 @@ import {
     projectTeamMemberDeletedListener as taskTeamMemberCleanup
 } from '../services/task/internal/listeners/ProjectTeamMemberDeletedListener';
 import {
-    taskTriggerListener as taskTriggerDelegator
+    taskTriggerListener as taskTriggerDelegator,
+
 } from "../services/task-trigger/internal/listeners/ProjectTaskUpdatedListener"
+
+import {taskTriggerListener} from "../services/task-trigger/internal/listeners/TaskTriggerListener";
 
 export {
     taskProjectCleanup,
@@ -34,7 +37,8 @@ export {
     taskTeamCleanup,
     teamTeamCleanup,
     taskTeamMemberCleanup,
-    taskTriggerDelegator
+    taskTriggerDelegator,
+    taskTriggerListener
 };
 
 export const startConsumers = async () => {
@@ -52,7 +56,9 @@ export const startConsumers = async () => {
 
         taskTeamMemberCleanup.init(),
 
-        taskTriggerDelegator.init()
+        taskTriggerDelegator.init(),
+
+        taskTriggerListener.init()
     ]);
 };
 
