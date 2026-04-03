@@ -46,12 +46,13 @@ export const getTaskTriggersByTaskId = async (data: {
 /**
  * Updates the status of the parent task for a given taskId.
  * Uses a single SQL query for atomicity and performance.
+ * Returns the parent task ID and project ID if updated.
  */
 export const updateParentTaskStatus = async (data: {
     taskId: string;
     statusToSet: string;
-}) => {
-    await sql`
+}): Promise<{ id: string, projectId: string } | null> => {
+    const result = await sql<{ id: string, fk_project_id: string }>`
         UPDATE project_task
         SET status = ${data.statusToSet},
             version = version + 1,
@@ -61,7 +62,15 @@ export const updateParentTaskStatus = async (data: {
             FROM project_task 
             WHERE id = ${data.taskId}::uuid
         )
+        RETURNING id, fk_project_id
     `.execute(db);
+
+    const row = result.rows[0];
+    if (!row) return null;
+    return {
+        id: row.id,
+        projectId: row.fk_project_id
+    };
 }
 
 /**
