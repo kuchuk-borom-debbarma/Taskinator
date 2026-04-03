@@ -1,4 +1,6 @@
 import type {TaskTrigger} from "../../TaskTriggerService.ts";
+import {updateParentStatusTrigger} from "./processors/updateParentStatus.ts";
+import {notifyParentTeamTrigger, notifyTaskTeamTrigger} from "./processors/notifyTeamTrigger.ts";
 
 type TriggerProcessor = {
     [K in TaskTrigger["triggerType"]]: (taskId: string, trigger: Extract<TaskTrigger, {
@@ -7,9 +9,9 @@ type TriggerProcessor = {
 };
 
 const processor: TriggerProcessor = {
-    UPDATE_PARENT_STATUS: async (taskId, trigger) => {
-        console.log(`Processor: ${taskId} trigger status: ${trigger.triggerType}`);
-    }
+    UPDATE_PARENT_STATUS: updateParentStatusTrigger,
+    NOTIFY_PARENT_TEAM: notifyParentTeamTrigger,
+    NOTIFY_TASK_TEAM: notifyTaskTeamTrigger
 };
 
 export default processor;

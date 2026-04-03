@@ -1,4 +1,4 @@
-import { KAFKA_EVENTS, eventBus } from '../../../../utils/EventBus';
+import eventBus, { KAFKA_EVENTS } from '../../../../utils/EventBus';
 import { deleteAllProjectTasks } from '../TaskQueries';
 
 export class ProjectDeletedListener {

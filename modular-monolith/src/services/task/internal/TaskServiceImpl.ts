@@ -5,7 +5,7 @@ import type {
     TaskService,
     UpdateTasksParam,
 } from '../TaskService.ts';
-import { KAFKA_EVENTS, eventBus } from '../../../utils/EventBus.ts';
+import eventBus, { KAFKA_EVENTS } from '../../../utils/EventBus.ts';
 import {
     deleteTasks,
     getTasks,

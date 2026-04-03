@@ -1,7 +1,9 @@
 import type {TaskTrigger} from "../../TaskTriggerService.ts";
 import processor from "../trigger-engine";
-import {eventBus, KAFKA_EVENTS} from "../../../../utils/EventBus.ts";
+import eventBus, {KAFKA_EVENTS} from "../../../../utils/EventBus.ts";
 
+
+//TODO batch processing task trigger handler not solo
 export class TaskTriggerListener {
     async init() {
         await eventBus.subscribe('task-trigger-processor-group', {
@@ -9,14 +11,15 @@ export class TaskTriggerListener {
                 taskId: string,
                 trigger: TaskTrigger
             }) => {
-                const {taskId, trigger} = data
-                const handler = processor[trigger.triggerType];
+                const {taskId, trigger} = data;
+                const handler = processor[trigger.triggerType] as (taskId: string, trigger: TaskTrigger) => Promise<void>;
                 if (handler) {
                     await handler(taskId, trigger);
+                } else {
+                    console.warn(`[Trigger Listener] No handler for trigger type: ${trigger.triggerType}`);
                 }
             },
         });
-        console.log('[Task Service] ProjectDeletedListener started');
     }
 
     async stop() {

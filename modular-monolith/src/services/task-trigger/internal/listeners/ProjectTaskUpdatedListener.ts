@@ -1,4 +1,4 @@
-import {KAFKA_EVENTS, eventBus, KAFKA_TOPICS} from '../../../../utils/EventBus.ts';
+import eventBus, {KAFKA_EVENTS, KAFKA_TOPICS} from '../../../../utils/EventBus.ts';
 import {getTaskTriggersByTaskId} from "../TaskTriggerQueries.ts";
 
 export class TaskUpdatedListener {
@@ -16,15 +16,20 @@ export class TaskUpdatedListener {
                 // Get triggers of the task
                 //TODO batching for edge case
                 const triggers = await getTaskTriggersByTaskId({taskId})
+                
+                if (triggers.length === 0) return;
+
                 // Publish events for each trigger that will be consumed by trigger engine consumer
-                await eventBus.publish(KAFKA_EVENTS.PROJECT_TASK_TRIGGER.TRIGGER, {
-                    key: projectId,
-                    data: triggers.map((trigger) => ({
-                        taskId,
-                        trigger: trigger
+                await eventBus.publish(
+                    KAFKA_EVENTS.PROJECT_TASK_TRIGGER.TRIGGER, 
+                    triggers.map((trigger) => ({
+                        key: projectId,
+                        data: {
+                            taskId,
+                            trigger: trigger
+                        }
                     }))
-                })
-                //TODO write consumer
+                )
             },
         });
         console.log('[Task Service] ProjectDeletedListener started');

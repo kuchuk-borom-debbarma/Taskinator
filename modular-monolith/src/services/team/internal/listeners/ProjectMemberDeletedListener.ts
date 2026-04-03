@@ -1,4 +1,4 @@
-import { KAFKA_EVENTS, eventBus } from '../../../../utils/EventBus';
+import eventBus, { KAFKA_EVENTS } from '../../../../utils/EventBus';
 import { removeUserFromAllTeams } from '../TeamQueries';
 
 export class ProjectMemberDeletedListener {

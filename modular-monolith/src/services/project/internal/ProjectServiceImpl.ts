@@ -18,7 +18,7 @@ import {
     insertProjects,
 } from './ProjectQueries.ts';
 
-import { KAFKA_EVENTS, eventBus } from '../../../utils/EventBus.ts';
+import eventBus, { KAFKA_EVENTS } from '../../../utils/EventBus.ts';
 
 export class ProjectServiceImpl implements ProjectService {
     async getProjects(userId: string): Promise<Project[]> {
