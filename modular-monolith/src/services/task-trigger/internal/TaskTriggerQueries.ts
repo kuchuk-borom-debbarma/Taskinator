@@ -114,3 +114,12 @@ export const getParentTaskTeamMembers = async (
     `.execute(db);
     return result.rows.map((r) => r.fk_user_id);
 };
+
+export const deleteTaskTriggers = async (taskIds: string[]) => {
+    if (!taskIds.length) return;
+    
+    await sql`
+        DELETE FROM project_task_trigger_table
+        WHERE fk_task_id = ANY (${taskIds}::uuid[])
+    `.execute(db);
+};

@@ -93,8 +93,8 @@ export const insertTask = async (
 
 export const deleteTasks = async (
     data: DeleteTasksParam,
-): Promise<string[]> => {
-    const result = await sql<{ id: string }>`
+): Promise<ProjectTask[]> => {
+    const result = await sql<ProjectTask>`
         DELETE
         FROM project_task
         WHERE fk_project_id = ${data.projectId}::uuid
@@ -103,14 +103,65 @@ export const deleteTasks = async (
             EXISTS (SELECT 1 FROM project WHERE id = ${data.projectId}::uuid AND fk_user_id = ${data.userId})
             OR EXISTS (SELECT 1 FROM project_member WHERE fk_project_id = ${data.projectId}::uuid AND fk_user_id = ${data.userId})
             )
-            RETURNING id
+        RETURNING
+            id,
+            fk_project_id AS "projectId",
+            fk_team_id AS "teamId",
+            fk_member_id AS "memberId",
+            fk_parent_task_id AS "parentTaskId",
+            title,
+            description,
+            status,
+            materialized_path AS "materializedPath",
+            version,
+            last_event_id AS "lastEventId",
+            created_by AS "createdBy",
+            updated_by AS "updatedBy",
+            created_at AS "createdAt",
+            updated_at AS "updatedAt"
     `.execute(db);
 
     if (result.rows.length !== data.taskIds.length) {
         throw new Error('Unauthorized or some tasks not found');
     }
 
-    return result.rows.map((r) => r.id);
+    return result.rows;
+};
+
+export const deleteChildrenTasksBatch = async (
+    projectId: string,
+    parentPath: string,
+    limit: number,
+): Promise<{ deletedIds: string[]; hasMore: boolean }> => {
+    // Select children first using the path
+    const childrenQuery = await sql<{ id: string }>`
+        SELECT id
+        FROM project_task
+        WHERE fk_project_id = ${projectId}::uuid
+          AND materialized_path LIKE ${parentPath + '/%'}
+        LIMIT ${limit + 1}
+    `.execute(db);
+    
+    if (childrenQuery.rows.length === 0) {
+        return { deletedIds: [], hasMore: false };
+    }
+    
+    const hasMore = childrenQuery.rows.length > limit;
+    const targetIds = childrenQuery.rows.slice(0, limit).map(r => r.id);
+    
+    // Delete the targeted batch
+    const result = await sql<{ id: string }>`
+        DELETE
+        FROM project_task
+        WHERE fk_project_id = ${projectId}::uuid
+          AND id = ANY (${targetIds}::uuid[])
+        RETURNING id
+    `.execute(db);
+    
+    return {
+        deletedIds: result.rows.map(r => r.id),
+        hasMore
+    };
 };
 
 export interface UpdateTaskParam {
