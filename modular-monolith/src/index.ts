@@ -1,4 +1,3 @@
-import './instrumentation.ts'; // Must be imported before all other modules for auto-tracing hooks to work
 import { projectService } from './services/project';
 import { teamService } from './services/team';
 import { taskService } from './services/task';

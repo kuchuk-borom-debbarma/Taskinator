@@ -82,3 +82,15 @@ CREATE INDEX idx_project_user ON project(fk_user_id);
 CREATE INDEX idx_project_member_user ON project_member(fk_user_id);
 CREATE INDEX idx_project_task_path ON project_task(materialized_path);
 CREATE INDEX idx_project_task_project ON project_task(fk_project_id);
+
+-- Project Task Trigger Table
+CREATE TABLE project_task_trigger_table (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name TEXT NOT NULL,
+    fk_project_id UUID NOT NULL,
+    fk_task_id UUID NOT NULL,
+    trigger_type TEXT NOT NULL,
+    trigger_data JSONB NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
