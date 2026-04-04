@@ -1,6 +1,9 @@
-import type {BaseService} from '../project';
+import type { BaseService } from '../project';
 
-export type TaskTriggerType = 'UPDATE_PARENT_STATUS' | 'NOTIFY_PARENT_TEAM' | 'NOTIFY_TASK_TEAM';
+export type TaskTriggerType =
+    | 'UPDATE_PARENT_STATUS'
+    | 'NOTIFY_PARENT_TEAM'
+    | 'NOTIFY_TASK_TEAM';
 
 export type TaskTrigger = {
     id: string;
@@ -22,7 +25,5 @@ export interface TaskTriggerService extends BaseService {
         triggerType: TaskTriggerType;
         triggerData: any;
     }): Promise<void>;
-    getTriggersForTask(data: {
-        taskId: string;
-    }): Promise<TaskTrigger[]>;
+    getTriggersForTask(data: { taskId: string }): Promise<TaskTrigger[]>;
 }

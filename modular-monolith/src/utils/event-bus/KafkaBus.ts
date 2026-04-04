@@ -1,5 +1,5 @@
-import { Kafka, type Producer, type Consumer } from 'kafkajs';
-import { EVENT_TO_TOPIC } from './constants.ts';
+import { Kafka, Partitioners, type Producer, type Consumer } from 'kafkajs';
+import { EVENT_TO_TOPIC, KAFKA_TOPICS } from './constants.ts';
 import type { Bus, DomainEvent } from './types.ts';
 import { createEvent, withIdempotency } from './idempotency.ts';
 
@@ -12,11 +12,31 @@ export class KafkaBus implements Bus {
     private consumers: Consumer[] = [];
 
     constructor() {
-        this.producer = this.kafka.producer({ idempotent: true });
+        this.producer = this.kafka.producer({
+            idempotent: true,
+            createPartitioner: Partitioners.LegacyPartitioner,
+        });
     }
 
     async init() {
         await this.producer.connect();
+
+        // Admin: Auto-create topics so that consumers don't crash on fresh environments
+        const admin = this.kafka.admin();
+        await admin.connect();
+        const existingTopics = await admin.listTopics();
+        const requiredTopics = Object.values(KAFKA_TOPICS);
+        const topicsToCreate = requiredTopics.filter(
+            (t) => !existingTopics.includes(t),
+        );
+
+        if (topicsToCreate.length > 0) {
+            await admin.createTopics({
+                waitForLeaders: true,
+                topics: topicsToCreate.map((topic) => ({ topic })),
+            });
+        }
+        await admin.disconnect();
     }
 
     async destroy() {
@@ -73,7 +93,7 @@ export class KafkaBus implements Bus {
         const consumer = this.kafka.consumer({ groupId });
         await consumer.connect();
         await consumer.subscribe({ topic, fromBeginning: false });
-        
+
         await consumer.run({
             eachBatch: async ({
                 batch,
@@ -105,7 +125,7 @@ export class KafkaBus implements Bus {
                 await heartbeat();
             },
         });
-        
+
         this.consumers.push(consumer);
     }
 }
