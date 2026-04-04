@@ -15,6 +15,9 @@ import { taskTriggerListener } from '../services/task-trigger/internal/listeners
 import { taskDeleteListener as taskRecursiveCleanup } from '../services/task/internal/listeners/TaskDeleteListener';
 import { taskDeletedListener as triggerTaskCleanup } from '../services/task-trigger/internal/listeners/TaskDeletedListener';
 
+import { userSignupStartedListener } from '../services/auth/internal/listeners/UserSignupStartedListener.ts';
+import { userCreatedListener } from '../services/auth/internal/listeners/UserCreatedListener.ts';
+
 export {
     taskProjectCleanup,
     teamProjectCleanup,
@@ -28,6 +31,8 @@ export {
     taskTriggerListener,
     taskRecursiveCleanup,
     triggerTaskCleanup,
+    userSignupStartedListener,
+    userCreatedListener,
 };
 
 export const startConsumers = async () => {
@@ -52,6 +57,9 @@ export const startConsumers = async () => {
         taskRecursiveCleanup.init(),
         
         triggerTaskCleanup.init(),
+
+        userSignupStartedListener.init(),
+        userCreatedListener.init(),
     ]);
 };
 
@@ -73,5 +81,8 @@ export const stopConsumers = async () => {
         taskRecursiveCleanup.stop(),
         
         triggerTaskCleanup.stop(),
+
+        userSignupStartedListener.stop(),
+        userCreatedListener.stop(),
     ]);
 };

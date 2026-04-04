@@ -112,7 +112,7 @@ export class KafkaBus implements Bus {
                 if (batch.messages.length === 0) return;
 
                 // Extract trace context from the first message in the batch
-                const firstMessageHeaders = batch.messages[0].headers || {};
+                const firstMessageHeaders = batch.messages[0]?.headers || {};
                 const parentContext = propagation.extract(context.active(), firstMessageHeaders as any);
 
                 // Run the entire batch processing within the stitched trace context

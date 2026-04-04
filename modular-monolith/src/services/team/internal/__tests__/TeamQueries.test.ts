@@ -1,4 +1,4 @@
-import { jest, describe, it, expect, beforeEach } from '@jest/globals';
+import {jest, describe, it, expect, beforeEach} from '@jest/globals';
 
 // Mock database
 jest.unstable_mockModule('../../../../database/index.ts', () => ({
@@ -18,7 +18,7 @@ jest.unstable_mockModule('kysely', () => {
 });
 
 // Dynamic imports
-const { sql } = (await import('kysely')) as any;
+const {sql} = (await import('kysely')) as any;
 const TeamQueries = (await import('../TeamQueries.ts')) as any;
 
 describe('TeamQueries', () => {
@@ -48,7 +48,7 @@ describe('TeamQueries', () => {
             const mockExecute = (jest.fn() as any).mockResolvedValue({
                 rows: mockRows,
             });
-            (sql as any).mockReturnValue({ execute: mockExecute });
+            (sql as any).mockReturnValue({execute: mockExecute});
 
             const result = await TeamQueries.insertTeam(data);
 
@@ -66,12 +66,12 @@ describe('TeamQueries', () => {
                 teamIds: ['t1', 't2'],
             };
 
-            const mockRows = [{ id: 't1' }, { id: 't2' }];
+            const mockRows = [{id: 't1'}, {id: 't2'}];
 
             const mockExecute = (jest.fn() as any).mockResolvedValue({
                 rows: mockRows,
             });
-            (sql as any).mockReturnValue({ execute: mockExecute });
+            (sql as any).mockReturnValue({execute: mockExecute});
 
             const result = await TeamQueries.deleteTeams(data);
 
@@ -85,12 +85,12 @@ describe('TeamQueries', () => {
                 teamIds: ['t1', 't2'],
             };
 
-            const mockRows = [{ id: 't1' }]; // Only one found
+            const mockRows = [{id: 't1'}]; // Only one found
 
             const mockExecute = (jest.fn() as any).mockResolvedValue({
                 rows: mockRows,
             });
-            (sql as any).mockReturnValue({ execute: mockExecute });
+            (sql as any).mockReturnValue({execute: mockExecute});
 
             await expect(TeamQueries.deleteTeams(data)).rejects.toThrow(
                 'Unauthorized or some teams not found',
@@ -120,7 +120,7 @@ describe('TeamQueries', () => {
             const mockExecute = (jest.fn() as any).mockResolvedValue({
                 rows: mockRows,
             });
-            (sql as any).mockReturnValue({ execute: mockExecute });
+            (sql as any).mockReturnValue({execute: mockExecute});
 
             const result = await TeamQueries.insertTeamMembers(data);
 
@@ -137,12 +137,12 @@ describe('TeamQueries', () => {
                 members: ['u1', 'u2'],
             };
 
-            const mockRows = [{ userId: 'u1' }, { userId: 'u2' }];
+            const mockRows = [{userId: 'u1'}, {userId: 'u2'}];
 
             const mockExecute = (jest.fn() as any).mockResolvedValue({
                 rows: mockRows,
             });
-            (sql as any).mockReturnValue({ execute: mockExecute });
+            (sql as any).mockReturnValue({execute: mockExecute});
 
             const result = await TeamQueries.deleteTeamMembers(data);
 

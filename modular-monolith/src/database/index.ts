@@ -10,6 +10,7 @@ import type {
     ProjectTaskTriggerTable,
 } from './tables/Task.ts';
 import type { ProcessedEventTable } from './tables/ProcessedEvent.ts';
+import type { UserTable, PendingUserTable } from './tables/User.ts';
 
 export interface Database {
     project: ProjectTable;
@@ -19,6 +20,8 @@ export interface Database {
     project_task: ProjectTaskTable;
     project_task_trigger_table: ProjectTaskTriggerTable;
     processed_event: ProcessedEventTable;
+    users: UserTable;
+    pending_users: PendingUserTable;
 }
 
 const dialect = new PostgresDialect({
