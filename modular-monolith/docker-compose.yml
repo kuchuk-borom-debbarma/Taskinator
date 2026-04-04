@@ -33,6 +33,13 @@ services:
     volumes:
       - kafka_data:/bitnami/kafka
 
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: taskinator-jaeger
+    ports:
+      - "16686:16686"
+      - "4318:4318"
+
 volumes:
   postgres_data:
   kafka_data:

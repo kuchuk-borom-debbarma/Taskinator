@@ -45,21 +45,16 @@ export class TaskServiceImpl implements TaskService {
     }
 
     async deleteTask(data: DeleteTasksParam): Promise<string[]> {
-        const deletedIds = await deleteTasks(data);
+        const deletedTasks = await deleteTasks(data);
 
-        await eventBus.publish(
-            KAFKA_EVENTS.PROJECT_TASK.DELETED,
-            deletedIds.map((taskId: string) => ({
-                key: taskId,
-                data: {
-                    taskId,
-                    projectId: data.projectId,
-                    userId: data.userId,
-                },
-            })),
-        );
+        for (const task of deletedTasks) {
+            await eventBus.publish(KAFKA_EVENTS.PROJECT_TASK.PARENT_DELETED, {
+                key: task.id,
+                data: task,
+            });
+        }
 
-        return deletedIds;
+        return deletedTasks.map(t => t.id);
     }
 
     async updateTasks(data: UpdateTasksParam): Promise<string[]> {

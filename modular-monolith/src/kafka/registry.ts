@@ -1,32 +1,19 @@
-import {projectDeletedListener as taskProjectCleanup} from '../services/task/internal/listeners/ProjectDeletedListener';
-import {teamCleanupListener as teamProjectCleanup} from '../services/team/internal/listeners/ProjectDeletedListener';
-import {
-    memberCleanupListener as memberProjectCleanup
-} from '../services/project/internal/listeners/ProjectDeletedListener';
+import { projectDeletedListener as taskProjectCleanup } from '../services/task/internal/listeners/ProjectDeletedListener';
+import { teamCleanupListener as teamProjectCleanup } from '../services/team/internal/listeners/ProjectDeletedListener';
+import { memberCleanupListener as memberProjectCleanup } from '../services/project/internal/listeners/ProjectDeletedListener';
 
-import {
-    projectMemberDeletedListener as taskMemberCleanup
-} from '../services/task/internal/listeners/ProjectMemberDeletedListener';
-import {
-    projectMemberDeletedListener as teamMemberCleanup
-} from '../services/team/internal/listeners/ProjectMemberDeletedListener';
+import { projectMemberDeletedListener as taskMemberCleanup } from '../services/task/internal/listeners/ProjectMemberDeletedListener';
+import { projectMemberDeletedListener as teamMemberCleanup } from '../services/team/internal/listeners/ProjectMemberDeletedListener';
 
-import {
-    projectTeamDeletedListener as taskTeamCleanup
-} from '../services/task/internal/listeners/ProjectTeamDeletedListener';
-import {
-    projectTeamDeletedListener as teamTeamCleanup
-} from '../services/team/internal/listeners/ProjectTeamDeletedListener';
+import { projectTeamDeletedListener as taskTeamCleanup } from '../services/task/internal/listeners/ProjectTeamDeletedListener';
+import { projectTeamDeletedListener as teamTeamCleanup } from '../services/team/internal/listeners/ProjectTeamDeletedListener';
 
-import {
-    projectTeamMemberDeletedListener as taskTeamMemberCleanup
-} from '../services/task/internal/listeners/ProjectTeamMemberDeletedListener';
-import {
-    taskTriggerListener as taskTriggerDelegator,
+import { projectTeamMemberDeletedListener as taskTeamMemberCleanup } from '../services/task/internal/listeners/ProjectTeamMemberDeletedListener';
+import { taskTriggerListener as taskTriggerDelegator } from '../services/task-trigger/internal/listeners/ProjectTaskUpdatedListener';
 
-} from "../services/task-trigger/internal/listeners/ProjectTaskUpdatedListener"
-
-import {taskTriggerListener} from "../services/task-trigger/internal/listeners/TaskTriggerListener";
+import { taskTriggerListener } from '../services/task-trigger/internal/listeners/TaskTriggerListener';
+import { taskDeleteListener as taskRecursiveCleanup } from '../services/task/internal/listeners/TaskDeleteListener';
+import { taskDeletedListener as triggerTaskCleanup } from '../services/task-trigger/internal/listeners/TaskDeletedListener';
 
 export {
     taskProjectCleanup,
@@ -38,7 +25,9 @@ export {
     teamTeamCleanup,
     taskTeamMemberCleanup,
     taskTriggerDelegator,
-    taskTriggerListener
+    taskTriggerListener,
+    taskRecursiveCleanup,
+    triggerTaskCleanup,
 };
 
 export const startConsumers = async () => {
@@ -58,7 +47,11 @@ export const startConsumers = async () => {
 
         taskTriggerDelegator.init(),
 
-        taskTriggerListener.init()
+        taskTriggerListener.init(),
+        
+        taskRecursiveCleanup.init(),
+        
+        triggerTaskCleanup.init(),
     ]);
 };
 
@@ -76,5 +69,9 @@ export const stopConsumers = async () => {
         teamTeamCleanup.stop(),
 
         taskTeamMemberCleanup.stop(),
+        
+        taskRecursiveCleanup.stop(),
+        
+        triggerTaskCleanup.stop(),
     ]);
 };

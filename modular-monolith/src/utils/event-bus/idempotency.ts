@@ -5,7 +5,7 @@ import { v4 as uuid } from 'uuid';
 
 /**
  * Optimised batch idempotency engine.
- * 
+ *
  * In a distributed 10k RPS system, this ensures consumers only process each Kafka message EXACTLY ONCE.
  */
 export async function withIdempotency(
@@ -33,7 +33,7 @@ export async function withIdempotency(
 
     // Step 2: The 'RETURNING' clause exclusively matches rows that were SUCCESSFULLY inserted.
     const processedIds = new Set(results.map((r) => r.event_id));
-    
+
     const unprocessed = events.filter((e) => processedIds.has(e.eventId));
 
     // Step 3: Run the business logic handler ONLY on the newly approved events.

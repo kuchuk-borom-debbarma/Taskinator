@@ -16,7 +16,7 @@ CREATE TABLE project (
 -- Project Member Table
 CREATE TABLE project_member (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    fk_project_id UUID NOT NULL REFERENCES project(id) ON DELETE CASCADE,
+    fk_project_id UUID NOT NULL,
     fk_user_id TEXT NOT NULL,
     last_event_id UUID,
     version INTEGER NOT NULL DEFAULT 1,
@@ -29,7 +29,7 @@ CREATE TABLE project_member (
 CREATE TABLE project_team (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     name TEXT NOT NULL,
-    fk_project_id UUID NOT NULL REFERENCES project(id) ON DELETE CASCADE,
+    fk_project_id UUID NOT NULL,
     fk_user_id TEXT NOT NULL, -- Creator
     last_event_id UUID,
     version INTEGER NOT NULL DEFAULT 1,
@@ -40,8 +40,8 @@ CREATE TABLE project_team (
 -- Project Team Member Table
 CREATE TABLE project_team_member (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    fk_project_id UUID NOT NULL REFERENCES project(id) ON DELETE CASCADE,
-    fk_team_id UUID NOT NULL REFERENCES project_team(id) ON DELETE CASCADE,
+    fk_project_id UUID NOT NULL,
+    fk_team_id UUID NOT NULL,
     fk_user_id TEXT NOT NULL,
     last_event_id UUID,
     version INTEGER NOT NULL DEFAULT 1,
@@ -53,10 +53,10 @@ CREATE TABLE project_team_member (
 -- Project Task Table
 CREATE TABLE project_task (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    fk_project_id UUID NOT NULL REFERENCES project(id) ON DELETE CASCADE,
-    fk_team_id UUID REFERENCES project_team(id) ON DELETE SET NULL,
+    fk_project_id UUID NOT NULL,
+    fk_team_id UUID,
     fk_member_id TEXT, -- References user_id who is assigned
-    fk_parent_task_id UUID REFERENCES project_task(id) ON DELETE CASCADE,
+    fk_parent_task_id UUID,
     title TEXT NOT NULL,
     description TEXT NOT NULL DEFAULT '',
     status TEXT NOT NULL DEFAULT 'TODO',
@@ -82,3 +82,15 @@ CREATE INDEX idx_project_user ON project(fk_user_id);
 CREATE INDEX idx_project_member_user ON project_member(fk_user_id);
 CREATE INDEX idx_project_task_path ON project_task(materialized_path);
 CREATE INDEX idx_project_task_project ON project_task(fk_project_id);
+
+-- Project Task Trigger Table
+CREATE TABLE project_task_trigger_table (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name TEXT NOT NULL,
+    fk_project_id UUID NOT NULL,
+    fk_task_id UUID NOT NULL,
+    trigger_type TEXT NOT NULL,
+    trigger_data JSONB NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);

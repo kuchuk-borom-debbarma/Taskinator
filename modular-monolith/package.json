@@ -16,6 +16,10 @@
         "typescript": "^5"
     },
     "dependencies": {
+        "@opentelemetry/api": "^1.9.1",
+        "@opentelemetry/auto-instrumentations-node": "^0.72.0",
+        "@opentelemetry/exporter-trace-otlp-http": "^0.214.0",
+        "@opentelemetry/sdk-node": "^0.214.0",
         "@types/lodash": "^4.17.24",
         "@types/pg": "^8.20.0",
         "cors": "^2.8.6",
@@ -31,6 +35,8 @@
     "scripts": {
         "format": "biome format --write .",
         "check-types": "bun x tsc --noEmit",
-        "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js"
+        "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js",
+        "start": "bun --preload ./src/instrumentation.ts src/index.ts",
+        "dev": "bun --watch --preload ./src/instrumentation.ts src/index.ts"
     }
 }
