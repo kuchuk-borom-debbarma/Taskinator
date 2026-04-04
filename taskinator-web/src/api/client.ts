@@ -66,7 +66,7 @@ export const taskApi = {
     }) => 
         api.post<Task>('/tasks', data).then(res => res.data),
 
-    updateTasks: (userId: string, projectId: string, tasks: any[]) =>
+    updateTasks: (userId: string, projectId: string, tasks: unknown[]) =>
         api.patch<string[]>('/tasks', { userId, projectId, tasks }).then(res => res.data),
 
     deleteTasks: (userId: string, projectId: string, taskIds: string[]) =>

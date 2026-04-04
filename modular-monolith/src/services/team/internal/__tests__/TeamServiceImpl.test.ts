@@ -13,37 +13,53 @@ jest.unstable_mockModule('../TeamQueries.ts', () => ({
     deleteTeams: jest.fn(),
     insertTeamMembers: jest.fn(),
     deleteTeamMembers: jest.fn(),
+    getTeams: jest.fn(),
+    getTeamMembers: jest.fn(),
 }));
 
-jest.unstable_mockModule('../../../../kafka/index.ts', () => {
-    const mockProducer = {
-        connect: (jest.fn() as any).mockResolvedValue(undefined),
-        send: (jest.fn() as any).mockResolvedValue(undefined),
-        disconnect: (jest.fn() as any).mockResolvedValue(undefined),
-    };
-    return {
-        kafka: {
-            producer: jest.fn().mockReturnValue(mockProducer),
+jest.unstable_mockModule('../../../../utils/EventBus.ts', () => ({
+    eventBus: {
+        init: (jest.fn() as any).mockResolvedValue(undefined),
+        publish: (jest.fn() as any).mockResolvedValue(undefined),
+        destroy: (jest.fn() as any).mockResolvedValue(undefined),
+    },
+    KAFKA_EVENTS: {
+        PROJECT: { CREATED: 'PROJECT_CREATED', DELETED: 'PROJECT_DELETED' },
+        PROJECT_MEMBER: {
+            ADDED: 'PROJECT_MEMBER_ADDED',
+            DELETED: 'PROJECT_MEMBER_DELETED',
         },
-    };
-});
+        PROJECT_TEAM: {
+            ADDED: 'PROJECT_TEAM_ADDED',
+            DELETED: 'PROJECT_TEAM_DELETED',
+        },
+        PROJECT_TEAM_MEMBER: {
+            ADDED: 'PROJECT_TEAM_MEMBER_ADDED',
+            DELETED: 'PROJECT_TEAM_MEMBER_DELETED',
+        },
+        PROJECT_TASK: {
+            CREATED: 'PROJECT_TASK_CREATED',
+            UPDATED: 'PROJECT_TASK_UPDATED',
+            DELETED: 'PROJECT_TASK_DELETED',
+        },
+    },
+}));
 
 // Dynamic imports AFTER mockModule
 const { TeamServiceImpl } = (await import('../TeamServiceImpl.ts')) as any;
 const TeamQueries = (await import('../TeamQueries.ts')) as any;
-const { kafka } = (await import('../../../../kafka/index.ts')) as any;
-const { KAFKA_TOPICS } = (await import('../../../../utils/kafka.ts')) as any;
+const { eventBus, KAFKA_EVENTS } = (await import(
+    '../../../../utils/EventBus.ts'
+)) as any;
 
 const mockedQueries = TeamQueries as jest.Mocked<typeof TeamQueries>;
 
 describe('TeamServiceImpl', () => {
     let teamService: any;
-    let mockProducer: any;
 
     beforeEach(async () => {
         jest.clearAllMocks();
         teamService = new TeamServiceImpl();
-        mockProducer = (kafka.producer as jest.Mock).mock.results[0]?.value;
         await teamService.init();
     });
 
@@ -79,13 +95,11 @@ describe('TeamServiceImpl', () => {
             const result = await teamService.createTeams(data);
 
             expect(mockedQueries.insertTeam).toHaveBeenCalledWith(data);
-            expect(mockProducer.send).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    topic: KAFKA_TOPICS.PROJECT_TEAM,
-                    messages: expect.any(Array),
-                }),
+            expect(eventBus.publish).toHaveBeenCalledWith(
+                KAFKA_EVENTS.PROJECT_TEAM.ADDED,
+                expect.any(Array),
             );
-            expect(mockProducer.send.mock.calls[0][0].messages).toHaveLength(2);
+            expect(eventBus.publish.mock.calls[0][1]).toHaveLength(2);
             expect(result).toEqual(mockTeams);
         });
     });
@@ -103,7 +117,10 @@ describe('TeamServiceImpl', () => {
             const result = await teamService.deleteTeams(data);
 
             expect(mockedQueries.deleteTeams).toHaveBeenCalledWith(data);
-            expect(mockProducer.send).toHaveBeenCalled();
+            expect(eventBus.publish).toHaveBeenCalledWith(
+                KAFKA_EVENTS.PROJECT_TEAM.DELETED,
+                expect.any(Array),
+            );
             expect(result).toEqual(['t1', 't2']);
         });
 
@@ -149,7 +166,10 @@ describe('TeamServiceImpl', () => {
             const result = await teamService.addTeamMembers(data);
 
             expect(mockedQueries.insertTeamMembers).toHaveBeenCalledWith(data);
-            expect(mockProducer.send).toHaveBeenCalled();
+            expect(eventBus.publish).toHaveBeenCalledWith(
+                KAFKA_EVENTS.PROJECT_TEAM_MEMBER.ADDED,
+                expect.any(Array),
+            );
             expect(result).toEqual(mockMembers);
         });
     });
@@ -168,7 +188,10 @@ describe('TeamServiceImpl', () => {
             const result = await teamService.deleteTeamMembers(data);
 
             expect(mockedQueries.deleteTeamMembers).toHaveBeenCalledWith(data);
-            expect(mockProducer.send).toHaveBeenCalled();
+            expect(eventBus.publish).toHaveBeenCalledWith(
+                KAFKA_EVENTS.PROJECT_TEAM_MEMBER.DELETED,
+                expect.any(Array),
+            );
             expect(result).toEqual(['tm1']);
         });
     });

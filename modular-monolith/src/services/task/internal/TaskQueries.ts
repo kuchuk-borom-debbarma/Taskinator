@@ -84,7 +84,9 @@ export const insertTask = async (
     `.execute(db);
 
     if (result.rows.length === 0)
-        throw new Error('Unauthorized or invalid parameters (member not in project/team)');
+        throw new Error(
+            'Unauthorized or invalid parameters (member not in project/team)',
+        );
 
     return result.rows[0]!;
 };
@@ -206,7 +208,7 @@ export const updateTask = async (
 export const deleteAllProjectTasks = async (projectId: string) => {
     await db
         .deleteFrom('project_task')
-        .where('fk_project_id', '=', sql`${projectId}::uuid`)
+        .where('fk_project_id', '=', sql`${projectId}::uuid` as any)
         .execute();
 };
 
@@ -217,7 +219,7 @@ export const unassignMemberFromAllTasks = async (
     await db
         .updateTable('project_task')
         .set({ fk_member_id: null })
-        .where('fk_project_id', '=', sql`${projectId}::uuid`)
+        .where('fk_project_id', '=', sql`${projectId}::uuid` as any)
         .where('fk_member_id', '=', memberId)
         .execute();
 };
@@ -232,8 +234,8 @@ export const unassignTeamFromAllTasks = async (
             fk_team_id: null,
             fk_member_id: null,
         })
-        .where('fk_project_id', '=', sql`${projectId}::uuid`)
-        .where('fk_team_id', '=', sql`${teamId}::uuid`)
+        .where('fk_project_id', '=', sql`${projectId}::uuid` as any)
+        .where('fk_team_id', '=', sql`${teamId}::uuid` as any)
         .execute();
 };
 
@@ -245,8 +247,8 @@ export const unassignMemberFromTeamTasks = async (
     await db
         .updateTable('project_task')
         .set({ fk_member_id: null })
-        .where('fk_project_id', '=', sql`${projectId}::uuid`)
-        .where('fk_team_id', '=', sql`${teamId}::uuid`)
+        .where('fk_project_id', '=', sql`${projectId}::uuid` as any)
+        .where('fk_team_id', '=', sql`${teamId}::uuid` as any)
         .where('fk_member_id', '=', memberId)
         .execute();
 };

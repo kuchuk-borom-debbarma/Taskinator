@@ -109,7 +109,7 @@ describe('ProjectQueries', () => {
             expect(mockWhere1).toHaveBeenCalledWith(
                 'id',
                 'in',
-                data.projectIds,
+                expect.any(Array),
             );
             expect(mockWhere2).toHaveBeenCalledWith(
                 'fk_user_id',

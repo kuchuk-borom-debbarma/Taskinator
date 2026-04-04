@@ -69,5 +69,8 @@ export interface ProjectService extends BaseService {
 
     getProject(userId: string, projectId: string): Promise<Project | null>;
 
-    getProjectMembers(userId: string, projectId: string): Promise<ProjectMember[]>;
+    getProjectMembers(
+        userId: string,
+        projectId: string,
+    ): Promise<ProjectMember[]>;
 }

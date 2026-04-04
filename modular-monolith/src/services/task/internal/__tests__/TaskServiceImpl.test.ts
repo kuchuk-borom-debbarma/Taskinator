@@ -12,37 +12,52 @@ jest.unstable_mockModule('../TaskQueries.ts', () => ({
     insertTask: jest.fn(),
     deleteTasks: jest.fn(),
     updateTask: jest.fn(),
+    getTasks: jest.fn(),
 }));
 
-jest.unstable_mockModule('../../../../kafka/index.ts', () => {
-    const mockProducer = {
-        connect: (jest.fn() as any).mockResolvedValue(undefined),
-        send: (jest.fn() as any).mockResolvedValue(undefined),
-        disconnect: (jest.fn() as any).mockResolvedValue(undefined),
-    };
-    return {
-        kafka: {
-            producer: jest.fn().mockReturnValue(mockProducer),
+jest.unstable_mockModule('../../../../utils/EventBus.ts', () => ({
+    eventBus: {
+        init: (jest.fn() as any).mockResolvedValue(undefined),
+        publish: (jest.fn() as any).mockResolvedValue(undefined),
+        destroy: (jest.fn() as any).mockResolvedValue(undefined),
+    },
+    KAFKA_EVENTS: {
+        PROJECT: { CREATED: 'PROJECT_CREATED', DELETED: 'PROJECT_DELETED' },
+        PROJECT_MEMBER: {
+            ADDED: 'PROJECT_MEMBER_ADDED',
+            DELETED: 'PROJECT_MEMBER_DELETED',
         },
-    };
-});
+        PROJECT_TEAM: {
+            ADDED: 'PROJECT_TEAM_ADDED',
+            DELETED: 'PROJECT_TEAM_DELETED',
+        },
+        PROJECT_TEAM_MEMBER: {
+            ADDED: 'PROJECT_TEAM_MEMBER_ADDED',
+            DELETED: 'PROJECT_TEAM_MEMBER_DELETED',
+        },
+        PROJECT_TASK: {
+            CREATED: 'PROJECT_TASK_CREATED',
+            UPDATED: 'PROJECT_TASK_UPDATED',
+            DELETED: 'PROJECT_TASK_DELETED',
+        },
+    },
+}));
 
 // Dynamic imports AFTER mockModule
 const { TaskServiceImpl } = (await import('../TaskServiceImpl.ts')) as any;
 const TaskQueries = (await import('../TaskQueries.ts')) as any;
-const { kafka } = (await import('../../../../kafka/index.ts')) as any;
-const { KAFKA_TOPICS } = (await import('../../../../utils/kafka.ts')) as any;
+const { eventBus, KAFKA_EVENTS } = (await import(
+    '../../../../utils/EventBus.ts'
+)) as any;
 
 const mockedQueries = TaskQueries as jest.Mocked<typeof TaskQueries>;
 
 describe('TaskServiceImpl', () => {
     let taskService: any;
-    let mockProducer: any;
 
     beforeEach(async () => {
         jest.clearAllMocks();
         taskService = new TaskServiceImpl();
-        mockProducer = (kafka.producer as jest.Mock).mock.results[0]?.value;
         await taskService.init();
     });
 
@@ -72,17 +87,14 @@ describe('TaskServiceImpl', () => {
             const result = await taskService.createTask(data);
 
             expect(mockedQueries.insertTask).toHaveBeenCalledWith(data);
-            expect(mockProducer.send).toHaveBeenCalledWith(
+            expect(eventBus.publish).toHaveBeenCalledWith(
+                KAFKA_EVENTS.PROJECT_TASK.CREATED,
                 expect.objectContaining({
-                    topic: KAFKA_TOPICS.PROJECT_TASK,
-                    messages: expect.arrayContaining([
-                        expect.objectContaining({
-                            key: 't1',
-                        }),
-                    ]),
+                    key: 't1',
+                    data: expect.any(Object),
                 }),
             );
-            expect(result).toEqual([mockTask]);
+            expect(result).toEqual(mockTask);
         });
     });
 
@@ -99,8 +111,11 @@ describe('TaskServiceImpl', () => {
             const result = await taskService.deleteTask(data);
 
             expect(mockedQueries.deleteTasks).toHaveBeenCalledWith(data);
-            expect(mockProducer.send).toHaveBeenCalled();
-            expect(mockProducer.send.mock.calls[0][0].messages).toHaveLength(2);
+            expect(eventBus.publish).toHaveBeenCalledWith(
+                KAFKA_EVENTS.PROJECT_TASK.DELETED,
+                expect.any(Array),
+            );
+            expect(eventBus.publish.mock.calls[0][1]).toHaveLength(2);
             expect(result).toEqual(['t1', 't2']);
         });
     });
@@ -123,7 +138,11 @@ describe('TaskServiceImpl', () => {
             const result = await taskService.updateTasks(data);
 
             expect(mockedQueries.updateTask).toHaveBeenCalledTimes(2);
-            expect(mockProducer.send).toHaveBeenCalledTimes(2);
+            expect(eventBus.publish).toHaveBeenCalledWith(
+                KAFKA_EVENTS.PROJECT_TASK.UPDATED,
+                expect.any(Array),
+            );
+            expect(eventBus.publish.mock.calls[0][1]).toHaveLength(2);
             expect(result).toEqual(['t1', 't2']);
         });
 
@@ -143,7 +162,7 @@ describe('TaskServiceImpl', () => {
             });
 
             await expect(taskService.updateTasks(data)).rejects.toThrow(
-                'Unauthorized or some tasks not found/invalid',
+                'Unauthorized, some tasks not found, or version conflict',
             );
         });
     });

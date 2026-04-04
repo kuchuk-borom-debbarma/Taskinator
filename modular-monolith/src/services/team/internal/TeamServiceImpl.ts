@@ -7,11 +7,7 @@ import type {
     TeamMember,
     TeamService,
 } from '../TeamService.ts';
-import {
-    createEvent,
-    KAFKA_EVENTS,
-    KAFKA_TOPICS,
-} from '../../../utils/kafka.ts';
+import eventBus, { KAFKA_EVENTS } from '../../../utils/EventBus.ts';
 import {
     insertTeam,
     deleteTeams,
@@ -20,7 +16,6 @@ import {
     getTeams,
     getTeamMembers,
 } from './TeamQueries.ts';
-import { eventBus } from '../../../utils/EventBus.ts';
 import _ from 'lodash';
 
 export class TeamServiceImpl implements TeamService {
@@ -43,21 +38,19 @@ export class TeamServiceImpl implements TeamService {
             throw new Error('Failed to add any team members');
         }
 
-        const events = added.map((a) =>
-            createEvent(
-                KAFKA_EVENTS.PROJECT_TEAM_MEMBER.ADDED,
-                data.projectId,
-                {
+        await eventBus.publish(
+            KAFKA_EVENTS.PROJECT_TEAM_MEMBER.ADDED,
+            added.map((a) => ({
+                key: data.projectId,
+                data: {
                     userId: a.userId,
                     projectId: data.projectId,
                     teamId: data.teamId,
                     actorId: data.userId,
                     memberId: a.id,
                 },
-            ),
+            })),
         );
-
-        await eventBus.emit(KAFKA_TOPICS.PROJECT_TEAM_MEMBER, events);
 
         return added;
     }
@@ -65,16 +58,18 @@ export class TeamServiceImpl implements TeamService {
     async createTeams(data: CreateTeamsParam): Promise<Team[]> {
         const added = await insertTeam(data);
 
-        const events = added.map((team) =>
-            createEvent(KAFKA_EVENTS.PROJECT_TEAM.ADDED, data.projectId, {
-                userId: data.userId,
-                projectId: data.projectId,
-                teamId: team.id,
-                name: team.name,
-            }),
+        await eventBus.publish(
+            KAFKA_EVENTS.PROJECT_TEAM.ADDED,
+            added.map((team) => ({
+                key: data.projectId,
+                data: {
+                    userId: data.userId,
+                    projectId: data.projectId,
+                    teamId: team.id,
+                    name: team.name,
+                },
+            })),
         );
-
-        await eventBus.emit(KAFKA_TOPICS.PROJECT_TEAM, events);
 
         return added;
     }
@@ -86,20 +81,18 @@ export class TeamServiceImpl implements TeamService {
             throw new Error('Failed to delete any teamMembers');
         }
 
-        const events = deleted.map((v) =>
-            createEvent(
-                KAFKA_EVENTS.PROJECT_TEAM_MEMBER.DELETED,
-                data.projectId,
-                {
+        await eventBus.publish(
+            KAFKA_EVENTS.PROJECT_TEAM_MEMBER.DELETED,
+            deleted.map((v) => ({
+                key: data.projectId,
+                data: {
                     userId: v,
                     projectId: data.projectId,
                     teamId: data.teamId,
                     actorId: data.userId,
                 },
-            ),
+            })),
         );
-
-        await eventBus.emit(KAFKA_TOPICS.PROJECT_TEAM_MEMBER, events);
 
         return deleted;
     }
@@ -111,15 +104,17 @@ export class TeamServiceImpl implements TeamService {
             throw new Error('Failed to delete any teams');
         }
 
-        const events = deleted.map((d) =>
-            createEvent(KAFKA_EVENTS.PROJECT_TEAM.DELETED, data.projectId, {
-                userId: data.userId,
-                projectId: data.projectId,
-                teamId: d,
-            }),
+        await eventBus.publish(
+            KAFKA_EVENTS.PROJECT_TEAM.DELETED,
+            deleted.map((d) => ({
+                key: data.projectId,
+                data: {
+                    userId: data.userId,
+                    projectId: data.projectId,
+                    teamId: d,
+                },
+            })),
         );
-
-        await eventBus.emit(KAFKA_TOPICS.PROJECT_TEAM, events);
 
         return deleted;
     }

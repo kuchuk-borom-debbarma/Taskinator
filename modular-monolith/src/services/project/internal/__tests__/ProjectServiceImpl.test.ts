@@ -14,40 +14,56 @@ jest.unstable_mockModule('../ProjectQueries.ts', () => ({
     insertProjectMembers: jest.fn(),
     deleteProjects: jest.fn(),
     deleteProjectMembers: jest.fn(),
+    getProject: jest.fn(),
+    getProjects: jest.fn(),
+    getProjectMembers: jest.fn(),
 }));
 
-jest.unstable_mockModule('../../../../kafka/index.ts', () => {
-    const mockProducer = {
-        connect: (jest.fn() as any).mockResolvedValue(undefined),
-        send: (jest.fn() as any).mockResolvedValue(undefined),
-        disconnect: (jest.fn() as any).mockResolvedValue(undefined),
-    };
-    return {
-        kafka: {
-            producer: jest.fn().mockReturnValue(mockProducer),
+jest.unstable_mockModule('../../../../utils/EventBus.ts', () => ({
+    eventBus: {
+        init: (jest.fn() as any).mockResolvedValue(undefined),
+        publish: (jest.fn() as any).mockResolvedValue(undefined),
+        destroy: (jest.fn() as any).mockResolvedValue(undefined),
+    },
+    KAFKA_EVENTS: {
+        PROJECT: { CREATED: 'PROJECT_CREATED', DELETED: 'PROJECT_DELETED' },
+        PROJECT_MEMBER: {
+            ADDED: 'PROJECT_MEMBER_ADDED',
+            DELETED: 'PROJECT_MEMBER_DELETED',
         },
-    };
-});
+        PROJECT_TEAM: {
+            ADDED: 'PROJECT_TEAM_ADDED',
+            DELETED: 'PROJECT_TEAM_DELETED',
+        },
+        PROJECT_TEAM_MEMBER: {
+            ADDED: 'PROJECT_TEAM_MEMBER_ADDED',
+            DELETED: 'PROJECT_TEAM_MEMBER_DELETED',
+        },
+        PROJECT_TASK: {
+            CREATED: 'PROJECT_TASK_CREATED',
+            UPDATED: 'PROJECT_TASK_UPDATED',
+            DELETED: 'PROJECT_TASK_DELETED',
+        },
+    },
+}));
 
 // Dynamic imports AFTER mockModule
 const { ProjectServiceImpl } = (await import(
     '../ProjectServiceImpl.ts'
 )) as any;
 const ProjectQueries = (await import('../ProjectQueries.ts')) as any;
-const { kafka } = (await import('../../../../kafka/index.ts')) as any;
-const { KAFKA_TOPICS } = (await import('../../../../utils/kafka.ts')) as any;
+const { eventBus, KAFKA_EVENTS } = (await import(
+    '../../../../utils/EventBus.ts'
+)) as any;
 
 const mockedQueries = ProjectQueries as jest.Mocked<typeof ProjectQueries>;
 
 describe('ProjectServiceImpl', () => {
     let projectService: any;
-    let mockProducer: any;
 
     beforeEach(async () => {
         jest.clearAllMocks();
         projectService = new ProjectServiceImpl();
-        // Since we mocked kafka.producer, we can get the mock producer instance
-        mockProducer = (kafka.producer as jest.Mock).mock.results[0]?.value;
         await projectService.init();
     });
 
@@ -78,14 +94,11 @@ describe('ProjectServiceImpl', () => {
             expect(mockedQueries.insertProject).toHaveBeenCalledWith(
                 createParam,
             );
-            expect(mockProducer.send).toHaveBeenCalledWith(
+            expect(eventBus.publish).toHaveBeenCalledWith(
+                KAFKA_EVENTS.PROJECT.CREATED,
                 expect.objectContaining({
-                    topic: KAFKA_TOPICS.PROJECT,
-                    messages: expect.arrayContaining([
-                        expect.objectContaining({
-                            key: 'project-123',
-                        }),
-                    ]),
+                    key: 'project-123',
+                    data: expect.any(Object),
                 }),
             );
             expect(result).toEqual(mockProject);
@@ -101,7 +114,7 @@ describe('ProjectServiceImpl', () => {
                 }),
             ).rejects.toThrow('Failed to create project');
 
-            expect(mockProducer.send).not.toHaveBeenCalled();
+            expect(eventBus.publish).not.toHaveBeenCalled();
         });
     });
 
@@ -137,13 +150,11 @@ describe('ProjectServiceImpl', () => {
             expect(mockedQueries.insertProjectMembers).toHaveBeenCalledWith(
                 data,
             );
-            expect(mockProducer.send).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    topic: KAFKA_TOPICS.PROJECT_MEMBER,
-                    messages: expect.any(Array),
-                }),
+            expect(eventBus.publish).toHaveBeenCalledWith(
+                KAFKA_EVENTS.PROJECT_MEMBER.ADDED,
+                expect.any(Array),
             );
-            expect(mockProducer.send.mock.calls[0][0].messages).toHaveLength(2);
+            expect(eventBus.publish.mock.calls[0][1]).toHaveLength(2);
             expect(result).toEqual(mockMembers);
         });
 
@@ -158,7 +169,7 @@ describe('ProjectServiceImpl', () => {
                 }),
             ).rejects.toThrow('Failed to add any project members');
 
-            expect(mockProducer.send).not.toHaveBeenCalled();
+            expect(eventBus.publish).not.toHaveBeenCalled();
         });
     });
 
@@ -193,13 +204,11 @@ describe('ProjectServiceImpl', () => {
             await projectService.deleteProjects(data);
 
             expect(mockedQueries.deleteProjects).toHaveBeenCalledWith(data);
-            expect(mockProducer.send).toHaveBeenCalledWith(
-                expect.objectContaining({
-                    topic: KAFKA_TOPICS.PROJECT,
-                    messages: expect.any(Array),
-                }),
+            expect(eventBus.publish).toHaveBeenCalledWith(
+                KAFKA_EVENTS.PROJECT.DELETED,
+                expect.any(Array),
             );
-            expect(mockProducer.send.mock.calls[0][0].messages).toHaveLength(2);
+            expect(eventBus.publish.mock.calls[0][1]).toHaveLength(2);
         });
 
         it('should throw an error if no projects are deleted', async () => {
@@ -231,8 +240,8 @@ describe('ProjectServiceImpl', () => {
             const result = await projectService.createProjects(params);
 
             expect(mockedQueries.insertProjects).toHaveBeenCalledWith(params);
-            expect(mockProducer.send).toHaveBeenCalled();
-            expect(mockProducer.send.mock.calls[0][0].messages).toHaveLength(2);
+            expect(eventBus.publish).toHaveBeenCalled();
+            expect(eventBus.publish.mock.calls[0][1]).toHaveLength(2);
             expect(result).toEqual(mockProjects);
         });
     });
@@ -264,7 +273,7 @@ describe('ProjectServiceImpl', () => {
             expect(mockedQueries.deleteProjectMembers).toHaveBeenCalledWith(
                 data,
             );
-            expect(mockProducer.send).toHaveBeenCalled();
+            expect(eventBus.publish).toHaveBeenCalled();
         });
     });
 });

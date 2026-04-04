@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { User, Trash2, Plus } from 'lucide-react';
-import { cn } from '../utils/cn';
+import { Trash2, Plus } from 'lucide-react';
 
 interface Member {
     id: string;

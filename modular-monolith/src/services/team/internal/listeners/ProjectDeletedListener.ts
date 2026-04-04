@@ -1,10 +1,9 @@
-import { KAFKA_TOPICS, KAFKA_EVENTS } from '../../../../utils/kafka';
+import eventBus, { KAFKA_EVENTS } from '../../../../utils/EventBus';
 import { deleteAllProjectTeams } from '../TeamQueries';
-import { eventBus } from '../../../../utils/EventBus';
 
 export class TeamCleanupListener {
     async init() {
-        await eventBus.on(KAFKA_TOPICS.PROJECT, 'team-cleanup-group', {
+        await eventBus.subscribe('team-cleanup-group', {
             [KAFKA_EVENTS.PROJECT.DELETED]: async (data) => {
                 const { projectId } = data;
                 console.log(

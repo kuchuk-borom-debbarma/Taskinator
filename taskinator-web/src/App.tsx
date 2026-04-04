@@ -5,8 +5,7 @@ import { ProjectSidebar } from './components/ProjectSidebar';
 import { TaskTree } from './components/TaskTree';
 import { Drawer } from './components/Drawer';
 import { MemberManager } from './components/MemberManager';
-import type { Project, Task, Team, ProjectMember, TeamMember } from './types';
-import { Layout, Users, Settings, Plus, Search, Bell, Trash2, FolderEdit, CheckCircle2, Circle, Type, AlignLeft, Users2, User as UserIcon } from 'lucide-react';
+import { Layout, Users, Settings, Plus, Search, Bell, Trash2, FolderEdit, CheckCircle2, Circle, AlignLeft, Users2, User as UserIcon } from 'lucide-react';
 import { cn } from './utils/cn';
 
 const queryClient = new QueryClient();
