@@ -493,25 +493,41 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
 const decodeJWT = (token: string): JWTPayload => JSON.parse(atob(token.split('.')[1]));
 
 function App() {
-  const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
-
-  const handleLogin = (newToken: string) => {
-      localStorage.setItem('token', newToken);
-      setToken(newToken);
-  };
+  const [token, setToken] = useState<string | null>(() => {
+    const saved = localStorage.getItem('token');
+    if (saved) {
+        try {
+            decodeJWT(saved);
+            return saved;
+        } catch {
+            localStorage.removeItem('token');
+            return null;
+        }
+    }
+    return null;
+  });
 
   const handleLogout = () => {
       localStorage.removeItem('token');
       setToken(null);
   };
 
+  const handleLogin = (newToken: string) => {
+      try {
+          decodeJWT(newToken);
+          localStorage.setItem('token', newToken);
+          setToken(newToken);
+      } catch (e) {
+          console.error('Attempted to login with invalid token', e);
+      }
+  };
+
   let user: JWTPayload | null = null;
   if (token) {
       try {
           user = decodeJWT(token);
-      } catch (e) {
-          console.error('Invalid token', e);
-          localStorage.removeItem('token');
+      } catch {
+          // Fallback handled by state initialization
       }
   }
 

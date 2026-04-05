@@ -62,12 +62,12 @@ export interface Task {
 export interface StartSignUpParam {
     email: string;
     username: string;
-    password_raw: string;
+    password: string;
 }
 
 export interface SignInParam {
     email: string;
-    password_raw: string;
+    password: string;
 }
 
 export interface JWTPayload {

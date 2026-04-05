@@ -23,12 +23,12 @@ export const Auth: React.FC<AuthProps> = ({ onLogin }) => {
         
         try {
             if (isLogin) {
-                const res = await authApi.signIn({ email, password_raw: password });
+                const res = await authApi.signIn({ email, password });
                 if (res.token) {
                     onLogin(res.token);
                 }
             } else {
-                await authApi.startSignUp({ email, username, password_raw: password });
+                await authApi.startSignUp({ email, username, password });
                 setMessage('Signup started. Check your email or backend logs to finish the process.');
                 setIsLogin(true); // Switch to login view after successful signup
                 setPassword(''); // Clear password for security
