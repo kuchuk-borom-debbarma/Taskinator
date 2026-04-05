@@ -111,15 +111,41 @@ export const deleteTasks = async (
     data: DeleteTasksParam,
 ): Promise<ProjectTask[]> => {
     const result = await sql<ProjectTask>`
-        DELETE
-        FROM project_task
-        WHERE fk_project_id = ${data.projectId}::uuid
-          AND id = ANY (${data.taskIds}::uuid[])
-          AND (
-            EXISTS (SELECT 1 FROM project WHERE id = ${data.projectId}::uuid AND fk_user_id = ${data.userId})
-            OR EXISTS (SELECT 1 FROM project_member WHERE fk_project_id = ${data.projectId}::uuid AND fk_user_id = ${data.userId})
-            )
-        RETURNING
+        ),
+        deleted_tasks AS (
+            DELETE FROM project_task
+            WHERE fk_project_id = ${data.projectId}::uuid
+              AND id = ANY (${data.taskIds}::uuid[])
+              AND (
+                EXISTS (SELECT 1 FROM project WHERE id = ${data.projectId}::uuid AND fk_user_id = ${data.userId})
+                OR EXISTS (SELECT 1 FROM project_member WHERE fk_project_id = ${data.projectId}::uuid AND fk_user_id = ${data.userId})
+                )
+            RETURNING *
+        ),
+        inserted_outbox AS (
+            INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
+            SELECT 'project.task.parent.deleted',
+                   id::text,
+                   jsonb_build_object(
+                        'id', id,
+                        'projectId', fk_project_id,
+                        'teamId', fk_team_id,
+                        'memberId', fk_member_id,
+                        'parentTaskId', fk_parent_task_id,
+                        'title', title,
+                        'description', description,
+                        'status', status,
+                        'materializedPath', materialized_path,
+                        'version', version,
+                        'lastEventId', last_event_id,
+                        'createdBy', created_by,
+                        'updatedBy', updated_by,
+                        'createdAt', created_at,
+                        'updatedAt', updated_at
+                   )
+            FROM deleted_tasks
+        )
+        SELECT
             id,
             fk_project_id AS "projectId",
             fk_team_id AS "teamId",
@@ -135,6 +161,7 @@ export const deleteTasks = async (
             updated_by AS "updatedBy",
             created_at AS "createdAt",
             updated_at AS "updatedAt"
+        FROM deleted_tasks
     `.execute(db);
 
     if (result.rows.length !== data.taskIds.length) {
@@ -265,6 +292,18 @@ export const updateTask = async (
               AND EXISTS (SELECT 1 FROM updated_task)
               AND materialized_path LIKE (SELECT old_path FROM path_calculation) || CASE WHEN (SELECT old_path FROM path_calculation) = '' THEN '' ELSE '/' END || ${data.taskId}::text || '/%'
             RETURNING id
+        ),
+        inserted_outbox AS (
+            INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
+            SELECT 'project.task.updated',
+                   id::text,
+                   jsonb_build_object(
+                       'taskId', id,
+                       'projectId', ${data.projectId},
+                       'userId', ${data.userId},
+                       'updates', ${JSON.stringify(data)}::jsonb
+                   )
+            FROM updated_task
         )
         SELECT id FROM updated_task
     `.execute(db);

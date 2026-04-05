@@ -38,38 +38,11 @@ export class TeamServiceImpl implements TeamService {
             throw new Error('Failed to add any team members');
         }
 
-        await eventBus.publish(
-            KAFKA_EVENTS.PROJECT_TEAM_MEMBER.ADDED,
-            added.map((a) => ({
-                key: data.projectId,
-                data: {
-                    userId: a.userId,
-                    projectId: data.projectId,
-                    teamId: data.teamId,
-                    actorId: data.userId,
-                    memberId: a.id,
-                },
-            })),
-        );
-
         return added;
     }
 
     async createTeams(data: CreateTeamsParam): Promise<Team[]> {
         const added = await insertTeam(data);
-
-        await eventBus.publish(
-            KAFKA_EVENTS.PROJECT_TEAM.ADDED,
-            added.map((team) => ({
-                key: data.projectId,
-                data: {
-                    userId: data.userId,
-                    projectId: data.projectId,
-                    teamId: team.id,
-                    name: team.name,
-                },
-            })),
-        );
 
         return added;
     }
@@ -81,19 +54,6 @@ export class TeamServiceImpl implements TeamService {
             throw new Error('Failed to delete any teamMembers');
         }
 
-        await eventBus.publish(
-            KAFKA_EVENTS.PROJECT_TEAM_MEMBER.DELETED,
-            deleted.map((v) => ({
-                key: data.projectId,
-                data: {
-                    userId: v,
-                    projectId: data.projectId,
-                    teamId: data.teamId,
-                    actorId: data.userId,
-                },
-            })),
-        );
-
         return deleted;
     }
 
@@ -103,18 +63,6 @@ export class TeamServiceImpl implements TeamService {
         if (_.isEmpty(deleted)) {
             throw new Error('Failed to delete any teams');
         }
-
-        await eventBus.publish(
-            KAFKA_EVENTS.PROJECT_TEAM.DELETED,
-            deleted.map((d) => ({
-                key: data.projectId,
-                data: {
-                    userId: data.userId,
-                    projectId: data.projectId,
-                    teamId: d,
-                },
-            })),
-        );
 
         return deleted;
     }

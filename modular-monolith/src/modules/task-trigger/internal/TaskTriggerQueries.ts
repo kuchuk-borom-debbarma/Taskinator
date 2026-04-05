@@ -57,16 +57,31 @@ export const updateParentTaskStatus = async (data: {
     statusToSet: string;
 }): Promise<{ id: string; projectId: string } | null> => {
     const result = await sql<{ id: string; fk_project_id: string }>`
-        UPDATE project_task
-        SET status = ${data.statusToSet},
-            version = version + 1,
-            updated_at = ${getTimeString()}
-        WHERE id = (
-            SELECT fk_parent_task_id 
-            FROM project_task 
-            WHERE id = ${data.taskId}::uuid
+        WITH updated_task AS (
+            UPDATE project_task
+            SET status = ${data.statusToSet},
+                version = version + 1,
+                updated_at = ${getTimeString()}
+            WHERE id = (
+                SELECT fk_parent_task_id 
+                FROM project_task 
+                WHERE id = ${data.taskId}::uuid
+            )
+            RETURNING *
+        ),
+        inserted_outbox AS (
+            INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
+            SELECT 'project.task.updated',
+                   id::text,
+                   jsonb_build_object(
+                       'taskId', id,
+                       'projectId', fk_project_id,
+                       'userId', 'SYSTEM',
+                       'updates', jsonb_build_object('status', ${data.statusToSet})
+                   )
+            FROM updated_task
         )
-        RETURNING id, fk_project_id
+        SELECT id, fk_project_id FROM updated_task
     `.execute(db);
 
     const row = result.rows[0];

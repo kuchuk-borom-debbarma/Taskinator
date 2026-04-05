@@ -56,19 +56,6 @@ export class ProjectServiceImpl implements ProjectService {
         if (!deleted.length) {
             throw new Error('Failed to delete any project members');
         }
-
-        await eventBus.publish(
-            KAFKA_EVENTS.PROJECT_MEMBER.DELETED,
-            deleted.map((v) => ({
-                key: data.projectId,
-                data: {
-                    userId: v.userId,
-                    projectId: data.projectId,
-                    actorId: data.userId,
-                    memberId: v.id,
-                },
-            })),
-        );
     }
 
     async deleteProjects(data: DeleteProjectsParam): Promise<void> {
@@ -77,17 +64,6 @@ export class ProjectServiceImpl implements ProjectService {
         if (!deleted.length) {
             throw new Error('Failed to delete any project');
         }
-
-        await eventBus.publish(
-            KAFKA_EVENTS.PROJECT.DELETED,
-            deleted.map((project) => ({
-                key: project.id,
-                data: {
-                    userId: data.userId,
-                    projectId: project.id,
-                },
-            })),
-        );
     }
 
     async addProjectMembers(
@@ -98,19 +74,6 @@ export class ProjectServiceImpl implements ProjectService {
         if (!added.length) {
             throw new Error('Failed to add any project members');
         }
-
-        await eventBus.publish(
-            KAFKA_EVENTS.PROJECT_MEMBER.ADDED,
-            added.map((member) => ({
-                key: data.projectId,
-                data: {
-                    projectId: data.projectId,
-                    userId: member.userId,
-                    actorId: data.userId,
-                    memberId: member.id,
-                },
-            })),
-        );
 
         return added;
     }
@@ -131,18 +94,6 @@ export class ProjectServiceImpl implements ProjectService {
         if (!projects.length) {
             throw new Error('Failed to create projects');
         }
-
-        await eventBus.publish(
-            KAFKA_EVENTS.PROJECT.CREATED,
-            projects.map((project) => ({
-                key: project.id,
-                data: {
-                    projectId: project.id,
-                    userId: project.userId,
-                    name: project.name,
-                },
-            })),
-        );
 
         return projects;
     }
