@@ -72,10 +72,16 @@ export const insertProjectMembers = async (
     const result = await sql<ProjectMember>`
         WITH auth_check AS (
             SELECT 1 FROM project WHERE id = ${data.projectId}::uuid AND fk_user_id = ${data.userId}
+        ),
+        valid_users AS (
+            SELECT id::text AS user_id
+            FROM users
+            WHERE id::text = ANY(${data.usersToAdd}::text[])
         )
         INSERT INTO project_member (fk_user_id, fk_project_id)
-        SELECT unnest(${data.usersToAdd}::text[]),
+        SELECT user_id,
                ${data.projectId}::uuid
+        FROM valid_users
         WHERE EXISTS (SELECT 1 FROM auth_check)
         RETURNING
             id, 

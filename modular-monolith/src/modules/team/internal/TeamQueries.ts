@@ -62,18 +62,23 @@ export const insertTeamMembers = async (
             UNION ALL
             SELECT 1 FROM project_team WHERE id = ${data.teamId}::uuid AND fk_project_id = ${data.projectId}::uuid AND fk_user_id = ${data.userId}
             LIMIT 1
+        ),
+        valid_users AS (
+            SELECT id::text AS user_id
+            FROM users
+            WHERE id::text = ANY(${data.members}::text[])
         )
         INSERT INTO project_team_member (fk_team_id, fk_user_id, fk_project_id)
         SELECT ${data.teamId}::uuid,
-               m.user_id,
+               v.user_id,
                ${data.projectId}::uuid
-        FROM unnest(${data.members}::text[]) AS m(user_id)
+        FROM valid_users v
         WHERE EXISTS (SELECT 1 FROM auth_check)
           -- CRITICAL: Member must be the project owner OR a project member
           AND (
-            EXISTS (SELECT 1 FROM project WHERE id = ${data.projectId}::uuid AND fk_user_id = m.user_id)
+            EXISTS (SELECT 1 FROM project WHERE id = ${data.projectId}::uuid AND fk_user_id = v.user_id)
             OR
-            EXISTS (SELECT 1 FROM project_member WHERE fk_project_id = ${data.projectId}::uuid AND fk_user_id = m.user_id)
+            EXISTS (SELECT 1 FROM project_member WHERE fk_project_id = ${data.projectId}::uuid AND fk_user_id = v.user_id)
           )
         RETURNING
             id, fk_team_id AS "teamId", fk_user_id AS "userId", fk_project_id AS "projectId", version, last_event_id AS "lastEventId", created_at AS "createdAt", updated_at AS "updatedAt"

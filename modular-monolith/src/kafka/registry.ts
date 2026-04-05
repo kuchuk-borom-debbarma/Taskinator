@@ -1,22 +1,22 @@
-import { projectDeletedListener as taskProjectCleanup } from '../services/task/internal/listeners/ProjectDeletedListener';
-import { teamCleanupListener as teamProjectCleanup } from '../services/team/internal/listeners/ProjectDeletedListener';
-import { memberCleanupListener as memberProjectCleanup } from '../services/project/internal/listeners/ProjectDeletedListener';
+import { projectDeletedListener as taskProjectCleanup } from '../modules/task/internal/listeners/ProjectDeletedListener';
+import { teamCleanupListener as teamProjectCleanup } from '../modules/team/internal/listeners/ProjectDeletedListener';
+import { memberCleanupListener as memberProjectCleanup } from '../modules/project/internal/listeners/ProjectDeletedListener';
 
-import { projectMemberDeletedListener as taskMemberCleanup } from '../services/task/internal/listeners/ProjectMemberDeletedListener';
-import { projectMemberDeletedListener as teamMemberCleanup } from '../services/team/internal/listeners/ProjectMemberDeletedListener';
+import { projectMemberDeletedListener as taskMemberCleanup } from '../modules/task/internal/listeners/ProjectMemberDeletedListener';
+import { projectMemberDeletedListener as teamMemberCleanup } from '../modules/team/internal/listeners/ProjectMemberDeletedListener';
 
-import { projectTeamDeletedListener as taskTeamCleanup } from '../services/task/internal/listeners/ProjectTeamDeletedListener';
-import { projectTeamDeletedListener as teamTeamCleanup } from '../services/team/internal/listeners/ProjectTeamDeletedListener';
+import { projectTeamDeletedListener as taskTeamCleanup } from '../modules/task/internal/listeners/ProjectTeamDeletedListener';
+import { projectTeamDeletedListener as teamTeamCleanup } from '../modules/team/internal/listeners/ProjectTeamDeletedListener';
 
-import { projectTeamMemberDeletedListener as taskTeamMemberCleanup } from '../services/task/internal/listeners/ProjectTeamMemberDeletedListener';
-import { taskTriggerListener as taskTriggerDelegator } from '../services/task-trigger/internal/listeners/ProjectTaskUpdatedListener';
+import { projectTeamMemberDeletedListener as taskTeamMemberCleanup } from '../modules/task/internal/listeners/ProjectTeamMemberDeletedListener';
+import { taskTriggerListener as taskTriggerDelegator } from '../modules/task-trigger/internal/listeners/ProjectTaskUpdatedListener';
 
-import { taskTriggerListener } from '../services/task-trigger/internal/listeners/TaskTriggerListener';
-import { taskDeleteListener as taskRecursiveCleanup } from '../services/task/internal/listeners/TaskDeleteListener';
-import { taskDeletedListener as triggerTaskCleanup } from '../services/task-trigger/internal/listeners/TaskDeletedListener';
+import { taskTriggerListener } from '../modules/task-trigger/internal/listeners/TaskTriggerListener';
+import { taskDeleteListener as taskRecursiveCleanup } from '../modules/task/internal/listeners/TaskDeleteListener';
+import { taskDeletedListener as triggerTaskCleanup } from '../modules/task-trigger/internal/listeners/TaskDeletedListener';
 
-import { userSignupStartedListener } from '../services/auth/internal/listeners/UserSignupStartedListener.ts';
-import { userCreatedListener } from '../services/auth/internal/listeners/UserCreatedListener.ts';
+import { userSignupStartedListener } from '../modules/auth/internal/listeners/UserSignupStartedListener.ts';
+import { userCreatedListener } from '../modules/auth/internal/listeners/UserCreatedListener.ts';
 
 export {
     taskProjectCleanup,

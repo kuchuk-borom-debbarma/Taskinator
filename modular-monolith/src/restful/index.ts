@@ -1,9 +1,9 @@
 import express from 'express';
 import cors from 'cors';
-import projectRoutes from './routes/project.routes';
-import teamRoutes from './routes/team.routes';
-import taskRoutes from './routes/task.routes';
-import authRoutes from './routes/auth.routes.ts';
+import projectRoutes from '../modules/project/project.routes';
+import teamRoutes from '../modules/team/team.routes';
+import taskRoutes from '../modules/task/task.routes';
+import authRoutes from '../modules/auth/auth.routes.ts';
 
 export const startRestServer = (port: number = 3000) => {
     const app = express();

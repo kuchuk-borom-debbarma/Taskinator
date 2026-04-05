@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authService } from '../../services/auth/index.ts';
+import { authService } from './index.ts';
 
 const router = Router();
 

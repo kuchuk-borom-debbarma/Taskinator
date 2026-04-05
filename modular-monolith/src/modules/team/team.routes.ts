@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { teamService } from '../../services/team';
+import { teamService } from './index';
 
 const router = Router();
 

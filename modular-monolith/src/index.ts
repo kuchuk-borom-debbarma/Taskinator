@@ -1,11 +1,11 @@
-import { projectService } from './services/project';
-import { teamService } from './services/team';
-import { taskService } from './services/task';
-import { authService } from './services/auth/index.ts';
-import { externalNotificationService } from './services/external-notification/index.ts';
+import { projectService } from './modules/project';
+import { teamService } from './modules/team';
+import { taskService } from './modules/task';
+import { authService } from './modules/auth/index.ts';
+import { externalNotificationService } from './modules/external-notification/index.ts';
 import { startConsumers } from './kafka/registry';
 import { startRestServer } from './restful';
-import { taskTriggerService } from './services/task-trigger';
+import { taskTriggerService } from './modules/task-trigger';
 
 // Start API immediately
 startRestServer(3000);
