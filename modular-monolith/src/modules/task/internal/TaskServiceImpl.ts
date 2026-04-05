@@ -30,17 +30,6 @@ export class TaskServiceImpl implements TaskService {
 
     async createTask(data: CreateTaskParam): Promise<ProjectTask> {
         const task = await insertTask(data);
-
-        await eventBus.publish(KAFKA_EVENTS.PROJECT_TASK.CREATED, {
-            key: task.id,
-            data: {
-                taskId: task.id,
-                projectId: task.projectId,
-                userId: data.userId,
-                title: task.title,
-            },
-        });
-
         return task;
     }
 

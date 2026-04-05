@@ -6,6 +6,7 @@ import { externalNotificationService } from './modules/external-notification/ind
 import { startConsumers } from './kafka/registry';
 import { startRestServer } from './restful';
 import { taskTriggerService } from './modules/task-trigger';
+import { startOutboxRelay } from './utils/event-bus/OutboxRelay.ts';
 
 // Start API immediately
 startRestServer(3000);
@@ -18,4 +19,6 @@ await Promise.all([
     authService.init(),
     externalNotificationService.init(),
     startConsumers(),
-]);
+]).then(() => {
+    startOutboxRelay();
+});

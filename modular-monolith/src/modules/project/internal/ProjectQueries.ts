@@ -13,29 +13,39 @@ import { sql } from 'kysely';
 export const insertProject = async (
     data: CreateProjectParam,
 ): Promise<Project | null> => {
-    const added = await db
-        .insertInto('project')
-        .values({
-            name: data.name,
-            description: data.description,
-            created_at: getTimeString(),
-            fk_user_id: data.userId,
-        })
-        .returningAll()
-        .executeTakeFirst();
+    const result = await sql<Project>`
+        WITH inserted_project AS (
+            INSERT INTO project (name, description, fk_user_id, created_at)
+            VALUES (${data.name}, ${data.description}, ${data.userId}, ${getTimeString()})
+            RETURNING *
+        ),
+        inserted_outbox AS (
+            INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
+            SELECT 'project.created',
+                   id::text,
+                   jsonb_build_object(
+                       'projectId', id,
+                       'userId', fk_user_id,
+                       'name', name
+                   )
+            FROM inserted_project
+        )
+        SELECT 
+            id,
+            name,
+            description,
+            fk_user_id AS "userId",
+            version,
+            last_event_id AS "lastEventId",
+            created_at AS "createdAt",
+            updated_at AS "updatedAt"
+        FROM inserted_project
+    `.execute(db);
 
+    const added = result.rows[0];
     if (!added) return null;
 
-    return {
-        createdAt: added.created_at,
-        description: added.description,
-        id: added.id,
-        name: added.name,
-        version: added.version,
-        lastEventId: added.last_event_id,
-        updatedAt: added.updated_at,
-        userId: added.fk_user_id,
-    };
+    return added;
 };
 
 export const insertProjects = async (

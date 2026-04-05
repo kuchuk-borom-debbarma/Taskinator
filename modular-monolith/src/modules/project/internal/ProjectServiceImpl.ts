@@ -122,15 +122,6 @@ export class ProjectServiceImpl implements ProjectService {
             throw new Error('Failed to create project');
         }
 
-        await eventBus.publish(KAFKA_EVENTS.PROJECT.CREATED, {
-            key: project.id,
-            data: {
-                projectId: project.id,
-                userId: data.userId,
-                name: project.name,
-            },
-        });
-
         return project;
     }
 

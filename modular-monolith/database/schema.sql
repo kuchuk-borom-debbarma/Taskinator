@@ -113,3 +113,13 @@ CREATE TABLE pending_users (
     password_hash TEXT NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Outbox Events Table (wCTE Delivery)
+CREATE TABLE outbox_events (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    kafka_topic TEXT NOT NULL,
+    kafka_key TEXT NOT NULL,
+    payload JSONB NOT NULL,
+    status TEXT NOT NULL DEFAULT 'PENDING',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
