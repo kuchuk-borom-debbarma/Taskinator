@@ -1,11 +1,27 @@
 import axios from 'axios';
-import type { Project, ProjectMember, Team, TeamMember, Task } from '../types';
+import type { Project, ProjectMember, Team, TeamMember, Task, SignInParam, StartSignUpParam } from '../types';
 
 const API_BASE_URL = 'http://127.0.0.1:3000';
 
 const api = axios.create({
     baseURL: API_BASE_URL,
 });
+
+api.interceptors.request.use((config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+});
+
+export const authApi = {
+    signIn: (data: SignInParam) => 
+        api.post<{ token: string }>('/auth/signin', data).then(res => res.data),
+        
+    startSignUp: (data: StartSignUpParam) => 
+        api.post<{ message: string }>('/auth/signup', data).then(res => res.data),
+};
 
 export const projectApi = {
     getProjects: (userId: string) => 

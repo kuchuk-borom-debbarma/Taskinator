@@ -58,3 +58,22 @@ export interface Task {
     createdAt: string;
     updatedAt: string;
 }
+
+export interface StartSignUpParam {
+    email: string;
+    username: string;
+    password_raw: string;
+}
+
+export interface SignInParam {
+    email: string;
+    password_raw: string;
+}
+
+export interface JWTPayload {
+    id: string;
+    email: string;
+    username: string;
+    iat: number;
+    exp: number;
+}

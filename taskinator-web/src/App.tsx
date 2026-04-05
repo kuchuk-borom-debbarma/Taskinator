@@ -7,11 +7,18 @@ import { Drawer } from './components/Drawer';
 import { MemberManager } from './components/MemberManager';
 import { Layout, Users, Settings, Plus, Search, Bell, Trash2, FolderEdit, CheckCircle2, Circle, AlignLeft, Users2, User as UserIcon } from 'lucide-react';
 import { cn } from './utils/cn';
+import { Auth } from './components/Auth';
+import type { JWTPayload } from './types';
 
 const queryClient = new QueryClient();
 
-const Workspace: React.FC = () => {
-    const [userId, setUserId] = useState<string>('demo-user');
+interface WorkspaceProps {
+    user: JWTPayload;
+    onLogout: () => void;
+}
+
+const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
+    const userId = user.id;
     const [selectedProjectId, setSelectedProjectId] = useState<string>();
     const [isProjectSettingsOpen, setIsProjectSettingsOpen] = useState(false);
     const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
@@ -171,8 +178,8 @@ const Workspace: React.FC = () => {
         <div className="flex h-screen w-full bg-background text-foreground overflow-hidden">
             <ProjectSidebar 
                 projects={projects}
-                userId={userId}
-                onUserIdChange={setUserId}
+                username={user.username}
+                onLogout={onLogout}
                 selectedProjectId={selectedProjectId}
                 onSelectProject={setSelectedProjectId}
                 onCreateProject={handleCreateProject}
@@ -483,10 +490,38 @@ const Workspace: React.FC = () => {
     );
 };
 
+const decodeJWT = (token: string): JWTPayload => JSON.parse(atob(token.split('.')[1]));
+
 function App() {
+  const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
+
+  const handleLogin = (newToken: string) => {
+      localStorage.setItem('token', newToken);
+      setToken(newToken);
+  };
+
+  const handleLogout = () => {
+      localStorage.removeItem('token');
+      setToken(null);
+  };
+
+  let user: JWTPayload | null = null;
+  if (token) {
+      try {
+          user = decodeJWT(token);
+      } catch (e) {
+          console.error('Invalid token', e);
+          localStorage.removeItem('token');
+      }
+  }
+
   return (
     <QueryClientProvider client={queryClient}>
-        <Workspace />
+        {user ? (
+            <Workspace user={user} onLogout={handleLogout} />
+        ) : (
+            <Auth onLogin={handleLogin} />
+        )}
     </QueryClientProvider>
   )
 }
