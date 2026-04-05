@@ -1,6 +1,8 @@
 import { projectService } from './services/project';
 import { teamService } from './services/team';
 import { taskService } from './services/task';
+import { authService } from './services/auth/index.ts';
+import { externalNotificationService } from './services/external-notification/index.ts';
 import { startConsumers } from './kafka/registry';
 import { startRestServer } from './restful';
 import { taskTriggerService } from './services/task-trigger';
@@ -13,5 +15,7 @@ await Promise.all([
     teamService.init(),
     taskService.init(),
     taskTriggerService.init(),
+    authService.init(),
+    externalNotificationService.init(),
     startConsumers(),
 ]);

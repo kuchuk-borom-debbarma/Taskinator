@@ -1,12 +1,12 @@
 import React from 'react';
 import type { Project } from '../types';
-import { Folder, Plus, ChevronRight } from 'lucide-react';
+import { Folder, Plus, ChevronRight, LogOut } from 'lucide-react';
 import { cn } from '../utils/cn';
 
 interface ProjectSidebarProps {
     projects: Project[];
-    userId: string;
-    onUserIdChange: (id: string) => void;
+    username: string;
+    onLogout: () => void;
     selectedProjectId?: string;
     onSelectProject: (id: string) => void;
     onCreateProject: () => void;
@@ -14,8 +14,8 @@ interface ProjectSidebarProps {
 
 export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
     projects,
-    userId,
-    onUserIdChange,
+    username,
+    onLogout,
     selectedProjectId,
     onSelectProject,
     onCreateProject,
@@ -53,26 +53,20 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
                 ))}
             </div>
             
-            <div className="p-4 border-t border-border space-y-2">
-                <div className="px-2">
-                    <label className="text-[10px] uppercase font-bold text-muted-foreground mb-1 block">Impersonate User</label>
-                    <input 
-                        type="text" 
-                        value={userId}
-                        onChange={(e) => onUserIdChange(e.target.value)}
-                        className="w-full bg-secondary/50 border border-border rounded px-2 py-1 text-xs outline-none focus:border-primary transition-colors"
-                        placeholder="Type userId..."
-                        autoComplete="off"
-                        data-1p-ignore
-                        data-lpignore="true"
-                    />
-                </div>
-                <div className="flex items-center gap-2 px-2">
-                    <div className="w-6 h-6 rounded-full bg-accent flex items-center justify-center text-[10px] font-bold">
-                        {userId.substring(0, 2).toUpperCase()}
+            <div className="p-4 border-t border-border flex items-center justify-between">
+                <div className="flex items-center gap-2 overflow-hidden">
+                    <div className="w-8 h-8 shrink-0 rounded-full bg-accent flex items-center justify-center text-xs font-bold text-accent-foreground">
+                        {username.substring(0, 2).toUpperCase()}
                     </div>
-                    <span className="text-xs font-medium text-muted truncate">{userId}</span>
+                    <span className="text-sm font-medium text-muted truncate">{username}</span>
                 </div>
+                <button 
+                    onClick={onLogout}
+                    className="p-2 hover:bg-secondary rounded-md text-muted hover:text-red-400 transition-colors"
+                    title="Logout"
+                >
+                    <LogOut size={16} />
+                </button>
             </div>
         </div>
     );

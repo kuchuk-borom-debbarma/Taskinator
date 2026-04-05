@@ -3,6 +3,7 @@ import cors from 'cors';
 import projectRoutes from './routes/project.routes';
 import teamRoutes from './routes/team.routes';
 import taskRoutes from './routes/task.routes';
+import authRoutes from './routes/auth.routes.ts';
 
 export const startRestServer = (port: number = 3000) => {
     const app = express();
@@ -28,6 +29,7 @@ export const startRestServer = (port: number = 3000) => {
     app.use('/projects', projectRoutes);
     app.use('/teams', teamRoutes);
     app.use('/tasks', taskRoutes);
+    app.use('/auth', authRoutes);
 
     app.listen(port, () => {
         console.log(`[REST] Server started on http://localhost:${port}`);

@@ -5,6 +5,7 @@ export const KAFKA_TOPICS = {
     PROJECT_TEAM_MEMBER: 'project-team-member-events',
     PROJECT_TASK: 'project-task-events',
     PROJECT_TASK_TRIGGER: 'project-task-trigger-events',
+    AUTH: 'auth-events',
 } as const;
 
 export const KAFKA_EVENTS = {
@@ -31,6 +32,10 @@ export const KAFKA_EVENTS = {
     PROJECT_TASK_TRIGGER: {
         TRIGGER: 'PROJECT_TASK_TRIGGER',
     },
+    AUTH: {
+        SIGNUP_STARTED: 'AUTH_SIGNUP_STARTED',
+        USER_CREATED: 'AUTH_USER_CREATED',
+    },
 } as const;
 
 export const EVENT_TO_TOPIC: Record<string, string> = {
@@ -50,4 +55,6 @@ export const EVENT_TO_TOPIC: Record<string, string> = {
     [KAFKA_EVENTS.PROJECT_TASK.CHILDREN_DELETED]: KAFKA_TOPICS.PROJECT_TASK,
     [KAFKA_EVENTS.PROJECT_TASK_TRIGGER.TRIGGER]:
         KAFKA_TOPICS.PROJECT_TASK_TRIGGER,
+    [KAFKA_EVENTS.AUTH.SIGNUP_STARTED]: KAFKA_TOPICS.AUTH,
+    [KAFKA_EVENTS.AUTH.USER_CREATED]: KAFKA_TOPICS.AUTH,
 };
