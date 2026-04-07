@@ -58,3 +58,25 @@ export const EVENT_TO_TOPIC: Record<string, string> = {
     [KAFKA_EVENTS.AUTH.SIGNUP_STARTED]: KAFKA_TOPICS.AUTH,
     [KAFKA_EVENTS.AUTH.USER_CREATED]: KAFKA_TOPICS.AUTH,
 };
+
+/**
+ * Maps the raw kafka_topic strings stored in outbox_events rows
+ * back to the KAFKA_EVENTS type codes that Bus.publish() expects.
+ * This allows the OutboxRelay to bridge between the DB and the MemoryBus.
+ */
+export const OUTBOX_TOPIC_TO_EVENT_TYPE: Record<string, string> = {
+    'project.created': KAFKA_EVENTS.PROJECT.CREATED,
+    'project.deleted': KAFKA_EVENTS.PROJECT.DELETED,
+    'project.member.added': KAFKA_EVENTS.PROJECT_MEMBER.ADDED,
+    'project.member.deleted': KAFKA_EVENTS.PROJECT_MEMBER.DELETED,
+    'project.team.created': KAFKA_EVENTS.PROJECT_TEAM.ADDED,
+    'project.team.deleted': KAFKA_EVENTS.PROJECT_TEAM.DELETED,
+    'project.team.member.added': KAFKA_EVENTS.PROJECT_TEAM_MEMBER.ADDED,
+    'project.team.member.deleted': KAFKA_EVENTS.PROJECT_TEAM_MEMBER.DELETED,
+    'project.task.created': KAFKA_EVENTS.PROJECT_TASK.CREATED,
+    'project.task.updated': KAFKA_EVENTS.PROJECT_TASK.UPDATED,
+    'project.task.deleted': KAFKA_EVENTS.PROJECT_TASK.DELETED,
+    'project.task.parent.deleted': KAFKA_EVENTS.PROJECT_TASK.PARENT_DELETED,
+    'project.task.children.deleted': KAFKA_EVENTS.PROJECT_TASK.CHILDREN_DELETED,
+    'project.task.trigger': KAFKA_EVENTS.PROJECT_TASK_TRIGGER.TRIGGER,
+};

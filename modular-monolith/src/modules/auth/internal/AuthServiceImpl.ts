@@ -7,6 +7,8 @@ import { logger } from '../../../logger/index.ts';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-jwt-key';
 
+import { sql } from 'kysely';
+
 export class AuthServiceImpl implements AuthService {
     async init(): Promise<void> {
         logger.info('AuthService initialized');
@@ -20,25 +22,23 @@ export class AuthServiceImpl implements AuthService {
         const password_hash = await Bun.password.hash(data.password_raw);
         const uid = uuidv4();
 
-        await db
-            .insertInto('pending_users')
-            .values({
-                id: uid,
-                email: data.email,
-                username: data.username,
-                password_hash: password_hash,
-            })
-            .execute();
+        await sql`
+            WITH inserted_pending AS (
+                INSERT INTO pending_users (id, email, username, password_hash)
+                VALUES (${uid}::uuid, ${data.email}, ${data.username}, ${password_hash})
+                RETURNING *
+            )
+            INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
+            SELECT 'auth.signup.started',
+                   ${uid}::text,
+                   jsonb_build_object(
+                       'email', email,
+                       'uid', id
+                   )
+            FROM inserted_pending
+        `.execute(db);
 
         logger.info(`Inserted pending user with email ${data.email}`);
-
-        await eventBus.publish(KAFKA_EVENTS.AUTH.SIGNUP_STARTED, {
-            key: uid,
-            data: {
-                email: data.email,
-                uid: uid,
-            }
-        });
     }
 
     async finishSignUp(token: string): Promise<void> {
@@ -46,35 +46,33 @@ export class AuthServiceImpl implements AuthService {
             const decoded = jwt.verify(token, JWT_SECRET) as { uid: string };
             const uid = decoded.uid;
 
-            const pendingUser = await db
-                .selectFrom('pending_users')
-                .where('id', '=', uid)
-                .selectAll()
-                .executeTakeFirst();
+            const result = await sql<{ email: string }>`
+                WITH pending AS (
+                    SELECT * FROM pending_users WHERE id = ${uid}::uuid
+                ),
+                inserted_user AS (
+                    INSERT INTO users (id, email, username, password_hash)
+                    SELECT id, email, username, password_hash FROM pending
+                    RETURNING *
+                ),
+                inserted_outbox AS (
+                    INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
+                    SELECT 'auth.user.created',
+                           id::text,
+                           jsonb_build_object(
+                               'email', email,
+                               'uid', id
+                           )
+                    FROM inserted_user
+                )
+                SELECT email FROM inserted_user
+            `.execute(db);
 
-            if (!pendingUser) {
+            if (result.rows.length === 0) {
                 throw new Error('Pending user not found');
             }
 
-            await db
-                .insertInto('users')
-                .values({
-                    id: pendingUser.id,
-                    email: pendingUser.email,
-                    username: pendingUser.username,
-                    password_hash: pendingUser.password_hash,
-                })
-                .execute();
-
-            logger.info(`User created with email ${pendingUser.email}`);
-
-            await eventBus.publish(KAFKA_EVENTS.AUTH.USER_CREATED, {
-                key: pendingUser.id,
-                data: {
-                    email: pendingUser.email,
-                    uid: pendingUser.id,
-                }
-            });
+            logger.info(`User created with email ${result.rows[0]!.email}`);
         } catch (error) {
             logger.error('Failed to finish signup:', error);
             throw error;

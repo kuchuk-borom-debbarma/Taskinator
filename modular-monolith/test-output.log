@@ -1,0 +1,445 @@
+
+> test
+> node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand --testMatch="**/*.test.ts"
+
+ts-jest[config] (WARN) [94mmessage[0m[90m TS151001: [0mIf you have issues related to imports, you should consider setting `esModuleInterop` to `true` in your TypeScript configuration file (usually `tsconfig.json`). See https://blogs.msdn.microsoft.com/typescript/2018/01/31/announcing-typescript-2-7/#easier-ecmascript-module-interoperability for more information.
+(node:21225) ExperimentalWarning: VM Modules is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:21225) Warning: `--localstorage-file` was provided without a valid path
+FAIL src/__tests__/TaskUpdate.eda.test.ts (16.62 s)
+  ● Console
+
+    console.log
+      Initializing event bus TaskServiceImpl
+
+      at TaskServiceImpl.init (src/modules/task/internal/TaskServiceImpl.ts:22:17)
+
+    console.log
+      Initializing event bus TaskTriggerServiceImpl
+
+      at TaskTriggerServiceImpl.init (src/modules/task-trigger/internal/TaskTriggerServiceImpl.ts:34:17)
+
+    console.log
+      [Task Service] ProjectDeletedListener started
+
+      at TaskUpdatedListener.init (src/modules/task-trigger/internal/listeners/ProjectTaskUpdatedListener.ts:38:17)
+
+    console.log
+      [Outbox Relay] Started polling for wCTE outbox events
+
+      at startOutboxRelay (src/utils/event-bus/OutboxRelay.ts:62:13)
+
+    console.log
+      [Task Trigger Service] Publishing event to trigger all trigger assigned to task 7480ccfc-2dc7-448f-ac87-7248ccaf0382
+
+      at EventEmitter.PROJECT_TASK_UPDATED (src/modules/task-trigger/internal/listeners/ProjectTaskUpdatedListener.ts:16:25)
+
+    console.log
+      [Trigger Engine] Updating parent status for taskId: 7480ccfc-2dc7-448f-ac87-7248ccaf0382 to DONE
+
+      at updateParentStatusTrigger (src/modules/task-trigger/internal/trigger-engine/processors/updateParentStatus.ts:24:13)
+
+    console.log
+      [Task Trigger Service] Publishing event to trigger all trigger assigned to task 5ed26f14-78bf-4103-8ad6-4c3538688267
+
+      at EventEmitter.PROJECT_TASK_UPDATED (src/modules/task-trigger/internal/listeners/ProjectTaskUpdatedListener.ts:16:25)
+
+    console.log
+      [Trigger Engine] Updating parent status for taskId: 5ed26f14-78bf-4103-8ad6-4c3538688267 to DONE
+
+      at updateParentStatusTrigger (src/modules/task-trigger/internal/trigger-engine/processors/updateParentStatus.ts:24:13)
+
+    console.log
+      [Task Trigger Service] Publishing event to trigger all trigger assigned to task 225fd6ce-29c8-40f4-b616-8cb1d61b0fd1
+
+      at EventEmitter.PROJECT_TASK_UPDATED (src/modules/task-trigger/internal/listeners/ProjectTaskUpdatedListener.ts:16:25)
+
+    console.log
+      [Trigger Engine] Updating parent status for taskId: 225fd6ce-29c8-40f4-b616-8cb1d61b0fd1 to DONE
+
+      at updateParentStatusTrigger (src/modules/task-trigger/internal/trigger-engine/processors/updateParentStatus.ts:24:13)
+
+    console.log
+      [Trigger Engine] Updating parent status for taskId: 225fd6ce-29c8-40f4-b616-8cb1d61b0fd1 to DONE
+
+      at updateParentStatusTrigger (src/modules/task-trigger/internal/trigger-engine/processors/updateParentStatus.ts:24:13)
+
+    console.log
+      [Outbox Relay] Stopped.
+
+      at stopOutboxRelay (src/utils/event-bus/OutboxRelay.ts:71:13)
+
+    console.log
+      Disconnecting event bus TaskServiceImpl
+
+      at TaskServiceImpl.destroy (src/modules/task/internal/TaskServiceImpl.ts:27:17)
+
+    console.log
+      Disconnecting event bus TaskTriggerServiceImpl
+
+      at TaskTriggerServiceImpl.destroy (src/modules/task-trigger/internal/TaskTriggerServiceImpl.ts:29:17)
+
+  ● Task Update → Trigger Dispatch → Execution EDA Flow › executes UPDATE_PARENT_STATUS trigger when a child task is updated
+
+    thrown: "Exceeded timeout of 5000 ms for a test.
+    Add a timeout value to this test to increase the timeout, if this is a long-running test. See https://jestjs.io/docs/api#testname-fn-timeout."
+
+      63 |     });
+      64 |
+    > 65 |     it('executes UPDATE_PARENT_STATUS trigger when a child task is updated', async () => {
+         |     ^
+      66 |         // Setup: parent task + child task
+      67 |         const parent = await createTask(projectId, ownerId, { title: 'Parent', status: 'TODO' });
+      68 |         const child = await createChildTask(projectId, ownerId, parent, { title: 'Child', status: 'TODO' });
+
+      at src/__tests__/TaskUpdate.eda.test.ts:65:5
+      at src/__tests__/TaskUpdate.eda.test.ts:37:1
+
+  ● Task Update → Trigger Dispatch → Execution EDA Flow › writes a new outbox event after the trigger updates the parent status
+
+    thrown: "Exceeded timeout of 5000 ms for a test.
+    Add a timeout value to this test to increase the timeout, if this is a long-running test. See https://jestjs.io/docs/api#testname-fn-timeout."
+
+      128 |     });
+      129 |
+    > 130 |     it('writes a new outbox event after the trigger updates the parent status', async () => {
+          |     ^
+      131 |         const parent = await createTask(projectId, ownerId, { title: 'Parent', status: 'IN_PROGRESS' });
+      132 |         const child = await createChildTask(projectId, ownerId, parent, { title: 'Child' });
+      133 |
+
+      at src/__tests__/TaskUpdate.eda.test.ts:130:5
+      at src/__tests__/TaskUpdate.eda.test.ts:37:1
+
+  ● Task Update → Trigger Dispatch → Execution EDA Flow › handles multiple triggers on the same task
+
+    thrown: "Exceeded timeout of 5000 ms for a test.
+    Add a timeout value to this test to increase the timeout, if this is a long-running test. See https://jestjs.io/docs/api#testname-fn-timeout."
+
+      161 |     });
+      162 |
+    > 163 |     it('handles multiple triggers on the same task', async () => {
+          |     ^
+      164 |         const parent = await createTask(projectId, ownerId, { title: 'Parent', status: 'TODO' });
+      165 |         const child = await createChildTask(projectId, ownerId, parent, { title: 'Child' });
+      166 |
+
+      at src/__tests__/TaskUpdate.eda.test.ts:163:5
+      at src/__tests__/TaskUpdate.eda.test.ts:37:1
+
+PASS src/__tests__/TaskDeleted.eda.test.ts
+  ● Console
+
+    console.log
+      Initializing event bus TaskServiceImpl
+
+      at TaskServiceImpl.init (src/modules/task/internal/TaskServiceImpl.ts:22:17)
+
+    console.log
+      [Task Service] TaskDeleteListener started
+
+      at TaskDeleteListener.init (src/modules/task/internal/listeners/TaskDeleteListener.ts:48:17)
+
+    console.log
+      [Trigger Service] TaskDeletedListener started
+
+      at TaskDeletedListener.init (src/modules/task-trigger/internal/listeners/TaskDeletedListener.ts:18:17)
+
+    console.log
+      [Outbox Relay] Started polling for wCTE outbox events
+
+      at startOutboxRelay (src/utils/event-bus/OutboxRelay.ts:62:13)
+
+    console.log
+      [Task Service] Recursively cleaning up children for task: 8315af79-99dd-4cd5-ae8b-9bebf4c6560e, projectId: f93a70a0-a1aa-4125-b565-9527d7508041, parentPath: 8315af79-99dd-4cd5-ae8b-9bebf4c6560e, rawMaterializedPath: ''
+
+      at EventEmitter.PROJECT_TASK_PARENT_DELETED (src/modules/task/internal/listeners/TaskDeleteListener.ts:14:25)
+
+    console.log
+      [Trigger Service] Cleaning up triggers for parent task: 8315af79-99dd-4cd5-ae8b-9bebf4c6560e
+
+      at EventEmitter.PROJECT_TASK_PARENT_DELETED (src/modules/task-trigger/internal/listeners/TaskDeletedListener.ts:8:25)
+
+    console.log
+      [TaskQueries] deleteChildrenTasksBatch: projectId=f93a70a0-a1aa-4125-b565-9527d7508041, parentPath=8315af79-99dd-4cd5-ae8b-9bebf4c6560e, foundRows= [
+        {
+          id: '437d012d-699a-4c50-86ea-0e7292d2de0c',
+          materialized_path: '8315af79-99dd-4cd5-ae8b-9bebf4c6560e'
+        },
+        {
+          id: 'fde92632-68b2-4a00-87f5-db50d1a88451',
+          materialized_path: '8315af79-99dd-4cd5-ae8b-9bebf4c6560e'
+        }
+      ]
+
+      at deleteChildrenTasksBatch (src/modules/task/internal/TaskQueries.ts:187:13)
+
+    console.log
+      [Task Service] Child deletion loop completed for task: 8315af79-99dd-4cd5-ae8b-9bebf4c6560e
+
+      at EventEmitter.PROJECT_TASK_PARENT_DELETED (src/modules/task/internal/listeners/TaskDeleteListener.ts:44:29)
+
+    console.log
+      [Trigger Service] Cleaning up triggers for 2 child tasks
+
+      at EventEmitter.PROJECT_TASK_CHILDREN_DELETED (src/modules/task-trigger/internal/listeners/TaskDeletedListener.ts:13:29)
+
+    console.log
+      [Task Service] Recursively cleaning up children for task: cff179b6-0464-43c9-a2db-3b48cff8a7f9, projectId: f6c92ad3-a6e4-4206-9e40-5a88a1189c82, parentPath: cff179b6-0464-43c9-a2db-3b48cff8a7f9, rawMaterializedPath: ''
+
+      at EventEmitter.PROJECT_TASK_PARENT_DELETED (src/modules/task/internal/listeners/TaskDeleteListener.ts:14:25)
+
+    console.log
+      [Trigger Service] Cleaning up triggers for parent task: cff179b6-0464-43c9-a2db-3b48cff8a7f9
+
+      at EventEmitter.PROJECT_TASK_PARENT_DELETED (src/modules/task-trigger/internal/listeners/TaskDeletedListener.ts:8:25)
+
+    console.log
+      [TaskQueries] deleteChildrenTasksBatch: projectId=f6c92ad3-a6e4-4206-9e40-5a88a1189c82, parentPath=cff179b6-0464-43c9-a2db-3b48cff8a7f9, foundRows= [
+        {
+          id: '145549b8-9132-4e5d-8617-bbe00796ddfb',
+          materialized_path: 'cff179b6-0464-43c9-a2db-3b48cff8a7f9'
+        },
+        {
+          id: 'ec2222ef-691c-4310-b867-1ff229cab1a5',
+          materialized_path: 'cff179b6-0464-43c9-a2db-3b48cff8a7f9/145549b8-9132-4e5d-8617-bbe00796ddfb'
+        }
+      ]
+
+      at deleteChildrenTasksBatch (src/modules/task/internal/TaskQueries.ts:187:13)
+
+    console.log
+      [Task Service] Child deletion loop completed for task: cff179b6-0464-43c9-a2db-3b48cff8a7f9
+
+      at EventEmitter.PROJECT_TASK_PARENT_DELETED (src/modules/task/internal/listeners/TaskDeleteListener.ts:44:29)
+
+    console.log
+      [Trigger Service] Cleaning up triggers for 2 child tasks
+
+      at EventEmitter.PROJECT_TASK_CHILDREN_DELETED (src/modules/task-trigger/internal/listeners/TaskDeletedListener.ts:13:29)
+
+    console.log
+      [Task Service] Recursively cleaning up children for task: 97cf427b-68e1-497f-8eb0-281c234ddef5, projectId: 10e9dcbc-c2af-4ad3-ae81-b703ad1301c1, parentPath: 97cf427b-68e1-497f-8eb0-281c234ddef5, rawMaterializedPath: ''
+
+      at EventEmitter.PROJECT_TASK_PARENT_DELETED (src/modules/task/internal/listeners/TaskDeleteListener.ts:14:25)
+
+    console.log
+      [Trigger Service] Cleaning up triggers for parent task: 97cf427b-68e1-497f-8eb0-281c234ddef5
+
+      at EventEmitter.PROJECT_TASK_PARENT_DELETED (src/modules/task-trigger/internal/listeners/TaskDeletedListener.ts:8:25)
+
+    console.log
+      [TaskQueries] deleteChildrenTasksBatch: projectId=10e9dcbc-c2af-4ad3-ae81-b703ad1301c1, parentPath=97cf427b-68e1-497f-8eb0-281c234ddef5, foundRows= []
+
+      at deleteChildrenTasksBatch (src/modules/task/internal/TaskQueries.ts:187:13)
+
+    console.log
+      [Task Service] Child deletion loop completed for task: 97cf427b-68e1-497f-8eb0-281c234ddef5
+
+      at EventEmitter.PROJECT_TASK_PARENT_DELETED (src/modules/task/internal/listeners/TaskDeleteListener.ts:44:29)
+
+    console.log
+      [Task Service] Recursively cleaning up children for task: cf018189-1f3b-4672-9bf3-086cc7617f76, projectId: 18652c65-1b31-4991-9b1c-478e97987d1a, parentPath: cf018189-1f3b-4672-9bf3-086cc7617f76, rawMaterializedPath: ''
+
+      at EventEmitter.PROJECT_TASK_PARENT_DELETED (src/modules/task/internal/listeners/TaskDeleteListener.ts:14:25)
+
+    console.log
+      [Trigger Service] Cleaning up triggers for parent task: cf018189-1f3b-4672-9bf3-086cc7617f76
+
+      at EventEmitter.PROJECT_TASK_PARENT_DELETED (src/modules/task-trigger/internal/listeners/TaskDeletedListener.ts:8:25)
+
+    console.log
+      [TaskQueries] deleteChildrenTasksBatch: projectId=18652c65-1b31-4991-9b1c-478e97987d1a, parentPath=cf018189-1f3b-4672-9bf3-086cc7617f76, foundRows= [
+        {
+          id: 'b3d0c8f9-bbff-4df1-bbaa-a84d571d3d30',
+          materialized_path: 'cf018189-1f3b-4672-9bf3-086cc7617f76'
+        }
+      ]
+
+      at deleteChildrenTasksBatch (src/modules/task/internal/TaskQueries.ts:187:13)
+
+    console.log
+      [Task Service] Child deletion loop completed for task: cf018189-1f3b-4672-9bf3-086cc7617f76
+
+      at EventEmitter.PROJECT_TASK_PARENT_DELETED (src/modules/task/internal/listeners/TaskDeleteListener.ts:44:29)
+
+    console.log
+      [Trigger Service] Cleaning up triggers for 1 child tasks
+
+      at EventEmitter.PROJECT_TASK_CHILDREN_DELETED (src/modules/task-trigger/internal/listeners/TaskDeletedListener.ts:13:29)
+
+    console.log
+      [Outbox Relay] Stopped.
+
+      at stopOutboxRelay (src/utils/event-bus/OutboxRelay.ts:71:13)
+
+    console.log
+      Disconnecting event bus TaskServiceImpl
+
+      at TaskServiceImpl.destroy (src/modules/task/internal/TaskServiceImpl.ts:27:17)
+
+PASS src/__tests__/ProjectDeleted.eda.test.ts
+  ● Console
+
+    console.log
+      Initializing event bus ProjectServiceImpl
+
+      at ProjectServiceImpl.init (src/modules/project/internal/ProjectServiceImpl.ts:49:17)
+
+    console.log
+      [Task Service] ProjectDeletedListener started
+
+      at ProjectDeletedListener.init (src/modules/task/internal/listeners/ProjectDeletedListener.ts:15:17)
+
+    console.log
+      [Project Service] MemberCleanupListener started
+
+      at MemberCleanupListener.init (src/modules/project/internal/listeners/ProjectDeletedListener.ts:15:17)
+
+    console.log
+      [Outbox Relay] Started polling for wCTE outbox events
+
+      at startOutboxRelay (src/utils/event-bus/OutboxRelay.ts:62:13)
+
+    console.log
+      [Task Service] Cleaning up tasks for project: 3621f466-17d2-4a8d-ade3-294041bc36cf
+
+      at EventEmitter.PROJECT_DELETED (src/modules/task/internal/listeners/ProjectDeletedListener.ts:9:25)
+
+    console.log
+      [Project Service] Cleaning up members for project: 3621f466-17d2-4a8d-ade3-294041bc36cf
+
+      at EventEmitter.PROJECT_DELETED (src/modules/project/internal/listeners/ProjectDeletedListener.ts:9:25)
+
+    console.log
+      [Task Service] Cleaning up tasks for project: a0b1ded4-e5d9-4913-9b59-35c4d5c41836
+
+      at EventEmitter.PROJECT_DELETED (src/modules/task/internal/listeners/ProjectDeletedListener.ts:9:25)
+
+    console.log
+      [Project Service] Cleaning up members for project: a0b1ded4-e5d9-4913-9b59-35c4d5c41836
+
+      at EventEmitter.PROJECT_DELETED (src/modules/project/internal/listeners/ProjectDeletedListener.ts:9:25)
+
+    console.log
+      [Task Service] Cleaning up tasks for project: 954be73f-56d7-4383-a717-ed08f92e4f0d
+
+      at EventEmitter.PROJECT_DELETED (src/modules/task/internal/listeners/ProjectDeletedListener.ts:9:25)
+
+    console.log
+      [Project Service] Cleaning up members for project: 954be73f-56d7-4383-a717-ed08f92e4f0d
+
+      at EventEmitter.PROJECT_DELETED (src/modules/project/internal/listeners/ProjectDeletedListener.ts:9:25)
+
+    console.log
+      [Task Service] Cleaning up tasks for project: d2915725-b17c-48ed-a014-41cbb4174581
+
+      at EventEmitter.PROJECT_DELETED (src/modules/task/internal/listeners/ProjectDeletedListener.ts:9:25)
+
+    console.log
+      [Project Service] Cleaning up members for project: d2915725-b17c-48ed-a014-41cbb4174581
+
+      at EventEmitter.PROJECT_DELETED (src/modules/project/internal/listeners/ProjectDeletedListener.ts:9:25)
+
+    console.log
+      [Outbox Relay] Stopped.
+
+      at stopOutboxRelay (src/utils/event-bus/OutboxRelay.ts:71:13)
+
+    console.log
+      Disconnecting event bus ProjectServiceImpl
+
+      at ProjectServiceImpl.destroy (src/modules/project/internal/ProjectServiceImpl.ts:44:17)
+
+PASS src/__tests__/OutboxRelay.eda.test.ts
+  ● Console
+
+    console.log
+      [Outbox Relay] Started polling for wCTE outbox events
+
+      at startOutboxRelay (src/utils/event-bus/OutboxRelay.ts:62:13)
+
+    console.log
+      [Outbox Relay] Stopped.
+
+      at stopOutboxRelay (src/utils/event-bus/OutboxRelay.ts:71:13)
+
+    console.log
+      [Outbox Relay] Started polling for wCTE outbox events
+
+      at startOutboxRelay (src/utils/event-bus/OutboxRelay.ts:62:13)
+
+    console.log
+      [Outbox Relay] Stopped.
+
+      at stopOutboxRelay (src/utils/event-bus/OutboxRelay.ts:71:13)
+
+    console.log
+      [Outbox Relay] Started polling for wCTE outbox events
+
+      at startOutboxRelay (src/utils/event-bus/OutboxRelay.ts:62:13)
+
+    console.log
+      [Outbox Relay] Stopped.
+
+      at stopOutboxRelay (src/utils/event-bus/OutboxRelay.ts:71:13)
+
+    console.log
+      [Outbox Relay] Started polling for wCTE outbox events
+
+      at startOutboxRelay (src/utils/event-bus/OutboxRelay.ts:62:13)
+
+    console.log
+      [Outbox Relay] Stopped.
+
+      at stopOutboxRelay (src/utils/event-bus/OutboxRelay.ts:71:13)
+
+PASS src/modules/team/internal/__tests__/TeamQueries.test.ts
+PASS src/modules/task/internal/__tests__/TaskQueries.test.ts
+  ● Console
+
+    console.log
+      [TaskQueries] deleteChildrenTasksBatch: projectId=3294be1e-6177-46ec-8998-88dfadd24f49, parentPath=f2b9313f-4d5a-4ac7-8619-280a71bbd517, foundRows= [
+        {
+          id: '36820669-7180-4345-91b2-7ba4f51fbcb5',
+          materialized_path: 'f2b9313f-4d5a-4ac7-8619-280a71bbd517'
+        },
+        {
+          id: 'e79e3947-3e6c-4b7f-87fc-af51c3edd019',
+          materialized_path: 'f2b9313f-4d5a-4ac7-8619-280a71bbd517'
+        }
+      ]
+
+      at deleteChildrenTasksBatch (src/modules/task/internal/TaskQueries.ts:187:13)
+
+    console.log
+      [TaskQueries] deleteChildrenTasksBatch: projectId=ccd1b181-dfdd-4be7-bd91-3e91ac2369a2, parentPath=86bca5e7-b3bc-40f1-ad1a-12fbde3e7af9, foundRows= [
+        {
+          id: 'c8aa7fa1-33ac-44a4-8fd2-28a7727a7591',
+          materialized_path: '86bca5e7-b3bc-40f1-ad1a-12fbde3e7af9'
+        },
+        {
+          id: 'cc945ca1-8e7c-4513-a843-715e9ea3b82a',
+          materialized_path: '86bca5e7-b3bc-40f1-ad1a-12fbde3e7af9'
+        },
+        {
+          id: '040fb182-cd87-41c6-8fc6-90ebd10ff295',
+          materialized_path: '86bca5e7-b3bc-40f1-ad1a-12fbde3e7af9'
+        }
+      ]
+
+      at deleteChildrenTasksBatch (src/modules/task/internal/TaskQueries.ts:187:13)
+
+    console.log
+      [TaskQueries] deleteChildrenTasksBatch: projectId=83b64f4e-c12a-4222-91d3-da9e7ac391e2, parentPath=fdd052ae-ef97-4a39-94d0-60bd4a53080b, foundRows= []
+
+      at deleteChildrenTasksBatch (src/modules/task/internal/TaskQueries.ts:187:13)
+
+PASS src/modules/project/internal/__tests__/ProjectQueries.test.ts
+PASS src/__tests__/Idempotency.eda.test.ts
+
+Test Suites: 1 failed, 7 passed, 8 total
+Tests:       3 failed, 69 passed, 72 total
+Snapshots:   0 total
+Time:        27.22 s, estimated 29 s
+Ran all test suites.

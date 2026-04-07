@@ -12,7 +12,7 @@ export class TaskDeleteListener {
                 const parentPath = materializedPath ? `${materializedPath}/${id}` : id;
                 
                 console.log(
-                    `[Task Service] Recursively cleaning up children for task: ${id}`,
+                    `[Task Service] Recursively cleaning up children for task: ${id}, projectId: ${projectId}, parentPath: ${parentPath}, rawMaterializedPath: '${materializedPath}'`,
                 );
                 
                 // Delete up to 100 children at a time

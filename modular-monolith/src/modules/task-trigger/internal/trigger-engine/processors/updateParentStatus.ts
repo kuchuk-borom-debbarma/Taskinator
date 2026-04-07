@@ -24,21 +24,8 @@ export const updateParentStatusTrigger = async (
     console.log(
         `[Trigger Engine] Updating parent status for taskId: ${taskId} to ${parentStatusToSet}`,
     );
-    const updatedParent = await updateParentTaskStatus({
+    await updateParentTaskStatus({
         taskId,
         statusToSet: parentStatusToSet,
     });
-
-    if (updatedParent) {
-        // Publish update event for the parent task so its triggers can run too
-        await eventBus.publish(KAFKA_EVENTS.PROJECT_TASK.UPDATED, {
-            key: updatedParent.id,
-            data: {
-                taskId: updatedParent.id,
-                projectId: updatedParent.projectId,
-                userId: 'SYSTEM', // Trigger-initiated update
-                updates: { status: parentStatusToSet },
-            },
-        });
-    }
 };

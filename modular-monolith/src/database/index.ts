@@ -11,6 +11,7 @@ import type {
 } from './tables/Task.ts';
 import type { ProcessedEventTable } from './tables/ProcessedEvent.ts';
 import type { UserTable, PendingUserTable } from './tables/User.ts';
+import type { OutboxEventTable } from './tables/OutboxEvent.ts';
 
 export interface Database {
     project: ProjectTable;
@@ -22,6 +23,7 @@ export interface Database {
     processed_event: ProcessedEventTable;
     users: UserTable;
     pending_users: PendingUserTable;
+    outbox_events: OutboxEventTable;
 }
 
 const dialect = new PostgresDialect({

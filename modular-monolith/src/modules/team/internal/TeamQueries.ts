@@ -17,15 +17,31 @@ export const insertTeam = async (data: CreateTeamsParam): Promise<Team[]> => {
             UNION ALL
             SELECT 1 FROM project_member WHERE fk_project_id = ${data.projectId}::uuid AND fk_user_id = ${data.userId}
             LIMIT 1
+        ),
+        inserted_teams AS (
+            INSERT INTO project_team (fk_project_id, name, created_at, fk_user_id)
+            SELECT ${data.projectId}::uuid,
+                   unnest(${data.teams}::text[]),
+                   ${getTimeString()},
+                   ${data.userId}
+            WHERE EXISTS (SELECT 1 FROM auth_check)
+            RETURNING *
+        ),
+        inserted_outbox AS (
+            INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
+            SELECT 'project.team.created',
+                   fk_project_id::text,
+                   jsonb_build_object(
+                       'projectId', fk_project_id,
+                       'userId', fk_user_id,
+                       'teamId', id,
+                       'name', name
+                   )
+            FROM inserted_teams
         )
-        INSERT INTO project_team (fk_project_id, name, created_at, fk_user_id)
-        SELECT ${data.projectId}::uuid,
-               unnest(${data.teams}::text[]),
-               ${getTimeString()},
-               ${data.userId}
-        WHERE EXISTS (SELECT 1 FROM auth_check)
-        RETURNING
+        SELECT
             id, name, fk_project_id AS "projectId", fk_user_id AS "createdBy", version, last_event_id AS "lastEventId", created_at AS "createdAt", updated_at AS "updatedAt"
+        FROM inserted_teams
     `.execute(db);
     return added.rows;
 };
@@ -36,16 +52,29 @@ export const deleteTeams = async (
     const result = await sql<{ id: string }>`
         WITH auth_check AS (
             SELECT 1 FROM project WHERE id = ${data.projectId}::uuid AND fk_user_id = ${data.userId}
+        ),
+        deleted_teams AS (
+            DELETE FROM project_team
+            WHERE fk_project_id = ${data.projectId}::uuid
+              AND id = ANY (${data.teamIds}::uuid[])
+              AND (
+                fk_user_id = ${data.userId}
+                OR EXISTS (SELECT 1 FROM auth_check)
+              )
+            RETURNING *
+        ),
+        inserted_outbox AS (
+            INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
+            SELECT 'project.team.deleted',
+                   fk_project_id::text,
+                   jsonb_build_object(
+                       'projectId', fk_project_id,
+                       'userId', ${data.userId}::text,
+                       'teamId', id
+                   )
+            FROM deleted_teams
         )
-        DELETE
-        FROM project_team
-        WHERE fk_project_id = ${data.projectId}::uuid
-          AND id = ANY (${data.teamIds}::uuid[])
-          AND (
-            fk_user_id = ${data.userId}
-            OR EXISTS (SELECT 1 FROM auth_check)
-          )
-        RETURNING id
+        SELECT id FROM deleted_teams
     `.execute(db);
     if (result.rows.length !== data.teamIds.length) {
         throw new Error('Unauthorized or some teams not found');
@@ -67,21 +96,37 @@ export const insertTeamMembers = async (
             SELECT id::text AS user_id
             FROM users
             WHERE id::text = ANY(${data.members}::text[])
+        ),
+        inserted_members AS (
+            INSERT INTO project_team_member (fk_team_id, fk_user_id, fk_project_id)
+            SELECT ${data.teamId}::uuid,
+                   v.user_id,
+                   ${data.projectId}::uuid
+            FROM valid_users v
+            WHERE EXISTS (SELECT 1 FROM auth_check)
+              AND (
+                EXISTS (SELECT 1 FROM project WHERE id = ${data.projectId}::uuid AND fk_user_id = v.user_id)
+                OR
+                EXISTS (SELECT 1 FROM project_member WHERE fk_project_id = ${data.projectId}::uuid AND fk_user_id = v.user_id)
+              )
+            RETURNING *
+        ),
+        inserted_outbox AS (
+            INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
+            SELECT 'project.team.member.added',
+                   fk_project_id::text,
+                   jsonb_build_object(
+                       'projectId', fk_project_id,
+                       'teamId', fk_team_id,
+                       'userId', fk_user_id,
+                       'actorId', ${data.userId}::text,
+                       'memberId', id
+                   )
+            FROM inserted_members
         )
-        INSERT INTO project_team_member (fk_team_id, fk_user_id, fk_project_id)
-        SELECT ${data.teamId}::uuid,
-               v.user_id,
-               ${data.projectId}::uuid
-        FROM valid_users v
-        WHERE EXISTS (SELECT 1 FROM auth_check)
-          -- CRITICAL: Member must be the project owner OR a project member
-          AND (
-            EXISTS (SELECT 1 FROM project WHERE id = ${data.projectId}::uuid AND fk_user_id = v.user_id)
-            OR
-            EXISTS (SELECT 1 FROM project_member WHERE fk_project_id = ${data.projectId}::uuid AND fk_user_id = v.user_id)
-          )
-        RETURNING
+        SELECT
             id, fk_team_id AS "teamId", fk_user_id AS "userId", fk_project_id AS "projectId", version, last_event_id AS "lastEventId", created_at AS "createdAt", updated_at AS "updatedAt"
+        FROM inserted_members
     `.execute(db);
 
     if (result.rows.length === 0)
@@ -101,14 +146,29 @@ export const deleteTeamMembers = async (
             UNION ALL
             SELECT 1 FROM project_team WHERE id = ${data.teamId}::uuid AND fk_project_id = ${data.projectId}::uuid AND fk_user_id = ${data.userId}
             LIMIT 1
+        ),
+        deleted_members AS (
+            DELETE FROM project_team_member
+            WHERE fk_team_id = ${data.teamId}::uuid
+              AND fk_project_id = ${data.projectId}::uuid
+              AND fk_user_id = ANY (${data.members}::text[])
+              AND EXISTS (SELECT 1 FROM auth_check)
+            RETURNING *
+        ),
+        inserted_outbox AS (
+            INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
+            SELECT 'project.team.member.deleted',
+                   fk_project_id::text,
+                   jsonb_build_object(
+                       'projectId', fk_project_id,
+                       'teamId', fk_team_id,
+                       'userId', fk_user_id,
+                       'actorId', ${data.userId}::text,
+                       'memberId', id
+                   )
+            FROM deleted_members
         )
-        DELETE
-        FROM project_team_member
-        WHERE fk_team_id = ${data.teamId}::uuid
-          AND fk_project_id = ${data.projectId}::uuid
-          AND fk_user_id = ANY (${data.members}::text[])
-          AND EXISTS (SELECT 1 FROM auth_check)
-        RETURNING fk_user_id AS "userId"
+        SELECT fk_user_id AS "userId" FROM deleted_members
     `.execute(db);
     if (result.rows.length !== data.members.length) {
         throw new Error('Unauthorized or some members not found');

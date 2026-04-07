@@ -13,57 +13,83 @@ import { sql } from 'kysely';
 export const insertProject = async (
     data: CreateProjectParam,
 ): Promise<Project | null> => {
-    const added = await db
-        .insertInto('project')
-        .values({
-            name: data.name,
-            description: data.description,
-            created_at: getTimeString(),
-            fk_user_id: data.userId,
-        })
-        .returningAll()
-        .executeTakeFirst();
+    const result = await sql<Project>`
+        WITH inserted_project AS (
+            INSERT INTO project (name, description, fk_user_id, created_at)
+            VALUES (${data.name}, ${data.description}, ${data.userId}, ${getTimeString()})
+            RETURNING *
+        ),
+        inserted_outbox AS (
+            INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
+            SELECT 'project.created',
+                   id::text,
+                   jsonb_build_object(
+                       'projectId', id,
+                       'userId', fk_user_id,
+                       'name', name
+                   )
+            FROM inserted_project
+        )
+        SELECT 
+            id,
+            name,
+            description,
+            fk_user_id AS "userId",
+            version,
+            last_event_id AS "lastEventId",
+            created_at AS "createdAt",
+            updated_at AS "updatedAt"
+        FROM inserted_project
+    `.execute(db);
 
+    const added = result.rows[0];
     if (!added) return null;
 
-    return {
-        createdAt: added.created_at,
-        description: added.description,
-        id: added.id,
-        name: added.name,
-        version: added.version,
-        lastEventId: added.last_event_id,
-        updatedAt: added.updated_at,
-        userId: added.fk_user_id,
-    };
+    return added;
 };
 
 export const insertProjects = async (
     data: CreateProjectParam[],
 ): Promise<Project[]> => {
-    const added = await db
-        .insertInto('project')
-        .values(
-            data.map((p) => ({
-                fk_user_id: p.userId,
-                name: p.name,
-                description: p.description,
-                created_at: getTimeString(),
-            })),
-        )
-        .returningAll()
-        .execute();
+    if (!data.length) return [];
+    const names = data.map((d) => d.name);
+    const descriptions = data.map((d) => d.description || '');
+    const userIds = data.map((d) => d.userId);
 
-    return added.map((p) => ({
-        userId: p.fk_user_id,
-        updatedAt: p.updated_at,
-        name: p.name,
-        id: p.id,
-        version: p.version,
-        lastEventId: p.last_event_id,
-        description: p.description,
-        createdAt: p.created_at,
-    }));
+    const result = await sql<Project>`
+        WITH batch_data AS (
+            SELECT * FROM unnest(${names}::text[], ${descriptions}::text[], ${userIds}::text[]) AS t(name, description, user_id)
+        ),
+        inserted_projects AS (
+            INSERT INTO project (name, description, fk_user_id, created_at)
+            SELECT name, description, user_id, ${getTimeString()}
+            FROM batch_data
+            RETURNING *
+        ),
+        inserted_outbox AS (
+            INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
+            SELECT 'project.created',
+                   id::text,
+                   jsonb_build_object(
+                       'projectId', id,
+                       'userId', fk_user_id,
+                       'name', name
+                   )
+            FROM inserted_projects
+        )
+        SELECT 
+            id,
+            name,
+            description,
+            fk_user_id AS "userId",
+            version,
+            last_event_id AS "lastEventId",
+            created_at AS "createdAt",
+            updated_at AS "updatedAt"
+        FROM inserted_projects
+    `.execute(db);
+
+    return result.rows;
 };
 
 export const insertProjectMembers = async (
@@ -77,13 +103,28 @@ export const insertProjectMembers = async (
             SELECT id::text AS user_id
             FROM users
             WHERE id::text = ANY(${data.usersToAdd}::text[])
+        ),
+        inserted_members AS (
+            INSERT INTO project_member (fk_user_id, fk_project_id)
+            SELECT user_id,
+                   ${data.projectId}::uuid
+            FROM valid_users
+            WHERE EXISTS (SELECT 1 FROM auth_check)
+            RETURNING *
+        ),
+        inserted_outbox AS (
+            INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
+            SELECT 'project.member.added',
+                   fk_project_id::text,
+                   jsonb_build_object(
+                       'projectId', fk_project_id,
+                       'userId', fk_user_id,
+                       'actorId', ${data.userId}::text,
+                       'memberId', id
+                   )
+            FROM inserted_members
         )
-        INSERT INTO project_member (fk_user_id, fk_project_id)
-        SELECT user_id,
-               ${data.projectId}::uuid
-        FROM valid_users
-        WHERE EXISTS (SELECT 1 FROM auth_check)
-        RETURNING
+        SELECT 
             id, 
             fk_user_id    AS "userId", 
             fk_project_id AS "projectId", 
@@ -91,6 +132,7 @@ export const insertProjectMembers = async (
             last_event_id AS "lastEventId",
             created_at    AS "createdAt", 
             updated_at    AS "updatedAt"
+        FROM inserted_members
     `.execute(db);
 
     if (result.rows.length === 0)
@@ -100,44 +142,67 @@ export const insertProjectMembers = async (
 };
 
 export const deleteProjects = async (data: DeleteProjectsParam) => {
-    const deleted = await db
-        .deleteFrom('project')
-        .where(
-            'id',
-            'in',
-            data.projectIds.map((id) => sql`${id}::uuid` as any),
+    const result = await sql<Project>`
+        WITH deleted_projects AS (
+            DELETE FROM project
+            WHERE id = ANY(${data.projectIds}::uuid[])
+              AND fk_user_id = ${data.userId}
+            RETURNING *
+        ),
+        inserted_outbox AS (
+            INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
+            SELECT 'project.deleted',
+                   id::text,
+                   jsonb_build_object(
+                       'userId', ${data.userId}::text,
+                       'projectId', id
+                   )
+            FROM deleted_projects
         )
-        .where('fk_user_id', '=', data.userId)
-        .returningAll()
-        .execute();
+        SELECT 
+            id,
+            name,
+            description,
+            fk_user_id AS "userId",
+            version,
+            last_event_id AS "lastEventId",
+            created_at AS "createdAt",
+            updated_at AS "updatedAt"
+        FROM deleted_projects
+    `.execute(db);
 
-    if (deleted.length !== data.projectIds.length) {
+    if (result.rows.length !== data.projectIds.length) {
         throw new Error('Unauthorized or some projects not found');
     }
 
-    return deleted.map((p) => ({
-        id: p.id,
-        name: p.name,
-        description: p.description,
-        userId: p.fk_user_id,
-        version: p.version,
-        lastEventId: p.last_event_id,
-        createdAt: p.created_at,
-        updatedAt: p.updated_at,
-    }));
+    return result.rows;
 };
 
 export const deleteProjectMembers = async (data: DeleteProjectMembersParam) => {
     const result = await sql<ProjectMember>`
         WITH auth_check AS (
             SELECT 1 FROM project WHERE id = ${data.projectId}::uuid AND fk_user_id = ${data.userId}
+        ),
+        deleted_members AS (
+            DELETE FROM project_member
+            WHERE fk_project_id = ${data.projectId}::uuid
+              AND id = ANY (${data.memberIds}::uuid[])
+              AND EXISTS (SELECT 1 FROM auth_check)
+            RETURNING *
+        ),
+        inserted_outbox AS (
+            INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
+            SELECT 'project.member.deleted',
+                   fk_project_id::text,
+                   jsonb_build_object(
+                       'userId', fk_user_id,
+                       'projectId', fk_project_id,
+                       'actorId', ${data.userId}::text,
+                       'memberId', id
+                   )
+            FROM deleted_members
         )
-        DELETE
-        FROM project_member
-        WHERE fk_project_id = ${data.projectId}::uuid
-          AND id = ANY (${data.memberIds}::uuid[])
-          AND EXISTS (SELECT 1 FROM auth_check)
-        RETURNING
+        SELECT
             id,
             fk_user_id    AS "userId",
             fk_project_id AS "projectId",
@@ -145,6 +210,7 @@ export const deleteProjectMembers = async (data: DeleteProjectMembersParam) => {
             last_event_id AS "lastEventId",
             created_at    AS "createdAt",
             updated_at    AS "updatedAt"
+        FROM deleted_members
     `.execute(db);
 
     return result.rows;
