@@ -111,8 +111,7 @@ export const deleteTasks = async (
     data: DeleteTasksParam,
 ): Promise<ProjectTask[]> => {
     const result = await sql<ProjectTask>`
-        ),
-        deleted_tasks AS (
+        WITH deleted_tasks AS (
             DELETE FROM project_task
             WHERE fk_project_id = ${data.projectId}::uuid
               AND id = ANY (${data.taskIds}::uuid[])
@@ -178,13 +177,15 @@ export const deleteChildrenTasksBatch = async (
 ): Promise<{ deletedIds: string[]; hasMore: boolean }> => {
     // Select children first using the path
     const childrenQuery = await sql<{ id: string }>`
-        SELECT id
+        SELECT id, materialized_path
         FROM project_task
         WHERE fk_project_id = ${projectId}::uuid
-          AND materialized_path LIKE ${parentPath + '/%'}
+          AND (materialized_path = ${parentPath} OR materialized_path LIKE ${parentPath + '/%'})
         LIMIT ${limit + 1}
     `.execute(db);
     
+    console.log(`[TaskQueries] deleteChildrenTasksBatch: projectId=${projectId}, parentPath=${parentPath}, foundRows=`, childrenQuery.rows);
+
     if (childrenQuery.rows.length === 0) {
         return { deletedIds: [], hasMore: false };
     }
@@ -200,10 +201,10 @@ export const deleteChildrenTasksBatch = async (
           AND id = ANY (${targetIds}::uuid[])
         RETURNING id
     `.execute(db);
-    
+
     return {
-        deletedIds: result.rows.map(r => r.id),
-        hasMore
+        deletedIds: result.rows.map((r) => r.id),
+        hasMore,
     };
 };
 
@@ -299,8 +300,8 @@ export const updateTask = async (
                    id::text,
                    jsonb_build_object(
                        'taskId', id,
-                       'projectId', ${data.projectId},
-                       'userId', ${data.userId},
+                       'projectId', ${data.projectId}::text,
+                       'userId', ${data.userId}::text,
                        'updates', ${JSON.stringify(data)}::jsonb
                    )
             FROM updated_task

@@ -1,5 +1,6 @@
 import { db } from '../../database';
 import eventBus from '../EventBus.ts';
+import { OUTBOX_TOPIC_TO_EVENT_TYPE } from './constants.ts';
 
 let isRunning = false;
 let timeoutId: ReturnType<typeof setTimeout> | null = null;
@@ -33,9 +34,14 @@ export const startOutboxRelay = () => {
                     });
                 }
                 
-                // Publish batches per topic
+                // Publish batches per topic, translating raw kafka_topic → event type code
                 for (const [topic, payloads] of Object.entries(byTopic)) {
-                    await eventBus.publish(topic, payloads);
+                    const eventType = OUTBOX_TOPIC_TO_EVENT_TYPE[topic];
+                    if (!eventType) {
+                        console.warn(`[Outbox Relay] No event type mapping for topic: ${topic}`);
+                        continue;
+                    }
+                    await eventBus.publish(eventType, payloads);
                 }
                 
                 // Delete processed outbox events to keep database lean (10k RPS optimization)

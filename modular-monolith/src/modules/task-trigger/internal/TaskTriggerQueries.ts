@@ -77,7 +77,7 @@ export const updateParentTaskStatus = async (data: {
                        'taskId', id,
                        'projectId', fk_project_id,
                        'userId', 'SYSTEM',
-                       'updates', jsonb_build_object('status', ${data.statusToSet})
+                       'updates', jsonb_build_object('status', ${data.statusToSet}::text)
                    )
             FROM updated_task
         )

@@ -103,7 +103,6 @@ export const insertProjectMembers = async (
             SELECT id::text AS user_id
             FROM users
             WHERE id::text = ANY(${data.usersToAdd}::text[])
-        )
         ),
         inserted_members AS (
             INSERT INTO project_member (fk_user_id, fk_project_id)
@@ -120,7 +119,7 @@ export const insertProjectMembers = async (
                    jsonb_build_object(
                        'projectId', fk_project_id,
                        'userId', fk_user_id,
-                       'actorId', ${data.userId},
+                       'actorId', ${data.userId}::text,
                        'memberId', id
                    )
             FROM inserted_members
@@ -155,7 +154,7 @@ export const deleteProjects = async (data: DeleteProjectsParam) => {
             SELECT 'project.deleted',
                    id::text,
                    jsonb_build_object(
-                       'userId', ${data.userId},
+                       'userId', ${data.userId}::text,
                        'projectId', id
                    )
             FROM deleted_projects
@@ -198,7 +197,7 @@ export const deleteProjectMembers = async (data: DeleteProjectMembersParam) => {
                    jsonb_build_object(
                        'userId', fk_user_id,
                        'projectId', fk_project_id,
-                       'actorId', ${data.userId},
+                       'actorId', ${data.userId}::text,
                        'memberId', id
                    )
             FROM deleted_members

@@ -17,7 +17,6 @@ export const insertTeam = async (data: CreateTeamsParam): Promise<Team[]> => {
             UNION ALL
             SELECT 1 FROM project_member WHERE fk_project_id = ${data.projectId}::uuid AND fk_user_id = ${data.userId}
             LIMIT 1
-        )
         ),
         inserted_teams AS (
             INSERT INTO project_team (fk_project_id, name, created_at, fk_user_id)
@@ -53,7 +52,6 @@ export const deleteTeams = async (
     const result = await sql<{ id: string }>`
         WITH auth_check AS (
             SELECT 1 FROM project WHERE id = ${data.projectId}::uuid AND fk_user_id = ${data.userId}
-        )
         ),
         deleted_teams AS (
             DELETE FROM project_team
@@ -71,7 +69,7 @@ export const deleteTeams = async (
                    fk_project_id::text,
                    jsonb_build_object(
                        'projectId', fk_project_id,
-                       'userId', ${data.userId},
+                       'userId', ${data.userId}::text,
                        'teamId', id
                    )
             FROM deleted_teams
@@ -98,7 +96,6 @@ export const insertTeamMembers = async (
             SELECT id::text AS user_id
             FROM users
             WHERE id::text = ANY(${data.members}::text[])
-        )
         ),
         inserted_members AS (
             INSERT INTO project_team_member (fk_team_id, fk_user_id, fk_project_id)
@@ -122,7 +119,7 @@ export const insertTeamMembers = async (
                        'projectId', fk_project_id,
                        'teamId', fk_team_id,
                        'userId', fk_user_id,
-                       'actorId', ${data.userId},
+                       'actorId', ${data.userId}::text,
                        'memberId', id
                    )
             FROM inserted_members
@@ -149,7 +146,6 @@ export const deleteTeamMembers = async (
             UNION ALL
             SELECT 1 FROM project_team WHERE id = ${data.teamId}::uuid AND fk_project_id = ${data.projectId}::uuid AND fk_user_id = ${data.userId}
             LIMIT 1
-        )
         ),
         deleted_members AS (
             DELETE FROM project_team_member
@@ -167,7 +163,7 @@ export const deleteTeamMembers = async (
                        'projectId', fk_project_id,
                        'teamId', fk_team_id,
                        'userId', fk_user_id,
-                       'actorId', ${data.userId},
+                       'actorId', ${data.userId}::text,
                        'memberId', id
                    )
             FROM deleted_members
