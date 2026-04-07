@@ -1,14 +1,19 @@
 import { Router } from 'express';
+import type { Response } from 'express';
 import { taskService } from './index';
+import { requireAuth } from '../auth/auth.middleware.ts';
 
 const router = Router();
 
+router.use(requireAuth as any);
+
 // Get Tasks
-router.get('/', async (req, res) => {
+router.get('/', async (req: any, res: Response) => {
     try {
-        const { userId, projectId } = req.query;
-        if (!userId || !projectId)
-            throw new Error('userId and projectId are required');
+        const { projectId } = req.query;
+        const userId = req.userId;
+        if (!projectId)
+            throw new Error('projectId is required');
         const tasks = await taskService.getTasks(
             userId as string,
             projectId as string,
@@ -21,14 +26,9 @@ router.get('/', async (req, res) => {
 });
 
 // Create Task
-router.post('/', async (req, res) => {
-    console.log(
-        '[REST] POST /tasks request body:',
-        JSON.stringify(req.body, null, 2),
-    );
+router.post('/', async (req: any, res: Response) => {
     try {
         const {
-            userId,
             projectId,
             title,
             description,
@@ -37,6 +37,7 @@ router.post('/', async (req, res) => {
             parentTaskId,
             initialStatus,
         } = req.body;
+        const userId = req.userId;
         const result = await taskService.createTask({
             userId,
             projectId,
@@ -55,13 +56,10 @@ router.post('/', async (req, res) => {
 });
 
 // Update Tasks (Batch)
-router.patch('/', async (req, res) => {
-    console.log(
-        '[REST] PATCH /tasks request body:',
-        JSON.stringify(req.body, null, 2),
-    );
+router.patch('/', async (req: any, res: Response) => {
     try {
-        const { userId, projectId, tasks } = req.body;
+        const { projectId, tasks } = req.body;
+        const userId = req.userId;
         const result = await taskService.updateTasks({
             userId,
             projectId,
@@ -75,13 +73,10 @@ router.patch('/', async (req, res) => {
 });
 
 // Delete Tasks
-router.delete('/', async (req, res) => {
-    console.log(
-        '[REST] DELETE /tasks request body:',
-        JSON.stringify(req.body, null, 2),
-    );
+router.delete('/', async (req: any, res: Response) => {
     try {
-        const { userId, projectId, taskIds } = req.body;
+        const { projectId, taskIds } = req.body;
+        const userId = req.userId;
         const result = await taskService.deleteTask({
             userId,
             projectId,

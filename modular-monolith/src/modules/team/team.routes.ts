@@ -1,14 +1,19 @@
 import { Router } from 'express';
+import type { Response } from 'express';
 import { teamService } from './index';
+import { requireAuth } from '../auth/auth.middleware.ts';
 
 const router = Router();
 
+router.use(requireAuth as any);
+
 // Get Teams
-router.get('/', async (req, res) => {
+router.get('/', async (req: any, res: Response) => {
     try {
-        const { userId, projectId } = req.query;
-        if (!userId || !projectId)
-            throw new Error('userId and projectId are required');
+        const { projectId } = req.query;
+        const userId = req.userId;
+        if (!projectId)
+            throw new Error('projectId is required');
         const teams = await teamService.getTeams(
             userId as string,
             projectId as string,
@@ -21,12 +26,13 @@ router.get('/', async (req, res) => {
 });
 
 // Get Team Members
-router.get('/:teamId/members', async (req, res) => {
+router.get('/:teamId/members', async (req: any, res: Response) => {
     try {
         const { teamId } = req.params;
-        const { userId, projectId } = req.query;
-        if (!userId || !projectId)
-            throw new Error('userId and projectId are required');
+        const { projectId } = req.query;
+        const userId = req.userId;
+        if (!projectId)
+            throw new Error('projectId is required');
         const members = await teamService.getTeamMembers(
             userId as string,
             projectId as string,
@@ -40,13 +46,10 @@ router.get('/:teamId/members', async (req, res) => {
 });
 
 // Create Teams
-router.post('/', async (req, res) => {
-    console.log(
-        '[REST] POST /teams request body:',
-        JSON.stringify(req.body, null, 2),
-    );
+router.post('/', async (req: any, res: Response) => {
     try {
-        const { userId, projectId, teams } = req.body;
+        const { projectId, teams } = req.body;
+        const userId = req.userId;
         const result = await teamService.createTeams({
             userId,
             projectId,
@@ -60,9 +63,10 @@ router.post('/', async (req, res) => {
 });
 
 // Delete Teams
-router.delete('/', async (req, res) => {
+router.delete('/', async (req: any, res: Response) => {
     try {
-        const { userId, projectId, teamIds } = req.body;
+        const { projectId, teamIds } = req.body;
+        const userId = req.userId;
         const result = await teamService.deleteTeams({
             userId,
             projectId,
@@ -76,10 +80,11 @@ router.delete('/', async (req, res) => {
 });
 
 // Add Team Members
-router.post('/:teamId/members', async (req, res) => {
+router.post('/:teamId/members', async (req: any, res: Response) => {
     try {
         const { teamId } = req.params;
-        const { userId, projectId, members } = req.body;
+        const { projectId, members } = req.body;
+        const userId = req.userId;
         const result = await teamService.addTeamMembers({
             userId,
             projectId,
@@ -94,10 +99,11 @@ router.post('/:teamId/members', async (req, res) => {
 });
 
 // Delete Team Members
-router.delete('/:teamId/members', async (req, res) => {
+router.delete('/:teamId/members', async (req: any, res: Response) => {
     try {
         const { teamId } = req.params;
-        const { userId, projectId, members } = req.body;
+        const { projectId, members } = req.body;
+        const userId = req.userId;
         const result = await teamService.deleteTeamMembers({
             userId,
             projectId,

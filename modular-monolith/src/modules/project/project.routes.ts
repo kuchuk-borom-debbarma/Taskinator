@@ -1,13 +1,17 @@
 import { Router } from 'express';
+import type { Response } from 'express';
 import { projectService } from './index';
+import { requireAuth } from '../auth/auth.middleware.ts';
+import type { AuthRequest } from '../auth/auth.middleware.ts';
 
 const router = Router();
 
+router.use(requireAuth as any);
+
 // Get Projects
-router.get('/', async (req, res) => {
+router.get('/', async (req: any, res: Response) => {
     try {
-        const { userId } = req.query;
-        if (!userId) throw new Error('userId is required');
+        const userId = req.userId;
         const projects = await projectService.getProjects(userId as string);
         res.status(200).json(projects);
     } catch (error: any) {
@@ -17,11 +21,10 @@ router.get('/', async (req, res) => {
 });
 
 // Get Project
-router.get('/:projectId', async (req, res) => {
+router.get('/:projectId', async (req: any, res: Response): Promise<void> => {
     try {
         const { projectId } = req.params;
-        const { userId } = req.query;
-        if (!userId) throw new Error('userId is required');
+        const userId = req.userId;
         const project = await projectService.getProject(
             userId as string,
             projectId,
@@ -38,11 +41,10 @@ router.get('/:projectId', async (req, res) => {
 });
 
 // Get Project Members
-router.get('/:projectId/members', async (req, res) => {
+router.get('/:projectId/members', async (req: any, res: Response) => {
     try {
         const { projectId } = req.params;
-        const { userId } = req.query;
-        if (!userId) throw new Error('userId is required');
+        const userId = req.userId;
         const members = await projectService.getProjectMembers(
             userId as string,
             projectId,
@@ -55,9 +57,10 @@ router.get('/:projectId/members', async (req, res) => {
 });
 
 // Create Project
-router.post('/', async (req, res) => {
+router.post('/', async (req: any, res: Response) => {
     try {
-        const { name, description, userId } = req.body;
+        const { name, description } = req.body;
+        const userId = req.userId;
         const project = await projectService.createProject({
             name,
             description,
@@ -71,9 +74,10 @@ router.post('/', async (req, res) => {
 });
 
 // Delete Projects
-router.delete('/', async (req, res) => {
+router.delete('/', async (req: any, res: Response) => {
     try {
-        const { userId, projectIds } = req.body;
+        const { projectIds } = req.body;
+        const userId = req.userId;
         await projectService.deleteProjects({ userId, projectIds });
         res.status(204).send();
     } catch (error: any) {
@@ -83,10 +87,11 @@ router.delete('/', async (req, res) => {
 });
 
 // Add Members
-router.post('/:projectId/members', async (req, res) => {
+router.post('/:projectId/members', async (req: any, res: Response) => {
     try {
         const { projectId } = req.params;
-        const { userId, usersToAdd } = req.body;
+        const { usersToAdd } = req.body;
+        const userId = req.userId;
         const members = await projectService.addProjectMembers({
             projectId,
             userId,
@@ -100,10 +105,11 @@ router.post('/:projectId/members', async (req, res) => {
 });
 
 // Remove Members
-router.delete('/:projectId/members', async (req, res) => {
+router.delete('/:projectId/members', async (req: any, res: Response) => {
     try {
         const { projectId } = req.params;
-        const { userId, memberIds } = req.body;
+        const { memberIds } = req.body;
+        const userId = req.userId;
         await projectService.deleteProjectMembers({
             projectId,
             userId,
