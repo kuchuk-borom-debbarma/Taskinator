@@ -48,6 +48,8 @@ describe('Task Update → Trigger Dispatch → Execution EDA Flow', () => {
 
     afterAll(async () => {
         stopOutboxRelay();
+        await taskUpdateDelegator.stop();
+        await triggerProcessor.stop();
         await taskService.destroy();
         await taskTriggerService.destroy();
         await cleanupDb();
