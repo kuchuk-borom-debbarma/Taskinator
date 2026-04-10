@@ -161,8 +161,7 @@ export const deleteTaskTrigger = async (data: {
             WHERE id = ${data.triggerId}::uuid
               AND EXISTS (
                 SELECT 1 FROM project p
-                JOIN project_task_trigger_table t ON t.fk_project_id = p.id
-                WHERE t.id = ${data.triggerId}::uuid
+                WHERE p.id = (SELECT fk_project_id FROM project_task_trigger_table WHERE id = ${data.triggerId}::uuid)
                   AND (p.fk_user_id = ${data.userId} OR EXISTS (
                     SELECT 1 FROM project_member pm 
                     WHERE pm.fk_project_id = p.id AND pm.fk_user_id = ${data.userId}

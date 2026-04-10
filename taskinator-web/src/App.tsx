@@ -594,8 +594,8 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
                                     onClick={() => {
                                         setTriggerForm({ 
                                             name: '', 
-                                            type: 'UPDATE_PARENT_STATUS', 
-                                            data: { parentStatusToSet: 'DONE' } 
+                                            type: 'SEQUENCE_UNLOCK', 
+                                            data: { targetTaskId: '', targetStatusToSet: 'TODO' } 
                                         });
                                         setIsCreateTriggerOpen(true);
                                     }}
