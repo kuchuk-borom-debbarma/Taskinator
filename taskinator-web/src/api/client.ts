@@ -100,4 +100,7 @@ export const taskApi = {
         triggerData: any;
     }) =>
         api.post<void>(`/tasks/${data.taskId}/triggers`, data).then(res => res.data),
+
+    deleteTaskTrigger: (taskId: string, triggerId: string) =>
+        api.delete<void>(`/tasks/${taskId}/triggers/${triggerId}`).then(res => res.data),
 };

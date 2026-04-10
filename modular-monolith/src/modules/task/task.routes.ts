@@ -121,4 +121,15 @@ router.post('/:taskId/triggers', async (req: any, res: Response) => {
     }
 });
 
+router.delete('/:taskId/triggers/:triggerId', async (req: any, res: Response) => {
+    try {
+        const { triggerId } = req.params;
+        const userId = req.userId;
+        await taskTriggerService.deleteTrigger({ userId, triggerId });
+        res.status(200).send();
+    } catch (error: any) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
 export default router;

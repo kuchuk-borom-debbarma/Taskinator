@@ -130,6 +130,41 @@ export const getParentTaskTeamMembers = async (
     return result.rows.map((r) => r.fk_user_id);
 };
 
+export const deleteTaskTrigger = async (data: {
+    userId: string;
+    triggerId: string;
+}) => {
+    await sql`
+        WITH deleted_trigger AS (
+            DELETE FROM project_task_trigger_table
+            WHERE id = ${data.triggerId}::uuid
+              AND EXISTS (
+                SELECT 1 FROM project p
+                JOIN project_task_trigger_table t ON t.fk_project_id = p.id
+                WHERE t.id = ${data.triggerId}::uuid
+                  AND (p.fk_user_id = ${data.userId} OR EXISTS (
+                    SELECT 1 FROM project_member pm 
+                    WHERE pm.fk_project_id = p.id AND pm.fk_user_id = ${data.userId}
+                  ))
+              )
+            RETURNING *
+        ),
+        inserted_outbox AS (
+            INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
+            SELECT 'project.task.trigger.deleted',
+                   id::text,
+                   jsonb_build_object(
+                       'triggerId', id,
+                       'taskId', fk_task_id,
+                       'projectId', fk_project_id,
+                       'userId', ${data.userId}
+                   )
+            FROM deleted_trigger
+        )
+        SELECT 1 FROM deleted_trigger
+    `.execute(db);
+};
+
 export const deleteTaskTriggers = async (taskIds: string[]) => {
     if (!taskIds.length) return;
 

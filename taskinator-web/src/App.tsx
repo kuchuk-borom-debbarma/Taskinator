@@ -106,6 +106,11 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
             }),
         onSuccess: () => qc.invalidateQueries({ queryKey: ['task-triggers', selectedTaskId] }),
     });
+
+    const deleteTaskTriggerMutation = useMutation({
+        mutationFn: (triggerId: string) => taskApi.deleteTaskTrigger(selectedTaskId!, triggerId),
+        onSuccess: () => qc.invalidateQueries({ queryKey: ['task-triggers', selectedTaskId] }),
+    });
     const createTaskMutation = useMutation({
         mutationFn: (data: { title: string; parentTaskId?: string }) => 
             taskApi.createTask({
@@ -559,9 +564,29 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
                             
                             <div className="space-y-2">
                                 {taskTriggers.map(trigger => (
-                                    <div key={trigger.id} className="text-xs p-2 bg-secondary/20 rounded border border-border flex items-center justify-between">
-                                        <span>{trigger.name}</span>
-                                        <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded">{trigger.triggerType}</span>
+                                    <div key={trigger.id} className="group text-xs p-2 bg-secondary/20 rounded border border-border flex items-center justify-between hover:border-border/60 transition-colors">
+                                        <div className="flex flex-col gap-0.5">
+                                            <span className="font-medium">{trigger.name}</span>
+                                            <span className="text-[10px] text-muted-foreground uppercase">{trigger.triggerType.replace(/_/g, ' ')}</span>
+                                        </div>
+                                        <button 
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                setConfirmModal({
+                                                    isOpen: true,
+                                                    title: 'Remove Automation',
+                                                    message: `Are you sure you want to remove the automation "${trigger.name}"?`,
+                                                    variant: 'danger',
+                                                    onConfirm: () => {
+                                                        deleteTaskTriggerMutation.mutate(trigger.id);
+                                                        setConfirmModal(prev => ({ ...prev, isOpen: false }));
+                                                    }
+                                                });
+                                            }}
+                                            className="p-1 hover:bg-red-500/10 rounded text-muted-foreground hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
+                                        >
+                                            <Trash2 size={12} />
+                                        </button>
                                     </div>
                                 ))}
                                 

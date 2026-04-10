@@ -4,6 +4,7 @@ import type {
     TaskTriggerType,
 } from '../TaskTriggerService.ts';
 import {
+    deleteTaskTrigger,
     getTaskTriggersByTaskId,
     insertTaskTrigger,
 } from './TaskTriggerQueries.ts';
@@ -23,6 +24,13 @@ export class TaskTriggerServiceImpl implements TaskTriggerService {
 
     async getTriggersForTask(data: { taskId: string }): Promise<TaskTrigger[]> {
         return await getTaskTriggersByTaskId(data);
+    }
+
+    async deleteTrigger(data: {
+        userId: string;
+        triggerId: string;
+    }): Promise<void> {
+        await deleteTaskTrigger(data);
     }
 
     async destroy(): Promise<void> {
