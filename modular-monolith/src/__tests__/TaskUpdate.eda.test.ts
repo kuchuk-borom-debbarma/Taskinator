@@ -58,36 +58,6 @@ describe('Task Update → Trigger Dispatch → Execution EDA Flow', () => {
         projectId = project.id;
     });
 
-    it('executes SEQUENCE_UNLOCK trigger when Task A is DONE', async () => {
-        const taskA = await createTask(projectId, ownerId, { title: 'Task A' });
-        const taskB = await createTask(projectId, ownerId, { title: 'Task B', status: 'BLOCKED' });
-
-        await createTaskTrigger({
-            projectId,
-            taskId: taskA.id,
-            triggerType: 'SEQUENCE_UNLOCK',
-            triggerData: { targetTaskId: taskB.id, targetStatusToSet: 'TODO' },
-            name: 'Unlock B',
-        });
-
-        await db.deleteFrom('outbox_events').execute();
-
-        await taskService.updateTasks({
-            userId: ownerId,
-            projectId,
-            tasks: [{ id: taskA.id, version: 1, status: 'DONE' }],
-        });
-
-        await waitFor(async () => {
-            const rowB = await db
-                .selectFrom('project_task')
-                .selectAll()
-                .where('id', '=', taskB.id as any)
-                .executeTakeFirst();
-            expect(rowB?.status).toBe('TODO');
-        }, 5000);
-    });
-
     it('executes BLOCK_PARENT_DONE trigger and reverts parent status', async () => {
         const parent = await createTask(projectId, ownerId, { title: 'Parent', status: 'IN_PROGRESS' });
         const child = await createChildTask(projectId, ownerId, parent, { title: 'Child', status: 'TODO' });

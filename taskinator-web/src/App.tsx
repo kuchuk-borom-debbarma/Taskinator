@@ -39,8 +39,8 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
     const [isCreateTriggerOpen, setIsCreateTriggerOpen] = useState(false);
     const [triggerForm, setTriggerForm] = useState<{ name: string; type: TaskTriggerType; data: any }>({ 
         name: '', 
-        type: 'SEQUENCE_UNLOCK', 
-        data: { targetTaskId: '', targetStatusToSet: 'TODO' } 
+        type: 'BLOCK_PARENT_DONE', 
+        data: { revertStatusTo: 'IN_PROGRESS' } 
     });
     
     const [confirmModal, setConfirmModal] = useState<{ 
@@ -613,8 +613,8 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
                                     onClick={() => {
                                         setTriggerForm({ 
                                             name: '', 
-                                            type: 'SEQUENCE_UNLOCK', 
-                                            data: { targetTaskId: '', targetStatusToSet: 'TODO' } 
+                                            type: 'BLOCK_PARENT_DONE', 
+                                            data: { revertStatusTo: 'IN_PROGRESS' } 
                                         });
                                         setIsCreateTriggerOpen(true);
                                     }}
@@ -866,47 +866,18 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
                             onChange={(e) => {
                                 const newType = e.target.value as TaskTriggerType;
                                 let newData = {};
-                                if (newType === 'SEQUENCE_UNLOCK') newData = { targetTaskId: '', targetStatusToSet: 'TODO' };
                                 if (newType === 'BLOCK_PARENT_DONE') newData = { revertStatusTo: 'IN_PROGRESS' };
                                 if (newType === 'WEBHOOK') newData = { url: '', secret: '' };
                                 setTriggerForm(prev => ({ ...prev, type: newType, data: newData }));
                             }}
                             className="w-full bg-secondary/30 border border-border/50 rounded-md px-3 py-2 text-sm outline-none focus:border-primary/50 transition-all"
                         >
-                            <option value="SEQUENCE_UNLOCK">Sequence Unlock (Dependency)</option>
                             <option value="BLOCK_PARENT_DONE">Block Parent Done (Guard)</option>
                             <option value="WEBHOOK">Webhook (External)</option>
                             <option value="NOTIFY_PARENT_TEAM">Notify Parent Team</option>
                             <option value="NOTIFY_TASK_TEAM">Notify Task Team</option>
                         </select>
                     </div>
-
-                    {triggerForm.type === 'SEQUENCE_UNLOCK' && (
-                        <div className="space-y-3 p-3 bg-primary/5 border border-primary/20 rounded-lg">
-                            <div className="space-y-1.5">
-                                <label className="text-[10px] uppercase font-bold text-primary/70">Target Task ID (UUID)</label>
-                                <input
-                                    className="w-full bg-background border border-primary/20 rounded-md px-3 py-1.5 text-sm outline-none"
-                                    placeholder="Enter task id..."
-                                    value={triggerForm.data.targetTaskId}
-                                    onChange={(e) => setTriggerForm(prev => ({ ...prev, data: { ...prev.data, targetTaskId: e.target.value } }))}
-                                />
-                            </div>
-                            <div className="space-y-1.5">
-                                <label className="text-[10px] uppercase font-bold text-primary/70">Set Status To</label>
-                                <select
-                                    className="w-full bg-background border border-primary/20 rounded-md px-3 py-1.5 text-sm outline-none"
-                                    value={triggerForm.data.targetStatusToSet}
-                                    onChange={(e) => setTriggerForm(prev => ({ ...prev, data: { ...prev.data, targetStatusToSet: e.target.value } }))}
-                                >
-                                    <option value="TODO">TODO</option>
-                                    <option value="IN_PROGRESS">IN_PROGRESS</option>
-                                    <option value="DONE">DONE</option>
-                                    <option value="BLOCKED">BLOCKED</option>
-                                </select>
-                            </div>
-                        </div>
-                    )}
 
                     {triggerForm.type === 'BLOCK_PARENT_DONE' && (
                         <div className="space-y-2 p-3 bg-primary/5 border border-primary/20 rounded-lg">
