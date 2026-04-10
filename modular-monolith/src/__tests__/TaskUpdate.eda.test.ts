@@ -120,6 +120,40 @@ describe('Task Update → Trigger Dispatch → Execution EDA Flow', () => {
         }, 5000);
     });
 
+    it('executes BLOCK_PARENT_DONE trigger recursively for deep descendants', async () => {
+        const root = await createTask(projectId, ownerId, { title: 'Root', status: 'IN_PROGRESS' });
+        const level1 = await createChildTask(projectId, ownerId, root, { title: 'Level 1', status: 'DONE' });
+        // Deep nested child that is NOT DONE
+        const level2 = await createChildTask(projectId, ownerId, level1, { title: 'Level 2', status: 'TODO' });
+
+        await createTaskTrigger({
+            projectId,
+            taskId: root.id,
+            triggerType: 'BLOCK_PARENT_DONE',
+            triggerData: { revertStatusTo: 'IN_PROGRESS' },
+            name: 'DeepGuard',
+        });
+
+        await db.deleteFrom('outbox_events').execute();
+
+        // Attempt to mark Root as DONE
+        await taskService.updateTasks({
+            userId: ownerId,
+            projectId,
+            tasks: [{ id: root.id, version: 1, status: 'DONE' }],
+        });
+
+        // Trigger should detect the deep nested level2 child is TODO and revert Root
+        await waitFor(async () => {
+            const rootRow = await db
+                .selectFrom('project_task')
+                .selectAll()
+                .where('id', '=', root.id as any)
+                .executeTakeFirst();
+            expect(rootRow?.status).toBe('IN_PROGRESS');
+        }, 15000); // 15s timeout for deep recursive EDA
+    }, 20000); // 20s test timeout
+
     it('does not change status if no trigger is registered', async () => {
         const taskA = await createTask(projectId, ownerId, { title: 'Task A' });
         const taskB = await createTask(projectId, ownerId, { title: 'Task B', status: 'BLOCKED' });

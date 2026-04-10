@@ -91,7 +91,7 @@ const TreeItem: React.FC<TreeItemProps> = ({
                             <Zap size={14} className="text-amber-500 fill-amber-500/20" />
                             <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 hidden group-hover/zap:block z-50">
                                 <div className="bg-popover border border-border shadow-xl rounded-md p-2 w-48 text-[10px] space-y-1.5 animate-in fade-in slide-in-from-bottom-1">
-                                    <p className="font-bold border-bottom border-border pb-1 uppercase text-muted-foreground tracking-widest">Active Automations</p>
+                                    <p className="font-bold border-b border-border pb-1 uppercase text-muted-foreground tracking-widest">Active Automations</p>
                                     {taskTriggers.map(t => (
                                         <div key={t.id} className="flex flex-col gap-0.5">
                                             <p className="font-semibold text-foreground">{t.name}</p>
