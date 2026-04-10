@@ -77,3 +77,21 @@ export interface JWTPayload {
     iat: number;
     exp: number;
 }
+
+export type TaskTriggerType =
+    | 'WEBHOOK'
+    | 'SEQUENCE_UNLOCK'
+    | 'BLOCK_PARENT_DONE'
+    | 'NOTIFY_PARENT_TEAM'
+    | 'NOTIFY_TASK_TEAM';
+
+export interface TaskTrigger {
+    id: string;
+    name: string;
+    projectId: string;
+    taskId: string;
+    triggerType: TaskTriggerType;
+    triggerData: any;
+    createdAt: string;
+    updatedAt: string;
+}

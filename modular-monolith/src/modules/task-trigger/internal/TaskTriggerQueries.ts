@@ -48,11 +48,10 @@ export const getTaskTriggersByTaskId = async (data: {
 };
 
 /**
- * Updates the status of the parent task for a given taskId.
- * Uses a single SQL query for atomicity and performance.
- * Returns the parent task ID and project ID if updated.
+ * Updates the status of a specific task.
+ * Returns the task ID and project ID if updated.
  */
-export const updateParentTaskStatus = async (data: {
+export const updateTaskStatus = async (data: {
     taskId: string;
     statusToSet: string;
 }): Promise<{ id: string; projectId: string } | null> => {
@@ -62,11 +61,7 @@ export const updateParentTaskStatus = async (data: {
             SET status = ${data.statusToSet},
                 version = version + 1,
                 updated_at = ${getTimeString()}
-            WHERE id = (
-                SELECT fk_parent_task_id 
-                FROM project_task 
-                WHERE id = ${data.taskId}::uuid
-            )
+            WHERE id = ${data.taskId}::uuid
             RETURNING *
         ),
         inserted_outbox AS (
@@ -90,6 +85,32 @@ export const updateParentTaskStatus = async (data: {
         id: row.id,
         projectId: row.fk_project_id,
     };
+};
+
+/**
+ * Counts children of a task that are not in 'DONE' status.
+ */
+export const countIncompleteChildren = async (
+    taskId: string,
+): Promise<number> => {
+    const result = await sql<{ count: string }>`
+        SELECT count(*) as count
+        FROM project_task
+        WHERE fk_parent_task_id = ${taskId}::uuid
+          AND status != 'DONE'
+    `.execute(db);
+    return parseInt(result.rows[0]?.count ?? '0');
+};
+
+/**
+ * Gets a task by ID.
+ */
+export const getTaskById = async (taskId: string) => {
+    return await db
+        .selectFrom('project_task')
+        .selectAll()
+        .where('id', '=', taskId)
+        .executeTakeFirst();
 };
 
 /**

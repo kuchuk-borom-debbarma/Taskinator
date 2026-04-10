@@ -8,11 +8,18 @@ export class TaskUpdatedListener {
     async init() {
         await eventBus.subscribe('task-update-trigger-delegate-group', {
             [KAFKA_EVENTS.PROJECT_TASK.UPDATED]: async (data: {
-                actorId: string;
+                userId: string;
                 projectId: string;
                 taskId: string;
+                updates: any;
             }) => {
-                const { taskId, projectId } = data;
+                const { taskId, projectId, updates, userId } = data;
+
+                // Avoid infinite loops by skipping system-initiated updates
+                if (userId === 'SYSTEM') {
+                    console.log(`[Task Trigger Service] Skipping system-initiated update for task ${taskId}`);
+                    return;
+                }
                 console.log(
                     `[Task Trigger Service] Publishing event to trigger all trigger assigned to task ${taskId}`,
                 );
@@ -30,6 +37,7 @@ export class TaskUpdatedListener {
                         data: {
                             taskId,
                             trigger: trigger,
+                            updates: updates,
                         },
                     })),
                 );

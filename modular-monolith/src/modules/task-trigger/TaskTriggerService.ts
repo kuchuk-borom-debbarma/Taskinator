@@ -1,7 +1,9 @@
 import type { BaseService } from '../project';
 
 export type TaskTriggerType =
-    | 'UPDATE_PARENT_STATUS'
+    | 'WEBHOOK'
+    | 'SEQUENCE_UNLOCK'
+    | 'BLOCK_PARENT_DONE'
     | 'NOTIFY_PARENT_TEAM'
     | 'NOTIFY_TASK_TEAM';
 

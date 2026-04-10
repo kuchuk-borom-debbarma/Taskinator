@@ -9,14 +9,16 @@ export class TaskTriggerListener {
             [KAFKA_EVENTS.PROJECT_TASK_TRIGGER.TRIGGER]: async (data: {
                 taskId: string;
                 trigger: TaskTrigger;
+                updates: any;
             }) => {
-                const { taskId, trigger } = data;
+                const { taskId, trigger, updates } = data;
                 const handler = processor[trigger.triggerType] as (
                     taskId: string,
                     trigger: TaskTrigger,
+                    updates: any,
                 ) => Promise<void>;
                 if (handler) {
-                    await handler(taskId, trigger);
+                    await handler(taskId, trigger, updates);
                 } else {
                     console.warn(
                         `[Trigger Listener] No handler for trigger type: ${trigger.triggerType}`,

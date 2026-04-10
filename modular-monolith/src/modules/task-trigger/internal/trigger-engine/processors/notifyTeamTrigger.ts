@@ -12,6 +12,7 @@ import {
 export const notifyParentTeamTrigger = async (
     taskId: string,
     trigger: TaskTrigger,
+    updates: any,
 ) => {
     if (trigger.triggerType !== 'NOTIFY_PARENT_TEAM') {
         throw new Error(`Trigger type ${trigger.triggerType} not supported`);
@@ -39,6 +40,7 @@ export const notifyParentTeamTrigger = async (
 export const notifyTaskTeamTrigger = async (
     taskId: string,
     trigger: TaskTrigger,
+    updates: any,
 ) => {
     if (trigger.triggerType !== 'NOTIFY_TASK_TEAM') {
         throw new Error(`Trigger type ${trigger.triggerType} not supported`);

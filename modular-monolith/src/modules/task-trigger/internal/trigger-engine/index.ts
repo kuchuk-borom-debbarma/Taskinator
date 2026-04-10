@@ -1,5 +1,7 @@
 import type { TaskTrigger } from '../../TaskTriggerService.ts';
-import { updateParentStatusTrigger } from './processors/updateParentStatus.ts';
+import { blockParentDoneTrigger } from './processors/blockParentDoneTrigger.ts';
+import { sequenceUnlockTrigger } from './processors/sequenceUnlockTrigger.ts';
+import { webhookTrigger } from './processors/webhookTrigger.ts';
 import {
     notifyParentTeamTrigger,
     notifyTaskTeamTrigger,
@@ -14,11 +16,14 @@ type TriggerProcessor = {
                 triggerType: K;
             }
         >,
+        updates: any,
     ) => Promise<void>;
 };
 
 const processor: TriggerProcessor = {
-    UPDATE_PARENT_STATUS: updateParentStatusTrigger,
+    WEBHOOK: webhookTrigger,
+    SEQUENCE_UNLOCK: sequenceUnlockTrigger,
+    BLOCK_PARENT_DONE: blockParentDoneTrigger,
     NOTIFY_PARENT_TEAM: notifyParentTeamTrigger,
     NOTIFY_TASK_TEAM: notifyTaskTeamTrigger,
 };
