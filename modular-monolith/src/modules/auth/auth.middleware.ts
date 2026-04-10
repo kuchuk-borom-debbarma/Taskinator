@@ -7,9 +7,13 @@ export interface AuthRequest extends Request {
     userId?: string;
 }
 
-export const requireAuth = (req: AuthRequest, res: Response, next: NextFunction): void => {
+export const requireAuth = (
+    req: AuthRequest,
+    res: Response,
+    next: NextFunction,
+): void => {
     const authHeader = req.headers.authorization;
-    
+
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
         res.status(401).json({ error: 'Unauthorized: No token provided' });
         return;
@@ -23,7 +27,11 @@ export const requireAuth = (req: AuthRequest, res: Response, next: NextFunction)
     }
 
     try {
-        const decoded = jwt.verify(token, JWT_SECRET as string) as unknown as { id: string; email: string; username: string };
+        const decoded = jwt.verify(token, JWT_SECRET as string) as unknown as {
+            id: string;
+            email: string;
+            username: string;
+        };
         req.userId = decoded.id;
         next();
     } catch (error) {

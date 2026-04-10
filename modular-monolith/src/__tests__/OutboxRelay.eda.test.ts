@@ -21,7 +21,10 @@ import {
 } from '@jest/globals';
 import { db } from '../database/index.ts';
 import { cleanupDb, destroyDb } from './helpers/db.ts';
-import { startOutboxRelay, stopOutboxRelay } from '../utils/event-bus/OutboxRelay.ts';
+import {
+    startOutboxRelay,
+    stopOutboxRelay,
+} from '../utils/event-bus/OutboxRelay.ts';
 import eventBus from '../utils/EventBus.ts';
 import { waitFor } from './helpers/waitFor.ts';
 
@@ -48,7 +51,11 @@ describe('OutboxRelay — EDA Integration (MemoryBus)', () => {
             .values({
                 kafka_topic: 'project.created',
                 kafka_key: 'test-project-id',
-                payload: { projectId: 'test-project-id', userId: 'u1', name: 'P' } as any,
+                payload: {
+                    projectId: 'test-project-id',
+                    userId: 'u1',
+                    name: 'P',
+                } as any,
                 status: 'PENDING',
             })
             .execute();
@@ -68,7 +75,10 @@ describe('OutboxRelay — EDA Integration (MemoryBus)', () => {
 
         // Row should be deleted after processing
         await waitFor(async () => {
-            const remaining = await db.selectFrom('outbox_events').selectAll().execute();
+            const remaining = await db
+                .selectFrom('outbox_events')
+                .selectAll()
+                .execute();
             expect(remaining).toHaveLength(0);
         });
 
@@ -80,16 +90,36 @@ describe('OutboxRelay — EDA Integration (MemoryBus)', () => {
         await db
             .insertInto('outbox_events')
             .values([
-                { kafka_topic: 'project.created', kafka_key: 'p1', payload: { id: 'p1' } as any, status: 'PENDING' },
-                { kafka_topic: 'project.created', kafka_key: 'p2', payload: { id: 'p2' } as any, status: 'PENDING' },
-                { kafka_topic: 'project.task.created', kafka_key: 't1', payload: { id: 't1' } as any, status: 'PENDING' },
+                {
+                    kafka_topic: 'project.created',
+                    kafka_key: 'p1',
+                    payload: { id: 'p1' } as any,
+                    status: 'PENDING',
+                },
+                {
+                    kafka_topic: 'project.created',
+                    kafka_key: 'p2',
+                    payload: { id: 'p2' } as any,
+                    status: 'PENDING',
+                },
+                {
+                    kafka_topic: 'project.task.created',
+                    kafka_key: 't1',
+                    payload: { id: 't1' } as any,
+                    status: 'PENDING',
+                },
             ])
             .execute();
 
         const calls: { topic: string; payloads: any[] }[] = [];
-        const publishSpy = jest.spyOn(eventBus, 'publish').mockImplementation(async (topic, payload) => {
-            calls.push({ topic, payloads: Array.isArray(payload) ? payload : [payload] });
-        });
+        const publishSpy = jest
+            .spyOn(eventBus, 'publish')
+            .mockImplementation(async (topic, payload) => {
+                calls.push({
+                    topic,
+                    payloads: Array.isArray(payload) ? payload : [payload],
+                });
+            });
 
         startOutboxRelay();
 
@@ -99,13 +129,18 @@ describe('OutboxRelay — EDA Integration (MemoryBus)', () => {
             expect(topicCalls).toContain('PROJECT_CREATED');
             expect(topicCalls).toContain('PROJECT_TASK_CREATED');
 
-            const projectCreatedCall = calls.find((c) => c.topic === 'PROJECT_CREATED');
+            const projectCreatedCall = calls.find(
+                (c) => c.topic === 'PROJECT_CREATED',
+            );
             expect(projectCreatedCall!.payloads).toHaveLength(2);
         });
 
         // All rows cleaned up
         await waitFor(async () => {
-            const remaining = await db.selectFrom('outbox_events').selectAll().execute();
+            const remaining = await db
+                .selectFrom('outbox_events')
+                .selectAll()
+                .execute();
             expect(remaining).toHaveLength(0);
         });
 
@@ -138,14 +173,20 @@ describe('OutboxRelay — EDA Integration (MemoryBus)', () => {
 
         // After first poll: at most 100 deleted, 20 remain
         await waitFor(async () => {
-            const remaining = await db.selectFrom('outbox_events').selectAll().execute();
+            const remaining = await db
+                .selectFrom('outbox_events')
+                .selectAll()
+                .execute();
             // After at least 2 poll cycles, all should be gone
             expect(remaining.length).toBeLessThan(120);
         }, 3000);
 
         // After subsequent polls: all gone
         await waitFor(async () => {
-            const remaining = await db.selectFrom('outbox_events').selectAll().execute();
+            const remaining = await db
+                .selectFrom('outbox_events')
+                .selectAll()
+                .execute();
             expect(remaining).toHaveLength(0);
         }, 5000);
     });

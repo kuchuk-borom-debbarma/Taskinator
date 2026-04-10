@@ -183,16 +183,19 @@ export const deleteChildrenTasksBatch = async (
           AND (materialized_path = ${parentPath} OR materialized_path LIKE ${parentPath + '/%'})
         LIMIT ${limit + 1}
     `.execute(db);
-    
-    console.log(`[TaskQueries] deleteChildrenTasksBatch: projectId=${projectId}, parentPath=${parentPath}, foundRows=`, childrenQuery.rows);
+
+    console.log(
+        `[TaskQueries] deleteChildrenTasksBatch: projectId=${projectId}, parentPath=${parentPath}, foundRows=`,
+        childrenQuery.rows,
+    );
 
     if (childrenQuery.rows.length === 0) {
         return { deletedIds: [], hasMore: false };
     }
-    
+
     const hasMore = childrenQuery.rows.length > limit;
-    const targetIds = childrenQuery.rows.slice(0, limit).map(r => r.id);
-    
+    const targetIds = childrenQuery.rows.slice(0, limit).map((r) => r.id);
+
     // Delete the targeted batch
     const result = await sql<{ id: string }>`
         DELETE

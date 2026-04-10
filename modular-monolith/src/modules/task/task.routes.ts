@@ -2,6 +2,7 @@ import { Router } from 'express';
 import type { Response } from 'express';
 import { taskService } from './index';
 import { requireAuth } from '../auth/auth.middleware.ts';
+import { taskTriggerService } from '../task-trigger';
 
 const router = Router();
 
@@ -12,8 +13,7 @@ router.get('/', async (req: any, res: Response) => {
     try {
         const { projectId } = req.query;
         const userId = req.userId;
-        if (!projectId)
-            throw new Error('projectId is required');
+        if (!projectId) throw new Error('projectId is required');
         const tasks = await taskService.getTasks(
             userId as string,
             projectId as string,
@@ -85,6 +85,38 @@ router.delete('/', async (req: any, res: Response) => {
         res.status(200).json(result);
     } catch (error: any) {
         console.error('[REST] Error deleting tasks:', error);
+        res.status(400).json({ error: error.message });
+    }
+});
+
+// Task Triggers
+router.get('/:taskId/triggers', async (req: any, res: Response) => {
+    try {
+        const { taskId } = req.params;
+        const triggers = await taskTriggerService.getTriggersForTask({
+            taskId,
+        });
+        res.status(200).json(triggers);
+    } catch (error: any) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+router.post('/:taskId/triggers', async (req: any, res: Response) => {
+    try {
+        const { taskId } = req.params;
+        const { name, projectId, triggerType, triggerData } = req.body;
+        const userId = req.userId;
+        await taskTriggerService.addTriggerToTask({
+            userId,
+            name,
+            projectId,
+            taskId,
+            triggerType,
+            triggerData,
+        });
+        res.status(201).send();
+    } catch (error: any) {
         res.status(400).json({ error: error.message });
     }
 });

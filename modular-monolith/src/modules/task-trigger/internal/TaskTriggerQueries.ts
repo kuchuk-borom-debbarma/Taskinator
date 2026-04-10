@@ -132,7 +132,7 @@ export const getParentTaskTeamMembers = async (
 
 export const deleteTaskTriggers = async (taskIds: string[]) => {
     if (!taskIds.length) return;
-    
+
     await sql`
         DELETE FROM project_task_trigger_table
         WHERE fk_task_id = ANY (${taskIds}::uuid[])

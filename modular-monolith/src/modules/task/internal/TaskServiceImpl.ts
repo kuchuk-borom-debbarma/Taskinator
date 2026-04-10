@@ -35,7 +35,7 @@ export class TaskServiceImpl implements TaskService {
 
     async deleteTask(data: DeleteTasksParam): Promise<string[]> {
         const deletedTasks = await deleteTasks(data);
-        return deletedTasks.map(t => t.id);
+        return deletedTasks.map((t) => t.id);
     }
 
     async updateTasks(data: UpdateTasksParam): Promise<string[]> {

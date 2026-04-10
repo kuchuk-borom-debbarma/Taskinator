@@ -111,9 +111,29 @@ describe('TaskQueries — Integration (Real DB + wCTE)', () => {
         });
 
         it('computes materializedPath for a grandchild (2-level nesting)', async () => {
-            const root = await insertTask({ userId: ownerId, projectId, title: 'Root', description: '', initialStatus: 'TODO' });
-            const child = await insertTask({ userId: ownerId, projectId, title: 'Child', description: '', initialStatus: 'TODO', parentTaskId: root.id });
-            const grandchild = await insertTask({ userId: ownerId, projectId, title: 'Grandchild', description: '', initialStatus: 'TODO', parentTaskId: child.id });
+            const root = await insertTask({
+                userId: ownerId,
+                projectId,
+                title: 'Root',
+                description: '',
+                initialStatus: 'TODO',
+            });
+            const child = await insertTask({
+                userId: ownerId,
+                projectId,
+                title: 'Child',
+                description: '',
+                initialStatus: 'TODO',
+                parentTaskId: root.id,
+            });
+            const grandchild = await insertTask({
+                userId: ownerId,
+                projectId,
+                title: 'Grandchild',
+                description: '',
+                initialStatus: 'TODO',
+                parentTaskId: child.id,
+            });
 
             expect(grandchild.materializedPath).toBe(`${root.id}/${child.id}`);
         });
@@ -152,7 +172,13 @@ describe('TaskQueries — Integration (Real DB + wCTE)', () => {
 
     describe('updateTask', () => {
         it('updates a task status and returns its id', async () => {
-            const task = await insertTask({ userId: ownerId, projectId, title: 'T', description: '', initialStatus: 'TODO' });
+            const task = await insertTask({
+                userId: ownerId,
+                projectId,
+                title: 'T',
+                description: '',
+                initialStatus: 'TODO',
+            });
             await db.deleteFrom('outbox_events').execute();
 
             const updatedId = await updateTask({
@@ -165,16 +191,32 @@ describe('TaskQueries — Integration (Real DB + wCTE)', () => {
 
             expect(updatedId).toBe(task.id);
 
-            const row = await db.selectFrom('project_task').selectAll().where('id', '=', task.id as any).executeTakeFirst();
+            const row = await db
+                .selectFrom('project_task')
+                .selectAll()
+                .where('id', '=', task.id as any)
+                .executeTakeFirst();
             expect(row?.status).toBe('IN_PROGRESS');
             expect(row?.version).toBe(2);
         });
 
         it('atomically writes an outbox_events row with project.task.updated topic', async () => {
-            const task = await insertTask({ userId: ownerId, projectId, title: 'T', description: '', initialStatus: 'TODO' });
+            const task = await insertTask({
+                userId: ownerId,
+                projectId,
+                title: 'T',
+                description: '',
+                initialStatus: 'TODO',
+            });
             await db.deleteFrom('outbox_events').execute();
 
-            await updateTask({ userId: ownerId, projectId, taskId: task.id, version: 1, status: 'DONE' });
+            await updateTask({
+                userId: ownerId,
+                projectId,
+                taskId: task.id,
+                version: 1,
+                status: 'DONE',
+            });
 
             const outbox = await db
                 .selectFrom('outbox_events')
@@ -186,7 +228,13 @@ describe('TaskQueries — Integration (Real DB + wCTE)', () => {
         });
 
         it('returns null when version does not match (optimistic locking)', async () => {
-            const task = await insertTask({ userId: ownerId, projectId, title: 'T', description: '', initialStatus: 'TODO' });
+            const task = await insertTask({
+                userId: ownerId,
+                projectId,
+                title: 'T',
+                description: '',
+                initialStatus: 'TODO',
+            });
 
             const result = await updateTask({
                 userId: ownerId,
@@ -200,7 +248,13 @@ describe('TaskQueries — Integration (Real DB + wCTE)', () => {
         });
 
         it('returns null for an unauthorized user', async () => {
-            const task = await insertTask({ userId: ownerId, projectId, title: 'T', description: '', initialStatus: 'TODO' });
+            const task = await insertTask({
+                userId: ownerId,
+                projectId,
+                title: 'T',
+                description: '',
+                initialStatus: 'TODO',
+            });
             const stranger = await createUser();
 
             const result = await updateTask({
@@ -270,12 +324,22 @@ describe('TaskQueries — Integration (Real DB + wCTE)', () => {
 
     describe('deleteChildrenTasksBatch', () => {
         it('deletes children of a given parent path and returns hasMore=false when all deleted', async () => {
-            const parent = await createTask(projectId, ownerId, { title: 'Parent' });
-            const child1 = await createChildTask(projectId, ownerId, parent, { title: 'Child 1' });
-            const child2 = await createChildTask(projectId, ownerId, parent, { title: 'Child 2' });
+            const parent = await createTask(projectId, ownerId, {
+                title: 'Parent',
+            });
+            const child1 = await createChildTask(projectId, ownerId, parent, {
+                title: 'Child 1',
+            });
+            const child2 = await createChildTask(projectId, ownerId, parent, {
+                title: 'Child 2',
+            });
 
             const parentPath = parent.id; // empty path + id
-            const { deletedIds, hasMore } = await deleteChildrenTasksBatch(projectId, parentPath, 100);
+            const { deletedIds, hasMore } = await deleteChildrenTasksBatch(
+                projectId,
+                parentPath,
+                100,
+            );
 
             expect(deletedIds).toHaveLength(2);
             expect(deletedIds).toContain(child1.id);
@@ -284,22 +348,36 @@ describe('TaskQueries — Integration (Real DB + wCTE)', () => {
         });
 
         it('returns hasMore=true when more children exist than the batch limit', async () => {
-            const parent = await createTask(projectId, ownerId, { title: 'Parent' });
+            const parent = await createTask(projectId, ownerId, {
+                title: 'Parent',
+            });
             // Create 3 children but only delete 2 at a time
             for (let i = 0; i < 3; i++) {
-                await createChildTask(projectId, ownerId, parent, { title: `Child ${i}` });
+                await createChildTask(projectId, ownerId, parent, {
+                    title: `Child ${i}`,
+                });
             }
 
             const parentPath = parent.id;
-            const { deletedIds, hasMore } = await deleteChildrenTasksBatch(projectId, parentPath, 2);
+            const { deletedIds, hasMore } = await deleteChildrenTasksBatch(
+                projectId,
+                parentPath,
+                2,
+            );
 
             expect(deletedIds).toHaveLength(2);
             expect(hasMore).toBe(true);
         });
 
         it('returns empty result when there are no children', async () => {
-            const parent = await createTask(projectId, ownerId, { title: 'Leaf' });
-            const { deletedIds, hasMore } = await deleteChildrenTasksBatch(projectId, parent.id, 100);
+            const parent = await createTask(projectId, ownerId, {
+                title: 'Leaf',
+            });
+            const { deletedIds, hasMore } = await deleteChildrenTasksBatch(
+                projectId,
+                parent.id,
+                100,
+            );
             expect(deletedIds).toHaveLength(0);
             expect(hasMore).toBe(false);
         });

@@ -37,3 +37,7 @@ This document outlines upcoming features designed to increase the resiliency, co
 1. **Exponential Backoff:** If a webhook HTTP POST fails (e.g., user server is down), the worker should re-queue the task with exponential backoff (retry after 5s, 30s, 5m, 1h).
 2. **Circuit Breaking:** If a specific webhook URL fails consistently consecutive times, "trip the circuit" and pause the webhook to protect the system's outbound queue.
 3. **Dead Letter Queue (DLQ):** After the maximum number of retries is reached without success, the event should be moved to a DLQ table or Kafka DLQ topic for manual inspection or permanent archival.
+
+
+### TODO RAW
+- Direct children task complete Example :- 1/4

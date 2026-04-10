@@ -12,8 +12,7 @@ router.get('/', async (req: any, res: Response) => {
     try {
         const { projectId } = req.query;
         const userId = req.userId;
-        if (!projectId)
-            throw new Error('projectId is required');
+        if (!projectId) throw new Error('projectId is required');
         const teams = await teamService.getTeams(
             userId as string,
             projectId as string,
@@ -31,8 +30,7 @@ router.get('/:teamId/members', async (req: any, res: Response) => {
         const { teamId } = req.params;
         const { projectId } = req.query;
         const userId = req.userId;
-        if (!projectId)
-            throw new Error('projectId is required');
+        if (!projectId) throw new Error('projectId is required');
         const members = await teamService.getTeamMembers(
             userId as string,
             projectId as string,

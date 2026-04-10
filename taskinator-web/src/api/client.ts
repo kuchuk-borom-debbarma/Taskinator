@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { Project, ProjectMember, Team, TeamMember, Task, SignInParam, StartSignUpParam } from '../types';
+import type { Project, ProjectMember, Team, TeamMember, Task, SignInParam, StartSignUpParam, TaskTrigger, TaskTriggerType } from '../types';
 
 const API_BASE_URL = 'http://127.0.0.1:3000';
 
@@ -87,4 +87,17 @@ export const taskApi = {
 
     deleteTasks: (userId: string, projectId: string, taskIds: string[]) =>
         api.delete('/tasks', { data: { userId, projectId, taskIds } }).then(res => res.data),
+
+    getTaskTriggers: (taskId: string) =>
+        api.get<TaskTrigger[]>(`/tasks/${taskId}/triggers`).then(res => res.data),
+
+    addTaskTrigger: (data: {
+        userId: string;
+        projectId: string;
+        taskId: string;
+        name: string;
+        triggerType: TaskTriggerType;
+        triggerData: any;
+    }) =>
+        api.post<void>(`/tasks/${data.taskId}/triggers`, data).then(res => res.data),
 };

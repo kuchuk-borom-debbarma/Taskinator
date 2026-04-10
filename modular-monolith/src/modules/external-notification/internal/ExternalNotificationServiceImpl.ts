@@ -1,7 +1,9 @@
 import type { ExternalNotificationService } from '../ExternalNotificationService.ts';
-import { logger } from '../../../logger/index.ts';
+import { logger } from '../../../logger';
 
-export class ExternalNotificationServiceImpl implements ExternalNotificationService {
+export class ExternalNotificationServiceImpl
+    implements ExternalNotificationService
+{
     async init(): Promise<void> {
         logger.info('ExternalNotificationService initialized');
     }

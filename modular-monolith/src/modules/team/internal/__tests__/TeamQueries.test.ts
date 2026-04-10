@@ -60,7 +60,11 @@ describe('TeamQueries — Integration (Real DB + wCTE)', () => {
         });
 
         it('writes one outbox_events row per team created', async () => {
-            await insertTeam({ userId: ownerId, projectId, teams: ['Alpha', 'Beta'] });
+            await insertTeam({
+                userId: ownerId,
+                projectId,
+                teams: ['Alpha', 'Beta'],
+            });
 
             const outbox = await db
                 .selectFrom('outbox_events')
@@ -103,13 +107,21 @@ describe('TeamQueries — Integration (Real DB + wCTE)', () => {
 
     describe('deleteTeams', () => {
         it('deletes own teams and writes outbox events', async () => {
-            const teams = await insertTeam({ userId: ownerId, projectId, teams: ['To Delete'] });
+            const teams = await insertTeam({
+                userId: ownerId,
+                projectId,
+                teams: ['To Delete'],
+            });
             const teamId = teams[0]!.id;
 
             // Clear outbox from insertTeam call
             await db.deleteFrom('outbox_events').execute();
 
-            const deleted = await deleteTeams({ userId: ownerId, projectId, teamIds: [teamId] });
+            const deleted = await deleteTeams({
+                userId: ownerId,
+                projectId,
+                teamIds: [teamId],
+            });
 
             expect(deleted).toHaveLength(1);
             expect(deleted[0]).toBe(teamId);

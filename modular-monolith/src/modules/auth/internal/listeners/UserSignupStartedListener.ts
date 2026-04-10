@@ -1,7 +1,7 @@
 import eventBus, { KAFKA_EVENTS } from '../../../../utils/event-bus/index.ts';
-import { externalNotificationService } from '../../../external-notification/index.ts';
+import { externalNotificationService } from '../../../external-notification';
 import jwt from 'jsonwebtoken';
-import { logger } from '../../../../logger/index.ts';
+import { logger } from '../../../../logger';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-jwt-key';
 
@@ -10,10 +10,14 @@ export class UserSignupStartedListener {
         await eventBus.subscribe('auth-signup-group', {
             [KAFKA_EVENTS.AUTH.SIGNUP_STARTED]: async (data) => {
                 const { email, uid } = data;
-                logger.info(`[Auth Service] Processing signup for email: ${email}`);
+                logger.info(
+                    `[Auth Service] Processing signup for email: ${email}`,
+                );
 
                 // Generate token with UID
-                const token = jwt.sign({ uid }, JWT_SECRET, { expiresIn: '1h' });
+                const token = jwt.sign({ uid }, JWT_SECRET, {
+                    expiresIn: '1h',
+                });
                 const link = `http://localhost:3000/auth/finish-sign-up?token=${token}`;
 
                 await externalNotificationService.sendSignUpEmail(email, link);

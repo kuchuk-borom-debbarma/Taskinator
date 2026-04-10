@@ -1,6 +1,9 @@
 import { db } from '../../database/index.ts';
 import { sql } from 'kysely';
-import type { Project, ProjectMember } from '../../modules/project/ProjectService.ts';
+import type {
+    Project,
+    ProjectMember,
+} from '../../modules/project/ProjectService.ts';
 import type { ProjectTask } from '../../modules/task/TaskService.ts';
 import type { Team, TeamMember } from '../../modules/team/TeamService.ts';
 

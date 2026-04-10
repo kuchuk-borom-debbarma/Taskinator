@@ -13,16 +13,23 @@ async function run() {
     await projectService.init();
 
     // Sign up
-    await authService.startSignUp({ email: 'test@example.com', username: 'testuser', password_raw: 'password' });
-    
+    await authService.startSignUp({
+        email: 'test@example.com',
+        username: 'testuser',
+        password_raw: 'password',
+    });
+
     // We need to bypass the email token since it uses uuidv4 in DB, let's just query it
-    const pendingUser = await db.selectFrom('pending_users').selectAll().executeTakeFirstOrThrow();
-    
+    const pendingUser = await db
+        .selectFrom('pending_users')
+        .selectAll()
+        .executeTakeFirstOrThrow();
+
     // Finish sign up
     // Wait... finishSignUp requires a token. Let's see how AuthService does it:
     // It verifies a JWT! We need to make a token manually if the email flow is skipped,
-    // OR we just sign in after creating the token? 
-    // Wait, startSignUp doesn't email the token? 
+    // OR we just sign in after creating the token?
+    // Wait, startSignUp doesn't email the token?
     // Actually AuthService doesn't send the email directly in startSignUp.
 }
 

@@ -10,7 +10,11 @@
 import { afterAll, beforeEach, describe, expect, it } from '@jest/globals';
 import { db } from '../../../../database/index.ts';
 import { cleanupDb, destroyDb } from '../../../../__tests__/helpers/db.ts';
-import { createProject, createUser, addProjectMember } from '../../../../__tests__/helpers/factories.ts';
+import {
+    createProject,
+    createUser,
+    addProjectMember,
+} from '../../../../__tests__/helpers/factories.ts';
 import {
     insertProject,
     insertProjects,
@@ -55,7 +59,10 @@ describe('ProjectQueries — Integration (Real DB + wCTE)', () => {
         });
 
         it('atomically writes an outbox_events row (wCTE guarantee)', async () => {
-            const project = await insertProject({ name: 'Outbox Test', userId });
+            const project = await insertProject({
+                name: 'Outbox Test',
+                userId,
+            });
 
             const outbox = await db
                 .selectFrom('outbox_events')
@@ -141,7 +148,9 @@ describe('ProjectQueries — Integration (Real DB + wCTE)', () => {
 
         it('throws if user does not own the project (auth rule)', async () => {
             const otherUser = await createUser();
-            const project = await createProject(otherUser.id, { name: 'Other Project' });
+            const project = await createProject(otherUser.id, {
+                name: 'Other Project',
+            });
 
             await expect(
                 deleteProjects({ userId, projectIds: [project.id] }),

@@ -17,7 +17,14 @@
  *
  * The final assertion is that the parent task's status is changed in the DB.
  */
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from '@jest/globals';
+import {
+    afterAll,
+    beforeAll,
+    beforeEach,
+    describe,
+    expect,
+    it,
+} from '@jest/globals';
 import { db } from '../database/index.ts';
 import { cleanupDb, destroyDb } from './helpers/db.ts';
 import {
@@ -32,7 +39,10 @@ import { taskService } from '../modules/task/index.ts';
 import { taskTriggerService } from '../modules/task-trigger/index.ts';
 import { taskTriggerListener as taskUpdateDelegator } from '../modules/task-trigger/internal/listeners/ProjectTaskUpdatedListener.ts';
 import { taskTriggerListener as triggerProcessor } from '../modules/task-trigger/internal/listeners/TaskTriggerListener.ts';
-import { startOutboxRelay, stopOutboxRelay } from '../utils/event-bus/OutboxRelay.ts';
+import {
+    startOutboxRelay,
+    stopOutboxRelay,
+} from '../utils/event-bus/OutboxRelay.ts';
 
 describe('Task Update → Trigger Dispatch → Execution EDA Flow', () => {
     let ownerId: string;
@@ -66,8 +76,14 @@ describe('Task Update → Trigger Dispatch → Execution EDA Flow', () => {
 
     it('executes UPDATE_PARENT_STATUS trigger when a child task is updated', async () => {
         // Setup: parent task + child task
-        const parent = await createTask(projectId, ownerId, { title: 'Parent', status: 'TODO' });
-        const child = await createChildTask(projectId, ownerId, parent, { title: 'Child', status: 'TODO' });
+        const parent = await createTask(projectId, ownerId, {
+            title: 'Parent',
+            status: 'TODO',
+        });
+        const child = await createChildTask(projectId, ownerId, parent, {
+            title: 'Child',
+            status: 'TODO',
+        });
 
         // Register an UPDATE_PARENT_STATUS trigger on the child
         await createTaskTrigger({
@@ -89,23 +105,25 @@ describe('Task Update → Trigger Dispatch → Execution EDA Flow', () => {
         });
 
         // Assert: parent task's status is eventually updated to 'DONE'
-        await waitFor(
-            async () => {
-                const parentRow = await db
-                    .selectFrom('project_task')
-                    .selectAll()
-                    .where('id', '=', parent.id as any)
-                    .executeTakeFirst();
+        await waitFor(async () => {
+            const parentRow = await db
+                .selectFrom('project_task')
+                .selectAll()
+                .where('id', '=', parent.id as any)
+                .executeTakeFirst();
 
-                expect(parentRow?.status).toBe('DONE');
-            },
-            5000,
-        );
+            expect(parentRow?.status).toBe('DONE');
+        }, 5000);
     });
 
     it('does not change parent status if no trigger is registered on the child', async () => {
-        const parent = await createTask(projectId, ownerId, { title: 'Parent', status: 'TODO' });
-        const child = await createChildTask(projectId, ownerId, parent, { title: 'Child' });
+        const parent = await createTask(projectId, ownerId, {
+            title: 'Parent',
+            status: 'TODO',
+        });
+        const child = await createChildTask(projectId, ownerId, parent, {
+            title: 'Child',
+        });
 
         // No trigger registered
         await db.deleteFrom('outbox_events').execute();
@@ -130,8 +148,13 @@ describe('Task Update → Trigger Dispatch → Execution EDA Flow', () => {
     });
 
     it('writes a new outbox event after the trigger updates the parent status', async () => {
-        const parent = await createTask(projectId, ownerId, { title: 'Parent', status: 'IN_PROGRESS' });
-        const child = await createChildTask(projectId, ownerId, parent, { title: 'Child' });
+        const parent = await createTask(projectId, ownerId, {
+            title: 'Parent',
+            status: 'IN_PROGRESS',
+        });
+        const child = await createChildTask(projectId, ownerId, parent, {
+            title: 'Child',
+        });
 
         await createTaskTrigger({
             projectId,
@@ -163,8 +186,13 @@ describe('Task Update → Trigger Dispatch → Execution EDA Flow', () => {
     });
 
     it('handles multiple triggers on the same task', async () => {
-        const parent = await createTask(projectId, ownerId, { title: 'Parent', status: 'TODO' });
-        const child = await createChildTask(projectId, ownerId, parent, { title: 'Child' });
+        const parent = await createTask(projectId, ownerId, {
+            title: 'Parent',
+            status: 'TODO',
+        });
+        const child = await createChildTask(projectId, ownerId, parent, {
+            title: 'Child',
+        });
 
         // Register the same trigger twice (edge case)
         await createTaskTrigger({
@@ -192,16 +220,13 @@ describe('Task Update → Trigger Dispatch → Execution EDA Flow', () => {
 
         // Parent eventually gets DONE (possibly from second trigger since first may set it,
         // and second still succeeds since version bumps are per-trigger)
-        await waitFor(
-            async () => {
-                const parentRow = await db
-                    .selectFrom('project_task')
-                    .selectAll()
-                    .where('id', '=', parent.id as any)
-                    .executeTakeFirst();
-                expect(parentRow?.status).toBe('DONE');
-            },
-            5000,
-        );
+        await waitFor(async () => {
+            const parentRow = await db
+                .selectFrom('project_task')
+                .selectAll()
+                .where('id', '=', parent.id as any)
+                .executeTakeFirst();
+            expect(parentRow?.status).toBe('DONE');
+        }, 5000);
     });
 });

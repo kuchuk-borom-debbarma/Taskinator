@@ -1,6 +1,6 @@
 import React from 'react';
 import type { Project } from '../types';
-import { Folder, Plus, ChevronRight, LogOut } from 'lucide-react';
+import { Folder, Plus, LogOut, Hash, LayoutDashboard, Settings } from 'lucide-react';
 import { cn } from '../utils/cn';
 
 interface ProjectSidebarProps {
@@ -21,52 +21,84 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
     onCreateProject,
 }) => {
     return (
-        <div className="w-64 border-r border-border h-full flex flex-col bg-background text-foreground">
-            <div className="p-4 flex items-center justify-between">
-                <h1 className="text-sm font-semibold tracking-tight uppercase text-muted">Projects</h1>
-                <button 
-                    onClick={onCreateProject}
-                    className="p-1 hover:bg-secondary rounded-md transition-colors"
-                >
-                    <Plus size={16} />
-                </button>
-            </div>
-            
-            <div className="flex-1 overflow-y-auto px-2">
-                {projects.map((project) => (
-                    <button
-                        key={project.id}
-                        onClick={() => onSelectProject(project.id)}
-                        className={cn(
-                            "w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm transition-all group",
-                            selectedProjectId === project.id 
-                                ? "bg-secondary text-primary shadow-sm" 
-                                : "text-muted hover:text-foreground hover:bg-secondary/50"
-                        )}
-                    >
-                        <Folder size={16} className={cn(
-                            selectedProjectId === project.id ? "text-primary" : "text-muted group-hover:text-foreground"
-                        )} />
-                        <span className="truncate flex-1 text-left">{project.name}</span>
-                        {selectedProjectId === project.id && <ChevronRight size={14} />}
-                    </button>
-                ))}
-            </div>
-            
-            <div className="p-4 border-t border-border flex items-center justify-between">
-                <div className="flex items-center gap-2 overflow-hidden">
-                    <div className="w-8 h-8 shrink-0 rounded-full bg-accent flex items-center justify-center text-xs font-bold text-accent-foreground">
-                        {username.substring(0, 2).toUpperCase()}
+        <div className="w-60 border-r border-border h-full flex flex-col bg-[#0d0d0d] text-foreground shrink-0 select-none">
+            {/* Logo/Header */}
+            <div className="h-14 flex items-center px-4 border-b border-border/50">
+                <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded bg-primary flex items-center justify-center">
+                        <Hash size={14} className="text-white" />
                     </div>
-                    <span className="text-sm font-medium text-muted truncate">{username}</span>
+                    <span className="font-bold text-sm tracking-tight">Taskinator</span>
                 </div>
-                <button 
-                    onClick={onLogout}
-                    className="p-2 hover:bg-secondary rounded-md text-muted hover:text-red-400 transition-colors"
-                    title="Logout"
-                >
-                    <LogOut size={16} />
-                </button>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto py-4 flex flex-col gap-6">
+                {/* Navigation Group */}
+                <div className="px-3 space-y-1">
+                    <button className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-[13px] text-muted-foreground hover:bg-secondary/50 hover:text-foreground transition-all">
+                        <LayoutDashboard size={14} />
+                        Dashboard
+                    </button>
+                    <button className="w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-[13px] text-muted-foreground hover:bg-secondary/50 hover:text-foreground transition-all">
+                        <Settings size={14} />
+                        Settings
+                    </button>
+                </div>
+
+                {/* Projects Group */}
+                <div className="space-y-1">
+                    <div className="px-5 flex items-center justify-between mb-1">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Projects</span>
+                        <button 
+                            onClick={onCreateProject}
+                            className="p-0.5 hover:bg-secondary rounded transition-colors text-muted-foreground hover:text-foreground"
+                        >
+                            <Plus size={12} />
+                        </button>
+                    </div>
+                    
+                    <div className="px-3 space-y-0.5">
+                        {projects.map((project) => (
+                            <button
+                                key={project.id}
+                                onClick={() => onSelectProject(project.id)}
+                                className={cn(
+                                    "w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-[13px] transition-all group",
+                                    selectedProjectId === project.id 
+                                        ? "bg-primary/10 text-primary" 
+                                        : "text-muted-foreground hover:text-foreground hover:bg-secondary/30"
+                                )}
+                            >
+                                <Folder size={14} className={cn(
+                                    selectedProjectId === project.id ? "text-primary" : "text-muted-foreground"
+                                )} />
+                                <span className="truncate flex-1 text-left">{project.name}</span>
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            </div>
+            
+            {/* User Profile Section */}
+            <div className="p-3 border-t border-border/50 bg-[#0a0a0a]">
+                <div className="flex items-center justify-between p-2 rounded-lg bg-secondary/20 border border-border/30">
+                    <div className="flex items-center gap-2 overflow-hidden">
+                        <div className="w-7 h-7 shrink-0 rounded bg-accent flex items-center justify-center text-[10px] font-bold text-accent-foreground border border-white/10">
+                            {username.substring(0, 2).toUpperCase()}
+                        </div>
+                        <div className="flex flex-col min-w-0">
+                            <span className="text-[12px] font-semibold truncate leading-none">{username}</span>
+                            <span className="text-[10px] text-muted-foreground truncate">Free Plan</span>
+                        </div>
+                    </div>
+                    <button 
+                        onClick={onLogout}
+                        className="p-1.5 hover:bg-red-500/10 rounded text-muted-foreground hover:text-red-500 transition-colors"
+                        title="Logout"
+                    >
+                        <LogOut size={14} />
+                    </button>
+                </div>
             </div>
         </div>
     );

@@ -113,39 +113,50 @@ export class KafkaBus implements Bus {
 
                 // Extract trace context from the first message in the batch
                 const firstMessageHeaders = batch.messages[0]?.headers || {};
-                const parentContext = propagation.extract(context.active(), firstMessageHeaders as any);
+                const parentContext = propagation.extract(
+                    context.active(),
+                    firstMessageHeaders as any,
+                );
 
                 // Run the entire batch processing within the stitched trace context
                 await context.with(parentContext, async () => {
                     // Create an explicit span to represent the Consumer taking action
                     const tracer = trace.getTracer('kafkajs-consumer');
-                    await tracer.startActiveSpan(`process batch ${topic}`, {}, async (span) => {
-                        try {
-                            // 1. Parsing & Filtering
-                            const allEvents: DomainEvent[] = batch.messages
-                                .map((m) => JSON.parse(m.value?.toString() || '{}'))
-                                .filter((e) => handlers[e.type]);
-    
-                            // 2. Safe Execution using the Idempotency Wrapper
-                            await withIdempotency(
-                                allEvents,
-                                groupId,
-                                async (unprocessed) => {
-                                    for (const e of unprocessed) {
-                                        if (!isRunning() || isStale()) break;
-                                        const handler = handlers[e.type];
-                                        if (handler) await handler(e.data);
-                                    }
-                                },
-                            );
-    
-                            // 3. Mark the Kafka batch as consumed to advance the offset
-                            for (const m of batch.messages) resolveOffset(m.offset);
-                            await heartbeat();
-                        } finally {
-                            span.end();
-                        }
-                    });
+                    await tracer.startActiveSpan(
+                        `process batch ${topic}`,
+                        {},
+                        async (span) => {
+                            try {
+                                // 1. Parsing & Filtering
+                                const allEvents: DomainEvent[] = batch.messages
+                                    .map((m) =>
+                                        JSON.parse(m.value?.toString() || '{}'),
+                                    )
+                                    .filter((e) => handlers[e.type]);
+
+                                // 2. Safe Execution using the Idempotency Wrapper
+                                await withIdempotency(
+                                    allEvents,
+                                    groupId,
+                                    async (unprocessed) => {
+                                        for (const e of unprocessed) {
+                                            if (!isRunning() || isStale())
+                                                break;
+                                            const handler = handlers[e.type];
+                                            if (handler) await handler(e.data);
+                                        }
+                                    },
+                                );
+
+                                // 3. Mark the Kafka batch as consumed to advance the offset
+                                for (const m of batch.messages)
+                                    resolveOffset(m.offset);
+                                await heartbeat();
+                            } finally {
+                                span.end();
+                            }
+                        },
+                    );
                 });
             },
         });

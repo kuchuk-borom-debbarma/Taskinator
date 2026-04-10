@@ -7,14 +7,18 @@ export class UserCreatedListener {
         await eventBus.subscribe('auth-user-created-group', {
             [KAFKA_EVENTS.AUTH.USER_CREATED]: async (data) => {
                 const { email } = data;
-                logger.info(`[Auth Service] Cleaning up pending user for email: ${email}`);
+                logger.info(
+                    `[Auth Service] Cleaning up pending user for email: ${email}`,
+                );
 
                 await db
                     .deleteFrom('pending_users')
                     .where('email', '=', email)
                     .execute();
 
-                logger.info(`[Auth Service] Successfully removed ${email} from pending_users`);
+                logger.info(
+                    `[Auth Service] Successfully removed ${email} from pending_users`,
+                );
             },
         });
         logger.info('[Auth Service] UserCreatedListener started');

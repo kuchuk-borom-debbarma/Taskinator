@@ -10,11 +10,17 @@ export class LoggerImpl implements Logger {
     }
 
     warn(message: string, ...meta: any[]): void {
-        console.warn(`[WARN] ${new Date().toISOString()} - ${message}`, ...meta);
+        console.warn(
+            `[WARN] ${new Date().toISOString()} - ${message}`,
+            ...meta,
+        );
     }
 
     error(message: string, ...meta: any[]): void {
-        console.error(`[ERROR] ${new Date().toISOString()} - ${message}`, ...meta);
+        console.error(
+            `[ERROR] ${new Date().toISOString()} - ${message}`,
+            ...meta,
+        );
     }
 }
 

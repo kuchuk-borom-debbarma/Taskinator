@@ -1,9 +1,12 @@
-import type { AuthService, StartSignUpParam, SignInParam } from '../AuthService.ts';
-import { db } from '../../../database/index.ts';
-import eventBus, { KAFKA_EVENTS } from '../../../utils/event-bus/index.ts';
+import type {
+    AuthService,
+    StartSignUpParam,
+    SignInParam,
+} from '../AuthService.ts';
+import { db } from '../../../database';
 import { v4 as uuidv4 } from 'uuid';
 import jwt from 'jsonwebtoken';
-import { logger } from '../../../logger/index.ts';
+import { logger } from '../../../logger';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-jwt-key';
 
@@ -91,7 +94,10 @@ export class AuthServiceImpl implements AuthService {
             return null;
         }
 
-        const isMatch = await Bun.password.verify(data.password_raw, user.password_hash);
+        const isMatch = await Bun.password.verify(
+            data.password_raw,
+            user.password_hash,
+        );
         if (!isMatch) {
             logger.warn(`Sign in failed: invalid password for ${data.email}`);
             return null;
@@ -100,7 +106,7 @@ export class AuthServiceImpl implements AuthService {
         const token = jwt.sign(
             { id: user.id, email: user.email, username: user.username },
             JWT_SECRET,
-            { expiresIn: '24h' }
+            { expiresIn: '24h' },
         );
 
         logger.info(`User ${data.email} signed in successfully`);

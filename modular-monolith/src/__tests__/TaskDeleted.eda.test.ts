@@ -14,7 +14,14 @@
  *       ↓ deleteTaskTriggers(parentId)
  *       ↓ deleteTaskTriggers(childIds)
  */
-import { afterAll, beforeAll, beforeEach, describe, expect, it } from '@jest/globals';
+import {
+    afterAll,
+    beforeAll,
+    beforeEach,
+    describe,
+    expect,
+    it,
+} from '@jest/globals';
 import { db } from '../database/index.ts';
 import { cleanupDb, destroyDb } from './helpers/db.ts';
 import {
@@ -28,7 +35,10 @@ import { waitFor } from './helpers/waitFor.ts';
 import { taskService } from '../modules/task/index.ts';
 import { taskDeleteListener as taskRecursiveCleanup } from '../modules/task/internal/listeners/TaskDeleteListener.ts';
 import { taskDeletedListener as triggerTaskCleanup } from '../modules/task-trigger/internal/listeners/TaskDeletedListener.ts';
-import { startOutboxRelay, stopOutboxRelay } from '../utils/event-bus/OutboxRelay.ts';
+import {
+    startOutboxRelay,
+    stopOutboxRelay,
+} from '../utils/event-bus/OutboxRelay.ts';
 
 describe('Task Deleted EDA Flow — Recursive Cleanup', () => {
     let ownerId: string;
@@ -57,9 +67,15 @@ describe('Task Deleted EDA Flow — Recursive Cleanup', () => {
     });
 
     it('deletes direct children when a root task is deleted', async () => {
-        const parent = await createTask(projectId, ownerId, { title: 'Parent' });
-        const child1 = await createChildTask(projectId, ownerId, parent, { title: 'C1' });
-        const child2 = await createChildTask(projectId, ownerId, parent, { title: 'C2' });
+        const parent = await createTask(projectId, ownerId, {
+            title: 'Parent',
+        });
+        const child1 = await createChildTask(projectId, ownerId, parent, {
+            title: 'C1',
+        });
+        const child2 = await createChildTask(projectId, ownerId, parent, {
+            title: 'C2',
+        });
 
         await taskService.deleteTask({
             userId: ownerId,
@@ -68,11 +84,11 @@ describe('Task Deleted EDA Flow — Recursive Cleanup', () => {
         });
 
         await waitFor(async () => {
-            const remaining = await db
+            const remaining = (await db
                 .selectFrom('project_task')
                 .selectAll()
                 .where('fk_project_id', '=', projectId as any)
-                .execute() as any[];
+                .execute()) as any[];
             expect(remaining).toHaveLength(0);
         });
 
@@ -89,8 +105,12 @@ describe('Task Deleted EDA Flow — Recursive Cleanup', () => {
 
     it('recursively deletes grandchildren (3-level hierarchy)', async () => {
         const root = await createTask(projectId, ownerId, { title: 'Root' });
-        const child = await createChildTask(projectId, ownerId, root, { title: 'Child' });
-        const grandchild = await createChildTask(projectId, ownerId, child, { title: 'Grandchild' });
+        const child = await createChildTask(projectId, ownerId, root, {
+            title: 'Child',
+        });
+        const grandchild = await createChildTask(projectId, ownerId, child, {
+            title: 'Grandchild',
+        });
 
         await taskService.deleteTask({
             userId: ownerId,
@@ -119,7 +139,9 @@ describe('Task Deleted EDA Flow — Recursive Cleanup', () => {
     });
 
     it('cleans up task triggers for the deleted parent task', async () => {
-        const task = await createTask(projectId, ownerId, { title: 'TaskWithTrigger' });
+        const task = await createTask(projectId, ownerId, {
+            title: 'TaskWithTrigger',
+        });
         await createTaskTrigger({
             projectId,
             taskId: task.id,
@@ -145,8 +167,12 @@ describe('Task Deleted EDA Flow — Recursive Cleanup', () => {
     });
 
     it('cleans up triggers for child tasks after recursive deletion', async () => {
-        const parent = await createTask(projectId, ownerId, { title: 'Parent' });
-        const child = await createChildTask(projectId, ownerId, parent, { title: 'Child' });
+        const parent = await createTask(projectId, ownerId, {
+            title: 'Parent',
+        });
+        const child = await createChildTask(projectId, ownerId, parent, {
+            title: 'Child',
+        });
 
         await createTaskTrigger({
             projectId,
@@ -161,16 +187,13 @@ describe('Task Deleted EDA Flow — Recursive Cleanup', () => {
             taskIds: [parent.id],
         });
 
-        await waitFor(
-            async () => {
-                const triggers = await db
-                    .selectFrom('project_task_trigger_table')
-                    .selectAll()
-                    .where('fk_task_id', '=', child.id as any)
-                    .execute();
-                expect(triggers).toHaveLength(0);
-            },
-            5000,
-        );
+        await waitFor(async () => {
+            const triggers = await db
+                .selectFrom('project_task_trigger_table')
+                .selectAll()
+                .where('fk_task_id', '=', child.id as any)
+                .execute();
+            expect(triggers).toHaveLength(0);
+        }, 5000);
     });
 });

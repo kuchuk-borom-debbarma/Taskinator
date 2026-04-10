@@ -8,10 +8,20 @@
  * - Retry (same eventId, same groupId): handler is NOT called again
  * - Same eventId, different groupId: each group processes independently
  */
-import { afterAll, beforeEach, describe, expect, it, jest } from '@jest/globals';
+import {
+    afterAll,
+    beforeEach,
+    describe,
+    expect,
+    it,
+    jest,
+} from '@jest/globals';
 import { db } from '../database/index.ts';
 import { cleanupDb, destroyDb } from './helpers/db.ts';
-import { withIdempotency, createEvent } from '../utils/event-bus/idempotency.ts';
+import {
+    withIdempotency,
+    createEvent,
+} from '../utils/event-bus/idempotency.ts';
 
 describe('withIdempotency — Real DB Integration', () => {
     beforeEach(async () => {
@@ -25,7 +35,9 @@ describe('withIdempotency — Real DB Integration', () => {
 
     it('calls the handler exactly once for a new event', async () => {
         const handler = jest.fn(async () => {}) as any;
-        const event = createEvent('PROJECT_CREATED', 'key-1', { projectId: 'p1' });
+        const event = createEvent('PROJECT_CREATED', 'key-1', {
+            projectId: 'p1',
+        });
 
         await withIdempotency([event], 'group-A', handler);
 
@@ -35,7 +47,11 @@ describe('withIdempotency — Real DB Integration', () => {
 
     it('inserts a row into processed_event on first delivery', async () => {
         const event = createEvent('PROJECT_CREATED', 'key-2', {});
-        await withIdempotency([event], 'group-A', jest.fn(async () => {}) as any);
+        await withIdempotency(
+            [event],
+            'group-A',
+            jest.fn(async () => {}) as any,
+        );
 
         const rows = await db
             .selectFrom('processed_event')
@@ -76,10 +92,18 @@ describe('withIdempotency — Real DB Integration', () => {
         const eventNew = createEvent('X', 'k2', {});
 
         // Pre-process the first event
-        await withIdempotency([eventAlreadyProcessed], 'group-Z', jest.fn(async () => {}) as any);
+        await withIdempotency(
+            [eventAlreadyProcessed],
+            'group-Z',
+            jest.fn(async () => {}) as any,
+        );
 
         const handler = jest.fn(async () => {}) as any;
-        await withIdempotency([eventAlreadyProcessed, eventNew], 'group-Z', handler);
+        await withIdempotency(
+            [eventAlreadyProcessed, eventNew],
+            'group-Z',
+            handler,
+        );
 
         // Handler should only be called with the NEW event
         expect(handler).toHaveBeenCalledTimes(1);

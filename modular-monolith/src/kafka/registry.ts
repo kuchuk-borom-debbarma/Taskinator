@@ -53,9 +53,9 @@ export const startConsumers = async () => {
         taskTriggerDelegator.init(),
 
         taskTriggerListener.init(),
-        
+
         taskRecursiveCleanup.init(),
-        
+
         triggerTaskCleanup.init(),
 
         userSignupStartedListener.init(),
@@ -77,9 +77,9 @@ export const stopConsumers = async () => {
         teamTeamCleanup.stop(),
 
         taskTeamMemberCleanup.stop(),
-        
+
         taskRecursiveCleanup.stop(),
-        
+
         triggerTaskCleanup.stop(),
 
         userSignupStartedListener.stop(),
