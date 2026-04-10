@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useQuery, useMutation, useQueryClient, QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, QueryClient, QueryClientProvider, useQueries } from '@tanstack/react-query';
 import { projectApi, taskApi, teamApi } from './api/client';
 import { ProjectSidebar } from './components/ProjectSidebar';
 import { TaskTree } from './components/TaskTree';
@@ -65,11 +65,28 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
         enabled: !!userId.trim(),
     });
 
-    const { data: tasks = [] } = useQuery({
+    const { data: projectTasks = [] } = useQuery({
         queryKey: ['tasks', selectedProjectId, userId],
         queryFn: () => taskApi.getTasks(userId.trim(), selectedProjectId!),
         enabled: !!selectedProjectId && !!userId.trim(),
     });
+
+    const triggerQueries = useQueries({
+        queries: projectTasks.map(t => ({
+            queryKey: ['task-triggers', t.id],
+            queryFn: () => taskApi.getTaskTriggers(t.id),
+        }))
+    });
+
+    const triggerMap = useMemo(() => {
+        const map: Record<string, TaskTrigger[]> = {};
+        projectTasks.forEach((t, i) => {
+            if (triggerQueries[i]?.data) {
+                map[t.id] = triggerQueries[i].data!;
+            }
+        });
+        return map;
+    }, [projectTasks, triggerQueries]);
 
     const { data: teams = [] } = useQuery({
         queryKey: ['teams', selectedProjectId, userId],
@@ -298,9 +315,11 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
                         
                         <div className="flex-1 overflow-y-auto custom-scrollbar px-2 py-4">
                             {selectedProjectId ? (
-                                <TaskTree 
-                                    tasks={tasks} 
+                                <TaskTree
+                                    tasks={projectTasks}
+                                    triggerMap={triggerMap}
                                     onToggleStatus={(task) => updateTaskMutation.mutate({ id: task.id, version: task.version, status: task.status === 'DONE' ? 'TODO' : 'DONE' })}
+
                                     onCreateSubtask={(id) => handleCreateTask(id)}
                                     onClickTask={(task) => setSelectedTaskId(task.id)}
                                     onDeleteTask={(id) => {

@@ -1,10 +1,11 @@
 import React, { useMemo } from 'react';
-import type { Task } from '../types';
-import { CheckCircle2, Circle, Plus, ChevronDown, ChevronRight, Trash2, Hash, User } from 'lucide-react';
+import type { Task, TaskTrigger } from '../types';
+import { CheckCircle2, Circle, Plus, ChevronDown, ChevronRight, Trash2, Hash, User, Zap } from 'lucide-react';
 import { cn } from '../utils/cn';
 
 interface TaskTreeProps {
     tasks: Task[];
+    triggerMap: Record<string, TaskTrigger[]>;
     onToggleStatus: (task: Task) => void;
     onCreateSubtask: (parentId: string) => void;
     onClickTask: (task: Task) => void;
@@ -20,6 +21,7 @@ interface TreeItemProps {
     onClickTask: (task: Task) => void;
     onDeleteTask: (taskId: string) => void;
     treeMap: Record<string, Task[]>;
+    triggerMap: Record<string, TaskTrigger[]>;
 }
 
 const formatDate = (dateStr: string) => {
@@ -38,10 +40,11 @@ const formatDate = (dateStr: string) => {
 };
 
 const TreeItem: React.FC<TreeItemProps> = ({ 
-    task, children, depth, onToggleStatus, onCreateSubtask, onClickTask, onDeleteTask, treeMap
+    task, children, depth, onToggleStatus, onCreateSubtask, onClickTask, onDeleteTask, treeMap, triggerMap
 }) => {
     const [isExpanded, setIsExpanded] = React.useState(true);
     const hasChildren = children && children.length > 0;
+    const taskTriggers = triggerMap[task.id] || [];
 
     return (
         <div className="flex flex-col">
@@ -82,6 +85,23 @@ const TreeItem: React.FC<TreeItemProps> = ({
                     )}>
                         {task.title}
                     </span>
+
+                    {taskTriggers.length > 0 && (
+                        <div className="relative group/zap ml-1 shrink-0">
+                            <Zap size={14} className="text-amber-500 fill-amber-500/20" />
+                            <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 hidden group-hover/zap:block z-50">
+                                <div className="bg-popover border border-border shadow-xl rounded-md p-2 w-48 text-[10px] space-y-1.5 animate-in fade-in slide-in-from-bottom-1">
+                                    <p className="font-bold border-bottom border-border pb-1 uppercase text-muted-foreground tracking-widest">Active Automations</p>
+                                    {taskTriggers.map(t => (
+                                        <div key={t.id} className="flex flex-col gap-0.5">
+                                            <p className="font-semibold text-foreground">{t.name}</p>
+                                            <p className="text-muted-foreground/80 uppercase">{t.triggerType.replace(/_/g, ' ')}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
                 {/* Team ID */}
@@ -164,6 +184,7 @@ const TreeItem: React.FC<TreeItemProps> = ({
                             onClickTask={onClickTask}
                             onDeleteTask={onDeleteTask}
                             treeMap={treeMap}
+                            triggerMap={triggerMap}
                         />
                     ))}
                 </div>
@@ -173,7 +194,7 @@ const TreeItem: React.FC<TreeItemProps> = ({
 };
 
 export const TaskTree: React.FC<TaskTreeProps> = ({ 
-    tasks, onToggleStatus, onCreateSubtask, onClickTask, onDeleteTask 
+    tasks, triggerMap, onToggleStatus, onCreateSubtask, onClickTask, onDeleteTask 
 }) => {
     const rootTasks = useMemo(() => {
         const treeMap: Record<string, Task[]> = {};
@@ -212,6 +233,7 @@ export const TaskTree: React.FC<TaskTreeProps> = ({
                     onClickTask={onClickTask}
                     onDeleteTask={onDeleteTask}
                     treeMap={rootTasks.treeMap}
+                    triggerMap={triggerMap}
                 />
             ))}
         </div>
