@@ -114,6 +114,28 @@ CREATE TABLE pending_users (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Internal Notifications Table (Bucket-per-User)
+CREATE TABLE internal_notification (
+    id UUID NOT NULL DEFAULT uuid_generate_v4(),
+    fk_user_id TEXT NOT NULL,
+    title TEXT NOT NULL,
+    message TEXT NOT NULL,
+    type TEXT NOT NULL,
+    metadata JSONB NOT NULL DEFAULT '{}',
+    is_read BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    read_at TIMESTAMP WITH TIME ZONE,
+    PRIMARY KEY (id, created_at)
+) PARTITION BY RANGE (created_at);
+
+-- Initial Partition (for current data)
+CREATE TABLE internal_notification_y2026 PARTITION OF internal_notification
+    FOR VALUES FROM ('2026-01-01') TO ('2027-01-01');
+
+-- Indexes for 10k RPS
+CREATE INDEX idx_internal_notification_user_unread ON internal_notification(fk_user_id) WHERE is_read = FALSE;
+CREATE INDEX idx_internal_notification_user_feed ON internal_notification(fk_user_id, created_at DESC);
+
 -- Outbox Events Table (wCTE Delivery)
 CREATE TABLE outbox_events (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
