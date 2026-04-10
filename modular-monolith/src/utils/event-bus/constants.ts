@@ -6,6 +6,7 @@ export const KAFKA_TOPICS = {
     PROJECT_TASK: 'project-task-events',
     PROJECT_TASK_TRIGGER: 'project-task-trigger-events',
     AUTH: 'auth-events',
+    NOTIFICATION: 'notification-events',
 } as const;
 
 export const KAFKA_EVENTS = {
@@ -37,6 +38,9 @@ export const KAFKA_EVENTS = {
         SIGNUP_STARTED: 'AUTH_SIGNUP_STARTED',
         USER_CREATED: 'AUTH_USER_CREATED',
     },
+    NOTIFICATION: {
+        REQUESTED: 'NOTIFICATION_REQUESTED',
+    },
 } as const;
 
 export const EVENT_TO_TOPIC: Record<string, string> = {
@@ -60,6 +64,7 @@ export const EVENT_TO_TOPIC: Record<string, string> = {
         KAFKA_TOPICS.PROJECT_TASK_TRIGGER,
     [KAFKA_EVENTS.AUTH.SIGNUP_STARTED]: KAFKA_TOPICS.AUTH,
     [KAFKA_EVENTS.AUTH.USER_CREATED]: KAFKA_TOPICS.AUTH,
+    [KAFKA_EVENTS.NOTIFICATION.REQUESTED]: KAFKA_TOPICS.NOTIFICATION,
 };
 
 /**

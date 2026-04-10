@@ -5,6 +5,7 @@ import type {
 } from '../InternalNotificationService.ts';
 import * as Queries from './InternalNotificationQueries.ts';
 import eventBus from '../../../utils/EventBus.ts';
+import { notificationRequestedListener } from './listeners/NotificationRequestedListener.ts';
 
 export class InternalNotificationServiceImpl implements InternalNotificationService {
     async createNotification(data: CreateNotificationParam): Promise<InternalNotification> {
@@ -34,10 +35,12 @@ export class InternalNotificationServiceImpl implements InternalNotificationServ
     async init(): Promise<void> {
         console.log(`Initializing event bus ${this.constructor.name}`);
         await eventBus.init();
+        await notificationRequestedListener.init();
     }
 
     async destroy(): Promise<void> {
         console.log(`Disconnecting event bus ${this.constructor.name}`);
+        await notificationRequestedListener.stop();
         await eventBus.destroy();
     }
 }

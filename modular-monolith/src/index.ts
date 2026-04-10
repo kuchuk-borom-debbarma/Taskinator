@@ -3,6 +3,7 @@ import { teamService } from './modules/team';
 import { taskService } from './modules/task';
 import { authService } from './modules/auth/index.ts';
 import { externalNotificationService } from './modules/external-notification/index.ts';
+import { internalNotificationService } from './modules/internal-notification/index.ts';
 import { startConsumers } from './kafka/registry';
 import { startRestServer } from './restful';
 import { taskTriggerService } from './modules/task-trigger';
@@ -18,6 +19,7 @@ await Promise.all([
     taskTriggerService.init(),
     authService.init(),
     externalNotificationService.init(),
+    internalNotificationService.init(),
     startConsumers(),
 ]).then(() => {
     startOutboxRelay();

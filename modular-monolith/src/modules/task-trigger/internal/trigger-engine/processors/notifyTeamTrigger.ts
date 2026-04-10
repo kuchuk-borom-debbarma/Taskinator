@@ -3,11 +3,13 @@ import {
     getParentTaskTeamMembers,
     getTaskTeamMembers,
 } from '../../TaskTriggerQueries.ts';
+import eventBus, { KAFKA_EVENTS } from '../../../../../utils/EventBus.ts';
 
 /**
  * Trigger that will notify the team assigned to the parent task
  * @param taskId
  * @param trigger
+ * @param updates
  */
 export const notifyParentTeamTrigger = async (
     taskId: string,
@@ -27,15 +29,26 @@ export const notifyParentTeamTrigger = async (
     }
 
     console.log(
-        `[Trigger Engine] Notifying parent team members of task ${taskId}: ${members.join(', ')}`,
+        `[Trigger Engine] Publishing notification request for parent team members of task ${taskId}`,
     );
-    // TODO: Integrate with real Notification Service when available
+
+    await eventBus.publish(KAFKA_EVENTS.NOTIFICATION.REQUESTED, {
+        key: taskId,
+        data: {
+            userIds: members,
+            title: `Parent Task Notification: ${trigger.name}`,
+            message: `Automation '${trigger.name}' triggered on task associated with your parent team.`,
+            type: 'TEAM_NOTIFICATION',
+            metadata: { taskId, triggerId: trigger.id, projectId: trigger.projectId }
+        }
+    });
 };
 
 /**
  * Trigger that will notify the team assigned to the task
  * @param taskId
  * @param trigger
+ * @param updates
  */
 export const notifyTaskTeamTrigger = async (
     taskId: string,
@@ -55,7 +68,17 @@ export const notifyTaskTeamTrigger = async (
     }
 
     console.log(
-        `[Trigger Engine] Notifying team members of task ${taskId}: ${members.join(', ')}`,
+        `[Trigger Engine] Publishing notification request for team members of task ${taskId}`,
     );
-    // TODO: Integrate with real Notification Service when available
+
+    await eventBus.publish(KAFKA_EVENTS.NOTIFICATION.REQUESTED, {
+        key: taskId,
+        data: {
+            userIds: members,
+            title: `Task Notification: ${trigger.name}`,
+            message: `Automation '${trigger.name}' triggered on task associated with your team.`,
+            type: 'TEAM_NOTIFICATION',
+            metadata: { taskId, triggerId: trigger.id, projectId: trigger.projectId }
+        }
+    });
 };
