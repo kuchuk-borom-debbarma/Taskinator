@@ -81,11 +81,11 @@ export const getNotifications = async (
             created_at AS "createdAt",
             read_at AS "readAt"
         FROM internal_notification
-        WHERE fk_user_id = ${userId}
+        WHERE fk_user_id = ${userId}::text
           AND (
-              ${cursorDate} IS NULL
-              OR created_at < ${cursorDate}
-              OR (created_at = ${cursorDate} AND id < ${cursorId}::uuid)
+              ${cursorDate}::timestamptz IS NULL
+              OR created_at < ${cursorDate}::timestamptz
+              OR (created_at = ${cursorDate}::timestamptz AND id < ${cursorId}::uuid)
           )
         ORDER BY created_at DESC, id DESC
         LIMIT ${limit + 1}

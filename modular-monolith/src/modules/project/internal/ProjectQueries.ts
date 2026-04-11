@@ -237,17 +237,17 @@ export const getProjects = async (
         [cursorDate, cursorId] = cursor.split('|');
     }
 
-    const result = await sql<Project & { isOwner: boolean }>`
+        const result = await sql<Project & { isOwner: boolean }>`
         WITH combined_projects AS (
             SELECT p.*, true as is_owner
             FROM project p
-            WHERE p.fk_user_id = ${userId}
+            WHERE p.fk_user_id = ${userId}::text
             UNION ALL
             SELECT p.*, false as is_owner
             FROM project p
             JOIN project_member pm ON pm.fk_project_id = p.id
-            WHERE pm.fk_user_id = ${userId}
-              AND p.fk_user_id <> ${userId} -- Avoid duplicates if user is somehow both
+            WHERE pm.fk_user_id = ${userId}::text
+              AND p.fk_user_id <> ${userId}::text -- Avoid duplicates if user is somehow both
         )
         SELECT 
             id,
@@ -261,9 +261,9 @@ export const getProjects = async (
             is_owner AS "isOwner"
         FROM combined_projects
         WHERE (
-            ${cursorDate} IS NULL 
-            OR created_at < ${cursorDate}
-            OR (created_at = ${cursorDate} AND id < ${cursorId}::uuid)
+            ${cursorDate}::timestamptz IS NULL 
+            OR created_at < ${cursorDate}::timestamptz
+            OR (created_at = ${cursorDate}::timestamptz AND id < ${cursorId}::uuid)
         )
         ORDER BY created_at DESC, id DESC
         LIMIT ${limit + 1}
@@ -323,9 +323,9 @@ export const getProjectMembers = async (
 
     const result = await sql<ProjectMember>`
         WITH auth_check AS (
-            SELECT 1 FROM project WHERE id = ${projectId}::uuid AND fk_user_id = ${userId}
+            SELECT 1 FROM project WHERE id = ${projectId}::uuid AND fk_user_id = ${userId}::text
             UNION ALL
-            SELECT 1 FROM project_member WHERE fk_project_id = ${projectId}::uuid AND fk_user_id = ${userId}
+            SELECT 1 FROM project_member WHERE fk_project_id = ${projectId}::uuid AND fk_user_id = ${userId}::text
             LIMIT 1
         )
         SELECT 

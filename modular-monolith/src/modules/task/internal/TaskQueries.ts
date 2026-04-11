@@ -380,9 +380,9 @@ export const getTasks = async (
 
     const result = await sql<ProjectTask>`
         WITH auth_check AS (
-            SELECT 1 FROM project WHERE id = ${projectId}::uuid AND fk_user_id = ${userId}
+            SELECT 1 FROM project WHERE id = ${projectId}::uuid AND fk_user_id = ${userId}::text
             UNION ALL
-            SELECT 1 FROM project_member WHERE fk_project_id = ${projectId}::uuid AND fk_user_id = ${userId}
+            SELECT 1 FROM project_member WHERE fk_project_id = ${projectId}::uuid AND fk_user_id = ${userId}::text
             LIMIT 1
         )
         SELECT 
@@ -405,9 +405,9 @@ export const getTasks = async (
         WHERE fk_project_id = ${projectId}::uuid
           AND EXISTS (SELECT 1 FROM auth_check)
           AND (
-              ${cursorDate} IS NULL
-              OR created_at < ${cursorDate}
-              OR (created_at = ${cursorDate} AND id < ${cursorId}::uuid)
+              ${cursorDate}::timestamptz IS NULL
+              OR created_at < ${cursorDate}::timestamptz
+              OR (created_at = ${cursorDate}::timestamptz AND id < ${cursorId}::uuid)
           )
         ORDER BY created_at DESC, id DESC
         LIMIT ${limit + 1}

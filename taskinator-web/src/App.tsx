@@ -74,11 +74,12 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
     const projects = projectData?.projects ?? [];
     const nextCursor = projectData?.nextCursor;
 
-    const { data: projectTasks = [] } = useQuery({
+    const { data: taskData } = useQuery({
         queryKey: ['tasks', selectedProjectId, userId],
         queryFn: () => taskApi.getTasks(userId.trim(), selectedProjectId!),
         enabled: !!selectedProjectId && !!userId.trim(),
     });
+    const projectTasks = taskData?.tasks ?? [];
 
     const triggerQueries = useQueries({
         queries: projectTasks.map(t => ({
@@ -90,36 +91,40 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
     const triggerMap = useMemo(() => {
         const map: Record<string, TaskTrigger[]> = {};
         projectTasks.forEach((t, i) => {
-            if (triggerQueries[i]?.data) {
-                map[t.id] = triggerQueries[i].data!;
+            if (triggerQueries[i]?.data?.triggers) {
+                map[t.id] = triggerQueries[i].data!.triggers;
             }
         });
         return map;
     }, [projectTasks, triggerQueries]);
 
-    const { data: teams = [] } = useQuery({
+    const { data: teamData } = useQuery({
         queryKey: ['teams', selectedProjectId, userId],
         queryFn: () => teamApi.getTeams(userId.trim(), selectedProjectId!),
         enabled: !!selectedProjectId && !!userId.trim(),
     });
+    const teams = teamData?.teams ?? [];
 
-    const { data: projectMembers = [] } = useQuery({
+    const { data: memberData } = useQuery({
         queryKey: ['project-members', selectedProjectId, userId],
         queryFn: () => projectApi.getProjectMembers(userId.trim(), selectedProjectId!),
         enabled: isProjectSettingsOpen && !!selectedProjectId && !!userId.trim(),
     });
+    const projectMembers = memberData?.members ?? [];
 
-    const { data: teamMembers = [] } = useQuery({
+    const { data: tMemData } = useQuery({
         queryKey: ['team-members', selectedProjectId, selectedTeamId],
         queryFn: () => teamApi.getTeamMembers(userId.trim(), selectedProjectId!, selectedTeamId!),
         enabled: !!selectedTeamId && !!selectedProjectId && !!userId.trim(),
     });
+    const teamMembers = tMemData?.members ?? [];
 
-    const { data: taskTriggers = [] } = useQuery({
+    const { data: triggerData } = useQuery({
         queryKey: ['task-triggers', selectedTaskId],
         queryFn: () => taskApi.getTaskTriggers(selectedTaskId!),
         enabled: !!selectedTaskId,
     });
+    const taskTriggers = triggerData?.triggers ?? [];
 
     const { data: unreadData } = useQuery({
         queryKey: ['notifications-unread', userId],
