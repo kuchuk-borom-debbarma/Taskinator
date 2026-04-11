@@ -284,6 +284,11 @@ export const resolvers = {
     creator: (t: any, _: any, context: GraphQLContext) => context.loaders.user.load(t.createdBy),
     triggers: (t: any, _: any, context: GraphQLContext) => context.loaders.taskTriggers.load(t.id),
   },
+  TaskTrigger: {
+    triggerData: (t: any) => typeof t.triggerData === 'string' ? t.triggerData : JSON.stringify(t.triggerData),
+    createdAt: (t: any) => t.createdAt instanceof Date ? t.createdAt.toISOString() : t.createdAt,
+    updatedAt: (t: any) => t.updatedAt instanceof Date ? t.updatedAt.toISOString() : t.updatedAt,
+  },
   Query: {
     me: (_: any, __: any, context: GraphQLContext) => {
       if (!context.userId) return null;

@@ -1,6 +1,5 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient, QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { projectApi, taskApi, teamApi, notificationApi } from './api/client';
 import type { UserSearchResult } from './api/client';
 import { ProjectSidebar } from './components/ProjectSidebar';
 import { TaskTree } from './components/TaskTree';
@@ -15,8 +14,8 @@ import { UserSearchDropdown } from './components/UserSearchDropdown';
 import { useRealtime } from './hooks/useRealtime.ts';
 import type { JWTPayload, TaskTriggerType, TaskTrigger } from './types';
 import { gqlClient } from './graphql/client';
-import { 
-    GET_PROJECTS, GET_PROJECT, GET_WORKSPACE_DATA, GET_TASKS, GET_TEAMS, GET_PROJECT_MEMBERS, GET_TEAM_MEMBERS, GET_TASK_TRIGGERS, GET_UNREAD_NOTIFICATIONS_COUNT,
+import {
+    GET_PROJECTS, GET_WORKSPACE_DATA, GET_PROJECT_MEMBERS, GET_TEAM_MEMBERS, GET_UNREAD_NOTIFICATIONS_COUNT,
     CREATE_PROJECT, DELETE_PROJECTS, CREATE_TEAM, DELETE_TEAMS, ADD_PROJECT_MEMBERS, REMOVE_PROJECT_MEMBERS, ADD_TEAM_MEMBERS, REMOVE_TEAM_MEMBERS,
     CREATE_TASK, UPDATE_TASKS, DELETE_TASKS, ADD_TASK_TRIGGER, DELETE_TASK_TRIGGER
 } from './graphql/operations';
@@ -37,36 +36,36 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
     const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
     const [isNotifPanelOpen, setIsNotifPanelOpen] = useState(false);
     const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
-    
+
     // Modal States
     const [isCreateProjectOpen, setIsCreateProjectOpen] = useState(false);
     const [projectName, setProjectName] = useState('');
-    
+
     const [isCreateTeamOpen, setIsCreateTeamOpen] = useState(false);
     const [teamName, setTeamName] = useState('');
-    
+
     const [isCreateTaskOpen, setIsCreateTaskOpen] = useState(false);
     const [taskTitle, setTaskTitle] = useState('');
     const [parentTaskIdForNew, setParentTaskIdForNew] = useState<string>();
-    
+
     const [isCreateTriggerOpen, setIsCreateTriggerOpen] = useState(false);
-    const [triggerForm, setTriggerForm] = useState<{ name: string; type: TaskTriggerType; data: any }>({ 
-        name: '', 
-        type: 'BLOCK_PARENT_DONE', 
-        data: { revertStatusTo: 'IN_PROGRESS' } 
+    const [triggerForm, setTriggerForm] = useState<{ name: string; type: TaskTriggerType; data: any }>({
+        name: '',
+        type: 'BLOCK_PARENT_DONE',
+        data: { revertStatusTo: 'IN_PROGRESS' }
     });
-    
-    const [confirmModal, setConfirmModal] = useState<{ 
-        isOpen: boolean; 
-        title: string; 
-        message: string; 
+
+    const [confirmModal, setConfirmModal] = useState<{
+        isOpen: boolean;
+        title: string;
+        message: string;
         onConfirm: () => void;
         variant?: 'danger' | 'primary';
-    }>({ 
-        isOpen: false, 
-        title: '', 
-        message: '', 
-        onConfirm: () => {} 
+    }>({
+        isOpen: false,
+        title: '',
+        message: '',
+        onConfirm: () => { }
     });
 
     const qc = useQueryClient();
@@ -126,7 +125,7 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
 
     // Mutations
     const addTaskTriggerMutation = useMutation({
-        mutationFn: (data: { name: string; triggerType: TaskTriggerType; triggerData: any }) => 
+        mutationFn: (data: { name: string; triggerType: TaskTriggerType; triggerData: any }) =>
             gqlClient.request<any>(ADD_TASK_TRIGGER, {
                 taskId: selectedTaskId!,
                 projectId: selectedProjectId!,
@@ -142,7 +141,7 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
         onSuccess: () => qc.invalidateQueries({ queryKey: ['workspace', selectedProjectId, userId] }),
     });
     const createTaskMutation = useMutation({
-        mutationFn: (data: { title: string; parentTaskId?: string }) => 
+        mutationFn: (data: { title: string; parentTaskId?: string }) =>
             gqlClient.request<any>(CREATE_TASK, {
                 projectId: selectedProjectId!,
                 title: data.title,
@@ -153,7 +152,7 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
     });
 
     const updateTaskMutation = useMutation({
-        mutationFn: (updates: { id: string; version: number; status?: string; title?: string; description?: string; teamId?: string | null; memberId?: string | null }) => 
+        mutationFn: (updates: { id: string; version: number; status?: string; title?: string; description?: string; teamId?: string | null; memberId?: string | null }) =>
             gqlClient.request<any>(UPDATE_TASKS, { projectId: selectedProjectId!, tasks: [updates] }),
         onSuccess: () => qc.invalidateQueries({ queryKey: ['workspace', selectedProjectId, userId] }),
     });
@@ -181,17 +180,17 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
     });
 
     const addProjectMemberMutation = useMutation({
-        mutationFn: (targetUserId: string) => gqlClient.request<any>(ADD_PROJECT_MEMBERS, { 
-            projectId: selectedProjectId!, 
-            userIds: [targetUserId] 
+        mutationFn: (targetUserId: string) => gqlClient.request<any>(ADD_PROJECT_MEMBERS, {
+            projectId: selectedProjectId!,
+            userIds: [targetUserId]
         }),
         onSuccess: () => qc.invalidateQueries({ queryKey: ['project-members', selectedProjectId, userId] }),
     });
 
     const removeProjectMemberMutation = useMutation({
-        mutationFn: (memberId: string) => gqlClient.request<any>(REMOVE_PROJECT_MEMBERS, { 
-            projectId: selectedProjectId!, 
-            memberIds: [memberId] 
+        mutationFn: (memberId: string) => gqlClient.request<any>(REMOVE_PROJECT_MEMBERS, {
+            projectId: selectedProjectId!,
+            memberIds: [memberId]
         }),
         onSuccess: () => qc.invalidateQueries({ queryKey: ['project-members', selectedProjectId, userId] }),
     });
@@ -210,10 +209,10 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
     });
 
     const addTeamMemberMutation = useMutation({
-        mutationFn: (targetUserId: string) => gqlClient.request<any>(ADD_TEAM_MEMBERS, { 
-            projectId: selectedProjectId!, 
-            teamId: selectedTeamId!, 
-            userIds: [targetUserId] 
+        mutationFn: (targetUserId: string) => gqlClient.request<any>(ADD_TEAM_MEMBERS, {
+            projectId: selectedProjectId!,
+            teamId: selectedTeamId!,
+            userIds: [targetUserId]
         }),
         onSuccess: () => qc.invalidateQueries({ queryKey: ['team-members', selectedProjectId, selectedTeamId] }),
     });
@@ -221,10 +220,10 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
     const removeTeamMemberMutation = useMutation({
         mutationFn: (memberId: string) => {
             const member = teamMembers.find((m: any) => m.id === memberId);
-            return gqlClient.request<any>(REMOVE_TEAM_MEMBERS, { 
-                projectId: selectedProjectId!, 
-                teamId: selectedTeamId!, 
-                userIds: [member!.userId] 
+            return gqlClient.request<any>(REMOVE_TEAM_MEMBERS, {
+                projectId: selectedProjectId!,
+                teamId: selectedTeamId!,
+                userIds: [member!.userId]
             });
         },
         onSuccess: () => qc.invalidateQueries({ queryKey: ['team-members', selectedProjectId, selectedTeamId] }),
@@ -254,7 +253,7 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
 
     return (
         <div className="flex h-screen w-full bg-background text-foreground overflow-hidden">
-            <ProjectSidebar 
+            <ProjectSidebar
                 projects={projects}
                 username={user.username}
                 onLogout={onLogout}
@@ -272,7 +271,7 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
                             <ChevronRight size={12} className="text-muted-foreground/50" />
                             <span className="text-foreground">{selectedProject?.name || 'Select a project'}</span>
                             {selectedProjectId && (
-                                <button 
+                                <button
                                     onClick={() => setIsProjectSettingsOpen(true)}
                                     className="p-1 hover:bg-secondary rounded text-muted-foreground hover:text-foreground transition-colors ml-1"
                                 >
@@ -285,9 +284,9 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
                     <div className="flex items-center gap-4">
                         <div className="relative group hidden sm:block">
                             <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground group-focus-within:text-primary transition-colors" />
-                            <input 
-                                type="text" 
-                                placeholder="Search tasks..." 
+                            <input
+                                type="text"
+                                placeholder="Search tasks..."
                                 className="bg-secondary/30 border border-border/50 focus:border-primary/40 focus:bg-secondary/50 rounded-md py-1.5 pl-9 pr-3 text-[12px] w-64 transition-all outline-none"
                                 autoComplete="off"
                                 data-1p-ignore
@@ -325,7 +324,7 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
                                 <h2 className="text-sm font-bold tracking-tight">Active Tasks</h2>
                                 <p className="text-[11px] text-muted-foreground mt-0.5">Manage and organize your project goals.</p>
                             </div>
-                            <button 
+                            <button
                                 onClick={() => handleCreateTask()}
                                 disabled={!selectedProjectId}
                                 className="bg-primary hover:bg-primary/90 text-white text-[12px] font-semibold px-4 py-2 rounded-md flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-primary/20"
@@ -334,7 +333,7 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
                                 New Task
                             </button>
                         </div>
-                        
+
                         <div className="flex-1 overflow-y-auto custom-scrollbar px-2 py-4">
                             {selectedProjectId ? (
                                 <TaskTree
@@ -378,7 +377,7 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
                                 <Users size={14} className="text-muted-foreground" />
                                 <h3 className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Team Directory</h3>
                             </div>
-                            <button 
+                            <button
                                 onClick={handleCreateTeam}
                                 disabled={!selectedProjectId}
                                 className="p-1 hover:bg-secondary rounded text-muted-foreground hover:text-foreground disabled:opacity-30 disabled:cursor-not-allowed transition-all"
@@ -386,17 +385,17 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
                                 <Plus size={14} />
                             </button>
                         </div>
-                        
+
                         <div className="p-3 space-y-1">
                             {teams.length > 0 ? (
                                 teams.map(team => (
-                                    <div 
-                                        key={team.id} 
+                                    <div
+                                        key={team.id}
                                         onClick={() => setSelectedTeamId(team.id)}
                                         className={cn(
                                             "group p-3 rounded-lg cursor-pointer transition-all border border-transparent",
-                                            selectedTeamId === team.id 
-                                                ? "bg-secondary border-border/50 shadow-sm" 
+                                            selectedTeamId === team.id
+                                                ? "bg-secondary border-border/50 shadow-sm"
                                                 : "hover:bg-secondary/40 hover:border-border/20"
                                         )}
                                     >
@@ -407,7 +406,7 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
                                         <div className="flex items-center gap-2">
                                             <div className="flex -space-x-1.5">
                                                 <div className="w-4 h-4 rounded-full bg-accent border-2 border-background flex items-center justify-center text-[7px] font-bold text-white">
-                                                    {(team.creator?.username || team.createdBy).substring(0,1).toUpperCase()}
+                                                    {(team.creator?.username || team.createdBy).substring(0, 1).toUpperCase()}
                                                 </div>
                                             </div>
                                             <span className="text-[10px] text-muted-foreground truncate">
@@ -427,9 +426,9 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
             </main>
 
             {/* Project Settings Drawer */}
-            <Drawer 
-                isOpen={isProjectSettingsOpen} 
-                onClose={() => setIsProjectSettingsOpen(false)} 
+            <Drawer
+                isOpen={isProjectSettingsOpen}
+                onClose={() => setIsProjectSettingsOpen(false)}
                 title="Project Settings"
             >
                 <div className="space-y-8">
@@ -448,7 +447,7 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
                         </div>
                     </div>
 
-                    <MemberManager 
+                    <MemberManager
                         title="Project Members"
                         members={projectMembers}
                         onAdd={(uid) => addProjectMemberMutation.mutate(uid)}
@@ -457,7 +456,7 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
                     />
 
                     <div className="pt-4 border-t border-border">
-                        <button 
+                        <button
                             onClick={() => {
                                 setConfirmModal({
                                     isOpen: true,
@@ -480,13 +479,13 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
             </Drawer>
 
             {/* Team Detail Drawer */}
-            <Drawer 
-                isOpen={!!selectedTeamId} 
-                onClose={() => setSelectedTeamId(null)} 
+            <Drawer
+                isOpen={!!selectedTeamId}
+                onClose={() => setSelectedTeamId(null)}
                 title={`Team: ${selectedTeam?.name}`}
             >
                 <div className="space-y-8">
-                    <MemberManager 
+                    <MemberManager
                         title="Team Members"
                         members={teamMembers}
                         onAdd={(userId) => addTeamMemberMutation.mutate(userId)}
@@ -495,7 +494,7 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
                     />
 
                     <div className="pt-4 border-t border-border">
-                        <button 
+                        <button
                             onClick={() => {
                                 setConfirmModal({
                                     isOpen: true,
@@ -518,21 +517,21 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
             </Drawer>
 
             {/* Task Detail Drawer */}
-            <Drawer 
-                isOpen={!!selectedTaskId} 
-                onClose={() => setSelectedTaskId(null)} 
+            <Drawer
+                isOpen={!!selectedTaskId}
+                onClose={() => setSelectedTaskId(null)}
                 title="Task Details"
             >
                 {selectedTask && (
                     <div className="space-y-6">
                         <div className="flex items-center gap-3 p-3 bg-secondary/20 rounded-lg border border-border">
-                            <button 
+                            <button
                                 onClick={() => updateTaskMutation.mutate({ id: selectedTask.id, version: selectedTask.version, status: selectedTask.status === 'DONE' ? 'TODO' : 'DONE' })}
                                 className="text-muted hover:text-primary transition-colors"
                             >
                                 {selectedTask.status === 'DONE' ? <CheckCircle2 size={24} className="text-primary" /> : <Circle size={24} />}
                             </button>
-                            <input 
+                            <input
                                 type="text"
                                 defaultValue={selectedTask.title}
                                 onBlur={(e) => {
@@ -552,7 +551,7 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
                                 <AlignLeft size={12} />
                                 Description
                             </label>
-                            <textarea 
+                            <textarea
                                 defaultValue={selectedTask.description}
                                 onBlur={(e) => {
                                     if (e.target.value !== selectedTask.description) {
@@ -573,7 +572,7 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
                                     <Users2 size={12} />
                                     Team
                                 </label>
-                                <select 
+                                <select
                                     value={selectedTask.teamId || ''}
                                     onChange={(e) => updateTaskMutation.mutate({ id: selectedTask.id, version: selectedTask.version, teamId: e.target.value || null })}
                                     className="w-full bg-secondary/30 border border-border rounded-md px-2 py-1.5 text-sm outline-none focus:border-primary/50"
@@ -633,7 +632,7 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
                                 <Zap size={12} />
                                 Automations
                             </label>
-                            
+
                             <div className="space-y-2">
                                 {taskTriggers.map(trigger => (
                                     <div key={trigger.id} className="group text-xs p-2 bg-secondary/20 rounded border border-border flex items-center justify-between hover:border-border/60 transition-colors">
@@ -641,7 +640,7 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
                                             <span className="font-medium">{trigger.name}</span>
                                             <span className="text-[10px] text-muted-foreground uppercase">{trigger.triggerType.replace(/_/g, ' ')}</span>
                                         </div>
-                                        <button 
+                                        <button
                                             onClick={(e) => {
                                                 e.stopPropagation();
                                                 setConfirmModal({
@@ -661,13 +660,13 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
                                         </button>
                                     </div>
                                 ))}
-                                
-                                <button 
+
+                                <button
                                     onClick={() => {
-                                        setTriggerForm({ 
-                                            name: '', 
-                                            type: 'BLOCK_PARENT_DONE', 
-                                            data: { revertStatusTo: 'IN_PROGRESS' } 
+                                        setTriggerForm({
+                                            name: '',
+                                            type: 'BLOCK_PARENT_DONE',
+                                            data: { revertStatusTo: 'IN_PROGRESS' }
                                         });
                                         setIsCreateTriggerOpen(true);
                                     }}
@@ -679,7 +678,7 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
                         </div>
 
                         <div className="pt-6 border-t border-border">
-                            <button 
+                            <button
                                 onClick={() => {
                                     setConfirmModal({
                                         isOpen: true,
@@ -703,7 +702,7 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
             </Drawer>
 
             {/* Modals */}
-            
+
             {/* Confirmation Modal */}
             <Modal
                 isOpen={confirmModal.isOpen}
@@ -711,13 +710,13 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
                 title={confirmModal.title}
                 footer={
                     <>
-                        <button 
+                        <button
                             onClick={() => setConfirmModal(prev => ({ ...prev, isOpen: false }))}
                             className="px-4 py-2 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
                         >
                             Cancel
                         </button>
-                        <button 
+                        <button
                             onClick={confirmModal.onConfirm}
                             className={cn(
                                 "px-4 py-2 text-xs font-bold rounded-md transition-all",
@@ -750,13 +749,13 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
                 description="Projects are top-level containers for your teams and tasks."
                 footer={
                     <>
-                        <button 
+                        <button
                             onClick={() => setIsCreateProjectOpen(false)}
                             className="px-4 py-2 text-xs font-medium text-muted-foreground hover:text-foreground"
                         >
                             Cancel
                         </button>
-                        <button 
+                        <button
                             disabled={!projectName.trim()}
                             onClick={() => {
                                 createProjectMutation.mutate(projectName);
@@ -772,7 +771,7 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
                 <div className="space-y-4">
                     <div className="space-y-2">
                         <label className="text-[10px] uppercase font-bold text-muted-foreground">Project Name</label>
-                        <input 
+                        <input
                             autoFocus
                             type="text"
                             value={projectName}
@@ -792,13 +791,13 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
                 description="Teams own tasks and represent a group of members."
                 footer={
                     <>
-                        <button 
+                        <button
                             onClick={() => setIsCreateTeamOpen(false)}
                             className="px-4 py-2 text-xs font-medium text-muted-foreground hover:text-foreground"
                         >
                             Cancel
                         </button>
-                        <button 
+                        <button
                             disabled={!teamName.trim()}
                             onClick={() => {
                                 createTeamMutation.mutate(teamName);
@@ -814,7 +813,7 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
                 <div className="space-y-4">
                     <div className="space-y-2">
                         <label className="text-[10px] uppercase font-bold text-muted-foreground">Team Name</label>
-                        <input 
+                        <input
                             autoFocus
                             type="text"
                             value={teamName}
@@ -834,13 +833,13 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
                 description="Tasks can be assigned to teams and organized into hierarchies."
                 footer={
                     <>
-                        <button 
+                        <button
                             onClick={() => setIsCreateTaskOpen(false)}
                             className="px-4 py-2 text-xs font-medium text-muted-foreground hover:text-foreground"
                         >
                             Cancel
                         </button>
-                        <button 
+                        <button
                             disabled={!taskTitle.trim()}
                             onClick={() => {
                                 createTaskMutation.mutate({ title: taskTitle, parentTaskId: parentTaskIdForNew });
@@ -856,7 +855,7 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
                 <div className="space-y-4">
                     <div className="space-y-2">
                         <label className="text-[10px] uppercase font-bold text-muted-foreground">Task Title</label>
-                        <input 
+                        <input
                             autoFocus
                             type="text"
                             value={taskTitle}
@@ -876,19 +875,19 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
                 description="Define rules that trigger automatically when tasks are completed."
                 footer={
                     <>
-                        <button 
+                        <button
                             onClick={() => setIsCreateTriggerOpen(false)}
                             className="px-4 py-2 text-xs font-medium text-muted-foreground hover:text-foreground"
                         >
                             Cancel
                         </button>
-                        <button 
+                        <button
                             disabled={!triggerForm.name.trim()}
                             onClick={() => {
-                                addTaskTriggerMutation.mutate({ 
-                                    name: triggerForm.name, 
-                                    triggerType: triggerForm.type, 
-                                    triggerData: triggerForm.data 
+                                addTaskTriggerMutation.mutate({
+                                    name: triggerForm.name,
+                                    triggerType: triggerForm.type,
+                                    triggerData: triggerForm.data
                                 });
                                 setIsCreateTriggerOpen(false);
                             }}
@@ -902,7 +901,7 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
                 <div className="space-y-4">
                     <div className="space-y-2">
                         <label className="text-[10px] uppercase font-bold text-muted-foreground">Automation Name</label>
-                        <input 
+                        <input
                             autoFocus
                             type="text"
                             value={triggerForm.name}
@@ -914,7 +913,7 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
 
                     <div className="space-y-2">
                         <label className="text-[10px] uppercase font-bold text-muted-foreground">Trigger Type</label>
-                        <select 
+                        <select
                             value={triggerForm.type}
                             onChange={(e) => {
                                 const newType = e.target.value as TaskTriggerType;
@@ -935,7 +934,7 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
                     {triggerForm.type === 'BLOCK_PARENT_DONE' && (
                         <div className="space-y-2 p-3 bg-primary/5 border border-primary/20 rounded-lg">
                             <label className="text-[10px] uppercase font-bold text-primary/70">Revert Parent Status To</label>
-                            <select 
+                            <select
                                 value={triggerForm.data.revertStatusTo}
                                 onChange={(e) => setTriggerForm(prev => ({ ...prev, data: { ...prev.data, revertStatusTo: e.target.value } }))}
                                 className="w-full bg-background border border-primary/20 rounded-md px-3 py-1.5 text-sm outline-none"
@@ -979,53 +978,53 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
 const decodeJWT = (token: string): JWTPayload => JSON.parse(atob(token.split('.')[1]));
 
 function App() {
-  const [token, setToken] = useState<string | null>(() => {
-    const saved = localStorage.getItem('token');
-    if (saved) {
+    const [token, setToken] = useState<string | null>(() => {
+        const saved = localStorage.getItem('token');
+        if (saved) {
+            try {
+                decodeJWT(saved);
+                return saved;
+            } catch {
+                localStorage.removeItem('token');
+                return null;
+            }
+        }
+        return null;
+    });
+
+    const handleLogout = () => {
+        localStorage.removeItem('token');
+        setToken(null);
+    };
+
+    const handleLogin = (newToken: string) => {
         try {
-            decodeJWT(saved);
-            return saved;
+            decodeJWT(newToken);
+            localStorage.setItem('token', newToken);
+            setToken(newToken);
+        } catch (e) {
+            console.error('Attempted to login with invalid token', e);
+        }
+    };
+
+    let user: JWTPayload | null = null;
+    if (token) {
+        try {
+            user = decodeJWT(token);
         } catch {
-            localStorage.removeItem('token');
-            return null;
+            // Fallback handled by state initialization
         }
     }
-    return null;
-  });
 
-  const handleLogout = () => {
-      localStorage.removeItem('token');
-      setToken(null);
-  };
-
-  const handleLogin = (newToken: string) => {
-      try {
-          decodeJWT(newToken);
-          localStorage.setItem('token', newToken);
-          setToken(newToken);
-      } catch (e) {
-          console.error('Attempted to login with invalid token', e);
-      }
-  };
-
-  let user: JWTPayload | null = null;
-  if (token) {
-      try {
-          user = decodeJWT(token);
-      } catch {
-          // Fallback handled by state initialization
-      }
-  }
-
-  return (
-    <QueryClientProvider client={queryClient}>
-        {user ? (
-            <Workspace user={user} onLogout={handleLogout} />
-        ) : (
-            <Auth onLogin={handleLogin} />
-        )}
-    </QueryClientProvider>
-  )
+    return (
+        <QueryClientProvider client={queryClient}>
+            {user ? (
+                <Workspace user={user} onLogout={handleLogout} />
+            ) : (
+                <Auth onLogin={handleLogin} />
+            )}
+        </QueryClientProvider>
+    )
 }
 
 export default App
