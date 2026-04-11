@@ -18,7 +18,7 @@ export const useRealtime = (userId: string | undefined, projectId: string | unde
                 // If it's a task event
                 if (result.data.taskEvents) {
                     logger.info('[Realtime] Task event received via GraphQL Subscription');
-                    queryClient.invalidateQueries({ queryKey: ['tasks', projectId, userId] });
+                    queryClient.invalidateQueries({ queryKey: ['workspace', projectId, userId] });
                 }
                 // We could add notification subscription here too
             }

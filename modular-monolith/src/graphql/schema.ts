@@ -116,6 +116,7 @@ export const typeDefs = /* GraphQL */ `
     createdAt: String!
     updatedAt: String
     version: Int!
+    triggers: [TaskTrigger!]!
   }
 
   type TaskEdge {
@@ -281,6 +282,7 @@ export const resolvers = {
     team: (t: any, _: any, context: GraphQLContext) => t.teamId ? context.loaders.team.load(t.teamId) : null,
     assignee: (t: any, _: any, context: GraphQLContext) => t.memberId ? context.loaders.user.load(t.memberId) : null,
     creator: (t: any, _: any, context: GraphQLContext) => context.loaders.user.load(t.createdBy),
+    triggers: (t: any, _: any, context: GraphQLContext) => context.loaders.taskTriggers.load(t.id),
   },
   Query: {
     me: (_: any, __: any, context: GraphQLContext) => {

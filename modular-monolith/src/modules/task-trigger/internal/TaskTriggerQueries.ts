@@ -233,3 +233,32 @@ export const deleteTaskTriggers = async (taskIds: string[]) => {
         WHERE fk_task_id = ANY (${taskIds}::uuid[])
     `.execute(db);
 };
+
+export const getTriggersByTaskIds = async (taskIds: string[]): Promise<Map<string, TaskTrigger[]>> => {
+    if (!taskIds.length) return new Map();
+
+    const result = await sql<any>`
+        SELECT id, name, fk_project_id, fk_task_id, trigger_type, trigger_data, created_at, updated_at
+        FROM project_task_trigger_table
+        WHERE fk_task_id = ANY (${taskIds}::uuid[])
+        ORDER BY fk_task_id, id
+    `.execute(db);
+
+    const map = new Map<string, TaskTrigger[]>();
+    result.rows.forEach(v => {
+        const taskId = v.fk_task_id;
+        if (!map.has(taskId)) map.set(taskId, []);
+        map.get(taskId)!.push({
+            id: v.id,
+            name: v.name,
+            projectId: v.fk_project_id,
+            taskId: v.fk_task_id,
+            triggerType: v.trigger_type as TaskTriggerType,
+            triggerData: v.trigger_data,
+            createdAt: v.created_at,
+            updatedAt: v.updated_at,
+        });
+    });
+
+    return map;
+};

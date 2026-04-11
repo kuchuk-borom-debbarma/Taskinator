@@ -7,6 +7,8 @@ import { taskService } from '../modules/task';
 import type { ProjectTask } from '../modules/task/TaskService';
 import { authService } from '../modules/auth';
 import type { UserResult } from '../modules/auth/AuthService';
+import { taskTriggerService } from '../modules/task-trigger';
+import type { TaskTrigger } from '../modules/task-trigger/TaskTriggerService';
 
 export const createLoaders = (userId: string) => {
     return {
@@ -24,6 +26,11 @@ export const createLoaders = (userId: string) => {
             const users = await authService.getUsersByIds(ids as string[]);
             const map = new Map(users.map(u => [u.id, u]));
             return ids.map(id => map.get(id) || null);
+        }),
+        taskTriggers: new DataLoader<string, TaskTrigger[]>(async (taskIds) => {
+            const map = await taskTriggerService.getTriggersByTaskIds(taskIds as string[]);
+            // DataLoader requires returning an array for each key, in the same order
+            return taskIds.map(id => map.get(id) || []);
         }),
     };
 };

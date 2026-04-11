@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { useQuery, useMutation, useQueryClient, QueryClient, QueryClientProvider, useQueries } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { projectApi, taskApi, teamApi, notificationApi } from './api/client';
 import type { UserSearchResult } from './api/client';
 import { ProjectSidebar } from './components/ProjectSidebar';
@@ -16,7 +16,7 @@ import { useRealtime } from './hooks/useRealtime.ts';
 import type { JWTPayload, TaskTriggerType, TaskTrigger } from './types';
 import { gqlClient } from './graphql/client';
 import { 
-    GET_PROJECTS, GET_PROJECT, GET_TASKS, GET_TEAMS, GET_PROJECT_MEMBERS, GET_TEAM_MEMBERS, GET_TASK_TRIGGERS, GET_UNREAD_NOTIFICATIONS_COUNT,
+    GET_PROJECTS, GET_PROJECT, GET_WORKSPACE_DATA, GET_TASKS, GET_TEAMS, GET_PROJECT_MEMBERS, GET_TEAM_MEMBERS, GET_TASK_TRIGGERS, GET_UNREAD_NOTIFICATIONS_COUNT,
     CREATE_PROJECT, DELETE_PROJECTS, CREATE_TEAM, DELETE_TEAMS, ADD_PROJECT_MEMBERS, REMOVE_PROJECT_MEMBERS, ADD_TEAM_MEMBERS, REMOVE_TEAM_MEMBERS,
     CREATE_TASK, UPDATE_TASKS, DELETE_TASKS, ADD_TASK_TRIGGER, DELETE_TASK_TRIGGER
 } from './graphql/operations';
@@ -80,36 +80,25 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
     const projects = (projectData?.projects?.edges ?? []).map((e: any) => e.node);
     const nextCursor = projectData?.projects?.pageInfo?.endCursor;
 
-    const { data: taskData } = useQuery({
-        queryKey: ['tasks', selectedProjectId, userId],
-        queryFn: () => gqlClient.request<any>(GET_TASKS, { projectId: selectedProjectId, first: 100 }),
+    // === SINGLE CONSOLIDATED WORKSPACE QUERY ===
+    // Fetches tasks (with inline triggers, team, assignee) AND teams in ONE request.
+    // This eliminates the previous N+1 trigger-fetching pattern.
+    const { data: workspaceData } = useQuery({
+        queryKey: ['workspace', selectedProjectId, userId],
+        queryFn: () => gqlClient.request<any>(GET_WORKSPACE_DATA, { projectId: selectedProjectId, first: 200 }),
         enabled: !!selectedProjectId && !!userId.trim(),
     });
-    const projectTasks = (taskData?.tasks?.edges ?? []).map((e: any) => e.node);
+    const projectTasks = (workspaceData?.tasks?.edges ?? []).map((e: any) => e.node);
+    const teams = (workspaceData?.teams?.edges ?? []).map((e: any) => e.node);
 
-    const triggerQueries = useQueries({
-        queries: projectTasks.map(t => ({
-            queryKey: ['task-triggers', t.id],
-            queryFn: () => taskApi.getTaskTriggers(t.id),
-        }))
-    });
-
+    // Triggers are now embedded in each task — build a lookup map for the task detail panel
     const triggerMap = useMemo(() => {
         const map: Record<string, TaskTrigger[]> = {};
-        projectTasks.forEach((t, i) => {
-            if (triggerQueries[i]?.data?.triggers) {
-                map[t.id] = triggerQueries[i].data!.triggers;
-            }
+        projectTasks.forEach((t: any) => {
+            map[t.id] = t.triggers ?? [];
         });
         return map;
-    }, [projectTasks, triggerQueries]);
-
-    const { data: teamData } = useQuery({
-        queryKey: ['teams', selectedProjectId, userId],
-        queryFn: () => gqlClient.request<any>(GET_TEAMS, { projectId: selectedProjectId, first: 50 }),
-        enabled: !!selectedProjectId && !!userId.trim(),
-    });
-    const teams = (teamData?.teams?.edges ?? []).map((e: any) => e.node);
+    }, [projectTasks]);
 
     const { data: memberData } = useQuery({
         queryKey: ['project-members', selectedProjectId, userId],
@@ -125,12 +114,9 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
     });
     const teamMembers = (tMemData?.teamMembers?.edges ?? []).map((e: any) => e.node);
 
-    const { data: triggerData } = useQuery({
-        queryKey: ['task-triggers', selectedTaskId],
-        queryFn: () => gqlClient.request<any>(GET_TASK_TRIGGERS, { taskId: selectedTaskId, first: 50 }),
-        enabled: !!selectedTaskId,
-    });
-    const taskTriggers = (triggerData?.taskTriggers?.edges ?? []).map((e: any) => e.node);
+    // Task triggers for the selected task come from the embedded triggerMap (no extra request needed).
+    // This query is kept as a fallback for when a task is selected that isn't in the current page.
+    const taskTriggers: TaskTrigger[] = selectedTaskId ? (triggerMap[selectedTaskId] ?? []) : [];
 
     const { data: unreadData } = useQuery({
         queryKey: ['notifications-unread', userId],
@@ -148,12 +134,12 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
                 triggerType: data.triggerType,
                 triggerData: JSON.stringify(data.triggerData)
             }),
-        onSuccess: () => qc.invalidateQueries({ queryKey: ['task-triggers', selectedTaskId] }),
+        onSuccess: () => qc.invalidateQueries({ queryKey: ['workspace', selectedProjectId, userId] }),
     });
 
     const deleteTaskTriggerMutation = useMutation({
         mutationFn: (triggerId: string) => gqlClient.request<any>(DELETE_TASK_TRIGGER, { taskId: selectedTaskId!, triggerId }),
-        onSuccess: () => qc.invalidateQueries({ queryKey: ['task-triggers', selectedTaskId] }),
+        onSuccess: () => qc.invalidateQueries({ queryKey: ['workspace', selectedProjectId, userId] }),
     });
     const createTaskMutation = useMutation({
         mutationFn: (data: { title: string; parentTaskId?: string }) => 
@@ -163,20 +149,20 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
                 description: '',
                 parentTaskId: data.parentTaskId,
             }),
-        onSuccess: () => qc.invalidateQueries({ queryKey: ['tasks', selectedProjectId, userId] }),
+        onSuccess: () => qc.invalidateQueries({ queryKey: ['workspace', selectedProjectId, userId] }),
     });
 
     const updateTaskMutation = useMutation({
         mutationFn: (updates: { id: string; version: number; status?: string; title?: string; description?: string; teamId?: string | null; memberId?: string | null }) => 
             gqlClient.request<any>(UPDATE_TASKS, { projectId: selectedProjectId!, tasks: [updates] }),
-        onSuccess: () => qc.invalidateQueries({ queryKey: ['tasks', selectedProjectId, userId] }),
+        onSuccess: () => qc.invalidateQueries({ queryKey: ['workspace', selectedProjectId, userId] }),
     });
 
     const deleteTasksMutation = useMutation({
         mutationFn: (taskIds: string[]) => gqlClient.request<any>(DELETE_TASKS, { projectId: selectedProjectId!, taskIds }),
         onSuccess: () => {
             setSelectedTaskId(null);
-            qc.invalidateQueries({ queryKey: ['tasks', selectedProjectId, userId] });
+            qc.invalidateQueries({ queryKey: ['workspace', selectedProjectId, userId] });
         },
     });
 
@@ -212,14 +198,14 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
 
     const createTeamMutation = useMutation({
         mutationFn: (name: string) => gqlClient.request<any>(CREATE_TEAM, { projectId: selectedProjectId!, name }),
-        onSuccess: () => qc.invalidateQueries({ queryKey: ['teams', selectedProjectId, userId] }),
+        onSuccess: () => qc.invalidateQueries({ queryKey: ['workspace', selectedProjectId, userId] }),
     });
 
     const deleteTeamMutation = useMutation({
         mutationFn: (id: string) => gqlClient.request<any>(DELETE_TEAMS, { projectId: selectedProjectId!, teamIds: [id] }),
         onSuccess: () => {
             setSelectedTeamId(null);
-            qc.invalidateQueries({ queryKey: ['teams', selectedProjectId, userId] });
+            qc.invalidateQueries({ queryKey: ['workspace', selectedProjectId, userId] });
         },
     });
 

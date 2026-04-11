@@ -75,6 +75,16 @@ export const GET_TASKS = gql`
           }
           createdAt
           updatedAt
+          triggers {
+            id
+            name
+            projectId
+            taskId
+            triggerType
+            triggerData
+            createdAt
+            updatedAt
+          }
         }
         cursor
       }
@@ -85,6 +95,80 @@ export const GET_TASKS = gql`
     }
   }
 `;
+
+export const GET_WORKSPACE_DATA = gql`
+  query GetWorkspaceData($projectId: ID!, $first: Int) {
+    tasks(projectId: $projectId, first: $first) {
+      edges {
+        node {
+          id
+          title
+          description
+          status
+          projectId
+          teamId
+          team {
+            id
+            name
+          }
+          memberId
+          assignee {
+            id
+            username
+          }
+          parentTaskId
+          materializedPath
+          version
+          createdBy
+          creator {
+            id
+            username
+          }
+          createdAt
+          updatedAt
+          triggers {
+            id
+            name
+            projectId
+            taskId
+            triggerType
+            triggerData
+            createdAt
+            updatedAt
+          }
+        }
+        cursor
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+    }
+    teams(projectId: $projectId, first: $first) {
+      edges {
+        node {
+          id
+          name
+          projectId
+          createdBy
+          creator {
+            id
+            username
+          }
+          createdAt
+          updatedAt
+          version
+        }
+        cursor
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+    }
+  }
+`;
+
 
 export const GET_TEAMS = gql`
   query GetTeams($projectId: ID!, $first: Int, $after: String) {
