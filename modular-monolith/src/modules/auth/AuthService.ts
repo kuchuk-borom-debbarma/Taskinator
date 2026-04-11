@@ -40,7 +40,6 @@ export interface AuthService {
      * Cursor-paginated user search.
      * Matches username exactly OR id exactly.
      */
-     */
     searchUsers(params: SearchUsersParam): Promise<{ users: UserResult[]; nextCursor: string | null }>;
 
     /**

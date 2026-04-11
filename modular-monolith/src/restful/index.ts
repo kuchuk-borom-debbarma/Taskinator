@@ -35,7 +35,7 @@ export const startRestServer = (port: number = 3000) => {
     app.use('/auth', authRoutes);
     app.use('/notifications', notificationRoutes);
     app.use('/realtime', realtimeRoutes);
-    app.use('/graphql', yoga);
+    app.use('/graphql', (req, res) => yoga(req, res));
 
     app.listen(port, () => {
         console.log(`[REST] Server started on http://localhost:${port}`);

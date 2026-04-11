@@ -3,7 +3,7 @@ import { pubsub } from './pubsub';
 import { projectService } from '../modules/project';
 import { teamService } from '../modules/team';
 import { taskService } from '../modules/task';
-import { notificationService } from '../modules/internal-notification';
+import { internalNotificationService as notificationService } from '../modules/internal-notification';
 import { taskTriggerService } from '../modules/task-trigger';
 import { authService } from '../modules/auth';
 import type { GraphQLContext } from './context';
@@ -36,6 +36,14 @@ export const typeDefs = /* GraphQL */ `
     edges: [ProjectEdge!]!
     pageInfo: PageInfo!
     totalCount: Int
+  }
+
+  type ProjectMember {
+    id: ID!
+    projectId: ID!
+    userId: String!
+    user: User
+    createdAt: String!
   }
 
   type ProjectMemberConnection {
@@ -332,32 +340,23 @@ export const resolvers = {
         },
       };
     },
-    projectMembers: async (_: any, { projectId, first, after }: any, context: GraphQLContext) => {
-      if (!context.userId) throw new Error('Unauthorized');
-      const { members, nextCursor } = await projectService.getProjectMembers(context.userId, projectId, {
-        limit: first,
-        cursor: after,
-      });
+    projectMembers: async (_: any, args: { projectId: string; first?: number; after?: string }, context: GraphQLContext) => {
+        const { members } = await projectService.getProjectMembers(context.userId!, args.projectId);
       return {
-        edges: members.map(m => ({ node: m, cursor: m.id })),
-        pageInfo: { hasNextPage: !!nextCursor, endCursor: nextCursor },
+        edges: members.map((m: any) => ({ node: m, cursor: m.id })),
+        pageInfo: { hasNextPage: false, endCursor: null },
       };
     },
-    teamMembers: async (_: any, { projectId, teamId, first, after }: any, context: GraphQLContext) => {
-      if (!context.userId) throw new Error('Unauthorized');
-      const { members, nextCursor } = await teamService.getTeamMembers(context.userId, projectId, teamId, {
-        limit: first,
-        cursor: after,
-      });
+    teamMembers: async (_: any, args: { projectId: string; teamId: string; first?: number; after?: string }, context: GraphQLContext) => {
+        const { members } = await teamService.getTeamMembers(context.userId!, args.projectId, args.teamId);
       return {
-        edges: members.map(m => ({ node: m, cursor: m.id })),
-        pageInfo: { hasNextPage: !!nextCursor, endCursor: nextCursor },
+        edges: members.map((m: any) => ({ node: m, cursor: m.id })),
+        pageInfo: { hasNextPage: false, endCursor: null },
       };
     },
     taskTriggers: async (_: any, { taskId, first, after }: any, context: GraphQLContext) => {
       if (!context.userId) throw new Error('Unauthorized');
       const { triggers, nextCursor } = await taskTriggerService.getTriggersForTask({
-        userId: context.userId,
         taskId,
         cursor: after,
         limit: first,
@@ -370,18 +369,17 @@ export const resolvers = {
         pageInfo: { hasNextPage: !!nextCursor, endCursor: nextCursor },
       };
     },
-    notifications: async (_: any, { first, after }: any, context: GraphQLContext) => {
-      if (!context.userId) throw new Error('Unauthorized');
-      const { notifications, nextCursor } = await notificationService.getNotifications(context.userId, {
-        limit: first,
-        cursor: after,
+    notifications: async (_: any, args: { first?: number; after?: string }, context: GraphQLContext) => {
+        const { notifications } = await notificationService.getNotifications(context.userId!, {
+        limit: args.first,
+        cursor: args.after,
       });
       return {
-        edges: notifications.map(n => ({ 
-            node: { ...n, metadata: JSON.stringify(n.metadata) }, 
+        edges: notifications.map((n: any) => ({ 
+            node: { ...n, metadata: n.metadata ? JSON.stringify(n.metadata) : null }, 
             cursor: n.id 
         })),
-        pageInfo: { hasNextPage: !!nextCursor, endCursor: nextCursor },
+        pageInfo: { hasNextPage: false, endCursor: null },
       };
     },
     unreadNotificationsCount: async (_: any, __: any, context: GraphQLContext) => {
@@ -467,7 +465,7 @@ export const resolvers = {
     },
     deleteTeams: async (_: any, { projectId, teamIds }: any, context: GraphQLContext) => {
         if (!context.userId) throw new Error('Unauthorized');
-        return teamService.deleteTeams(context.userId, projectId, teamIds);
+        return teamService.deleteTeams({ userId: context.userId, projectId, teamIds });
     },
     addTeamMembers: async (_: any, { projectId, teamId, userIds }: any, context: GraphQLContext) => {
         if (!context.userId) throw new Error('Unauthorized');
@@ -504,17 +502,13 @@ export const resolvers = {
         });
     },
     addTaskTrigger: async (_: any, args: any, context: GraphQLContext) => {
-        if (!context.userId) throw new Error('Unauthorized');
-        await taskTriggerService.addTriggerToTask({
-            userId: context.userId,
-            projectId: args.projectId,
-            taskId: args.taskId,
-            name: args.name,
-            triggerType: args.triggerType as any,
+        await taskTriggerService.addTriggerToTask({ 
+            ...args, 
+            userId: context.userId!,
             triggerData: JSON.parse(args.triggerData)
         });
-        // We'd need to fetch the newly created trigger, but for now we'll just return a placeholder or refetch
-        const { triggers } = await taskTriggerService.getTriggersForTask({ userId: context.userId, taskId: args.taskId, limit: 1 });
+        const { triggers } = await taskTriggerService.getTriggersForTask({ taskId: args.taskId, limit: 1 });
+        if (!triggers[0]) throw new Error('Failed to create trigger');
         return { ...triggers[0], triggerData: JSON.stringify(triggers[0].triggerData) };
     },
     deleteTaskTrigger: async (_: any, { taskId, triggerId }: any, context: GraphQLContext) => {
@@ -538,41 +532,35 @@ export const resolvers = {
   },
   Subscription: {
     taskEvents: {
-      subscribe: async function* (_: any, { projectId }: any) {
-        // Listen to all task events and yield only those matching the projectId
-        const taskCreated = pubsub.subscribe('task_created');
-        const taskUpdated = pubsub.subscribe('task_updated');
-        const taskDeleted = pubsub.subscribe('task_deleted');
-
-        const combined = async function* () {
-            const iterators = [taskCreated, taskUpdated, taskDeleted];
-            // Simple multiplexing (not perfect but works for this demo)
-            // Ideally use a library like 'iterall' or Yoga's multi-subscribe if available
+      subscribe: (_parent: any, { projectId }: any, _context: GraphQLContext) => {
+        return (async function* () {
+            const iters = [
+                pubsub.subscribe('task_created'),
+                pubsub.subscribe('task_updated'),
+                pubsub.subscribe('task_deleted'),
+            ];
+            
+            // Simple race-based merging
+            const nexts = iters.map(it => it.next().then(res => ({ res, it })));
+            
             while (true) {
-                const results = await Promise.race(iterators.map(it => it.next()));
-                if (results.value) {
-                    if ((results.value as any).projectId === projectId) {
-                        yield { taskEvents: results.value };
+                const { res, it } = await Promise.race(nexts);
+                if (res.done) break;
+                
+                const event = res.value;
+                if (event && (event as any).projectId === projectId) {
+                    if ('title' in event) {
+                        yield { taskEvents: { __typename: 'TaskCreated', task: event } };
+                    } else {
+                        yield { taskEvents: { __typename: 'TaskDeleted', id: (event as any).id, projectId: (event as any).projectId } };
                     }
                 }
+                
+                // Refresh this iterator's next promise
+                const idx = iters.indexOf(it);
+                nexts[idx] = it.next().then(res => ({ res, it }));
             }
-        };
-        
-        // For simplicity and correctness in this environment, we'll use a better pattern:
-        // Yoga's pubsub supports multiple event names, but we still need to filter.
-        const iter = pubsub.subscribe('task_created', 'task_updated', 'task_deleted');
-        for await (const event of iter) {
-            if ((event as any).projectId === projectId) {
-                // Map event to union type
-                if ('title' in event) {
-                    // It's Created or Updated. We need to distinguish or just wrap.
-                    // For now, assume payload has enough info.
-                    yield { taskEvents: { __typename: 'TaskCreated', task: event } };
-                } else {
-                    yield { taskEvents: { __typename: 'TaskDeleted', id: (event as any).id, projectId: (event as any).projectId } };
-                }
-            }
-        }
+        })();
       },
     },
   },

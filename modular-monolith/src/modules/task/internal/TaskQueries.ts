@@ -375,7 +375,11 @@ export const getTasks = async (
     let cursorId: string | null = null;
 
     if (cursor && cursor.includes('|')) {
-        [cursorDate, cursorId] = cursor.split('|');
+        const parts = cursor.split('|');
+        if (parts.length === 2) {
+            cursorDate = parts[0]!;
+            cursorId = parts[1]!;
+        }
     }
 
     const result = await sql<ProjectTask>`

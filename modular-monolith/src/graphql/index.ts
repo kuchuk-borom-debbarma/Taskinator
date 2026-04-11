@@ -1,11 +1,11 @@
 import { createYoga } from 'graphql-yoga';
 import { schema } from './schema';
-import { createContext } from './context';
+import { createContext, type GraphQLContext } from './context';
 import jwt from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-jwt-key';
 
-export const yoga = createYoga({
+export const yoga = createYoga<GraphQLContext>({
     schema,
     context: async (initialContext) => {
         const authHeader = initialContext.request.headers.get('authorization');

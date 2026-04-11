@@ -434,16 +434,16 @@ describe('TaskQueries — Integration (Real DB + wCTE)', () => {
             await createTask(projectId, ownerId, { title: 'Alpha' });
             await createTask(projectId, ownerId, { title: 'Beta' });
 
-            const tasks = await getTasks(ownerId, projectId);
-            expect(tasks.length).toBeGreaterThanOrEqual(2);
+            const result = await getTasks(ownerId, projectId);
+            expect(result.tasks.length).toBeGreaterThanOrEqual(2);
         });
 
         it('returns empty array for an unauthorized user', async () => {
             await createTask(projectId, ownerId, { title: 'Private' });
             const stranger = await createUser();
 
-            const tasks = await getTasks(stranger.id, projectId);
-            expect(tasks).toHaveLength(0);
+            const result = await getTasks(stranger.id, projectId);
+            expect(result.tasks).toHaveLength(0);
         });
     });
 });
