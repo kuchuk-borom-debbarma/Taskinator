@@ -23,8 +23,8 @@ interface WorkspaceProps {
 }
 
 const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
-    useRealtime();
     const userId = user.id;
+    useRealtime(userId);
     const [selectedProjectId, setSelectedProjectId] = useState<string>();
     const [isProjectSettingsOpen, setIsProjectSettingsOpen] = useState(false);
     const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
@@ -121,7 +121,6 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
     const { data: unreadData } = useQuery({
         queryKey: ['notifications-unread', userId],
         queryFn: () => notificationApi.getUnreadCount(),
-        refetchInterval: 60_000,
     });
     const unreadCount = unreadData?.count ?? 0;
 

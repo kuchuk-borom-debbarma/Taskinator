@@ -83,13 +83,11 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, on
         queryKey: ['notifications', userId],
         queryFn: () => notificationApi.getNotifications({ limit: 50 }),
         enabled: isOpen,
-        refetchInterval: isOpen ? 30_000 : false,
     });
 
     const { data: unreadData } = useQuery({
         queryKey: ['notifications-unread', userId],
         queryFn: () => notificationApi.getUnreadCount(),
-        refetchInterval: 60_000,
     });
 
     const unreadCount = unreadData?.count ?? 0;

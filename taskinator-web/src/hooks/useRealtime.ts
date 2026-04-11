@@ -9,7 +9,7 @@ const API_BASE_URL = 'http://127.0.0.1:3000';
  * to the backend and triggers React Query invalidations when
  * tasks or notifications are updated in real-time.
  */
-export const useRealtime = () => {
+export const useRealtime = (userId: string | undefined) => {
     const queryClient = useQueryClient();
 
     const handleEvent = useCallback((event: MessageEvent) => {
@@ -19,18 +19,20 @@ export const useRealtime = () => {
 
             logger.debug(`[Realtime] Received event: ${type}`, data);
 
+            if (!userId) return;
+
             switch (type) {
                 case 'task_created':
                 case 'task_updated':
                 case 'task_deleted':
-                    // Invalidate all task lists for the affected project
-                    queryClient.invalidateQueries({ queryKey: ['tasks', data.projectId] });
+                    // Invalidate all task lists for the affected project and user
+                    queryClient.invalidateQueries({ queryKey: ['tasks', data.projectId, userId] });
                     break;
 
                 case 'notification_created':
-                    // Invalidate unread count and notification list
-                    queryClient.invalidateQueries({ queryKey: ['notification-unread-count'] });
-                    queryClient.invalidateQueries({ queryKey: ['notifications'] });
+                    // Invalidate unread count and notification list for this user
+                    queryClient.invalidateQueries({ queryKey: ['notifications-unread', userId] });
+                    queryClient.invalidateQueries({ queryKey: ['notifications', userId] });
                     break;
 
                 default:
@@ -39,11 +41,11 @@ export const useRealtime = () => {
         } catch (err) {
             logger.error('[Realtime] Failed to parse SSE message:', err);
         }
-    }, [queryClient]);
+    }, [queryClient, userId]);
 
     useEffect(() => {
         const token = localStorage.getItem('token');
-        if (!token) return;
+        if (!token || !userId) return;
 
         // Establish the SSE stream with the JWT in the query param
         const url = `${API_BASE_URL}/realtime/stream?token=${encodeURIComponent(token)}`;
