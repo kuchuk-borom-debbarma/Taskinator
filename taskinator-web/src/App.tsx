@@ -252,7 +252,7 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
 
     const selectedProject = projects.find(p => p.id === selectedProjectId);
     const selectedTeam = teams.find(t => t.id === selectedTeamId);
-    const selectedTask = tasks.find(t => t.id === selectedTaskId);
+    const selectedTask = projectTasks.find(t => t.id === selectedTaskId);
 
     return (
         <div className="flex h-screen w-full bg-background text-foreground overflow-hidden">

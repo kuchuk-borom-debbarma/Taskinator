@@ -19,7 +19,12 @@ export class KafkaBus implements Bus {
         });
     }
 
+    private isInitialized = false;
+
     async init() {
+        if (this.isInitialized) return;
+        this.isInitialized = true;
+
         await this.producer.connect();
 
         // Admin: Auto-create topics so that consumers don't crash on fresh environments
