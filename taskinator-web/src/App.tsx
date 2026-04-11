@@ -31,8 +31,8 @@ interface WorkspaceProps {
 
 const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
     const userId = user.id;
-    useRealtime(userId, selectedProjectId);
     const [selectedProjectId, setSelectedProjectId] = useState<string>();
+    useRealtime(userId, selectedProjectId);
     const [isProjectSettingsOpen, setIsProjectSettingsOpen] = useState(false);
     const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
     const [isNotifPanelOpen, setIsNotifPanelOpen] = useState(false);

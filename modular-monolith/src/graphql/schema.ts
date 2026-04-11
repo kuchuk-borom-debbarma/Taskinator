@@ -6,7 +6,7 @@ import { taskService } from '../modules/task';
 import { internalNotificationService as notificationService } from '../modules/internal-notification';
 import { taskTriggerService } from '../modules/task-trigger';
 import { authService } from '../modules/auth';
-import type { GraphQLContext } from './context';
+import type { GraphQLContext } from './context.ts';
 
 export const typeDefs = /* GraphQL */ `
   type PageInfo {
@@ -100,6 +100,7 @@ export const typeDefs = /* GraphQL */ `
     description: String
     status: String!
     projectId: ID!
+    project: Project
     teamId: ID
     team: Team
     memberId: ID
