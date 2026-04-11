@@ -234,7 +234,11 @@ export const getProjects = async (
     let cursorId: string | null = null;
 
     if (cursor && cursor.includes('|')) {
-        [cursorDate, cursorId] = cursor.split('|');
+        const parts = cursor.split('|');
+        if (parts.length === 2) {
+            cursorDate = parts[0]!;
+            cursorId = parts[1]!;
+        }
     }
 
         const result = await sql<Project & { isOwner: boolean }>`
@@ -421,4 +425,35 @@ export const searchProjectMembers = async (params: {
     const nextCursor = hasMore ? users[users.length - 1]!.id : null;
 
     return { users, nextCursor };
+};
+
+export const getProjectsByIds = async (
+    userId: string,
+    projectIds: string[],
+): Promise<Project[]> => {
+    if (projectIds.length === 0) return [];
+
+    const result = await sql<Project>`
+        SELECT 
+            id,
+            name,
+            description,
+            fk_user_id AS "userId",
+            version,
+            last_event_id AS "lastEventId",
+            created_at AS "createdAt",
+            updated_at AS "updatedAt"
+        FROM project
+        WHERE id = ANY(${projectIds}::uuid[])
+          AND (
+            fk_user_id = ${userId}
+            OR EXISTS (
+                SELECT 1 FROM project_member 
+                WHERE fk_project_id = project.id 
+                  AND fk_user_id = ${userId}
+            )
+          )
+    `.execute(db);
+
+    return result.rows;
 };

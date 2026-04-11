@@ -15,6 +15,7 @@ import {
     insertTeamMembers,
     deleteTeamMembers,
     getTeams,
+    getTeamsByIds,
     getTeamMembers,
     searchTeamUsers,
 } from './TeamQueries.ts';
@@ -27,6 +28,10 @@ export class TeamServiceImpl implements TeamService {
         params?: { cursor?: string; limit?: number },
     ): Promise<{ teams: Team[]; nextCursor: string | null }> {
         return getTeams(userId, projectId, params);
+    }
+
+    async getTeamsByIds(userId: string, teamIds: string[]): Promise<Team[]> {
+        return getTeamsByIds(userId, teamIds);
     }
 
     async getTeamMembers(

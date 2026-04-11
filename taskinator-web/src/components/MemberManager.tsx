@@ -6,6 +6,7 @@ import type { UserSearchResult } from '../api/client';
 interface Member {
     id: string;
     userId: string;
+    user?: { id: string; username: string; email: string };
 }
 
 interface MemberManagerProps {
@@ -56,11 +57,15 @@ export const MemberManager: React.FC<MemberManagerProps> = ({
                     >
                         <div className="flex items-center gap-3 overflow-hidden">
                             <div className="w-8 h-8 shrink-0 rounded bg-accent/20 border border-accent/30 flex items-center justify-center text-[11px] font-bold text-accent-foreground shadow-sm">
-                                {member.userId.substring(0, 2).toUpperCase()}
+                                {(member.user?.username || member.userId).substring(0, 2).toUpperCase()}
                             </div>
                             <div className="flex flex-col min-w-0">
-                                <span className="text-[13px] font-medium truncate">{member.userId}</span>
-                                <span className="text-[10px] text-muted-foreground truncate font-mono opacity-60">ID: {member.id.substring(0, 8)}</span>
+                                <span className="text-[13px] font-medium truncate">
+                                    {member.user?.username || member.userId}
+                                </span>
+                                <span className="text-[10px] text-muted-foreground truncate opacity-60">
+                                    {member.user?.email || `ID: ${member.id.substring(0, 8)}`}
+                                </span>
                             </div>
                         </div>
                         <button

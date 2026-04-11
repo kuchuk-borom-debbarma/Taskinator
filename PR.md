@@ -1,47 +1,40 @@
-# PR: Real-time Infrastructure, Keyset Pagination, and Authorization Refinement
+# Pull Request: Unified GraphQL Architecture & Real-time Stream Consolidation
 
-## Overview
-This PR introduces the real-time event streaming infrastructure (SSE), migrates the entire system to high-performance keyset-based pagination, and refactor the team/project membership authorization to better support collaborative workflows.
+## 📋 Overview
+This pull request fundamentally re-architects the Taskinator communication layer, transitioning from fragmented REST/SSE endpoints to a unified, production-grade **Modular GraphQL** system. It introduces a single-pipe real-time event stream and an ordered system bootloader to ensure maximum reliability and developer productivity.
 
-## Key Changes
+## 🚀 Key Architectural Changes
 
-### 📡 Real-time & SSE Infrastructure
-- **SSE Manager**: Implemented a localized SSE registry with multi-project mapping and heartbeat support.
-- **Kafka Fan-out**: Integrated Kafka consumers to broadcast project-level events (task updates, project triggers) to connected users.
-- **Security**: Scoped real-time updates to project membership, preventing unauthorized event leakage.
+### 1. Modular GraphQL Engine
+- **Vertical Schema Separation**: Decomposed the monolithic schema into domain-specific files (`task.graphql`, `team.graphql`, `project.graphql`, etc.) within `src/graphql/schema/`.
+- **Domain-Specific Resolvers**: Resolvers are now organized by module in `src/graphql/resolvers/` and aggregated dynamically.
+- **Type-Safe Loading**: Implemented [schema.ts](file:///Users/kuchukboromdebbarma/Documents/projects/Taskinator-v2/modular-monolith/src/graphql/schema.ts) using `@graphql-tools` to merge SDL files and resolvers at runtime, maintaining strict domain boundaries.
 
-### 📈 Universal Keyset Pagination
-- **Optimization**: All LIST-based endpoints (`/projects`, `/tasks`, `/teams`, `/notifications`) now use keyset-based pagination (`cursor` + `limit`).
-- **Performance**: Optimized for 10k RPS by replacing offset-based scans with index-friendly cursor queries.
-- **Stability**: Fixed frontend regressions where the UI expected raw arrays instead of the new `{ data, nextCursor }` wrapper.
+### 2. Unified Real-time Event Stream
+- **Consolidated Connection**: Replaced multiple, separate SSE connections with a single `Subscription.realtimeStream`.
+- **Event Multiplexing**: Implemented a `RealtimeEvent` union to stream Task Creations, Updates, Deletions, and Notifications through one stable pipe.
+- **Kafka Fan-out Logic**: Updated the real-time bridge to broadcast individual `NOTIFICATION.CREATED` events via Kafka, ensuring all server instances can deliver updates to their locally connected clients.
 
-### 🔐 Authorization & Search Refinements
-- **Project-Scoped User Search**: Restricted team member suggestions to users already part of the project (Owner or Members).
-- **Team Membership**:
-    - Reverted automatic creator membership; creators are now distinct from members unless manually added.
-    - Expanded management permissions: Project Owners, Team Creators, and existing Team Members can now manage team composition.
-- **Task Triggers**: Implemented missing authorization checks for trigger creation to ensure only project members can add automations.
+### 3. Ordered 4-Phase Boot Sequence
+- **Infrastructure Guarantee**: Refactored the application entry point to follow a strict sequential bootloader:
+    1. **Phase 1**: Kafka Infrastructure (Topics & Producer)
+    2. **Phase 2**: Domain Services & Event Listeners
+    3. **Phase 3**: Public API (GraphQL/REST)
+    4. **Phase 4**: Background Outbox Relay
+- **Impact**: This eliminates "cold start" issues where the API could start accepting traffic before internal event listeners were ready.
 
-### 🛠️ Developer Experience & Docs
-- **Explicit Extensions**: Standardized imports to include `.ts` extensions for better compatibility.
-- **Architecture Docs**: Added `docs/SSE Architecture.md` and updated stability/connection tuning guidelines.
+### 4. Frontend GraphQL Integration
+- **Unified Data Fetching**: Migrated the web client to use GraphQL as the primary data source, significantly reducing the number of round-trips to the backend.
+- **Improved Real-time Hook**: Refactored `useRealtime.ts` to manage a single, persistent subscription connection that handles workspace updates and notification badges in parallel.
 
-## Verification Plan
-
-### Automated Coverage
-- [x] Kafka consumer tests for event processing.
-- [x] SQL unit tests for keyset pagination boundary conditions.
-
-### Manual Verification
-- [x] Verified SSE connection stability under network fluctuation.
-- [x] Confirmed "Created by" label update in Team UI.
-- [x] Verified that adding team members only suggests project-participating users.
-- [x] Confirmed task trigger creation is restricted to project members.
-
-## Technical Notes
-- **SSE Tuning**: Increased backend connection timeout and added socket-level logging for better observability during peak loads.
-- **Null Handling**: Fixed edge cases in user search queries where missing search strings were causing SQL syntax errors.
+## 🧪 Verification & Stability
+- **Type Safety**: Passed a full `tsc --noEmit` check on the backend with 0 errors.
+- **Manual Verification**:
+    - [x] Confirmed "Read-time Notification" badge updates instantly on event receipt.
+    - [x] Verified "Workspace Task" updates reflect in real-time across multiple browser tabs.
+    - [x] Confirmed the ordered boot sequence prevents event loss during server startup.
 
 ---
-**Branch**: `feature/server-sent-event`  
-**Merge Target**: `dev`
+**Branch**: `endpoint/graphql`  
+**Merge Target**: `dev`  
+**Status**: Ready for Review

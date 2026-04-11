@@ -1,0 +1,21 @@
+type User {
+  id: ID!
+  username: String!
+  email: String!
+}
+
+type UserSearchResultEdge {
+  node: User!
+  cursor: String!
+}
+
+type UserSearchResultConnection {
+  edges: [UserSearchResultEdge!]!
+  pageInfo: PageInfo!
+}
+
+extend type Query {
+  me: User
+  searchUsers(search: String, first: Int, after: String): UserSearchResultConnection!
+  searchTeamUsers(projectId: ID!, teamId: ID!, search: String, first: Int, after: String): UserSearchResultConnection!
+}

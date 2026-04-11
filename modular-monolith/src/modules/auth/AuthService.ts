@@ -41,4 +41,9 @@ export interface AuthService {
      * Matches username exactly OR id exactly.
      */
     searchUsers(params: SearchUsersParam): Promise<{ users: UserResult[]; nextCursor: string | null }>;
+
+    /**
+     * Batch fetch users by IDs. Used by DataLoaders.
+     */
+    getUsersByIds(ids: string[]): Promise<UserResult[]>;
 }

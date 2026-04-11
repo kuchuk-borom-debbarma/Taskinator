@@ -8,6 +8,7 @@ export interface Project {
     isOwner?: boolean;
     createdAt: string;
     updatedAt?: string;
+    creator?: { id: string; username: string };
 }
 
 export interface ProjectMember {
@@ -18,6 +19,7 @@ export interface ProjectMember {
     lastEventId: string | null;
     createdAt: string;
     updatedAt: string;
+    user?: { id: string; username: string; email: string };
 }
 
 export interface Team {
@@ -29,6 +31,7 @@ export interface Team {
     lastEventId: string | null;
     createdAt: string;
     updatedAt: string;
+    creator?: { id: string; username: string };
 }
 
 export interface TeamMember {
@@ -40,6 +43,7 @@ export interface TeamMember {
     lastEventId: string | null;
     createdAt: string;
     updatedAt: string;
+    user?: { id: string; username: string; email: string };
 }
 
 export interface Task {
@@ -58,6 +62,9 @@ export interface Task {
     updatedBy: string;
     createdAt: string;
     updatedAt: string;
+    creator?: { id: string; username: string };
+    assignee?: { id: string; username: string };
+    team?: { id: string; name: string };
 }
 
 export interface StartSignUpParam {

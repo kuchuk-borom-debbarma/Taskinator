@@ -289,9 +289,9 @@ describe('TeamQueries — Integration (Real DB + wCTE)', () => {
             await addProjectMember(projectId, m.id);
             await addTeamMember(projectId, team.id, m.id);
 
-            const members = await getTeamMembers(ownerId, projectId, team.id);
-            expect(members).toHaveLength(1);
-            expect(members[0]!.userId).toBe(m.id);
+            const result = await getTeamMembers(ownerId, projectId, team.id);
+            expect(result.members).toHaveLength(1);
+            expect(result.members[0]!.userId).toBe(m.id);
         });
     });
 });

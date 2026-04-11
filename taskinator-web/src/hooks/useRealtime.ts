@@ -2,74 +2,73 @@ import { useEffect, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { logger } from '../utils/logger.ts';
 
-
-const API_BASE_URL = 'http://127.0.0.1:3000';
+const API_GQL_URL = 'http://127.0.0.1:3000/graphql';
 
 /**
- * useRealtime hook establishes a Server-Sent Events (SSE) connection
- * to the backend and triggers React Query invalidations when
- * tasks or notifications are updated in real-time.
+ * useRealtime hook establishes a SINGLE Unified GraphQL Subscription over SSE
+ * and triggers React Query invalidations based on the event type (__typename).
  */
-export const useRealtime = (userId: string | undefined) => {
+export const useRealtime = (userId: string | undefined, projectId: string | undefined) => {
     const queryClient = useQueryClient();
 
-    const handleEvent = useCallback((event: MessageEvent) => {
+    const handleMessage = useCallback((event: MessageEvent) => {
         try {
-            const type = event.type;
-            const data = JSON.parse(event.data);
+            const result = JSON.parse(event.data);
+            if (!result.data?.realtimeStream) return;
 
-            if (!userId) return;
+            const streamEvent = result.data.realtimeStream;
+            const type = streamEvent.__typename;
 
             switch (type) {
-                case 'task_created':
-                case 'task_updated':
-                case 'task_deleted':
-                    // Invalidate all task lists for the affected project and user
-                    queryClient.invalidateQueries({ queryKey: ['tasks', data.projectId, userId] });
+                case 'TaskCreated':
+                case 'TaskUpdated':
+                case 'TaskDeleted':
+                    logger.info(`[Realtime] Task event: ${type}`);
+                    queryClient.invalidateQueries({ queryKey: ['workspace', projectId, userId] });
                     break;
-
-                case 'notification_created':
-                    // Invalidate unread count and notification list for this user
+                
+                case 'InternalNotification':
+                    logger.info('[Realtime] New notification received');
                     queryClient.invalidateQueries({ queryKey: ['notifications-unread', userId] });
                     queryClient.invalidateQueries({ queryKey: ['notifications', userId] });
                     break;
-
+                
                 default:
-                    break;
+                    logger.warn(`[Realtime] Unknown event type: ${type}`);
             }
         } catch (err) {
-            logger.error('[Realtime] Failed to parse SSE message:', err);
+            // Heartbeats or other non-JSON messages might arrive
         }
-    }, [queryClient, userId]);
+    }, [queryClient, userId, projectId]);
 
     useEffect(() => {
         const token = localStorage.getItem('token');
         if (!token || !userId) return;
 
-        // Establish the SSE stream with the JWT in the query param
-        const url = `${API_BASE_URL}/realtime/stream?token=${encodeURIComponent(token)}`;
-        const eventSource = new EventSource(url);
+        // Unified Subscription for EVERYTHING
+        // We pass projectId to filter task events, but notifications are global for the user.
+        const query = `
+            subscription {
+                realtimeStream(projectId: "${projectId || ''}") {
+                    __typename
+                    ... on TaskCreated { task { id } }
+                    ... on TaskUpdated { task { id } }
+                    ... on TaskDeleted { id }
+                    ... on InternalNotification { id }
+                }
+            }
+        `.replace(/\s+/g, ' ').trim();
 
-        logger.info('[Realtime] Connecting to SSE stream...');
-
-        // Listen for specific domain events
-        eventSource.addEventListener('task_created', handleEvent);
-        eventSource.addEventListener('task_updated', handleEvent);
-        eventSource.addEventListener('task_deleted', handleEvent);
-        eventSource.addEventListener('notification_created', handleEvent);
-
-        eventSource.onopen = () => {
-            logger.info('[Realtime] SSE connection established');
-        };
-
-        eventSource.onerror = (err) => {
-            logger.error('[Realtime] SSE connection error or closed:', err);
-            // Browser handles reconnection automatically for EventSource
-        };
-
+        const url = `${API_GQL_URL}?query=${encodeURIComponent(query)}&token=${encodeURIComponent(token)}`;
+        const es = new EventSource(url);
+        
+        es.onopen = () => logger.info('[Realtime] Unified Stream connection opened');
+        es.onerror = (e) => logger.error('[Realtime] Unified Stream connection error', e);
+        es.onmessage = handleMessage;
+        
         return () => {
-            logger.info('[Realtime] Closing SSE connection');
-            eventSource.close();
+            logger.info('[Realtime] Closing Unified Stream connection');
+            es.close();
         };
-    }, [handleEvent]);
+    }, [userId, projectId, handleMessage]);
 };

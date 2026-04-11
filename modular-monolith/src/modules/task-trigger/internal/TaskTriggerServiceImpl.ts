@@ -6,6 +6,7 @@ import type {
 import {
     deleteTaskTrigger,
     getTaskTriggersByTaskId,
+    getTriggersByTaskIds,
     insertTaskTrigger,
 } from './TaskTriggerQueries.ts';
 import eventBus from '../../../utils/EventBus.ts';
@@ -35,6 +36,10 @@ export class TaskTriggerServiceImpl implements TaskTriggerService {
         triggerId: string;
     }): Promise<void> {
         await deleteTaskTrigger(data);
+    }
+
+    async getTriggersByTaskIds(taskIds: string[]): Promise<Map<string, TaskTrigger[]>> {
+        return getTriggersByTaskIds(taskIds);
     }
 
     async destroy(): Promise<void> {

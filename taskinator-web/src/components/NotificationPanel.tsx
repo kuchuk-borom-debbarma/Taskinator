@@ -2,6 +2,8 @@ import React, { useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Bell, X, CheckCheck, Loader2, BellOff, Info, Zap, AlertTriangle } from 'lucide-react';
 import { notificationApi } from '../api/client';
+import { gqlClient } from '../graphql/client';
+import { GET_NOTIFICATIONS, GET_UNREAD_NOTIFICATIONS_COUNT, MARK_NOTIFICATION_READ, MARK_ALL_NOTIFICATIONS_READ } from '../graphql/operations';
 import type { InternalNotification } from '../types';
 import { cn } from '../utils/cn';
 
@@ -81,20 +83,20 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, on
 
     const { data: statusData, isLoading } = useQuery({
         queryKey: ['notifications', userId],
-        queryFn: () => notificationApi.getNotifications({ limit: 50 }),
+        queryFn: () => gqlClient.request<any>(GET_NOTIFICATIONS, { first: 50 }),
         enabled: isOpen,
     });
-    const notifications = statusData?.notifications ?? [];
+    const notifications = (statusData?.notifications?.edges ?? []).map((e: any) => e.node);
 
     const { data: unreadData } = useQuery({
         queryKey: ['notifications-unread', userId],
-        queryFn: () => notificationApi.getUnreadCount(),
+        queryFn: () => gqlClient.request<any>(GET_UNREAD_NOTIFICATIONS_COUNT),
     });
 
-    const unreadCount = unreadData?.count ?? 0;
+    const unreadCount = unreadData?.unreadNotificationsCount ?? 0;
 
     const markReadMutation = useMutation({
-        mutationFn: (id: string) => notificationApi.markAsRead(id),
+        mutationFn: (id: string) => gqlClient.request<any>(MARK_NOTIFICATION_READ, { id }),
         onSuccess: () => {
             qc.invalidateQueries({ queryKey: ['notifications', userId] });
             qc.invalidateQueries({ queryKey: ['notifications-unread', userId] });
@@ -102,7 +104,7 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, on
     });
 
     const markAllMutation = useMutation({
-        mutationFn: () => notificationApi.markAllAsRead(),
+        mutationFn: () => gqlClient.request<any>(MARK_ALL_NOTIFICATIONS_READ),
         onSuccess: () => {
             qc.invalidateQueries({ queryKey: ['notifications', userId] });
             qc.invalidateQueries({ queryKey: ['notifications-unread', userId] });

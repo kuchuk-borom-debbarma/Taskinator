@@ -32,4 +32,5 @@ export interface TaskTriggerService extends BaseService {
         limit?: number;
     }): Promise<{ triggers: TaskTrigger[]; nextCursor: string | null }>;
     deleteTrigger(data: { userId: string; triggerId: string }): Promise<void>;
+    getTriggersByTaskIds(taskIds: string[]): Promise<Map<string, TaskTrigger[]>>;
 }

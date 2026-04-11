@@ -87,6 +87,11 @@ export interface ProjectService extends BaseService {
      */
     getUserProjectIds(userId: string): Promise<string[]>;
 
+    /**
+     * Batch fetch projects by IDs. Used by DataLoaders.
+     */
+    getProjectsByIds(userId: string, projectIds: string[]): Promise<Project[]>;
+
     searchProjectMembers(params: {
         actorId: string;
         projectId: string;

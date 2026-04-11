@@ -341,3 +341,34 @@ export const searchTeamUsers = async (params: {
 
     return { users, nextCursor };
 };
+
+export const getTeamsByIds = async (userId: string, teamIds: string[]): Promise<Team[]> => {
+    if (teamIds.length === 0) return [];
+    const result = await sql<Team>`
+        SELECT 
+            id, 
+            name, 
+            fk_project_id AS "projectId", 
+            fk_user_id AS "createdBy", 
+            version, 
+            last_event_id AS "lastEventId", 
+            created_at AS "createdAt", 
+            updated_at AS "updatedAt"
+        FROM project_team
+        WHERE id = ANY (${teamIds}::uuid[])
+          AND (
+              fk_user_id = ${userId}
+              OR EXISTS (
+                  SELECT 1 FROM project_member 
+                  WHERE fk_project_id = project_team.fk_project_id 
+                    AND fk_user_id = ${userId}
+              )
+              OR EXISTS (
+                  SELECT 1 FROM project 
+                  WHERE id = project_team.fk_project_id 
+                    AND fk_user_id = ${userId}
+              )
+          )
+    `.execute(db);
+    return result.rows;
+};

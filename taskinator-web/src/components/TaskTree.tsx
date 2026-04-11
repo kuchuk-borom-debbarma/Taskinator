@@ -105,25 +105,25 @@ const TreeItem: React.FC<TreeItemProps> = ({
                 </div>
 
                 {/* Team ID */}
-                <div className="w-32 shrink-0 hidden md:block">
+                <div className="w-40 shrink-0 hidden md:block">
                     <div className="flex items-center gap-1.5 overflow-hidden">
                         <div className="w-4 h-4 rounded bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0">
                             <Hash size={10} className="text-blue-500" />
                         </div>
                         <span className="text-[11px] text-muted-foreground truncate font-medium">
-                            {task.teamId ? `Team ${task.teamId.substring(0, 4)}` : '---'}
+                            {task.team?.name || (task.teamId ? `Team ${task.teamId.substring(0, 4)}` : '---')}
                         </span>
                     </div>
                 </div>
 
                 {/* Member ID */}
-                <div className="w-32 shrink-0 hidden lg:block">
+                <div className="w-40 shrink-0 hidden lg:block">
                     <div className="flex items-center gap-1.5 overflow-hidden">
                         <div className="w-4 h-4 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center shrink-0">
                             <User size={10} className="text-emerald-500" />
                         </div>
                         <span className="text-[11px] text-muted-foreground truncate font-medium">
-                            {task.memberId || 'Unassigned'}
+                            {task.assignee?.username || (task.memberId ? task.memberId.substring(0, 8) : 'Unassigned')}
                         </span>
                     </div>
                 </div>
