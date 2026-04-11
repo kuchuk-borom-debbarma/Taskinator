@@ -15,7 +15,11 @@ import { UserSearchDropdown } from './components/UserSearchDropdown';
 import { useRealtime } from './hooks/useRealtime.ts';
 import type { JWTPayload, TaskTriggerType, TaskTrigger } from './types';
 import { gqlClient } from './graphql/client';
-import { GET_PROJECTS, GET_PROJECT, GET_TASKS, GET_TEAMS, CREATE_PROJECT, DELETE_PROJECTS, CREATE_TASK } from './graphql/operations';
+import { 
+    GET_PROJECTS, GET_PROJECT, GET_TASKS, GET_TEAMS, GET_PROJECT_MEMBERS, GET_TEAM_MEMBERS, GET_TASK_TRIGGERS, GET_UNREAD_NOTIFICATIONS_COUNT,
+    CREATE_PROJECT, DELETE_PROJECTS, CREATE_TEAM, DELETE_TEAMS, ADD_PROJECT_MEMBERS, REMOVE_PROJECT_MEMBERS, ADD_TEAM_MEMBERS, REMOVE_TEAM_MEMBERS,
+    CREATE_TASK, UPDATE_TASKS, DELETE_TASKS, ADD_TASK_TRIGGER, DELETE_TASK_TRIGGER
+} from './graphql/operations';
 
 
 const queryClient = new QueryClient();
@@ -109,45 +113,46 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
 
     const { data: memberData } = useQuery({
         queryKey: ['project-members', selectedProjectId, userId],
-        queryFn: () => projectApi.getProjectMembers(userId.trim(), selectedProjectId!),
+        queryFn: () => gqlClient.request<any>(GET_PROJECT_MEMBERS, { projectId: selectedProjectId, first: 50 }),
         enabled: isProjectSettingsOpen && !!selectedProjectId && !!userId.trim(),
     });
-    const projectMembers = memberData?.members ?? [];
+    const projectMembers = (memberData?.projectMembers?.edges ?? []).map((e: any) => e.node);
 
     const { data: tMemData } = useQuery({
         queryKey: ['team-members', selectedProjectId, selectedTeamId],
-        queryFn: () => teamApi.getTeamMembers(userId.trim(), selectedProjectId!, selectedTeamId!),
+        queryFn: () => gqlClient.request<any>(GET_TEAM_MEMBERS, { projectId: selectedProjectId, teamId: selectedTeamId, first: 50 }),
         enabled: !!selectedTeamId && !!selectedProjectId && !!userId.trim(),
     });
-    const teamMembers = tMemData?.members ?? [];
+    const teamMembers = (tMemData?.teamMembers?.edges ?? []).map((e: any) => e.node);
 
     const { data: triggerData } = useQuery({
         queryKey: ['task-triggers', selectedTaskId],
-        queryFn: () => taskApi.getTaskTriggers(selectedTaskId!),
+        queryFn: () => gqlClient.request<any>(GET_TASK_TRIGGERS, { taskId: selectedTaskId, first: 50 }),
         enabled: !!selectedTaskId,
     });
-    const taskTriggers = triggerData?.triggers ?? [];
+    const taskTriggers = (triggerData?.taskTriggers?.edges ?? []).map((e: any) => e.node);
 
     const { data: unreadData } = useQuery({
         queryKey: ['notifications-unread', userId],
-        queryFn: () => notificationApi.getUnreadCount(),
+        queryFn: () => gqlClient.request<any>(GET_UNREAD_NOTIFICATIONS_COUNT),
     });
-    const unreadCount = unreadData?.count ?? 0;
+    const unreadCount = unreadData?.unreadNotificationsCount ?? 0;
 
     // Mutations
     const addTaskTriggerMutation = useMutation({
         mutationFn: (data: { name: string; triggerType: TaskTriggerType; triggerData: any }) => 
-            taskApi.addTaskTrigger({
-                userId: userId.trim(),
-                projectId: selectedProjectId!,
+            gqlClient.request<any>(ADD_TASK_TRIGGER, {
                 taskId: selectedTaskId!,
-                ...data
+                projectId: selectedProjectId!,
+                name: data.name,
+                triggerType: data.triggerType,
+                triggerData: JSON.stringify(data.triggerData)
             }),
         onSuccess: () => qc.invalidateQueries({ queryKey: ['task-triggers', selectedTaskId] }),
     });
 
     const deleteTaskTriggerMutation = useMutation({
-        mutationFn: (triggerId: string) => taskApi.deleteTaskTrigger(selectedTaskId!, triggerId),
+        mutationFn: (triggerId: string) => gqlClient.request<any>(DELETE_TASK_TRIGGER, { taskId: selectedTaskId!, triggerId }),
         onSuccess: () => qc.invalidateQueries({ queryKey: ['task-triggers', selectedTaskId] }),
     });
     const createTaskMutation = useMutation({
@@ -163,12 +168,12 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
 
     const updateTaskMutation = useMutation({
         mutationFn: (updates: { id: string; version: number; status?: string; title?: string; description?: string; teamId?: string | null; memberId?: string | null }) => 
-            taskApi.updateTasks(userId.trim(), selectedProjectId!, [updates]),
+            gqlClient.request<any>(UPDATE_TASKS, { projectId: selectedProjectId!, tasks: [updates] }),
         onSuccess: () => qc.invalidateQueries({ queryKey: ['tasks', selectedProjectId, userId] }),
     });
 
     const deleteTasksMutation = useMutation({
-        mutationFn: (taskIds: string[]) => taskApi.deleteTasks(userId.trim(), selectedProjectId!, taskIds),
+        mutationFn: (taskIds: string[]) => gqlClient.request<any>(DELETE_TASKS, { projectId: selectedProjectId!, taskIds }),
         onSuccess: () => {
             setSelectedTaskId(null);
             qc.invalidateQueries({ queryKey: ['tasks', selectedProjectId, userId] });
@@ -190,17 +195,15 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
     });
 
     const addProjectMemberMutation = useMutation({
-        mutationFn: (targetUserId: string) => projectApi.addProjectMembers({ 
-            userId: userId.trim(), 
+        mutationFn: (targetUserId: string) => gqlClient.request<any>(ADD_PROJECT_MEMBERS, { 
             projectId: selectedProjectId!, 
-            usersToAdd: [targetUserId] 
+            userIds: [targetUserId] 
         }),
         onSuccess: () => qc.invalidateQueries({ queryKey: ['project-members', selectedProjectId, userId] }),
     });
 
     const removeProjectMemberMutation = useMutation({
-        mutationFn: (memberId: string) => projectApi.deleteProjectMembers({ 
-            userId: userId.trim(), 
+        mutationFn: (memberId: string) => gqlClient.request<any>(REMOVE_PROJECT_MEMBERS, { 
             projectId: selectedProjectId!, 
             memberIds: [memberId] 
         }),
@@ -208,12 +211,12 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
     });
 
     const createTeamMutation = useMutation({
-        mutationFn: (name: string) => teamApi.createTeams({ userId: userId.trim(), projectId: selectedProjectId!, teams: [name] }),
+        mutationFn: (name: string) => gqlClient.request<any>(CREATE_TEAM, { projectId: selectedProjectId!, name }),
         onSuccess: () => qc.invalidateQueries({ queryKey: ['teams', selectedProjectId, userId] }),
     });
 
     const deleteTeamMutation = useMutation({
-        mutationFn: (id: string) => teamApi.deleteTeams(userId.trim(), selectedProjectId!, [id]),
+        mutationFn: (id: string) => gqlClient.request<any>(DELETE_TEAMS, { projectId: selectedProjectId!, teamIds: [id] }),
         onSuccess: () => {
             setSelectedTeamId(null);
             qc.invalidateQueries({ queryKey: ['teams', selectedProjectId, userId] });
@@ -221,23 +224,21 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
     });
 
     const addTeamMemberMutation = useMutation({
-        mutationFn: (targetUserId: string) => teamApi.addTeamMembers({ 
-            userId: userId.trim(), 
+        mutationFn: (targetUserId: string) => gqlClient.request<any>(ADD_TEAM_MEMBERS, { 
             projectId: selectedProjectId!, 
             teamId: selectedTeamId!, 
-            members: [targetUserId] 
+            userIds: [targetUserId] 
         }),
         onSuccess: () => qc.invalidateQueries({ queryKey: ['team-members', selectedProjectId, selectedTeamId] }),
     });
 
     const removeTeamMemberMutation = useMutation({
         mutationFn: (memberId: string) => {
-            const member = teamMembers.find(m => m.id === memberId);
-            return teamApi.deleteTeamMembers({ 
-                userId: userId.trim(), 
+            const member = teamMembers.find((m: any) => m.id === memberId);
+            return gqlClient.request<any>(REMOVE_TEAM_MEMBERS, { 
                 projectId: selectedProjectId!, 
                 teamId: selectedTeamId!, 
-                members: [member!.userId] 
+                userIds: [member!.userId] 
             });
         },
         onSuccess: () => qc.invalidateQueries({ queryKey: ['team-members', selectedProjectId, selectedTeamId] }),

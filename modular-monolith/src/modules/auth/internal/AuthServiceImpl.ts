@@ -147,5 +147,13 @@ export class AuthServiceImpl implements AuthService {
         const nextCursor = hasMore ? users[users.length - 1]!.id : null;
 
         return { users, nextCursor };
+    async getUsersByIds(ids: string[]): Promise<UserResult[]> {
+        if (ids.length === 0) return [];
+        const rows = await sql<UserResult>`
+            SELECT id, username, email
+            FROM users
+            WHERE id::text = ANY(${ids}::text[])
+        `.execute(db);
+        return rows.rows;
     }
 }

@@ -98,6 +98,11 @@ export interface TeamService extends BaseService {
         cursor?: string;
         limit?: number;
     }): Promise<{ users: UserResult[]; nextCursor: string | null }>;
+
+    /**
+     * Batch fetch teams by IDs. Used by DataLoaders.
+     */
+    getTeamsByIds(userId: string, teamIds: string[]): Promise<Team[]>;
 }
 
 export type { UserResult };

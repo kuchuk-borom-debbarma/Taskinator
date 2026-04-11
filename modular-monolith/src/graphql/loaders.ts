@@ -5,6 +5,8 @@ import { teamService } from '../modules/team';
 import type { Team } from '../modules/team/TeamService';
 import { taskService } from '../modules/task';
 import type { ProjectTask } from '../modules/task/TaskService';
+import { authService } from '../modules/auth';
+import type { UserResult } from '../modules/auth/AuthService';
 
 export const createLoaders = (userId: string) => {
     return {
@@ -14,10 +16,14 @@ export const createLoaders = (userId: string) => {
             return ids.map(id => map.get(id) || null);
         }),
         team: new DataLoader<string, Team | null>(async (ids) => {
-            // Placeholder: currently teamService doesn't have batch fetch. 
-            // We fetch individually for now but DataLoaders still cache duplicates.
-            // Ideally, we'd add getTeamsByIds to TeamService.
-            return Promise.all(ids.map(id => teamService.getTeams(userId, '', { limit: 1 }).then(res => res.teams.find(t => t.id === id) || null)));
+            const teams = await teamService.getTeamsByIds(userId, ids as string[]);
+            const map = new Map(teams.map(t => [t.id, t]));
+            return ids.map(id => map.get(id) || null);
+        }),
+        user: new DataLoader<string, UserResult | null>(async (ids) => {
+            const users = await authService.getUsersByIds(ids as string[]);
+            const map = new Map(users.map(u => [u.id, u]));
+            return ids.map(id => map.get(id) || null);
         }),
     };
 };
