@@ -1,6 +1,7 @@
 import { useEffect, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { logger } from '../utils/logger';
+import { logger } from '../utils/logger.ts';
+
 
 const API_BASE_URL = 'http://127.0.0.1:3000';
 

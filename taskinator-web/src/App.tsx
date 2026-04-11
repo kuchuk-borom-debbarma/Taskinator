@@ -12,8 +12,9 @@ import { cn } from './utils/cn';
 import { Auth } from './components/Auth';
 import { NotificationPanel } from './components/NotificationPanel';
 import { UserSearchDropdown } from './components/UserSearchDropdown';
-import { useRealtime } from './hooks/useRealtime';
+import { useRealtime } from './hooks/useRealtime.ts';
 import type { JWTPayload, TaskTriggerType, TaskTrigger } from './types';
+
 
 const queryClient = new QueryClient();
 
