@@ -22,7 +22,7 @@ router.get('/stream', requireAuth as any, async (req: AuthRequest, res: Response
         const projectIds = await projectService.getUserProjectIds(userId);
         
         // 2. Promotion to SSE
-        sseManager.addConnection(userId, projectIds, res);
+        sseManager.addConnection(userId, projectIds, req, res);
         
         logger.info(`[Realtime] Stream established for user ${userId} in ${projectIds.length} projects`);
         

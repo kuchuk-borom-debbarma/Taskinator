@@ -1,4 +1,4 @@
-import type { Response } from 'express';
+import type { Request, Response } from 'express';
 import { logger } from '../logger';
 
 /**
@@ -31,10 +31,16 @@ export class SSEManager {
      * Handshake and register a new SSE connection.
      * @param userId The recipient ID
      * @param projectIds List of project IDs the user has access to (cached on connect)
+     * @param req The Express request object (to tune socket)
      * @param res The Express response object
      */
-    public addConnection(userId: string, projectIds: string[], res: Response) {
-        // 1. Establish SSE Headers
+    public addConnection(userId: string, projectIds: string[], req: Request, res: Response) {
+        // 1. Tune the underlying socket for high-concurrency streaming
+        req.socket.setKeepAlive(true, 1000);
+        req.socket.setTimeout(0); // Prevents Node.js from closing idle stream
+        req.socket.setNoDelay(true);
+
+        // 2. Establish SSE Headers
         res.writeHead(200, {
             'Content-Type': 'text/event-stream',
             'Cache-Control': 'no-cache, no-transform',
@@ -42,14 +48,17 @@ export class SSEManager {
             'X-Accel-Buffering': 'no', // Disable proxy buffering (Nginx)
         });
 
-        // 2. Register User
+        // 3. Flush headers immediately to acknowledge connection
+        res.flushHeaders();
+
+        // 4. Register User
         if (!this.userRegistry.has(userId)) {
             this.userRegistry.set(userId, new Set());
         }
         const connections = this.userRegistry.get(userId)!;
         connections.add(res);
 
-        // 3. Register Project Memberships (for broadcasting task updates)
+        // 5. Register Project Memberships (for broadcasting task updates)
         projectIds.forEach((pid) => {
             if (!this.projectRegistry.has(pid)) {
                 this.projectRegistry.set(pid, new Set());
@@ -57,12 +66,12 @@ export class SSEManager {
             this.projectRegistry.get(pid)!.add(userId);
         });
 
-        // 4. Initial "ok" comment to confirm stream is open
+        // 6. Initial "ok" comment to confirm stream is open
         res.write(':ok\n\n');
 
-        logger.debug(`[SSE] Connected user: ${userId} (Total project-mapped users: ${this.userRegistry.size})`);
+        logger.debug(`[SSE] Connected user: ${userId} (Total users: ${this.userRegistry.size})`);
 
-        // 5. Cleanup on disconnect
+        // 7. Cleanup on disconnect
         res.on('close', () => {
             connections.delete(res);
             
@@ -115,6 +124,7 @@ export class SSEManager {
         connections.forEach((res) => {
             try {
                 res.write(payload);
+                // Optionally call res.flush() if using compression middleware
             } catch (err) {
                 // Connections closed abruptly are handled by 'close' listener
             }
