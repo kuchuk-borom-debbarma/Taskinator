@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Search, User as UserIcon, Loader2, ChevronDown } from 'lucide-react';
-import { userApi, type UserSearchResult } from '../api/client';
+import { userApi, projectApi, type UserSearchResult } from '../api/client';
 import { cn } from '../utils/cn';
 
 interface UserSearchDropdownProps {
@@ -23,6 +23,7 @@ export const UserSearchDropdown: React.FC<UserSearchDropdownProps> = ({
     placeholder = 'Search by exact username or paste user ID...',
     className,
     teamContext,
+    projectContext,
 }) => {
     const [query, setQuery]           = useState('');
     const [debouncedQ, setDebouncedQ] = useState('');
