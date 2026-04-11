@@ -90,4 +90,6 @@ export const OUTBOX_TOPIC_TO_EVENT_TYPE: Record<string, string> = {
     'project.task.trigger.deleted': KAFKA_EVENTS.PROJECT_TASK_TRIGGER.DELETED,
     'auth.signup.started': KAFKA_EVENTS.AUTH.SIGNUP_STARTED,
     'auth.user.created': KAFKA_EVENTS.AUTH.USER_CREATED,
+    'notification.requested': KAFKA_EVENTS.NOTIFICATION.REQUESTED,
 };
+

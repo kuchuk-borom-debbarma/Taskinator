@@ -45,7 +45,8 @@ export class RealtimeKafkaConsumer {
 
             // 2. Notifications: Push to specific users
             [KAFKA_EVENTS.NOTIFICATION.REQUESTED]: async (data: { userIds: string[]; title: string; message: string; type: string; metadata: any }) => {
-                data.userIds.forEach(userId => {
+                const userIds = Array.isArray(data?.userIds) ? data.userIds : [];
+                userIds.forEach(userId => {
                     sseManager.sendToUser(userId, 'notification_created', {
                         title: data.title,
                         message: data.message,
@@ -54,6 +55,7 @@ export class RealtimeKafkaConsumer {
                     });
                 });
             }
+
         });
     }
 

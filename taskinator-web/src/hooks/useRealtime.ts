@@ -17,8 +17,6 @@ export const useRealtime = (userId: string | undefined) => {
             const type = event.type;
             const data = JSON.parse(event.data);
 
-            logger.debug(`[Realtime] Received event: ${type}`, data);
-
             if (!userId) return;
 
             switch (type) {
