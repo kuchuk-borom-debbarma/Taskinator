@@ -245,7 +245,7 @@ describe('ProjectQueries — Integration (Real DB + wCTE)', () => {
             await createProject(userId, { name: 'Mine' });
             await createProject(otherUser.id, { name: 'Not Mine' });
 
-            const projects = await getProjects(userId);
+            const { projects } = await getProjects(userId);
             expect(projects).toHaveLength(1);
             expect(projects[0]!.name).toBe('Mine');
         });
@@ -275,7 +275,7 @@ describe('ProjectQueries — Integration (Real DB + wCTE)', () => {
             await addProjectMember(project.id, m1.id);
             await addProjectMember(project.id, m2.id);
 
-            const members = await getProjectMembers(userId, project.id);
+            const { members } = await getProjectMembers(userId, project.id);
             expect(members).toHaveLength(2);
         });
 
@@ -284,7 +284,7 @@ describe('ProjectQueries — Integration (Real DB + wCTE)', () => {
             const project = await createProject(userId);
             await addProjectMember(project.id, (await createUser()).id);
 
-            const members = await getProjectMembers(attacker.id, project.id);
+            const { members } = await getProjectMembers(attacker.id, project.id);
             expect(members).toHaveLength(0);
         });
     });

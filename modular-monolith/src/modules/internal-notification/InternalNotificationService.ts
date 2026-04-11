@@ -25,6 +25,9 @@ export interface InternalNotificationService extends BaseService {
     createNotificationsBatch(rows: CreateNotificationParam[]): Promise<InternalNotification[]>;
     markAsRead(userId: string, notificationId: string): Promise<void>;
     markAllAsRead(userId: string): Promise<void>;
-    getNotifications(userId: string, params: { limit?: number; offset?: number }): Promise<InternalNotification[]>;
+    getNotifications(
+        userId: string,
+        params: { cursor?: string; limit?: number }
+    ): Promise<{ notifications: InternalNotification[]; nextCursor: string | null }>;
     getUnreadCount(userId: string): Promise<number>;
 }

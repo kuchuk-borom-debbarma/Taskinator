@@ -4,6 +4,7 @@ import { taskService } from './modules/task';
 import { authService } from './modules/auth/index.ts';
 import { externalNotificationService } from './modules/external-notification/index.ts';
 import { internalNotificationService } from './modules/internal-notification/index.ts';
+import { realtimeKafkaConsumer } from './modules/realtime/internal/RealtimeKafkaConsumer.ts';
 import { startConsumers } from './kafka/registry';
 import { startRestServer } from './restful';
 import { taskTriggerService } from './modules/task-trigger';
@@ -26,6 +27,7 @@ await Promise.all([
     authService.init(),
     externalNotificationService.init(),
     internalNotificationService.init(),
+    realtimeKafkaConsumer.init(),
     startConsumers(),
 ]).then(() => {
     startOutboxRelay();

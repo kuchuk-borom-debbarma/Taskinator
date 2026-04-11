@@ -14,8 +14,12 @@ import {
 } from './TaskQueries.ts';
 
 export class TaskServiceImpl implements TaskService {
-    async getTasks(userId: string, projectId: string): Promise<ProjectTask[]> {
-        return getTasks(userId, projectId);
+    async getTasks(
+        userId: string,
+        projectId: string,
+        params?: { cursor?: string; limit?: number },
+    ): Promise<{ tasks: ProjectTask[]; nextCursor: string | null }> {
+        return getTasks(userId, projectId, params);
     }
 
     async init(): Promise<void> {

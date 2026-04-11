@@ -25,7 +25,7 @@ export class TaskUpdatedListener {
                 );
                 // Get triggers of the task
                 //TODO batching for edge case
-                const triggers = await getTaskTriggersByTaskId({ taskId });
+                const { triggers } = await getTaskTriggersByTaskId({ taskId });
                 if (triggers.length === 0) return;
 
                 // Publish events for each trigger that will be consumed by trigger engine consumer

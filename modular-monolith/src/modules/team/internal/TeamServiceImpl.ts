@@ -21,16 +21,21 @@ import {
 import _ from 'lodash';
 
 export class TeamServiceImpl implements TeamService {
-    async getTeams(userId: string, projectId: string): Promise<Team[]> {
-        return getTeams(userId, projectId);
+    async getTeams(
+        userId: string,
+        projectId: string,
+        params?: { cursor?: string; limit?: number },
+    ): Promise<{ teams: Team[]; nextCursor: string | null }> {
+        return getTeams(userId, projectId, params);
     }
 
     async getTeamMembers(
         userId: string,
         projectId: string,
         teamId: string,
-    ): Promise<TeamMember[]> {
-        return getTeamMembers(userId, projectId, teamId);
+        params?: { cursor?: string; limit?: number },
+    ): Promise<{ members: TeamMember[]; nextCursor: string | null }> {
+        return getTeamMembers(userId, projectId, teamId, params);
     }
 
     async searchTeamUsers(params: {

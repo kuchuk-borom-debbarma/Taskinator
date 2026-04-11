@@ -79,17 +79,16 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, on
         return () => document.removeEventListener('mousedown', handler);
     }, [isOpen, onClose]);
 
-    const { data: notifications = [], isLoading } = useQuery({
+    const { data: statusData, isLoading } = useQuery({
         queryKey: ['notifications', userId],
         queryFn: () => notificationApi.getNotifications({ limit: 50 }),
         enabled: isOpen,
-        refetchInterval: isOpen ? 30_000 : false,
     });
+    const notifications = statusData?.notifications ?? [];
 
     const { data: unreadData } = useQuery({
         queryKey: ['notifications-unread', userId],
         queryFn: () => notificationApi.getUnreadCount(),
-        refetchInterval: 60_000,
     });
 
     const unreadCount = unreadData?.count ?? 0;

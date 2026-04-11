@@ -118,7 +118,7 @@ export class AuthServiceImpl implements AuthService {
 
     async searchUsers(params: SearchUsersParam): Promise<{ users: UserResult[]; nextCursor: string | null }> {
         const search = params.search?.trim() ?? '';
-        const cursor = params.cursor;
+        const cursor = params.cursor || null;
         const limit  = Math.min(params.limit ?? 20, 50);
 
         // Exact match only: username = search OR id = search (cast to uuid if possible)
@@ -133,12 +133,14 @@ export class AuthServiceImpl implements AuthService {
                     OR id::text = ${search}
                 )
                 AND (
-                    ${cursor ?? ''} = ''
-                    OR id > ${cursor ?? ''}::uuid
+                    ${cursor}::uuid IS NULL
+                    OR id > ${cursor}::uuid
                 )
+                ${params.actorId ? sql`AND id <> ${params.actorId}::uuid` : sql``}
             ORDER BY id
             LIMIT ${limit + 1}
         `.execute(db);
+
 
         const hasMore   = rows.rows.length > limit;
         const users     = hasMore ? rows.rows.slice(0, limit) : rows.rows;

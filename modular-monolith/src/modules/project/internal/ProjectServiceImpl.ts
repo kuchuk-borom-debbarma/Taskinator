@@ -13,17 +13,22 @@ import {
     getProject,
     getProjectMembers,
     getProjects,
+    getUserProjectIds,
     insertProject,
     insertProjectMembers,
     insertProjects,
+    searchProjectMembers,
 } from './ProjectQueries.ts';
 
 import eventBus, { KAFKA_EVENTS } from '../../../utils/EventBus.ts';
 
 export class ProjectServiceImpl implements ProjectService {
-    async getProjects(userId: string): Promise<Project[]> {
+    async getProjects(
+        userId: string,
+        params?: { cursor?: string; limit?: number },
+    ): Promise<{ projects: Project[]; nextCursor: string | null }> {
         console.log(`[Project Service] Getting projects for userId: ${userId}`);
-        return getProjects(userId);
+        return getProjects(userId, params);
     }
 
     async getProject(
@@ -36,9 +41,15 @@ export class ProjectServiceImpl implements ProjectService {
     async getProjectMembers(
         userId: string,
         projectId: string,
-    ): Promise<ProjectMember[]> {
-        return getProjectMembers(userId, projectId);
+        params?: { cursor?: string; limit?: number },
+    ): Promise<{ members: ProjectMember[]; nextCursor: string | null }> {
+        return getProjectMembers(userId, projectId, params);
     }
+
+    async getUserProjectIds(userId: string): Promise<string[]> {
+        return getUserProjectIds(userId);
+    }
+
 
     async destroy(): Promise<void> {
         console.log(`Disconnecting event bus ${this.constructor.name}`);
@@ -96,5 +107,15 @@ export class ProjectServiceImpl implements ProjectService {
         }
 
         return projects;
+    }
+
+    async searchProjectMembers(params: {
+        actorId: string;
+        projectId: string;
+        search?: string;
+        cursor?: string;
+        limit?: number;
+    }): Promise<{ users: { id: string; username: string; email: string }[]; nextCursor: string | null }> {
+        return searchProjectMembers(params);
     }
 }

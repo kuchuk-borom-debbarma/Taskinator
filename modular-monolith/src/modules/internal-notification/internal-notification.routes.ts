@@ -7,14 +7,15 @@ const router = Router();
 
 router.use(requireAuth as any);
 
-// GET /notifications?limit=20&offset=0
+// Get Notifications
 router.get('/', async (req: any, res: Response) => {
     try {
-        const userId: string = req.userId;
-        const limit  = Math.min(parseInt(req.query.limit  as string) || 20, 100);
-        const offset = parseInt(req.query.offset as string) || 0;
-        const notifications = await internalNotificationService.getNotifications(userId, { limit, offset });
-        res.status(200).json(notifications);
+        const userId = req.userId;
+        const cursor = req.query.cursor as string | undefined;
+        const limit  = parseInt(req.query.limit as string) || 20;
+
+        const result = await internalNotificationService.getNotifications(userId, { cursor, limit });
+        res.status(200).json(result);
     } catch (error: any) {
         console.error('[REST] Error fetching notifications:', error);
         res.status(400).json({ error: error.message });

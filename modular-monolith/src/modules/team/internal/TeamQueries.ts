@@ -90,6 +90,8 @@ export const insertTeamMembers = async (
             SELECT 1 FROM project WHERE id = ${data.projectId}::uuid AND fk_user_id = ${data.userId}
             UNION ALL
             SELECT 1 FROM project_team WHERE id = ${data.teamId}::uuid AND fk_project_id = ${data.projectId}::uuid AND fk_user_id = ${data.userId}
+            UNION ALL
+            SELECT 1 FROM project_team_member WHERE fk_team_id = ${data.teamId}::uuid AND fk_user_id = ${data.userId}
             LIMIT 1
         ),
         valid_users AS (
@@ -145,6 +147,8 @@ export const deleteTeamMembers = async (
             SELECT 1 FROM project WHERE id = ${data.projectId}::uuid AND fk_user_id = ${data.userId}
             UNION ALL
             SELECT 1 FROM project_team WHERE id = ${data.teamId}::uuid AND fk_project_id = ${data.projectId}::uuid AND fk_user_id = ${data.userId}
+            UNION ALL
+            SELECT 1 FROM project_team_member WHERE fk_team_id = ${data.teamId}::uuid AND fk_user_id = ${data.userId}
             LIMIT 1
         ),
         deleted_members AS (
@@ -208,12 +212,16 @@ export const deleteAllTeamMembers = async (
 export const getTeams = async (
     userId: string,
     projectId: string,
-): Promise<Team[]> => {
+    params: { cursor?: string; limit?: number } = {},
+): Promise<{ teams: Team[]; nextCursor: string | null }> => {
+    const limit = Math.min(params.limit ?? 20, 50);
+    const cursor = params.cursor;
+
     const result = await sql<Team>`
         WITH auth_check AS (
-            SELECT 1 FROM project WHERE id = ${projectId}::uuid AND fk_user_id = ${userId}
+            SELECT 1 FROM project WHERE id = ${projectId}::uuid AND fk_user_id = ${userId}::text
             UNION ALL
-            SELECT 1 FROM project_member WHERE fk_project_id = ${projectId}::uuid AND fk_user_id = ${userId}
+            SELECT 1 FROM project_member WHERE fk_project_id = ${projectId}::uuid AND fk_user_id = ${userId}::text
             LIMIT 1
         )
         SELECT 
@@ -228,20 +236,35 @@ export const getTeams = async (
         FROM project_team
         WHERE fk_project_id = ${projectId}::uuid
           AND EXISTS (SELECT 1 FROM auth_check)
+          AND (
+              ${cursor}::uuid IS NULL
+              OR id > ${cursor}::uuid
+          )
+        ORDER BY id
+        LIMIT ${limit + 1}
     `.execute(db);
-    return result.rows;
+
+    const hasMore = result.rows.length > limit;
+    const teams = hasMore ? result.rows.slice(0, limit) : result.rows;
+    const nextCursor = hasMore ? teams[teams.length - 1]!.id : null;
+
+    return { teams, nextCursor };
 };
 
 export const getTeamMembers = async (
     userId: string,
     projectId: string,
     teamId: string,
-): Promise<TeamMember[]> => {
+    params: { cursor?: string; limit?: number } = {},
+): Promise<{ members: TeamMember[]; nextCursor: string | null }> => {
+    const limit = Math.min(params.limit ?? 20, 50);
+    const cursor = params.cursor;
+
     const result = await sql<TeamMember>`
         WITH auth_check AS (
-            SELECT 1 FROM project WHERE id = ${projectId}::uuid AND fk_user_id = ${userId}
+            SELECT 1 FROM project WHERE id = ${projectId}::uuid AND fk_user_id = ${userId}::text
             UNION ALL
-            SELECT 1 FROM project_member WHERE fk_project_id = ${projectId}::uuid AND fk_user_id = ${userId}
+            SELECT 1 FROM project_member WHERE fk_project_id = ${projectId}::uuid AND fk_user_id = ${userId}::text
             LIMIT 1
         )
         SELECT 
@@ -257,8 +280,19 @@ export const getTeamMembers = async (
         WHERE fk_team_id = ${teamId}::uuid
           AND fk_project_id = ${projectId}::uuid
           AND EXISTS (SELECT 1 FROM auth_check)
+          AND (
+              ${cursor}::uuid IS NULL
+              OR id > ${cursor}::uuid
+          )
+        ORDER BY id
+        LIMIT ${limit + 1}
     `.execute(db);
-    return result.rows;
+
+    const hasMore = result.rows.length > limit;
+    const members = hasMore ? result.rows.slice(0, limit) : result.rows;
+    const nextCursor = hasMore ? members[members.length - 1]!.id : null;
+
+    return { members, nextCursor };
 };
 
 export const searchTeamUsers = async (params: {
@@ -272,6 +306,8 @@ export const searchTeamUsers = async (params: {
     const search = params.search?.trim() ?? '';
     const cursor = params.cursor;
     const limit  = Math.min(params.limit ?? 20, 50);
+
+    const cursorVal = params.cursor || null;
 
     const rows = await sql<{ id: string; username: string; email: string }>`
         WITH auth_check AS (
@@ -292,8 +328,8 @@ export const searchTeamUsers = async (params: {
               OR u.id::text = ${search}
           )
           AND (
-              ${cursor ?? ''} = ''
-              OR u.id > ${cursor ?? ''}::uuid
+              ${cursorVal}::uuid IS NULL
+              OR u.id > ${cursorVal}::uuid
           )
         ORDER BY u.id
         LIMIT ${limit + 1}

@@ -55,7 +55,20 @@ export const insertNotification = async (data: CreateNotificationParam): Promise
     return result.rows[0];
 };
 
-export const getNotifications = async (userId: string, limit: number, offset: number): Promise<InternalNotification[]> => {
+export const getNotifications = async (
+    userId: string,
+    params: { cursor?: string; limit?: number } = {},
+): Promise<{ notifications: InternalNotification[]; nextCursor: string | null }> => {
+    const limit = Math.min(params.limit ?? 20, 50);
+    const cursor = params.cursor; // Expecting format: "ISO_DATE|uuid"
+
+    let cursorDate: string | null = null;
+    let cursorId: string | null = null;
+
+    if (cursor && cursor.includes('|')) {
+        [cursorDate, cursorId] = cursor.split('|');
+    }
+
     const result = await sql<any>`
         SELECT 
             id,
@@ -68,11 +81,27 @@ export const getNotifications = async (userId: string, limit: number, offset: nu
             created_at AS "createdAt",
             read_at AS "readAt"
         FROM internal_notification
-        WHERE fk_user_id = ${userId}
-        ORDER BY created_at DESC
-        LIMIT ${limit} OFFSET ${offset}
+        WHERE fk_user_id = ${userId}::text
+          AND (
+              ${cursorDate}::timestamptz IS NULL
+              OR created_at < ${cursorDate}::timestamptz
+              OR (created_at = ${cursorDate}::timestamptz AND id < ${cursorId}::uuid)
+          )
+        ORDER BY created_at DESC, id DESC
+        LIMIT ${limit + 1}
     `.execute(db);
-    return result.rows;
+
+    const hasMore = result.rows.length > limit;
+    const notifications = hasMore ? result.rows.slice(0, limit) : result.rows;
+
+    let nextCursor: string | null = null;
+    if (hasMore && notifications.length > 0) {
+        const last = notifications[notifications.length - 1]!;
+        const dateStr = last.createdAt instanceof Date ? last.createdAt.toISOString() : last.createdAt;
+        nextCursor = `${dateStr}|${last.id}`;
+    }
+
+    return { notifications, nextCursor };
 };
 
 export const markAsRead = async (userId: string, id: string): Promise<void> => {

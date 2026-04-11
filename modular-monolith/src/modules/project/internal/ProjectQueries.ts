@@ -223,59 +223,109 @@ export const deleteAllProjectMembers = async (projectId: string) => {
         .execute();
 };
 
-export const getProjects = async (userId: string): Promise<Project[]> => {
-    const projects = await db
-        .selectFrom('project')
-        .selectAll()
-        .where('fk_user_id', '=', userId)
-        .execute();
+export const getProjects = async (
+    userId: string,
+    params: { cursor?: string; limit?: number } = {}
+): Promise<{ projects: Project[]; nextCursor: string | null }> => {
+    const limit = Math.min(params.limit ?? 20, 50);
+    const cursor = params.cursor; // Expecting format: "YYYY-MM-DDTHH:MM:SS.sssZ|uuid"
 
-    return projects.map((p) => ({
-        userId: p.fk_user_id,
-        updatedAt: p.updated_at,
-        name: p.name,
-        id: p.id,
-        version: p.version,
-        lastEventId: p.last_event_id,
-        description: p.description,
-        createdAt: p.created_at,
-    }));
+    let cursorDate: string | null = null;
+    let cursorId: string | null = null;
+
+    if (cursor && cursor.includes('|')) {
+        [cursorDate, cursorId] = cursor.split('|');
+    }
+
+        const result = await sql<Project & { isOwner: boolean }>`
+        WITH combined_projects AS (
+            SELECT p.*, true as is_owner
+            FROM project p
+            WHERE p.fk_user_id = ${userId}::text
+            UNION ALL
+            SELECT p.*, false as is_owner
+            FROM project p
+            JOIN project_member pm ON pm.fk_project_id = p.id
+            WHERE pm.fk_user_id = ${userId}::text
+              AND p.fk_user_id <> ${userId}::text -- Avoid duplicates if user is somehow both
+        )
+        SELECT 
+            id,
+            name,
+            description,
+            fk_user_id AS "userId",
+            version,
+            last_event_id AS "lastEventId",
+            created_at AS "createdAt",
+            updated_at AS "updatedAt",
+            is_owner AS "isOwner"
+        FROM combined_projects
+        WHERE (
+            ${cursorDate}::timestamptz IS NULL 
+            OR created_at < ${cursorDate}::timestamptz
+            OR (created_at = ${cursorDate}::timestamptz AND id < ${cursorId}::uuid)
+        )
+        ORDER BY created_at DESC, id DESC
+        LIMIT ${limit + 1}
+    `.execute(db);
+
+    const hasMore = result.rows.length > limit;
+    const projects = hasMore ? result.rows.slice(0, limit) : result.rows;
+    
+    let nextCursor: string | null = null;
+    if (hasMore && projects.length > 0) {
+        const last = projects[projects.length - 1]!;
+        // Assuming createdAt is returned as a Date or ISO string
+        const dateStr = last.createdAt instanceof Date ? last.createdAt.toISOString() : last.createdAt;
+        nextCursor = `${dateStr}|${last.id}`;
+    }
+
+    return { projects, nextCursor };
 };
 
 export const getProject = async (
     userId: string,
     projectId: string,
 ): Promise<Project | null> => {
-    const p = await db
-        .selectFrom('project')
-        .selectAll()
-        .where('id', '=', sql`${projectId}::uuid` as any)
-        .where('fk_user_id', '=', userId)
-        .executeTakeFirst();
+    const result = await sql<Project & { isOwner: boolean }>`
+        SELECT 
+            id,
+            name,
+            description,
+            fk_user_id AS "userId",
+            version,
+            last_event_id AS "lastEventId",
+            created_at AS "createdAt",
+            updated_at AS "updatedAt",
+            (fk_user_id = ${userId}) AS "isOwner"
+        FROM project
+        WHERE id = ${projectId}::uuid
+          AND (
+            fk_user_id = ${userId}
+            OR EXISTS (
+                SELECT 1 FROM project_member 
+                WHERE fk_project_id = ${projectId}::uuid 
+                  AND fk_user_id = ${userId}
+            )
+          )
+    `.execute(db);
 
-    if (!p) return null;
-
-    return {
-        userId: p.fk_user_id,
-        updatedAt: p.updated_at,
-        name: p.name,
-        id: p.id,
-        version: p.version,
-        lastEventId: p.last_event_id,
-        description: p.description,
-        createdAt: p.created_at,
-    };
+    return result.rows[0] || null;
 };
 
 export const getProjectMembers = async (
     userId: string,
     projectId: string,
-): Promise<ProjectMember[]> => {
+    params: { cursor?: string; limit?: number } = {},
+): Promise<{ members: ProjectMember[]; nextCursor: string | null }> => {
+    const limit = Math.min(params.limit ?? 20, 50);
+    const cursor = params.cursor;
+
     const result = await sql<ProjectMember>`
         WITH auth_check AS (
-            SELECT 1 FROM project WHERE id = ${projectId}::uuid AND fk_user_id = ${userId}
+            SELECT 1 FROM project WHERE id = ${projectId}::uuid AND fk_user_id = ${userId}::text
             UNION ALL
-            SELECT 1 FROM project_member WHERE fk_project_id = ${projectId}::uuid AND fk_user_id = ${userId}
+            SELECT 1 FROM project_member WHERE fk_project_id = ${projectId}::uuid AND fk_user_id = ${userId}::text
             LIMIT 1
         )
         SELECT 
@@ -289,6 +339,86 @@ export const getProjectMembers = async (
         FROM project_member
         WHERE fk_project_id = ${projectId}::uuid
           AND EXISTS (SELECT 1 FROM auth_check)
+          AND (
+              ${cursor}::uuid IS NULL
+              OR id > ${cursor}::uuid
+          )
+        ORDER BY id
+        LIMIT ${limit + 1}
     `.execute(db);
-    return result.rows;
+
+    const hasMore = result.rows.length > limit;
+    const members = hasMore ? result.rows.slice(0, limit) : result.rows;
+    const nextCursor = hasMore ? members[members.length - 1]!.id : null;
+
+    return { members, nextCursor };
+};
+
+/**
+ * Fetches all project IDs where the user is either the owner or a member.
+ */
+export const getUserProjectIds = async (userId: string): Promise<string[]> => {
+    const result = await sql<{ id: string }>`
+        SELECT id FROM project WHERE fk_user_id = ${userId}
+        UNION
+        SELECT fk_project_id FROM project_member WHERE fk_user_id = ${userId}
+    `.execute(db);
+    return result.rows.map(r => r.id);
+};
+export const searchProjectMembers = async (params: {
+    actorId: string;
+    projectId: string;
+    search?: string;
+    cursor?: string;
+    limit?: number;
+}): Promise<{ users: { id: string; username: string; email: string }[]; nextCursor: string | null }> => {
+    const search = params.search?.trim() ?? '';
+    const cursor = params.cursor;
+    const limit  = Math.min(params.limit ?? 20, 50);
+
+    const rows = await sql<{ id: string; username: string; email: string }>`
+        WITH auth_check AS (
+            SELECT 1 FROM project WHERE id = ${params.projectId}::uuid AND fk_user_id = ${params.actorId}
+            UNION ALL
+            SELECT 1 FROM project_member WHERE fk_project_id = ${params.projectId}::uuid AND fk_user_id = ${params.actorId}
+            LIMIT 1
+        ),
+        project_owner AS (
+            SELECT u.id, u.username, u.email
+            FROM project p
+            JOIN users u ON u.id::text = p.fk_user_id
+            WHERE p.id = ${params.projectId}::uuid
+        ),
+        project_members AS (
+            SELECT u.id, u.username, u.email
+            FROM project_member pm
+            JOIN users u ON u.id::text = pm.fk_user_id
+            WHERE pm.fk_project_id = ${params.projectId}::uuid
+        ),
+        all_eligible_users AS (
+            SELECT * FROM project_owner
+            UNION
+            SELECT * FROM project_members
+        )
+        SELECT id, username, email
+        FROM all_eligible_users
+        WHERE EXISTS (SELECT 1 FROM auth_check)
+          AND (
+            ${search} = ''
+            OR username ILIKE '%' || ${search} || '%'
+            OR id::text = ${search}
+          )
+          AND (
+            ${cursor}::uuid IS NULL
+            OR id > ${cursor}::uuid
+          )
+        ORDER BY id
+        LIMIT ${limit + 1}
+    `.execute(db);
+
+    const hasMore    = rows.rows.length > limit;
+    const users      = hasMore ? rows.rows.slice(0, limit) : rows.rows;
+    const nextCursor = hasMore ? users[users.length - 1]!.id : null;
+
+    return { users, nextCursor };
 };

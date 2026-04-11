@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Search, User as UserIcon, Loader2, ChevronDown } from 'lucide-react';
-import { userApi, type UserSearchResult } from '../api/client';
+import { userApi, projectApi, type UserSearchResult } from '../api/client';
 import { cn } from '../utils/cn';
 
 interface UserSearchDropdownProps {
@@ -13,6 +13,7 @@ interface UserSearchDropdownProps {
      * instead of the global user list.
      */
     teamContext?: { projectId: string; teamId: string };
+    projectContext?: { projectId: string };
 }
 
 const DEBOUNCE_MS = 300;
@@ -22,6 +23,7 @@ export const UserSearchDropdown: React.FC<UserSearchDropdownProps> = ({
     placeholder = 'Search by exact username or paste user ID...',
     className,
     teamContext,
+    projectContext,
 }) => {
     const [query, setQuery]           = useState('');
     const [debouncedQ, setDebouncedQ] = useState('');
@@ -41,14 +43,18 @@ export const UserSearchDropdown: React.FC<UserSearchDropdownProps> = ({
         return () => clearTimeout(t);
     }, [query]);
 
-    // Switch between team-scoped and global query
+    // Switch between team-scoped, project-scoped and global query
     const queryKey = teamContext
         ? ['team-user-search', teamContext.teamId, debouncedQ, cursor]
-        : ['user-search', debouncedQ, cursor];
+        : projectContext
+            ? ['project-user-search', projectContext.projectId, debouncedQ, cursor]
+            : ['user-search', debouncedQ, cursor];
 
     const queryFn = teamContext
         ? () => userApi.searchTeamUsers({ ...teamContext, search: debouncedQ, cursor, limit: 15 })
-        : () => userApi.searchUsers({ search: debouncedQ, cursor, limit: 15 });
+        : projectContext
+            ? () => projectApi.searchProjectMembers({ ...projectContext, search: debouncedQ, cursor, limit: 15 })
+            : () => userApi.searchUsers({ search: debouncedQ, cursor, limit: 15 });
 
     const { data, isFetching } = useQuery({
         queryKey,
@@ -125,12 +131,27 @@ export const UserSearchDropdown: React.FC<UserSearchDropdownProps> = ({
                         </div>
                     )}
                     <div className="overflow-y-auto custom-scrollbar flex-1">
-                        {allUsers.length === 0 && !isFetching && (
+                        {allUsers.length === 0 && (
                             <div className="flex flex-col items-center justify-center py-6 text-muted-foreground/50 gap-1">
-                                <UserIcon size={18} />
-                                <p className="text-[11px]">
-                                    {debouncedQ ? 'No users found' : 'Start typing to search'}
-                                </p>
+                                {isFetching ? (
+                                    <>
+                                        <Loader2 size={18} className="animate-spin text-primary/40" />
+                                        <p className="text-[11px]">Searching...</p>
+                                    </>
+                                ) : (
+                                    <>
+                                        <UserIcon size={18} />
+                                        <p className="text-[11px]">
+                                            {debouncedQ 
+                                                ? 'No matches matching search' 
+                                                : (teamContext 
+                                                    ? 'No members found in this team' 
+                                                    : projectContext 
+                                                        ? 'No members found in this project' 
+                                                        : 'Start typing to search')}
+                                        </p>
+                                    </>
+                                )}
                             </div>
                         )}
 

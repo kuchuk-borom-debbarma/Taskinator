@@ -10,14 +10,15 @@ router.use(requireAuth as any);
 // Get Teams
 router.get('/', async (req: any, res: Response) => {
     try {
-        const { projectId } = req.query;
+        const { projectId, cursor, limit } = req.query;
         const userId = req.userId;
         if (!projectId) throw new Error('projectId is required');
-        const teams = await teamService.getTeams(
+        const result = await teamService.getTeams(
             userId as string,
             projectId as string,
+            { cursor: cursor as string, limit: parseInt(limit as string) || 20 }
         );
-        res.status(200).json(teams);
+        res.status(200).json(result);
     } catch (error: any) {
         console.error('[REST] Error fetching teams:', error);
         res.status(400).json({ error: error.message });
@@ -28,15 +29,16 @@ router.get('/', async (req: any, res: Response) => {
 router.get('/:teamId/members', async (req: any, res: Response) => {
     try {
         const { teamId } = req.params;
-        const { projectId } = req.query;
+        const { projectId, cursor, limit } = req.query;
         const userId = req.userId;
         if (!projectId) throw new Error('projectId is required');
-        const members = await teamService.getTeamMembers(
+        const result = await teamService.getTeamMembers(
             userId as string,
             projectId as string,
             teamId,
+            { cursor: cursor as string, limit: parseInt(limit as string) || 20 }
         );
-        res.status(200).json(members);
+        res.status(200).json(result);
     } catch (error: any) {
         console.error('[REST] Error fetching team members:', error);
         res.status(400).json({ error: error.message });

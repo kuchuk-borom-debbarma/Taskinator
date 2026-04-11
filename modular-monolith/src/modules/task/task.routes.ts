@@ -11,14 +11,18 @@ router.use(requireAuth as any);
 // Get Tasks
 router.get('/', async (req: any, res: Response) => {
     try {
-        const { projectId } = req.query;
+        const { projectId, cursor, limit } = req.query;
         const userId = req.userId;
-        if (!projectId) throw new Error('projectId is required');
-        const tasks = await taskService.getTasks(
-            userId as string,
-            projectId as string,
-        );
-        res.status(200).json(tasks);
+        if (!projectId) {
+            res.status(400).json({ error: 'projectId is required' });
+            return;
+        }
+
+        const result = await taskService.getTasks(userId, projectId as string, { 
+            cursor: cursor as string, 
+            limit: parseInt(limit as string) || 20 
+        });
+        res.status(200).json(result);
     } catch (error: any) {
         console.error('[REST] Error fetching tasks:', error);
         res.status(400).json({ error: error.message });
@@ -93,10 +97,13 @@ router.delete('/', async (req: any, res: Response) => {
 router.get('/:taskId/triggers', async (req: any, res: Response) => {
     try {
         const { taskId } = req.params;
-        const triggers = await taskTriggerService.getTriggersForTask({
+        const { cursor, limit } = req.query;
+        const result = await taskTriggerService.getTriggersForTask({
             taskId,
+            cursor: cursor as string,
+            limit: parseInt(limit as string) || 20,
         });
-        res.status(200).json(triggers);
+        res.status(200).json(result);
     } catch (error: any) {
         res.status(400).json({ error: error.message });
     }

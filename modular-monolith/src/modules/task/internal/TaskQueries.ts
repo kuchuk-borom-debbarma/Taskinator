@@ -366,12 +366,23 @@ export const unassignMemberFromTeamTasks = async (
 export const getTasks = async (
     userId: string,
     projectId: string,
-): Promise<ProjectTask[]> => {
+    params: { cursor?: string; limit?: number } = {},
+): Promise<{ tasks: ProjectTask[]; nextCursor: string | null }> => {
+    const limit = Math.min(params.limit ?? 20, 50);
+    const cursor = params.cursor; // Expecting format: "ISO_DATE|uuid"
+
+    let cursorDate: string | null = null;
+    let cursorId: string | null = null;
+
+    if (cursor && cursor.includes('|')) {
+        [cursorDate, cursorId] = cursor.split('|');
+    }
+
     const result = await sql<ProjectTask>`
         WITH auth_check AS (
-            SELECT 1 FROM project WHERE id = ${projectId}::uuid AND fk_user_id = ${userId}
+            SELECT 1 FROM project WHERE id = ${projectId}::uuid AND fk_user_id = ${userId}::text
             UNION ALL
-            SELECT 1 FROM project_member WHERE fk_project_id = ${projectId}::uuid AND fk_user_id = ${userId}
+            SELECT 1 FROM project_member WHERE fk_project_id = ${projectId}::uuid AND fk_user_id = ${userId}::text
             LIMIT 1
         )
         SELECT 
@@ -393,7 +404,24 @@ export const getTasks = async (
         FROM project_task
         WHERE fk_project_id = ${projectId}::uuid
           AND EXISTS (SELECT 1 FROM auth_check)
-        ORDER BY created_at ASC
+          AND (
+              ${cursorDate}::timestamptz IS NULL
+              OR created_at < ${cursorDate}::timestamptz
+              OR (created_at = ${cursorDate}::timestamptz AND id < ${cursorId}::uuid)
+          )
+        ORDER BY created_at DESC, id DESC
+        LIMIT ${limit + 1}
     `.execute(db);
-    return result.rows;
+
+    const hasMore = result.rows.length > limit;
+    const tasks = hasMore ? result.rows.slice(0, limit) : result.rows;
+
+    let nextCursor: string | null = null;
+    if (hasMore && tasks.length > 0) {
+        const last = tasks[tasks.length - 1]!;
+        const dateStr = last.createdAt instanceof Date ? last.createdAt.toISOString() : last.createdAt;
+        nextCursor = `${dateStr}|${last.id}`;
+    }
+
+    return { tasks, nextCursor };
 };

@@ -12,7 +12,9 @@ import { cn } from './utils/cn';
 import { Auth } from './components/Auth';
 import { NotificationPanel } from './components/NotificationPanel';
 import { UserSearchDropdown } from './components/UserSearchDropdown';
+import { useRealtime } from './hooks/useRealtime.ts';
 import type { JWTPayload, TaskTriggerType, TaskTrigger } from './types';
+
 
 const queryClient = new QueryClient();
 
@@ -23,6 +25,7 @@ interface WorkspaceProps {
 
 const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
     const userId = user.id;
+    useRealtime(userId);
     const [selectedProjectId, setSelectedProjectId] = useState<string>();
     const [isProjectSettingsOpen, setIsProjectSettingsOpen] = useState(false);
     const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
@@ -63,17 +66,20 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
     const qc = useQueryClient();
 
     // Queries
-    const { data: projects = [] } = useQuery({
+    const { data: projectData } = useQuery({
         queryKey: ['projects', userId],
-        queryFn: () => projectApi.getProjects(userId.trim()),
+        queryFn: () => projectApi.getProjects(userId.trim(), { limit: 50 }),
         enabled: !!userId.trim(),
     });
+    const projects = projectData?.projects ?? [];
+    const nextCursor = projectData?.nextCursor;
 
-    const { data: projectTasks = [] } = useQuery({
+    const { data: taskData } = useQuery({
         queryKey: ['tasks', selectedProjectId, userId],
         queryFn: () => taskApi.getTasks(userId.trim(), selectedProjectId!),
         enabled: !!selectedProjectId && !!userId.trim(),
     });
+    const projectTasks = taskData?.tasks ?? [];
 
     const triggerQueries = useQueries({
         queries: projectTasks.map(t => ({
@@ -85,41 +91,44 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
     const triggerMap = useMemo(() => {
         const map: Record<string, TaskTrigger[]> = {};
         projectTasks.forEach((t, i) => {
-            if (triggerQueries[i]?.data) {
-                map[t.id] = triggerQueries[i].data!;
+            if (triggerQueries[i]?.data?.triggers) {
+                map[t.id] = triggerQueries[i].data!.triggers;
             }
         });
         return map;
     }, [projectTasks, triggerQueries]);
 
-    const { data: teams = [] } = useQuery({
+    const { data: teamData } = useQuery({
         queryKey: ['teams', selectedProjectId, userId],
         queryFn: () => teamApi.getTeams(userId.trim(), selectedProjectId!),
         enabled: !!selectedProjectId && !!userId.trim(),
     });
+    const teams = teamData?.teams ?? [];
 
-    const { data: projectMembers = [] } = useQuery({
+    const { data: memberData } = useQuery({
         queryKey: ['project-members', selectedProjectId, userId],
         queryFn: () => projectApi.getProjectMembers(userId.trim(), selectedProjectId!),
         enabled: isProjectSettingsOpen && !!selectedProjectId && !!userId.trim(),
     });
+    const projectMembers = memberData?.members ?? [];
 
-    const { data: teamMembers = [] } = useQuery({
+    const { data: tMemData } = useQuery({
         queryKey: ['team-members', selectedProjectId, selectedTeamId],
         queryFn: () => teamApi.getTeamMembers(userId.trim(), selectedProjectId!, selectedTeamId!),
         enabled: !!selectedTeamId && !!selectedProjectId && !!userId.trim(),
     });
+    const teamMembers = tMemData?.members ?? [];
 
-    const { data: taskTriggers = [] } = useQuery({
+    const { data: triggerData } = useQuery({
         queryKey: ['task-triggers', selectedTaskId],
         queryFn: () => taskApi.getTaskTriggers(selectedTaskId!),
         enabled: !!selectedTaskId,
     });
+    const taskTriggers = triggerData?.triggers ?? [];
 
     const { data: unreadData } = useQuery({
         queryKey: ['notifications-unread', userId],
         queryFn: () => notificationApi.getUnreadCount(),
-        refetchInterval: 60_000,
     });
     const unreadCount = unreadData?.count ?? 0;
 
@@ -414,7 +423,7 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
                                                     {team.createdBy.substring(0,1).toUpperCase()}
                                                 </div>
                                             </div>
-                                            <span className="text-[10px] text-muted-foreground">Lead by {team.createdBy}</span>
+                                            <span className="text-[10px] text-muted-foreground">Created by {team.createdBy}</span>
                                         </div>
                                     </div>
                                 ))
@@ -489,6 +498,7 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
                         members={teamMembers}
                         onAdd={(userId) => addTeamMemberMutation.mutate(userId)}
                         onRemove={(id) => removeTeamMemberMutation.mutate(id)}
+                        projectId={selectedProjectId!}
                     />
 
                     <div className="pt-4 border-t border-border">
@@ -600,6 +610,7 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
                                 )}
                                 <UserSearchDropdown
                                     placeholder={selectedTask.memberId ? 'Change assignee...' : 'Search & assign user...'}
+                                    teamContext={selectedTask.teamId ? { projectId: selectedProjectId!, teamId: selectedTask.teamId } : undefined}
                                     onSelect={(user: UserSearchResult) =>
                                         updateTaskMutation.mutate({ id: selectedTask.id, version: selectedTask.version, memberId: user.id })
                                     }
