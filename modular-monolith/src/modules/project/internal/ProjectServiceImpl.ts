@@ -40,6 +40,11 @@ export class ProjectServiceImpl implements ProjectService {
         return getProjectMembers(userId, projectId);
     }
 
+    async getUserProjectIds(userId: string): Promise<string[]> {
+        return (await import('./ProjectQueries.ts')).getUserProjectIds(userId);
+    }
+
+
     async destroy(): Promise<void> {
         console.log(`Disconnecting event bus ${this.constructor.name}`);
         await eventBus.destroy();

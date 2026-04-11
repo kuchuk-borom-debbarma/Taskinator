@@ -12,6 +12,7 @@ import { cn } from './utils/cn';
 import { Auth } from './components/Auth';
 import { NotificationPanel } from './components/NotificationPanel';
 import { UserSearchDropdown } from './components/UserSearchDropdown';
+import { useRealtime } from './hooks/useRealtime';
 import type { JWTPayload, TaskTriggerType, TaskTrigger } from './types';
 
 const queryClient = new QueryClient();
@@ -22,6 +23,7 @@ interface WorkspaceProps {
 }
 
 const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
+    useRealtime();
     const userId = user.id;
     const [selectedProjectId, setSelectedProjectId] = useState<string>();
     const [isProjectSettingsOpen, setIsProjectSettingsOpen] = useState(false);

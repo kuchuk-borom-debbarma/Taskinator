@@ -13,13 +13,13 @@ export const requireAuth = (
     next: NextFunction,
 ): void => {
     const authHeader = req.headers.authorization;
+    let token: string | undefined;
 
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        res.status(401).json({ error: 'Unauthorized: No token provided' });
-        return;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+        token = authHeader.split(' ')[1];
+    } else if (req.query.token) {
+        token = req.query.token as string;
     }
-
-    const token = authHeader.split(' ')[1];
 
     if (!token) {
         res.status(401).json({ error: 'Unauthorized: No token provided' });

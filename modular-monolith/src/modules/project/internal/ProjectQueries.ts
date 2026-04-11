@@ -292,3 +292,16 @@ export const getProjectMembers = async (
     `.execute(db);
     return result.rows;
 };
+
+/**
+ * Fetches all project IDs where the user is either the owner or a member.
+ */
+export const getUserProjectIds = async (userId: string): Promise<string[]> => {
+    const result = await sql<{ id: string }>`
+        SELECT id FROM project WHERE fk_user_id = ${userId}
+        UNION
+        SELECT fk_project_id FROM project_member WHERE fk_user_id = ${userId}
+    `.execute(db);
+    return result.rows.map(r => r.id);
+};
+
