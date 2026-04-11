@@ -20,7 +20,13 @@ export const useRealtime = (userId: string | undefined, projectId: string | unde
                     logger.info('[Realtime] Task event received via GraphQL Subscription');
                     queryClient.invalidateQueries({ queryKey: ['workspace', projectId, userId] });
                 }
-                // We could add notification subscription here too
+                
+                // If it's a notification event
+                if (result.data.notificationAdded) {
+                    logger.info('[Realtime] New notification received');
+                    queryClient.invalidateQueries({ queryKey: ['notifications-unread', userId] });
+                    queryClient.invalidateQueries({ queryKey: ['notifications', userId] });
+                }
             }
         } catch (err) {
             // Heartbeats or other non-JSON messages might arrive
@@ -41,12 +47,21 @@ export const useRealtime = (userId: string | undefined, projectId: string | unde
             logger.info(`[Realtime] Subscribed to task events for project: ${projectId}`);
         }
 
-        // 2. We could also subscribe to notifications here...
+        // 2. Subscription for Notifications (Global for user)
+        const notifQuery = encodeURIComponent(`subscription { notificationAdded(userId: "${userId}") { id } }`);
+        const notifUrl = `${API_GQL_URL}?query=${notifQuery}&token=${encodeURIComponent(token)}`;
+        const notifES = new EventSource(notifUrl);
+        notifES.onmessage = handleMessage;
+        logger.info(`[Realtime] Subscribed to notification events for user: ${userId}`);
         
         return () => {
             if (taskES) {
                 logger.info('[Realtime] Closing task subscription');
                 taskES.close();
+            }
+            if (notifES) {
+                logger.info('[Realtime] Closing notification subscription');
+                notifES.close();
             }
         };
     }, [userId, projectId, handleMessage]);

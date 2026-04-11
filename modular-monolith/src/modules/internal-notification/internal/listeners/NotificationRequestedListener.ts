@@ -1,5 +1,6 @@
 import eventBus, { KAFKA_EVENTS } from '../../../../utils/EventBus.ts';
 import { internalNotificationService } from '../../index.ts';
+import { pubsub } from '../../../../graphql/pubsub.ts';
 
 export class NotificationRequestedListener {
     async init() {
@@ -15,9 +16,24 @@ export class NotificationRequestedListener {
                 console.log(`[Internal Notification] Batch-inserting notifications for ${userIds.length} users`);
 
                 // Single INSERT ... SELECT unnest(...) — one DB round-trip for all recipients
-                await internalNotificationService.createNotificationsBatch(
+                const notifications = await internalNotificationService.createNotificationsBatch(
                     userIds.map((userId) => ({ userId, title, message, type, metadata })),
                 );
+
+                // Push individual CREATED events to Kafka for fan-out to all SSE instances
+                for (const n of notifications) {
+                    eventBus.publish(KAFKA_EVENTS.NOTIFICATION.CREATED, {
+                        key: n.userId,
+                        data: {
+                            id: n.id,
+                            userId: n.userId,
+                            title: n.title,
+                            message: n.message,
+                            type: n.type,
+                            metadata: n.metadata,
+                        }
+                    });
+                }
             },
         });
     }

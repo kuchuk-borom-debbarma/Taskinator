@@ -1,5 +1,6 @@
 import type { GraphQLContext } from '../context.ts';
 import { internalNotificationService as notificationService } from '../../modules/internal-notification';
+import { pubsub } from '../pubsub';
 
 export const notificationResolvers = {
   InternalNotification: {
@@ -41,6 +42,21 @@ export const notificationResolvers = {
       if (!context.userId) throw new Error('Unauthorized');
       await notificationService.markAllAsRead(context.userId);
       return true;
+    },
+  },
+  Subscription: {
+    notificationAdded: {
+      subscribe: (_parent: any, { userId }: any) => {
+        return (async function* () {
+          const iter = pubsub.subscribe('notification_created');
+          for await (const event of iter) {
+            // Filter by userId
+            if (event.userId === userId) {
+              yield { notificationAdded: event };
+            }
+          }
+        })();
+      },
     },
   },
 };

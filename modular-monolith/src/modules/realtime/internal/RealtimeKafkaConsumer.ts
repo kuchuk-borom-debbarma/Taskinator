@@ -43,16 +43,15 @@ export class RealtimeKafkaConsumer {
                 });
             },
 
-            // 2. Notifications: Push to specific users
-            [KAFKA_EVENTS.NOTIFICATION.REQUESTED]: async (data: { userIds: string[]; title: string; message: string; type: string; metadata: any }) => {
-                const userIds = Array.isArray(data?.userIds) ? data.userIds : [];
-                userIds.forEach(userId => {
-                    pubsub.publish('notification_created', {
-                        title: data.title,
-                        message: data.message,
-                        type: data.type,
-                        metadata: data.metadata
-                    });
+            // 2. Notifications: Push to specific users via individual CREATED events
+            [KAFKA_EVENTS.NOTIFICATION.CREATED]: async (data: any) => {
+                pubsub.publish('notification_created', {
+                    id: data.id,
+                    userId: data.userId,
+                    title: data.title,
+                    message: data.message,
+                    type: data.type,
+                    metadata: data.metadata
                 });
             }
 
