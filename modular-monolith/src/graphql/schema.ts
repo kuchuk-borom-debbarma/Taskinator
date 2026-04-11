@@ -25,6 +25,7 @@ export const typeDefs = /* GraphQL */ `
     isOwner: Boolean
     createdAt: String!
     updatedAt: String
+    version: Int!
   }
 
   type ProjectEdge {
@@ -44,6 +45,7 @@ export const typeDefs = /* GraphQL */ `
     userId: String!
     user: User
     createdAt: String!
+    version: Int!
   }
 
   type ProjectMemberConnection {
@@ -64,6 +66,7 @@ export const typeDefs = /* GraphQL */ `
     creator: User
     createdAt: String!
     updatedAt: String
+    version: Int!
   }
 
   type TeamMember {
@@ -72,6 +75,7 @@ export const typeDefs = /* GraphQL */ `
     userId: String!
     user: User
     createdAt: String!
+    version: Int!
   }
 
   type TeamEdge {
@@ -111,6 +115,7 @@ export const typeDefs = /* GraphQL */ `
     creator: User
     createdAt: String!
     updatedAt: String
+    version: Int!
   }
 
   type TaskEdge {
