@@ -44,19 +44,5 @@ export const notificationResolvers = {
       return true;
     },
   },
-  Subscription: {
-    notificationAdded: {
-      subscribe: (_parent: any, { userId }: any) => {
-        return (async function* () {
-          const iter = pubsub.subscribe('notification_created');
-          for await (const event of iter) {
-            // Filter by userId
-            if (event.userId === userId) {
-              yield { notificationAdded: event };
-            }
-          }
-        })();
-      },
-    },
-  },
+
 };

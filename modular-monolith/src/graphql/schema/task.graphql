@@ -89,6 +89,4 @@ extend type Mutation {
   deleteTaskTrigger(taskId: ID!, triggerId: ID!): Boolean
 }
 
-extend type Subscription {
-  taskEvents(projectId: ID!): TaskEvent!
-}
+

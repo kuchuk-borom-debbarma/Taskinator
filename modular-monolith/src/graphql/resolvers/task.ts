@@ -91,36 +91,5 @@ export const taskResolvers = {
       return true;
     },
   },
-  Subscription: {
-    taskEvents: {
-      subscribe: (_parent: any, { projectId }: any, _context: GraphQLContext) => {
-        return (async function* () {
-          const iters = [
-            pubsub.subscribe('task_created'),
-            pubsub.subscribe('task_updated'),
-            pubsub.subscribe('task_deleted'),
-          ];
 
-          const nexts = iters.map((it) => it.next().then((res) => ({ res, it })));
-
-          while (true) {
-            const { res, it } = await Promise.race(nexts);
-            if (res.done) break;
-
-            const event = res.value;
-            if (event && (event as any).projectId === projectId) {
-              if ('title' in event) {
-                yield { taskEvents: { __typename: 'TaskCreated', task: event } };
-              } else {
-                yield { taskEvents: { __typename: 'TaskDeleted', id: (event as any).id, projectId: (event as any).projectId } };
-              }
-            }
-
-            const idx = iters.indexOf(it);
-            nexts[idx] = it.next().then((res) => ({ res, it }));
-          }
-        })();
-      },
-    },
-  },
 };

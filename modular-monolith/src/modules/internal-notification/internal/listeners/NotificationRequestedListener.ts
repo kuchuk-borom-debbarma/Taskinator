@@ -31,6 +31,8 @@ export class NotificationRequestedListener {
                             message: n.message,
                             type: n.type,
                             metadata: n.metadata,
+                            isRead: n.isRead,
+                            createdAt: n.createdAt,
                         }
                     });
                 }

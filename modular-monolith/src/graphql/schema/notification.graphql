@@ -30,6 +30,4 @@ extend type Mutation {
   markAllNotificationsAsRead: Boolean
 }
 
-extend type Subscription {
-  notificationAdded(userId: String!): InternalNotification!
-}
+

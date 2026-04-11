@@ -51,7 +51,9 @@ export class RealtimeKafkaConsumer {
                     title: data.title,
                     message: data.message,
                     type: data.type,
-                    metadata: data.metadata
+                    metadata: data.metadata,
+                    isRead: data.isRead,
+                    createdAt: data.createdAt,
                 });
             }
 
