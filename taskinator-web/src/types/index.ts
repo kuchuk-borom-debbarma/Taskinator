@@ -94,3 +94,15 @@ export interface TaskTrigger {
     createdAt: string;
     updatedAt: string;
 }
+
+export interface InternalNotification {
+    id: string;
+    userId: string;
+    title: string;
+    message: string;
+    type: string;
+    metadata: Record<string, unknown>;
+    isRead: boolean;
+    createdAt: string;
+    readAt: string | null;
+}

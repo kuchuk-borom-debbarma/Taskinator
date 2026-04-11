@@ -22,6 +22,7 @@ export interface CreateNotificationParam {
 
 export interface InternalNotificationService extends BaseService {
     createNotification(data: CreateNotificationParam): Promise<InternalNotification>;
+    createNotificationsBatch(rows: CreateNotificationParam[]): Promise<InternalNotification[]>;
     markAsRead(userId: string, notificationId: string): Promise<void>;
     markAllAsRead(userId: string): Promise<void>;
     getNotifications(userId: string, params: { limit?: number; offset?: number }): Promise<InternalNotification[]>;

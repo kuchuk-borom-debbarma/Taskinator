@@ -3,6 +3,40 @@ import { sql } from 'kysely';
 import type { CreateNotificationParam, InternalNotification } from '../InternalNotificationService.ts';
 import { getTimeString } from '../../../utils/utils.ts';
 
+export const insertNotificationsBatch = async (rows: CreateNotificationParam[]): Promise<InternalNotification[]> => {
+    if (rows.length === 0) return [];
+
+    const userIds   = rows.map((r) => r.userId);
+    const titles    = rows.map((r) => r.title);
+    const messages  = rows.map((r) => r.message);
+    const types     = rows.map((r) => r.type);
+    const metadatas = rows.map((r) => JSON.stringify(r.metadata ?? {}));
+    const now       = getTimeString();
+
+    const result = await sql<InternalNotification>`
+        INSERT INTO internal_notification (fk_user_id, title, message, type, metadata, created_at)
+        SELECT
+            unnest(${userIds}::text[]),
+            unnest(${titles}::text[]),
+            unnest(${messages}::text[]),
+            unnest(${types}::text[]),
+            unnest(${metadatas}::jsonb[]),
+            ${now}::timestamptz
+        RETURNING
+            id,
+            fk_user_id AS "userId",
+            title,
+            message,
+            type,
+            metadata,
+            is_read    AS "isRead",
+            created_at AS "createdAt",
+            read_at    AS "readAt"
+    `.execute(db);
+
+    return result.rows;
+};
+
 export const insertNotification = async (data: CreateNotificationParam): Promise<InternalNotification> => {
     const result = await sql<any>`
         INSERT INTO internal_notification (fk_user_id, title, message, type, metadata)

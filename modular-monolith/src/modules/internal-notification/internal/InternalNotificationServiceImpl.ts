@@ -12,6 +12,10 @@ export class InternalNotificationServiceImpl implements InternalNotificationServ
         return await Queries.insertNotification(data);
     }
 
+    async createNotificationsBatch(rows: CreateNotificationParam[]): Promise<InternalNotification[]> {
+        return await Queries.insertNotificationsBatch(rows);
+    }
+
     async markAsRead(userId: string, notificationId: string): Promise<void> {
         await Queries.markAsRead(userId, notificationId);
     }

@@ -1,5 +1,5 @@
 import axios from 'axios';
-import type { Project, ProjectMember, Team, TeamMember, Task, SignInParam, StartSignUpParam, TaskTrigger, TaskTriggerType } from '../types';
+import type { Project, ProjectMember, Team, TeamMember, Task, SignInParam, StartSignUpParam, TaskTrigger, TaskTriggerType, InternalNotification } from '../types';
 
 const API_BASE_URL = 'http://127.0.0.1:3000';
 
@@ -103,4 +103,18 @@ export const taskApi = {
 
     deleteTaskTrigger: (taskId: string, triggerId: string) =>
         api.delete<void>(`/tasks/${taskId}/triggers/${triggerId}`).then(res => res.data),
+};
+
+export const notificationApi = {
+    getNotifications: (params?: { limit?: number; offset?: number }) =>
+        api.get<InternalNotification[]>('/notifications', { params }).then(res => res.data),
+
+    getUnreadCount: () =>
+        api.get<{ count: number }>('/notifications/unread-count').then(res => res.data),
+
+    markAsRead: (id: string) =>
+        api.patch<void>(`/notifications/${id}/read`).then(res => res.data),
+
+    markAllAsRead: () =>
+        api.patch<void>('/notifications/read-all').then(res => res.data),
 };

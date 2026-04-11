@@ -4,6 +4,7 @@ import projectRoutes from '../modules/project/project.routes';
 import teamRoutes from '../modules/team/team.routes';
 import taskRoutes from '../modules/task/task.routes';
 import authRoutes from '../modules/auth/auth.routes.ts';
+import notificationRoutes from '../modules/internal-notification/internal-notification.routes.ts';
 
 export const startRestServer = (port: number = 3000) => {
     const app = express();
@@ -30,6 +31,7 @@ export const startRestServer = (port: number = 3000) => {
     app.use('/teams', teamRoutes);
     app.use('/tasks', taskRoutes);
     app.use('/auth', authRoutes);
+    app.use('/notifications', notificationRoutes);
 
     app.listen(port, () => {
         console.log(`[REST] Server started on http://localhost:${port}`);

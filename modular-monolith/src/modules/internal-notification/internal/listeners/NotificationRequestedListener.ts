@@ -1,5 +1,5 @@
 import eventBus, { KAFKA_EVENTS } from '../../../../utils/EventBus.ts';
-import { internalNotificationService } from '../index.ts';
+import { internalNotificationService } from '../../index.ts';
 
 export class NotificationRequestedListener {
     async init() {
@@ -12,26 +12,17 @@ export class NotificationRequestedListener {
                 metadata: any;
             }) => {
                 const { userIds, title, message, type, metadata } = data;
-                console.log(`[Internal Notification] Processing notification for ${userIds.length} users`);
+                console.log(`[Internal Notification] Batch-inserting notifications for ${userIds.length} users`);
 
-                // Create notifications in parallel for all users
-                // In a real 10k RPS system, we might use a batch insert query here
-                await Promise.all(
-                    userIds.map(userId => 
-                        internalNotificationService.createNotification({
-                            userId,
-                            title,
-                            message,
-                            type,
-                            metadata
-                        })
-                    )
+                // Single INSERT ... SELECT unnest(...) — one DB round-trip for all recipients
+                await internalNotificationService.createNotificationsBatch(
+                    userIds.map((userId) => ({ userId, title, message, type, metadata })),
                 );
             },
         });
     }
 
-    async stop() {}
+    async stop() { }
 }
 
 export const notificationRequestedListener = new NotificationRequestedListener();

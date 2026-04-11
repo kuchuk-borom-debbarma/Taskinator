@@ -1,5 +1,5 @@
 import eventBus, { KAFKA_EVENTS } from '../../../../utils/EventBus.ts';
-import { externalNotificationService } from '../index.ts';
+import { externalNotificationService } from '../../index.ts';
 
 export class NotificationRequestedListener {
     async init() {

@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient, QueryClient, QueryClientProvider, useQueries } from '@tanstack/react-query';
-import { projectApi, taskApi, teamApi } from './api/client';
+import { projectApi, taskApi, teamApi, notificationApi } from './api/client';
 import { ProjectSidebar } from './components/ProjectSidebar';
 import { TaskTree } from './components/TaskTree';
 import { Drawer } from './components/Drawer';
@@ -9,6 +9,7 @@ import { Modal } from './components/Modal';
 import { Layout, Users, Settings, Plus, Search, Bell, Trash2, FolderEdit, CheckCircle2, Circle, AlignLeft, Users2, User as UserIcon, Zap, ChevronRight, AlertTriangle } from 'lucide-react';
 import { cn } from './utils/cn';
 import { Auth } from './components/Auth';
+import { NotificationPanel } from './components/NotificationPanel';
 import type { JWTPayload, TaskTriggerType } from './types';
 
 const queryClient = new QueryClient();
@@ -23,6 +24,7 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
     const [selectedProjectId, setSelectedProjectId] = useState<string>();
     const [isProjectSettingsOpen, setIsProjectSettingsOpen] = useState(false);
     const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
+    const [isNotifPanelOpen, setIsNotifPanelOpen] = useState(false);
     const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
     
     // Modal States
@@ -111,6 +113,13 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
         queryFn: () => taskApi.getTaskTriggers(selectedTaskId!),
         enabled: !!selectedTaskId,
     });
+
+    const { data: unreadData } = useQuery({
+        queryKey: ['notifications-unread', userId],
+        queryFn: () => notificationApi.getUnreadCount(),
+        refetchInterval: 60_000,
+    });
+    const unreadCount = unreadData?.count ?? 0;
 
     // Mutations
     const addTaskTriggerMutation = useMutation({
@@ -287,10 +296,25 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
                                 data-lpignore="true"
                             />
                         </div>
-                        <button className="p-2 hover:bg-secondary rounded-md text-muted-foreground hover:text-foreground transition-colors relative">
-                            <Bell size={18} />
-                            <span className="absolute top-2 right-2 w-2 h-2 bg-primary rounded-full border-2 border-background"></span>
-                        </button>
+                        <div className="relative">
+                            <button
+                                id="notification-bell"
+                                onClick={() => setIsNotifPanelOpen(o => !o)}
+                                className="p-2 hover:bg-secondary rounded-md text-muted-foreground hover:text-foreground transition-colors relative"
+                            >
+                                <Bell size={18} />
+                                {unreadCount > 0 && (
+                                    <span className="absolute top-1.5 right-1.5 min-w-[14px] h-[14px] bg-primary text-white text-[8px] font-bold rounded-full flex items-center justify-center border-2 border-background px-0.5">
+                                        {unreadCount > 99 ? '99+' : unreadCount}
+                                    </span>
+                                )}
+                            </button>
+                            <NotificationPanel
+                                isOpen={isNotifPanelOpen}
+                                onClose={() => setIsNotifPanelOpen(false)}
+                                userId={userId}
+                            />
+                        </div>
                     </div>
                 </header>
 
