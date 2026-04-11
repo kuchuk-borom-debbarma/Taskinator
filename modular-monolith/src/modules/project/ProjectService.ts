@@ -86,4 +86,12 @@ export interface ProjectService extends BaseService {
      * Get all project IDs where user is owner or member.
      */
     getUserProjectIds(userId: string): Promise<string[]>;
+
+    searchProjectMembers(params: {
+        actorId: string;
+        projectId: string;
+        search?: string;
+        cursor?: string;
+        limit?: number;
+    }): Promise<{ users: { id: string; username: string; email: string }[]; nextCursor: string | null }>;
 }

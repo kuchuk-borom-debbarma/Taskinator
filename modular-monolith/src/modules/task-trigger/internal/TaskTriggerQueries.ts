@@ -11,17 +11,22 @@ export const insertTaskTrigger = async (data: {
     triggerType: TaskTriggerType;
     triggerData: any;
 }) => {
-    //TODO define auth rules
-    await db
-        .insertInto('project_task_trigger_table')
-        .values({
-            fk_project_id: data.projectId,
-            name: data.name,
-            fk_task_id: data.taskId,
-            trigger_data: data.triggerData,
-            trigger_type: data.triggerType,
-        })
-        .execute();
+    await sql`
+        WITH auth_check AS (
+            SELECT 1 FROM project WHERE id = ${data.projectId}::uuid AND fk_user_id = ${data.userId}
+            UNION ALL
+            SELECT 1 FROM project_member WHERE fk_project_id = ${data.projectId}::uuid AND fk_user_id = ${data.userId}
+            LIMIT 1
+        )
+        INSERT INTO project_task_trigger_table (fk_project_id, name, fk_task_id, trigger_data, trigger_type)
+        SELECT 
+            ${data.projectId}::uuid, 
+            ${data.name}, 
+            ${data.taskId}::uuid, 
+            ${data.triggerData}::jsonb, 
+            ${data.triggerType}
+        WHERE EXISTS (SELECT 1 FROM auth_check)
+    `.execute(db);
 };
 
 export const getTaskTriggersByTaskId = async (data: {

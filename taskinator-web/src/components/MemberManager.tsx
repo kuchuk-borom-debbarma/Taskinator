@@ -14,6 +14,7 @@ interface MemberManagerProps {
     onRemove: (memberId: string) => void;
     title?: string;
     placeholder?: string;
+    projectId?: string;
 }
 
 export const MemberManager: React.FC<MemberManagerProps> = ({
@@ -22,6 +23,7 @@ export const MemberManager: React.FC<MemberManagerProps> = ({
     onRemove,
     title = 'Members',
     placeholder = 'Search by username or paste user ID...',
+    projectId,
 }) => {
     const handleSelect = (user: UserSearchResult) => {
         const alreadyMember = members.some(m => m.userId === user.id);
@@ -43,6 +45,7 @@ export const MemberManager: React.FC<MemberManagerProps> = ({
             <UserSearchDropdown
                 onSelect={handleSelect}
                 placeholder={placeholder}
+                projectContext={projectId ? { projectId } : undefined}
             />
 
             <div className="space-y-1 max-h-[300px] overflow-y-auto custom-scrollbar pr-1">

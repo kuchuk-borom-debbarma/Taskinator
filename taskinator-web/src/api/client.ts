@@ -44,6 +44,9 @@ export const projectApi = {
 
     deleteProjectMembers: (data: { userId: string; projectId: string; memberIds: string[] }) =>
         api.delete(`/projects/${data.projectId}/members`, { data }).then(res => res.data),
+
+    searchProjectMembers: (params: { projectId: string; search?: string; cursor?: string; limit?: number }) =>
+        api.get<{ users: UserSearchResult[]; nextCursor: string | null }>(`/projects/${params.projectId}/members/search`, { params }).then(res => res.data),
 };
 
 export const teamApi = {

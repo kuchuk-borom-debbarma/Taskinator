@@ -498,6 +498,7 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
                         members={teamMembers}
                         onAdd={(userId) => addTeamMemberMutation.mutate(userId)}
                         onRemove={(id) => removeTeamMemberMutation.mutate(id)}
+                        projectId={selectedProjectId!}
                     />
 
                     <div className="pt-4 border-t border-border">

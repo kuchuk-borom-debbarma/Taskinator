@@ -17,6 +17,7 @@ import {
     insertProject,
     insertProjectMembers,
     insertProjects,
+    searchProjectMembers,
 } from './ProjectQueries.ts';
 
 import eventBus, { KAFKA_EVENTS } from '../../../utils/EventBus.ts';
@@ -106,5 +107,15 @@ export class ProjectServiceImpl implements ProjectService {
         }
 
         return projects;
+    }
+
+    async searchProjectMembers(params: {
+        actorId: string;
+        projectId: string;
+        search?: string;
+        cursor?: string;
+        limit?: number;
+    }): Promise<{ users: { id: string; username: string; email: string }[]; nextCursor: string | null }> {
+        return searchProjectMembers(params);
     }
 }

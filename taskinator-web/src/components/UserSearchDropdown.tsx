@@ -13,6 +13,7 @@ interface UserSearchDropdownProps {
      * instead of the global user list.
      */
     teamContext?: { projectId: string; teamId: string };
+    projectContext?: { projectId: string };
 }
 
 const DEBOUNCE_MS = 300;
@@ -41,14 +42,18 @@ export const UserSearchDropdown: React.FC<UserSearchDropdownProps> = ({
         return () => clearTimeout(t);
     }, [query]);
 
-    // Switch between team-scoped and global query
+    // Switch between team-scoped, project-scoped and global query
     const queryKey = teamContext
         ? ['team-user-search', teamContext.teamId, debouncedQ, cursor]
-        : ['user-search', debouncedQ, cursor];
+        : projectContext
+            ? ['project-user-search', projectContext.projectId, debouncedQ, cursor]
+            : ['user-search', debouncedQ, cursor];
 
     const queryFn = teamContext
         ? () => userApi.searchTeamUsers({ ...teamContext, search: debouncedQ, cursor, limit: 15 })
-        : () => userApi.searchUsers({ search: debouncedQ, cursor, limit: 15 });
+        : projectContext
+            ? () => projectApi.searchProjectMembers({ ...projectContext, search: debouncedQ, cursor, limit: 15 })
+            : () => userApi.searchUsers({ search: debouncedQ, cursor, limit: 15 });
 
     const { data, isFetching } = useQuery({
         queryKey,
@@ -137,8 +142,12 @@ export const UserSearchDropdown: React.FC<UserSearchDropdownProps> = ({
                                         <UserIcon size={18} />
                                         <p className="text-[11px]">
                                             {debouncedQ 
-                                                ? 'No members matching search' 
-                                                : (teamContext ? 'No members found in this team' : 'Start typing to search')}
+                                                ? 'No matches matching search' 
+                                                : (teamContext 
+                                                    ? 'No members found in this team' 
+                                                    : projectContext 
+                                                        ? 'No members found in this project' 
+                                                        : 'Start typing to search')}
                                         </p>
                                     </>
                                 )}

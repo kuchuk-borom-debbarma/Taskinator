@@ -63,6 +63,29 @@ router.get('/:projectId/members', async (req: any, res: Response) => {
     }
 });
 
+// Search Project Members
+router.get('/:projectId/members/search', async (req: any, res: Response) => {
+    try {
+        const { projectId } = req.params;
+        const actorId = req.userId;
+        const search = req.query.search as string | undefined;
+        const cursor = req.query.cursor as string | undefined;
+        const limit = parseInt(req.query.limit as string) || 20;
+
+        const result = await projectService.searchProjectMembers({
+            actorId: actorId as string,
+            projectId,
+            search,
+            cursor,
+            limit
+        });
+        res.status(200).json(result);
+    } catch (error: any) {
+        console.error('[REST] Error searching project members:', error);
+        res.status(400).json({ error: error.message });
+    }
+});
+
 // Create Project
 router.post('/', async (req: any, res: Response) => {
     try {

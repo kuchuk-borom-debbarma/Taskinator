@@ -365,4 +365,60 @@ export const getUserProjectIds = async (userId: string): Promise<string[]> => {
     `.execute(db);
     return result.rows.map(r => r.id);
 };
+export const searchProjectMembers = async (params: {
+    actorId: string;
+    projectId: string;
+    search?: string;
+    cursor?: string;
+    limit?: number;
+}): Promise<{ users: { id: string; username: string; email: string }[]; nextCursor: string | null }> => {
+    const search = params.search?.trim() ?? '';
+    const cursor = params.cursor;
+    const limit  = Math.min(params.limit ?? 20, 50);
 
+    const rows = await sql<{ id: string; username: string; email: string }>`
+        WITH auth_check AS (
+            SELECT 1 FROM project WHERE id = ${params.projectId}::uuid AND fk_user_id = ${params.actorId}
+            UNION ALL
+            SELECT 1 FROM project_member WHERE fk_project_id = ${params.projectId}::uuid AND fk_user_id = ${params.actorId}
+            LIMIT 1
+        ),
+        project_owner AS (
+            SELECT u.id, u.username, u.email
+            FROM project p
+            JOIN users u ON u.id::text = p.fk_user_id
+            WHERE p.id = ${params.projectId}::uuid
+        ),
+        project_members AS (
+            SELECT u.id, u.username, u.email
+            FROM project_member pm
+            JOIN users u ON u.id::text = pm.fk_user_id
+            WHERE pm.fk_project_id = ${params.projectId}::uuid
+        ),
+        all_eligible_users AS (
+            SELECT * FROM project_owner
+            UNION
+            SELECT * FROM project_members
+        )
+        SELECT id, username, email
+        FROM all_eligible_users
+        WHERE EXISTS (SELECT 1 FROM auth_check)
+          AND (
+            ${search} = ''
+            OR username ILIKE '%' || ${search} || '%'
+            OR id::text = ${search}
+          )
+          AND (
+            ${cursor}::uuid IS NULL
+            OR id > ${cursor}::uuid
+          )
+        ORDER BY id
+        LIMIT ${limit + 1}
+    `.execute(db);
+
+    const hasMore    = rows.rows.length > limit;
+    const users      = hasMore ? rows.rows.slice(0, limit) : rows.rows;
+    const nextCursor = hasMore ? users[users.length - 1]!.id : null;
+
+    return { users, nextCursor };
+};
