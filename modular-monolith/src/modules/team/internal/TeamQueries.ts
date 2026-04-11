@@ -90,6 +90,8 @@ export const insertTeamMembers = async (
             SELECT 1 FROM project WHERE id = ${data.projectId}::uuid AND fk_user_id = ${data.userId}
             UNION ALL
             SELECT 1 FROM project_team WHERE id = ${data.teamId}::uuid AND fk_project_id = ${data.projectId}::uuid AND fk_user_id = ${data.userId}
+            UNION ALL
+            SELECT 1 FROM project_team_member WHERE fk_team_id = ${data.teamId}::uuid AND fk_user_id = ${data.userId}
             LIMIT 1
         ),
         valid_users AS (
@@ -145,6 +147,8 @@ export const deleteTeamMembers = async (
             SELECT 1 FROM project WHERE id = ${data.projectId}::uuid AND fk_user_id = ${data.userId}
             UNION ALL
             SELECT 1 FROM project_team WHERE id = ${data.teamId}::uuid AND fk_project_id = ${data.projectId}::uuid AND fk_user_id = ${data.userId}
+            UNION ALL
+            SELECT 1 FROM project_team_member WHERE fk_team_id = ${data.teamId}::uuid AND fk_user_id = ${data.userId}
             LIMIT 1
         ),
         deleted_members AS (

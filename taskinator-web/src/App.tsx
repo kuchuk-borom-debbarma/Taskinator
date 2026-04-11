@@ -423,7 +423,7 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
                                                     {team.createdBy.substring(0,1).toUpperCase()}
                                                 </div>
                                             </div>
-                                            <span className="text-[10px] text-muted-foreground">Lead by {team.createdBy}</span>
+                                            <span className="text-[10px] text-muted-foreground">Created by {team.createdBy}</span>
                                         </div>
                                     </div>
                                 ))
