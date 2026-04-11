@@ -1,0 +1,31 @@
+type InternalNotification {
+  id: ID!
+  userId: String!
+  title: String!
+  message: String!
+  type: String!
+  metadata: String
+  isRead: Boolean!
+  createdAt: String!
+  readAt: String
+}
+
+type NotificationEdge {
+  node: InternalNotification!
+  cursor: String!
+}
+
+type NotificationConnection {
+  edges: [NotificationEdge!]!
+  pageInfo: PageInfo!
+}
+
+extend type Query {
+  notifications(first: Int, after: String): NotificationConnection!
+  unreadNotificationsCount: Int!
+}
+
+extend type Mutation {
+  markNotificationAsRead(id: ID!): Boolean
+  markAllNotificationsAsRead: Boolean
+}

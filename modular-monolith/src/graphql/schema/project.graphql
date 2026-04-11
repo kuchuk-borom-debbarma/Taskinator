@@ -1,0 +1,54 @@
+type Project {
+  id: ID!
+  name: String!
+  description: String
+  userId: String!
+  creator: User
+  isOwner: Boolean
+  createdAt: String!
+  updatedAt: String
+  version: Int!
+}
+
+type ProjectEdge {
+  node: Project!
+  cursor: String!
+}
+
+type ProjectConnection {
+  edges: [ProjectEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int
+}
+
+type ProjectMember {
+  id: ID!
+  projectId: ID!
+  userId: String!
+  user: User
+  createdAt: String!
+  version: Int!
+}
+
+type ProjectMemberEdge {
+  node: ProjectMember!
+  cursor: String!
+}
+
+type ProjectMemberConnection {
+  edges: [ProjectMemberEdge!]!
+  pageInfo: PageInfo!
+}
+
+extend type Query {
+  projects(first: Int, after: String): ProjectConnection!
+  project(id: ID!): Project
+  projectMembers(projectId: ID!, first: Int, after: String): ProjectMemberConnection!
+}
+
+extend type Mutation {
+  createProject(name: String!, description: String): Project
+  deleteProjects(projectIds: [ID!]!): Boolean
+  addProjectMembers(projectId: ID!, userIds: [String!]!): [ProjectMember]
+  removeProjectMembers(projectId: ID!, memberIds: [ID!]!): [ID]
+}
