@@ -1,6 +1,6 @@
 import eventBus from '../../../utils/EventBus.ts';
 import { KAFKA_EVENTS } from '../../../utils/event-bus/constants.ts';
-import { sseManager } from '../../../utils/SSEManager.ts';
+import { pubsub } from '../../../graphql/pubsub';
 import { logger } from '../../../logger';
 import os from 'os';
 import { v4 as uuidv4 } from 'uuid';
@@ -23,21 +23,21 @@ export class RealtimeKafkaConsumer {
         await eventBus.subscribe(this.groupId, {
             // 1. Task Updates: Broadcast to all connected members of the project
             [KAFKA_EVENTS.PROJECT_TASK.CREATED]: async (data: any) => {
-                sseManager.sendToProject(data.projectId, 'task_created', {
+                pubsub.publish('task_created', {
                     id: data.id,
                     projectId: data.projectId,
                     title: data.title
                 });
             },
             [KAFKA_EVENTS.PROJECT_TASK.UPDATED]: async (data: any) => {
-                sseManager.sendToProject(data.projectId, 'task_updated', {
+                pubsub.publish('task_updated', {
                     id: data.id,
                     projectId: data.projectId,
                     version: data.version
                 });
             },
             [KAFKA_EVENTS.PROJECT_TASK.DELETED]: async (data: any) => {
-                sseManager.sendToProject(data.projectId, 'task_deleted', {
+                pubsub.publish('task_deleted', {
                     id: data.id,
                     projectId: data.projectId
                 });
@@ -47,7 +47,7 @@ export class RealtimeKafkaConsumer {
             [KAFKA_EVENTS.NOTIFICATION.REQUESTED]: async (data: { userIds: string[]; title: string; message: string; type: string; metadata: any }) => {
                 const userIds = Array.isArray(data?.userIds) ? data.userIds : [];
                 userIds.forEach(userId => {
-                    sseManager.sendToUser(userId, 'notification_created', {
+                    pubsub.publish('notification_created', {
                         title: data.title,
                         message: data.message,
                         type: data.type,

@@ -13,6 +13,7 @@ import {
     getProject,
     getProjectMembers,
     getProjects,
+    getProjectsByIds,
     getUserProjectIds,
     insertProject,
     insertProjectMembers,
@@ -48,6 +49,10 @@ export class ProjectServiceImpl implements ProjectService {
 
     async getUserProjectIds(userId: string): Promise<string[]> {
         return getUserProjectIds(userId);
+    }
+
+    async getProjectsByIds(userId: string, projectIds: string[]): Promise<Project[]> {
+        return getProjectsByIds(userId, projectIds);
     }
 
 

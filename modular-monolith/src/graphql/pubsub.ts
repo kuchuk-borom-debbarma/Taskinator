@@ -1,0 +1,10 @@
+import { createPubSub } from 'graphql-yoga';
+
+export type PubSubEvents = {
+    'task_created': [{ id: string; projectId: string; title: string }];
+    'task_updated': [{ id: string; projectId: string; version: number }];
+    'task_deleted': [{ id: string; projectId: string }];
+    'notification_created': [{ title: string; message: string; type: string; metadata: any }];
+};
+
+export const pubsub = createPubSub<PubSubEvents>();

@@ -2,74 +2,52 @@ import { useEffect, useCallback } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { logger } from '../utils/logger.ts';
 
-
-const API_BASE_URL = 'http://127.0.0.1:3000';
+const API_GQL_URL = 'http://127.0.0.1:3000/graphql';
 
 /**
- * useRealtime hook establishes a Server-Sent Events (SSE) connection
- * to the backend and triggers React Query invalidations when
- * tasks or notifications are updated in real-time.
+ * useRealtime hook establishes a GraphQL Subscription over SSE
+ * and triggers React Query invalidations when tasks or notifications are updated.
  */
-export const useRealtime = (userId: string | undefined) => {
+export const useRealtime = (userId: string | undefined, projectId: string | undefined) => {
     const queryClient = useQueryClient();
 
-    const handleEvent = useCallback((event: MessageEvent) => {
+    const handleMessage = useCallback((event: MessageEvent) => {
         try {
-            const type = event.type;
-            const data = JSON.parse(event.data);
-
-            if (!userId) return;
-
-            switch (type) {
-                case 'task_created':
-                case 'task_updated':
-                case 'task_deleted':
-                    // Invalidate all task lists for the affected project and user
-                    queryClient.invalidateQueries({ queryKey: ['tasks', data.projectId, userId] });
-                    break;
-
-                case 'notification_created':
-                    // Invalidate unread count and notification list for this user
-                    queryClient.invalidateQueries({ queryKey: ['notifications-unread', userId] });
-                    queryClient.invalidateQueries({ queryKey: ['notifications', userId] });
-                    break;
-
-                default:
-                    break;
+            const result = JSON.parse(event.data);
+            if (result.data) {
+                // If it's a task event
+                if (result.data.taskEvents) {
+                    logger.info('[Realtime] Task event received via GraphQL Subscription');
+                    queryClient.invalidateQueries({ queryKey: ['tasks', projectId, userId] });
+                }
+                // We could add notification subscription here too
             }
         } catch (err) {
-            logger.error('[Realtime] Failed to parse SSE message:', err);
+            // Heartbeats or other non-JSON messages might arrive
         }
-    }, [queryClient, userId]);
+    }, [queryClient, userId, projectId]);
 
     useEffect(() => {
         const token = localStorage.getItem('token');
         if (!token || !userId) return;
 
-        // Establish the SSE stream with the JWT in the query param
-        const url = `${API_BASE_URL}/realtime/stream?token=${encodeURIComponent(token)}`;
-        const eventSource = new EventSource(url);
+        // 1. Subscription for Tasks (only if projectId is selected)
+        let taskES: EventSource | null = null;
+        if (projectId) {
+            const taskQuery = encodeURIComponent(`subscription { taskEvents(projectId: "${projectId}") { ... on TaskDeleted { id } } }`);
+            const taskUrl = `${API_GQL_URL}?query=${taskQuery}&token=${encodeURIComponent(token)}`;
+            taskES = new EventSource(taskUrl);
+            taskES.onmessage = handleMessage;
+            logger.info(`[Realtime] Subscribed to task events for project: ${projectId}`);
+        }
 
-        logger.info('[Realtime] Connecting to SSE stream...');
-
-        // Listen for specific domain events
-        eventSource.addEventListener('task_created', handleEvent);
-        eventSource.addEventListener('task_updated', handleEvent);
-        eventSource.addEventListener('task_deleted', handleEvent);
-        eventSource.addEventListener('notification_created', handleEvent);
-
-        eventSource.onopen = () => {
-            logger.info('[Realtime] SSE connection established');
-        };
-
-        eventSource.onerror = (err) => {
-            logger.error('[Realtime] SSE connection error or closed:', err);
-            // Browser handles reconnection automatically for EventSource
-        };
-
+        // 2. We could also subscribe to notifications here...
+        
         return () => {
-            logger.info('[Realtime] Closing SSE connection');
-            eventSource.close();
+            if (taskES) {
+                logger.info('[Realtime] Closing task subscription');
+                taskES.close();
+            }
         };
-    }, [handleEvent]);
+    }, [userId, projectId, handleMessage]);
 };

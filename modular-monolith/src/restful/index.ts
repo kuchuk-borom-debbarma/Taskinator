@@ -6,6 +6,7 @@ import taskRoutes from '../modules/task/task.routes';
 import authRoutes from '../modules/auth/auth.routes.ts';
 import notificationRoutes from '../modules/internal-notification/internal-notification.routes.ts';
 import realtimeRoutes from '../modules/realtime/realtime.routes.ts';
+import { yoga } from '../graphql';
 
 export const startRestServer = (port: number = 3000) => {
     const app = express();
@@ -34,6 +35,7 @@ export const startRestServer = (port: number = 3000) => {
     app.use('/auth', authRoutes);
     app.use('/notifications', notificationRoutes);
     app.use('/realtime', realtimeRoutes);
+    app.use('/graphql', yoga);
 
     app.listen(port, () => {
         console.log(`[REST] Server started on http://localhost:${port}`);

@@ -422,3 +422,34 @@ export const searchProjectMembers = async (params: {
 
     return { users, nextCursor };
 };
+
+export const getProjectsByIds = async (
+    userId: string,
+    projectIds: string[],
+): Promise<Project[]> => {
+    if (projectIds.length === 0) return [];
+
+    const result = await sql<Project>`
+        SELECT 
+            id,
+            name,
+            description,
+            fk_user_id AS "userId",
+            version,
+            last_event_id AS "lastEventId",
+            created_at AS "createdAt",
+            updated_at AS "updatedAt"
+        FROM project
+        WHERE id = ANY(${projectIds}::uuid[])
+          AND (
+            fk_user_id = ${userId}
+            OR EXISTS (
+                SELECT 1 FROM project_member 
+                WHERE fk_project_id = project.id 
+                  AND fk_user_id = ${userId}
+            )
+          )
+    `.execute(db);
+
+    return result.rows;
+};

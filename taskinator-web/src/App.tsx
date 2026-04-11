@@ -14,6 +14,8 @@ import { NotificationPanel } from './components/NotificationPanel';
 import { UserSearchDropdown } from './components/UserSearchDropdown';
 import { useRealtime } from './hooks/useRealtime.ts';
 import type { JWTPayload, TaskTriggerType, TaskTrigger } from './types';
+import { gqlClient } from './graphql/client';
+import { GET_PROJECTS, GET_PROJECT, GET_TASKS, GET_TEAMS, CREATE_PROJECT, DELETE_PROJECTS, CREATE_TASK } from './graphql/operations';
 
 
 const queryClient = new QueryClient();
@@ -25,7 +27,7 @@ interface WorkspaceProps {
 
 const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
     const userId = user.id;
-    useRealtime(userId);
+    useRealtime(userId, selectedProjectId);
     const [selectedProjectId, setSelectedProjectId] = useState<string>();
     const [isProjectSettingsOpen, setIsProjectSettingsOpen] = useState(false);
     const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
@@ -68,18 +70,18 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
     // Queries
     const { data: projectData } = useQuery({
         queryKey: ['projects', userId],
-        queryFn: () => projectApi.getProjects(userId.trim(), { limit: 50 }),
+        queryFn: () => gqlClient.request<any>(GET_PROJECTS, { first: 50 }),
         enabled: !!userId.trim(),
     });
-    const projects = projectData?.projects ?? [];
-    const nextCursor = projectData?.nextCursor;
+    const projects = (projectData?.projects?.edges ?? []).map((e: any) => e.node);
+    const nextCursor = projectData?.projects?.pageInfo?.endCursor;
 
     const { data: taskData } = useQuery({
         queryKey: ['tasks', selectedProjectId, userId],
-        queryFn: () => taskApi.getTasks(userId.trim(), selectedProjectId!),
+        queryFn: () => gqlClient.request<any>(GET_TASKS, { projectId: selectedProjectId, first: 100 }),
         enabled: !!selectedProjectId && !!userId.trim(),
     });
-    const projectTasks = taskData?.tasks ?? [];
+    const projectTasks = (taskData?.tasks?.edges ?? []).map((e: any) => e.node);
 
     const triggerQueries = useQueries({
         queries: projectTasks.map(t => ({
@@ -100,10 +102,10 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
 
     const { data: teamData } = useQuery({
         queryKey: ['teams', selectedProjectId, userId],
-        queryFn: () => teamApi.getTeams(userId.trim(), selectedProjectId!),
+        queryFn: () => gqlClient.request<any>(GET_TEAMS, { projectId: selectedProjectId, first: 50 }),
         enabled: !!selectedProjectId && !!userId.trim(),
     });
-    const teams = teamData?.teams ?? [];
+    const teams = (teamData?.teams?.edges ?? []).map((e: any) => e.node);
 
     const { data: memberData } = useQuery({
         queryKey: ['project-members', selectedProjectId, userId],
@@ -150,12 +152,10 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
     });
     const createTaskMutation = useMutation({
         mutationFn: (data: { title: string; parentTaskId?: string }) => 
-            taskApi.createTask({
-                userId: userId.trim(),
+            gqlClient.request<any>(CREATE_TASK, {
                 projectId: selectedProjectId!,
                 title: data.title,
                 description: '',
-                initialStatus: 'TODO',
                 parentTaskId: data.parentTaskId,
             }),
         onSuccess: () => qc.invalidateQueries({ queryKey: ['tasks', selectedProjectId, userId] }),
@@ -176,12 +176,12 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
     });
 
     const createProjectMutation = useMutation({
-        mutationFn: (name: string) => projectApi.createProject({ name, userId: userId.trim() }),
+        mutationFn: (name: string) => gqlClient.request<any>(CREATE_PROJECT, { name }),
         onSuccess: () => qc.invalidateQueries({ queryKey: ['projects', userId] }),
     });
 
     const deleteProjectMutation = useMutation({
-        mutationFn: (id: string) => projectApi.deleteProjects(userId.trim(), [id]),
+        mutationFn: (id: string) => gqlClient.request<any>(DELETE_PROJECTS, { projectIds: [id] }),
         onSuccess: () => {
             setSelectedProjectId(undefined);
             setIsProjectSettingsOpen(false);
