@@ -421,10 +421,12 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
                                         <div className="flex items-center gap-2">
                                             <div className="flex -space-x-1.5">
                                                 <div className="w-4 h-4 rounded-full bg-accent border-2 border-background flex items-center justify-center text-[7px] font-bold text-white">
-                                                    {team.createdBy.substring(0,1).toUpperCase()}
+                                                    {(team.creator?.username || team.createdBy).substring(0,1).toUpperCase()}
                                                 </div>
                                             </div>
-                                            <span className="text-[10px] text-muted-foreground">Created by {team.createdBy}</span>
+                                            <span className="text-[10px] text-muted-foreground truncate">
+                                                Created by <span className="text-foreground/80">{team.creator?.username || 'System'}</span>
+                                            </span>
                                         </div>
                                     </div>
                                 ))
@@ -453,6 +455,10 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
                         <div className="p-4 bg-secondary/30 rounded-lg border border-border">
                             <p className="text-sm font-medium">{selectedProject?.name}</p>
                             <p className="text-xs text-muted mt-1">{selectedProject?.description || 'No description'}</p>
+                            <div className="mt-3 pt-3 border-t border-border/30 flex items-center justify-between">
+                                <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Managed by</span>
+                                <span className="text-[11px] font-semibold text-primary">{selectedProject?.creator?.username || 'System'}</span>
+                            </div>
                         </div>
                     </div>
 
@@ -598,12 +604,19 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
                                 {selectedTask.memberId && (
                                     <div className="flex items-center gap-2 px-2 py-1.5 bg-secondary/30 border border-border rounded-md">
                                         <div className="w-5 h-5 rounded bg-primary/10 border border-primary/20 flex items-center justify-center text-[9px] font-bold text-primary">
-                                            {selectedTask.memberId.substring(0, 2).toUpperCase()}
+                                            {(selectedTask.assignee?.username || selectedTask.memberId).substring(0, 2).toUpperCase()}
                                         </div>
-                                        <span className="text-[11px] font-mono flex-1 truncate opacity-70">{selectedTask.memberId}</span>
+                                        <div className="flex flex-col min-w-0 flex-1">
+                                            <span className="text-[11px] font-semibold truncate leading-none">
+                                                {selectedTask.assignee?.username || 'Unknown User'}
+                                            </span>
+                                            <span className="text-[9px] text-muted-foreground font-mono truncate opacity-60">
+                                                ID: {selectedTask.memberId.substring(0, 8)}
+                                            </span>
+                                        </div>
                                         <button
                                             onClick={() => updateTaskMutation.mutate({ id: selectedTask.id, version: selectedTask.version, memberId: null })}
-                                            className="text-[10px] text-muted-foreground hover:text-red-500 transition-colors"
+                                            className="text-[10px] text-muted-foreground hover:text-red-500 transition-colors ml-1"
                                         >
                                             ✕
                                         </button>
@@ -617,6 +630,16 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
                                     }
                                 />
                             </div>
+                        </div>
+
+                        <div className="flex items-center justify-between px-3 py-2 bg-secondary/10 rounded-md border border-border/30">
+                            <div className="flex items-center gap-2">
+                                <div className="p-1.5 bg-accent/10 rounded text-accent">
+                                    <UserIcon size={12} />
+                                </div>
+                                <span className="text-[10px] uppercase font-bold text-muted-foreground">Reporter</span>
+                            </div>
+                            <span className="text-[11px] font-medium">{selectedTask.creator?.username || 'Unknown'}</span>
                         </div>
 
                         <div className="pt-6 border-t border-border space-y-4">
