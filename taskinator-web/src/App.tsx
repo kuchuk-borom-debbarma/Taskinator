@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient, QueryClient, QueryClientProvider, useQueries } from '@tanstack/react-query';
 import { projectApi, taskApi, teamApi, notificationApi } from './api/client';
+import type { UserSearchResult } from './api/client';
 import { ProjectSidebar } from './components/ProjectSidebar';
 import { TaskTree } from './components/TaskTree';
 import { Drawer } from './components/Drawer';
@@ -10,6 +11,7 @@ import { Layout, Users, Settings, Plus, Search, Bell, Trash2, FolderEdit, CheckC
 import { cn } from './utils/cn';
 import { Auth } from './components/Auth';
 import { NotificationPanel } from './components/NotificationPanel';
+import { UserSearchDropdown } from './components/UserSearchDropdown';
 import type { JWTPayload, TaskTriggerType, TaskTrigger } from './types';
 
 const queryClient = new QueryClient();
@@ -582,19 +584,25 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
                                     <UserIcon size={12} />
                                     Assignee
                                 </label>
-                                <input 
-                                    type="text"
-                                    defaultValue={selectedTask.memberId || ''}
-                                    onBlur={(e) => {
-                                        if (e.target.value !== (selectedTask.memberId || '')) {
-                                            updateTaskMutation.mutate({ id: selectedTask.id, version: selectedTask.version, memberId: e.target.value || null });
-                                        }
-                                    }}
-                                    placeholder="User ID"
-                                    className="w-full bg-secondary/30 border border-border rounded-md px-2 py-1.5 text-sm outline-none focus:border-primary/50"
-                                    autoComplete="off"
-                                    data-1p-ignore
-                                    data-lpignore="true"
+                                {selectedTask.memberId && (
+                                    <div className="flex items-center gap-2 px-2 py-1.5 bg-secondary/30 border border-border rounded-md">
+                                        <div className="w-5 h-5 rounded bg-primary/10 border border-primary/20 flex items-center justify-center text-[9px] font-bold text-primary">
+                                            {selectedTask.memberId.substring(0, 2).toUpperCase()}
+                                        </div>
+                                        <span className="text-[11px] font-mono flex-1 truncate opacity-70">{selectedTask.memberId}</span>
+                                        <button
+                                            onClick={() => updateTaskMutation.mutate({ id: selectedTask.id, version: selectedTask.version, memberId: null })}
+                                            className="text-[10px] text-muted-foreground hover:text-red-500 transition-colors"
+                                        >
+                                            ✕
+                                        </button>
+                                    </div>
+                                )}
+                                <UserSearchDropdown
+                                    placeholder={selectedTask.memberId ? 'Change assignee...' : 'Search & assign user...'}
+                                    onSelect={(user: UserSearchResult) =>
+                                        updateTaskMutation.mutate({ id: selectedTask.id, version: selectedTask.version, memberId: user.id })
+                                    }
                                 />
                             </div>
                         </div>

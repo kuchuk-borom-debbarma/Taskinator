@@ -43,6 +43,31 @@ router.get('/:teamId/members', async (req: any, res: Response) => {
     }
 });
 
+// Search users who are members of a team — exact match on username or user id
+// GET /teams/:teamId/users/search?projectId=&search=&cursor=&limit=
+router.get('/:teamId/users/search', async (req: any, res: Response) => {
+    try {
+        const { teamId } = req.params;
+        const { projectId, search, cursor, limit } = req.query;
+        const actorId = req.userId as string;
+        if (!projectId) throw new Error('projectId is required');
+
+        const result = await teamService.searchTeamUsers({
+            actorId,
+            projectId: projectId as string,
+            teamId,
+            search: search as string | undefined,
+            cursor: cursor as string | undefined,
+            limit: parseInt(limit as string) || 20,
+        });
+        res.status(200).json(result);
+    } catch (error: any) {
+        console.error('[REST] Error searching team users:', error);
+        res.status(400).json({ error: error.message });
+    }
+});
+
+
 // Create Teams
 router.post('/', async (req: any, res: Response) => {
     try {

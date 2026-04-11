@@ -6,6 +6,7 @@ import type {
     Team,
     TeamMember,
     TeamService,
+    UserResult,
 } from '../TeamService.ts';
 import eventBus, { KAFKA_EVENTS } from '../../../utils/EventBus.ts';
 import {
@@ -15,6 +16,7 @@ import {
     deleteTeamMembers,
     getTeams,
     getTeamMembers,
+    searchTeamUsers,
 } from './TeamQueries.ts';
 import _ from 'lodash';
 
@@ -29,6 +31,17 @@ export class TeamServiceImpl implements TeamService {
         teamId: string,
     ): Promise<TeamMember[]> {
         return getTeamMembers(userId, projectId, teamId);
+    }
+
+    async searchTeamUsers(params: {
+        actorId: string;
+        projectId: string;
+        teamId: string;
+        search?: string;
+        cursor?: string;
+        limit?: number;
+    }): Promise<{ users: UserResult[]; nextCursor: string | null }> {
+        return searchTeamUsers(params);
     }
 
     async addTeamMembers(data: AddTeamMembersParam): Promise<TeamMember[]> {

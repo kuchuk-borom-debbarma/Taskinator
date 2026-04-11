@@ -118,3 +118,35 @@ export const notificationApi = {
     markAllAsRead: () =>
         api.patch<void>('/notifications/read-all').then(res => res.data),
 };
+
+export interface UserSearchResult {
+    id: string;
+    username: string;
+    email: string;
+}
+
+export const userApi = {
+    /** Exact match on username or user id. Cursor-paginated. */
+    searchUsers: (params: { search?: string; cursor?: string; limit?: number }) =>
+        api.get<{ users: UserSearchResult[]; nextCursor: string | null }>(
+            '/auth/users',
+            { params },
+        ).then(res => res.data),
+
+    /**
+     * Search only users who are members of a specific team.
+     * Exact match on username or user id.
+     */
+    searchTeamUsers: (params: {
+        projectId: string;
+        teamId: string;
+        search?: string;
+        cursor?: string;
+        limit?: number;
+    }) =>
+        api.get<{ users: UserSearchResult[]; nextCursor: string | null }>(
+            `/teams/${params.teamId}/users/search`,
+            { params: { projectId: params.projectId, search: params.search, cursor: params.cursor, limit: params.limit } },
+        ).then(res => res.data),
+};
+

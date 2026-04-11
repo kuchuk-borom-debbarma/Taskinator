@@ -260,3 +260,48 @@ export const getTeamMembers = async (
     `.execute(db);
     return result.rows;
 };
+
+export const searchTeamUsers = async (params: {
+    actorId: string;
+    projectId: string;
+    teamId: string;
+    search?: string;
+    cursor?: string;
+    limit?: number;
+}): Promise<{ users: { id: string; username: string; email: string }[]; nextCursor: string | null }> => {
+    const search = params.search?.trim() ?? '';
+    const cursor = params.cursor;
+    const limit  = Math.min(params.limit ?? 20, 50);
+
+    const rows = await sql<{ id: string; username: string; email: string }>`
+        WITH auth_check AS (
+            SELECT 1 FROM project WHERE id = ${params.projectId}::uuid AND fk_user_id = ${params.actorId}
+            UNION ALL
+            SELECT 1 FROM project_member WHERE fk_project_id = ${params.projectId}::uuid AND fk_user_id = ${params.actorId}
+            LIMIT 1
+        )
+        SELECT u.id, u.username, u.email
+        FROM project_team_member tm
+        JOIN users u ON u.id::text = tm.fk_user_id
+        WHERE tm.fk_team_id    = ${params.teamId}::uuid
+          AND tm.fk_project_id = ${params.projectId}::uuid
+          AND EXISTS (SELECT 1 FROM auth_check)
+          AND (
+              ${search} = ''
+              OR u.username = ${search}
+              OR u.id::text = ${search}
+          )
+          AND (
+              ${cursor ?? ''} = ''
+              OR u.id > ${cursor ?? ''}::uuid
+          )
+        ORDER BY u.id
+        LIMIT ${limit + 1}
+    `.execute(db);
+
+    const hasMore    = rows.rows.length > limit;
+    const users      = hasMore ? rows.rows.slice(0, limit) : rows.rows;
+    const nextCursor = hasMore ? users[users.length - 1]!.id : null;
+
+    return { users, nextCursor };
+};

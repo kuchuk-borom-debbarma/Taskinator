@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
-import { Trash2, UserPlus, Users } from 'lucide-react';
-import { cn } from '../utils/cn';
+import React from 'react';
+import { Trash2, Users } from 'lucide-react';
+import { UserSearchDropdown } from './UserSearchDropdown';
+import type { UserSearchResult } from '../api/client';
 
 interface Member {
     id: string;
@@ -19,17 +20,12 @@ export const MemberManager: React.FC<MemberManagerProps> = ({
     members,
     onAdd,
     onRemove,
-    title = "Members",
-    placeholder = "Enter User ID to invite..."
+    title = 'Members',
+    placeholder = 'Search by username or paste user ID...',
 }) => {
-    const [newUserId, setNewUserId] = useState('');
-
-    const handleAdd = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (newUserId.trim()) {
-            onAdd(newUserId.trim());
-            setNewUserId('');
-        }
+    const handleSelect = (user: UserSearchResult) => {
+        const alreadyMember = members.some(m => m.userId === user.id);
+        if (!alreadyMember) onAdd(user.id);
     };
 
     return (
@@ -44,30 +40,15 @@ export const MemberManager: React.FC<MemberManagerProps> = ({
                 </span>
             </div>
 
-            <form onSubmit={handleAdd} className="relative group">
-                <input
-                    type="text"
-                    value={newUserId}
-                    onChange={(e) => setNewUserId(e.target.value)}
-                    placeholder={placeholder}
-                    className="w-full bg-[#0d0d0d] border border-border/50 rounded-lg pl-3 pr-10 py-2 text-[13px] outline-none focus:border-primary/50 transition-all placeholder:text-muted-foreground/50"
-                    autoComplete="off"
-                    data-1p-ignore
-                    data-lpignore="true"
-                />
-                <button
-                    type="submit"
-                    disabled={!newUserId.trim()}
-                    className="absolute right-1.5 top-1/2 -translate-y-1/2 p-1.5 text-muted-foreground hover:text-primary disabled:opacity-0 transition-all"
-                >
-                    <UserPlus size={16} />
-                </button>
-            </form>
+            <UserSearchDropdown
+                onSelect={handleSelect}
+                placeholder={placeholder}
+            />
 
             <div className="space-y-1 max-h-[300px] overflow-y-auto custom-scrollbar pr-1">
                 {members.map((member) => (
-                    <div 
-                        key={member.id} 
+                    <div
+                        key={member.id}
                         className="flex items-center justify-between py-2 px-3 rounded-lg hover:bg-secondary/40 border border-transparent hover:border-border/30 group transition-all"
                     >
                         <div className="flex items-center gap-3 overflow-hidden">
@@ -87,7 +68,7 @@ export const MemberManager: React.FC<MemberManagerProps> = ({
                         </button>
                     </div>
                 ))}
-                
+
                 {members.length === 0 && (
                     <div className="text-center py-8 border-2 border-dashed border-border/20 rounded-xl">
                         <p className="text-[11px] text-muted-foreground">No members found</p>

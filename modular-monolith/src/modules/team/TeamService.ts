@@ -1,4 +1,5 @@
 import type { BaseService } from '../project';
+import type { UserResult } from '../auth/AuthService.ts';
 
 export type Team = {
     id: string;
@@ -79,4 +80,19 @@ export interface TeamService extends BaseService {
         projectId: string,
         teamId: string,
     ): Promise<TeamMember[]>;
+
+    /**
+     * Search users who are members of a specific team.
+     * Exact match on username or user id. Cursor-paginated.
+     */
+    searchTeamUsers(params: {
+        actorId: string;
+        projectId: string;
+        teamId: string;
+        search?: string;
+        cursor?: string;
+        limit?: number;
+    }): Promise<{ users: UserResult[]; nextCursor: string | null }>;
 }
+
+export type { UserResult };

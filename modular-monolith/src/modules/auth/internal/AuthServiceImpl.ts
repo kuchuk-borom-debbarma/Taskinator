@@ -2,6 +2,8 @@ import type {
     AuthService,
     StartSignUpParam,
     SignInParam,
+    SearchUsersParam,
+    UserResult,
 } from '../AuthService.ts';
 import { db } from '../../../database';
 import { v4 as uuidv4 } from 'uuid';
@@ -112,5 +114,36 @@ export class AuthServiceImpl implements AuthService {
         logger.info(`User ${data.email} signed in successfully`);
 
         return { token };
+    }
+
+    async searchUsers(params: SearchUsersParam): Promise<{ users: UserResult[]; nextCursor: string | null }> {
+        const search = params.search?.trim() ?? '';
+        const cursor = params.cursor;
+        const limit  = Math.min(params.limit ?? 20, 50);
+
+        // Exact match only: username = search OR id = search (cast to uuid if possible)
+        // Cursor is the last-seen id for forward pagination (ORDER BY id)
+        const rows = await sql<UserResult>`
+            SELECT id, username, email
+            FROM users
+            WHERE
+                (
+                    ${search} = ''
+                    OR username = ${search}
+                    OR id::text = ${search}
+                )
+                AND (
+                    ${cursor ?? ''} = ''
+                    OR id > ${cursor ?? ''}::uuid
+                )
+            ORDER BY id
+            LIMIT ${limit + 1}
+        `.execute(db);
+
+        const hasMore   = rows.rows.length > limit;
+        const users     = hasMore ? rows.rows.slice(0, limit) : rows.rows;
+        const nextCursor = hasMore ? users[users.length - 1]!.id : null;
+
+        return { users, nextCursor };
     }
 }
