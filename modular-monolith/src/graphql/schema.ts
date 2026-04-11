@@ -289,6 +289,10 @@ export const resolvers = {
     createdAt: (t: any) => t.createdAt instanceof Date ? t.createdAt.toISOString() : t.createdAt,
     updatedAt: (t: any) => t.updatedAt instanceof Date ? t.updatedAt.toISOString() : t.updatedAt,
   },
+  InternalNotification: {
+    createdAt: (n: any) => n.createdAt instanceof Date ? n.createdAt.toISOString() : n.createdAt,
+    readAt: (n: any) => n.readAt instanceof Date ? n.readAt.toISOString() : n.readAt,
+  },
   Query: {
     me: (_: any, __: any, context: GraphQLContext) => {
       if (!context.userId) return null;
@@ -383,16 +387,21 @@ export const resolvers = {
       };
     },
     notifications: async (_: any, args: { first?: number; after?: string }, context: GraphQLContext) => {
-        const { notifications } = await notificationService.getNotifications(context.userId!, {
+      if (!context.userId) throw new Error('Unauthorized');
+      const { notifications, nextCursor } = await notificationService.getNotifications(context.userId, {
         limit: args.first,
         cursor: args.after,
       });
+
       return {
-        edges: notifications.map((n: any) => ({ 
-            node: { ...n, metadata: n.metadata ? JSON.stringify(n.metadata) : null }, 
-            cursor: n.id 
+        edges: notifications.map((n: any) => ({
+          node: { ...n, metadata: n.metadata ? JSON.stringify(n.metadata) : null },
+          cursor: `${n.createdAt instanceof Date ? n.createdAt.toISOString() : n.createdAt}|${n.id}`,
         })),
-        pageInfo: { hasNextPage: false, endCursor: null },
+        pageInfo: {
+          hasNextPage: !!nextCursor,
+          endCursor: nextCursor,
+        },
       };
     },
     unreadNotificationsCount: async (_: any, __: any, context: GraphQLContext) => {
