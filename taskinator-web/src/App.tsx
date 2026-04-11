@@ -77,7 +77,7 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
         enabled: !!userId.trim(),
     });
     const projects = (projectData?.projects?.edges ?? []).map((e: any) => e.node);
-    const nextCursor = projectData?.projects?.pageInfo?.endCursor;
+    // const nextCursor = projectData?.projects?.pageInfo?.endCursor;
 
     // === SINGLE CONSOLIDATED WORKSPACE QUERY ===
     // Fetches tasks (with inline triggers, team, assignee) AND teams in ONE request.
@@ -247,9 +247,9 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
         setIsCreateTaskOpen(true);
     };
 
-    const selectedProject = projects.find(p => p.id === selectedProjectId);
-    const selectedTeam = teams.find(t => t.id === selectedTeamId);
-    const selectedTask = projectTasks.find(t => t.id === selectedTaskId);
+    const selectedProject = projects.find((p: any) => p.id === selectedProjectId);
+    const selectedTeam = teams.find((t: any) => t.id === selectedTeamId);
+    const selectedTask = projectTasks.find((t: any) => t.id === selectedTaskId);
 
     return (
         <div className="flex h-screen w-full bg-background text-foreground overflow-hidden">
@@ -388,7 +388,7 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
 
                         <div className="p-3 space-y-1">
                             {teams.length > 0 ? (
-                                teams.map(team => (
+                                teams.map((team: any) => (
                                     <div
                                         key={team.id}
                                         onClick={() => setSelectedTeamId(team.id)}
@@ -578,7 +578,7 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
                                     className="w-full bg-secondary/30 border border-border rounded-md px-2 py-1.5 text-sm outline-none focus:border-primary/50"
                                 >
                                     <option value="">Unassigned</option>
-                                    {teams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                                    {teams.map((t: any) => <option key={t.id} value={t.id}>{t.name}</option>)}
                                 </select>
                             </div>
                             <div className="space-y-2">
