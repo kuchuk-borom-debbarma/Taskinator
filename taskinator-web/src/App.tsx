@@ -10,7 +10,7 @@ import { Layout, Users, Settings, Plus, Search, Bell, Trash2, FolderEdit, CheckC
 import { cn } from './utils/cn';
 import { Auth } from './components/Auth';
 import { NotificationPanel } from './components/NotificationPanel';
-import type { JWTPayload, TaskTriggerType } from './types';
+import type { JWTPayload, TaskTriggerType, TaskTrigger } from './types';
 
 const queryClient = new QueryClient();
 

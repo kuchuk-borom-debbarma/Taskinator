@@ -33,6 +33,19 @@ router.get('/unread-count', async (req: any, res: Response) => {
     }
 });
 
+// PATCH /notifications/read-all  — must be registered BEFORE /:id/read
+// otherwise Express matches "read-all" as the :id param
+router.patch('/read-all', async (req: any, res: Response) => {
+    try {
+        const userId: string = req.userId;
+        await internalNotificationService.markAllAsRead(userId);
+        res.status(204).send();
+    } catch (error: any) {
+        console.error('[REST] Error marking all notifications as read:', error);
+        res.status(400).json({ error: error.message });
+    }
+});
+
 // PATCH /notifications/:id/read
 router.patch('/:id/read', async (req: any, res: Response) => {
     try {
@@ -42,18 +55,6 @@ router.patch('/:id/read', async (req: any, res: Response) => {
         res.status(204).send();
     } catch (error: any) {
         console.error('[REST] Error marking notification as read:', error);
-        res.status(400).json({ error: error.message });
-    }
-});
-
-// PATCH /notifications/read-all
-router.patch('/read-all', async (req: any, res: Response) => {
-    try {
-        const userId: string = req.userId;
-        await internalNotificationService.markAllAsRead(userId);
-        res.status(204).send();
-    } catch (error: any) {
-        console.error('[REST] Error marking all notifications as read:', error);
         res.status(400).json({ error: error.message });
     }
 });
