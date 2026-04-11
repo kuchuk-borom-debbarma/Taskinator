@@ -21,6 +21,8 @@ export interface SearchUsersParam {
     /** Last-seen user id from previous page */
     cursor?: string;
     limit?: number;
+    /** ID of the user performing the search (to exclude from results) */
+    actorId?: string;
 }
 
 export interface AuthService {

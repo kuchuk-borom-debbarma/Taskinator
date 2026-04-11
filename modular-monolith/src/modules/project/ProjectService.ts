@@ -7,6 +7,7 @@ export type Project = {
     description: string | null;
     version: number;
     lastEventId: string | null;
+    isOwner?: boolean;
     createdAt: Date;
     updatedAt?: Date;
 };
@@ -65,14 +66,21 @@ export interface ProjectService extends BaseService {
 
     deleteProjectMembers(data: DeleteProjectMembersParam): Promise<void>;
 
-    getProjects(userId: string): Promise<Project[]>;
+    /**
+     * Get projects for a user (owned and joined)
+     */
+    getProjects(
+        userId: string,
+        params?: { cursor?: string; limit?: number }
+    ): Promise<{ projects: Project[]; nextCursor: string | null }>;
 
     getProject(userId: string, projectId: string): Promise<Project | null>;
 
     getProjectMembers(
         userId: string,
         projectId: string,
-    ): Promise<ProjectMember[]>;
+        params?: { cursor?: string; limit?: number }
+    ): Promise<{ members: ProjectMember[]; nextCursor: string | null }>;
 
     /**
      * Get all project IDs where user is owner or member.

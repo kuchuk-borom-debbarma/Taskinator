@@ -24,14 +24,14 @@ export const authApi = {
 };
 
 export const projectApi = {
-    getProjects: (userId: string) => 
-        api.get<Project[]>(`/projects`, { params: { userId } }).then(res => res.data),
+    getProjects: (userId: string, params?: { cursor?: string; limit?: number }) => 
+        api.get<{ projects: Project[]; nextCursor: string | null }>(`/projects`, { params: { ...params, userId } }).then(res => res.data),
     
     getProject: (userId: string, projectId: string) => 
         api.get<Project>(`/projects/${projectId}`, { params: { userId } }).then(res => res.data),
     
-    getProjectMembers: (userId: string, projectId: string) =>
-        api.get<ProjectMember[]>(`/projects/${projectId}/members`, { params: { userId } }).then(res => res.data),
+    getProjectMembers: (userId: string, projectId: string, params?: { cursor?: string; limit?: number }) =>
+        api.get<{ members: ProjectMember[]; nextCursor: string | null }>(`/projects/${projectId}/members`, { params: { ...params, userId } }).then(res => res.data),
 
     createProject: (data: { name: string; description?: string; userId: string }) => 
         api.post<Project>('/projects', data).then(res => res.data),
@@ -47,11 +47,11 @@ export const projectApi = {
 };
 
 export const teamApi = {
-    getTeams: (userId: string, projectId: string) => 
-        api.get<Team[]>(`/teams`, { params: { userId, projectId } }).then(res => res.data),
+    getTeams: (userId: string, projectId: string, params?: { cursor?: string; limit?: number }) => 
+        api.get<{ teams: Team[]; nextCursor: string | null }>(`/teams`, { params: { ...params, userId, projectId } }).then(res => res.data),
     
-    getTeamMembers: (userId: string, projectId: string, teamId: string) =>
-        api.get<TeamMember[]>(`/teams/${teamId}/members`, { params: { userId, projectId } }).then(res => res.data),
+    getTeamMembers: (userId: string, projectId: string, teamId: string, params?: { cursor?: string; limit?: number }) =>
+        api.get<{ members: TeamMember[]; nextCursor: string | null }>(`/teams/${teamId}/members`, { params: { ...params, userId, projectId } }).then(res => res.data),
 
     createTeams: (data: { userId: string; projectId: string; teams: string[] }) => 
         api.post<Team[]>('/teams', data).then(res => res.data),
@@ -67,8 +67,8 @@ export const teamApi = {
 };
 
 export const taskApi = {
-    getTasks: (userId: string, projectId: string) => 
-        api.get<Task[]>(`/tasks`, { params: { userId, projectId } }).then(res => res.data),
+    getTasks: (userId: string, projectId: string, params?: { cursor?: string; limit?: number }) => 
+        api.get<{ tasks: Task[]; nextCursor: string | null }>(`/tasks`, { params: { ...params, userId, projectId } }).then(res => res.data),
     
     createTask: (data: { 
         userId: string; 
@@ -88,8 +88,8 @@ export const taskApi = {
     deleteTasks: (userId: string, projectId: string, taskIds: string[]) =>
         api.delete('/tasks', { data: { userId, projectId, taskIds } }).then(res => res.data),
 
-    getTaskTriggers: (taskId: string) =>
-        api.get<TaskTrigger[]>(`/tasks/${taskId}/triggers`).then(res => res.data),
+    getTaskTriggers: (taskId: string, params?: { cursor?: string; limit?: number }) =>
+        api.get<{ triggers: TaskTrigger[]; nextCursor: string | null }>(`/tasks/${taskId}/triggers`, { params }).then(res => res.data),
 
     addTaskTrigger: (data: {
         userId: string;
@@ -106,8 +106,8 @@ export const taskApi = {
 };
 
 export const notificationApi = {
-    getNotifications: (params?: { limit?: number; offset?: number }) =>
-        api.get<InternalNotification[]>('/notifications', { params }).then(res => res.data),
+    getNotifications: (params?: { cursor?: string; limit?: number }) =>
+        api.get<{ notifications: InternalNotification[]; nextCursor: string | null }>('/notifications', { params }).then(res => res.data),
 
     getUnreadCount: () =>
         api.get<{ count: number }>('/notifications/unread-count').then(res => res.data),

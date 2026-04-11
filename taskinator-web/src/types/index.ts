@@ -5,6 +5,7 @@ export interface Project {
     description: string | null;
     version: number;
     lastEventId: string | null;
+    isOwner?: boolean;
     createdAt: string;
     updatedAt?: string;
 }

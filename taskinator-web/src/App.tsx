@@ -66,11 +66,13 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
     const qc = useQueryClient();
 
     // Queries
-    const { data: projects = [] } = useQuery({
+    const { data: projectData } = useQuery({
         queryKey: ['projects', userId],
-        queryFn: () => projectApi.getProjects(userId.trim()),
+        queryFn: () => projectApi.getProjects(userId.trim(), { limit: 50 }),
         enabled: !!userId.trim(),
     });
+    const projects = projectData?.projects ?? [];
+    const nextCursor = projectData?.nextCursor;
 
     const { data: projectTasks = [] } = useQuery({
         queryKey: ['tasks', selectedProjectId, userId],
@@ -602,6 +604,7 @@ const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
                                 )}
                                 <UserSearchDropdown
                                     placeholder={selectedTask.memberId ? 'Change assignee...' : 'Search & assign user...'}
+                                    teamContext={selectedTask.teamId ? { projectId: selectedProjectId!, teamId: selectedTask.teamId } : undefined}
                                     onSelect={(user: UserSearchResult) =>
                                         updateTaskMutation.mutate({ id: selectedTask.id, version: selectedTask.version, memberId: user.id })
                                     }

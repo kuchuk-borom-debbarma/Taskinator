@@ -61,7 +61,12 @@ router.get('/users', requireAuth as any, async (req: any, res: Response) => {
         const cursor = req.query.cursor as string | undefined;
         const limit  = parseInt(req.query.limit as string) || 20;
 
-        const result = await authService.searchUsers({ search, cursor, limit });
+        const result = await authService.searchUsers({ 
+            search, 
+            cursor, 
+            limit,
+            actorId: req.userId
+        });
         res.status(200).json(result);
     } catch (error: any) {
         console.error('[REST] Error searching users:', error);

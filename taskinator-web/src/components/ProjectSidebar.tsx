@@ -57,24 +57,56 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
                         </button>
                     </div>
                     
-                    <div className="px-3 space-y-0.5">
-                        {projects.map((project) => (
-                            <button
-                                key={project.id}
-                                onClick={() => onSelectProject(project.id)}
-                                className={cn(
-                                    "w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-[13px] transition-all group",
-                                    selectedProjectId === project.id 
-                                        ? "bg-primary/10 text-primary" 
-                                        : "text-muted-foreground hover:text-foreground hover:bg-secondary/30"
-                                )}
-                            >
-                                <Folder size={14} className={cn(
-                                    selectedProjectId === project.id ? "text-primary" : "text-muted-foreground"
-                                )} />
-                                <span className="truncate flex-1 text-left">{project.name}</span>
-                            </button>
-                        ))}
+                    <div className="space-y-4">
+                        {/* Owned Section */}
+                        <div className="space-y-0.5">
+                            <div className="px-5 py-1 text-[9px] font-semibold text-muted-foreground/50 uppercase tracking-widest">Owned</div>
+                            <div className="px-3 space-y-0.5">
+                                {projects.filter(p => p.isOwner).map((project) => (
+                                    <button
+                                        key={project.id}
+                                        onClick={() => onSelectProject(project.id)}
+                                        className={cn(
+                                            "w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-[13px] transition-all group",
+                                            selectedProjectId === project.id 
+                                                ? "bg-primary/10 text-primary" 
+                                                : "text-muted-foreground hover:text-foreground hover:bg-secondary/30"
+                                        )}
+                                    >
+                                        <Folder size={14} className={cn(
+                                            selectedProjectId === project.id ? "text-primary" : "text-muted-foreground"
+                                        )} />
+                                        <span className="truncate flex-1 text-left">{project.name}</span>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Joined Section */}
+                        {projects.some(p => !p.isOwner) && (
+                            <div className="space-y-0.5">
+                                <div className="px-5 py-1 text-[9px] font-semibold text-muted-foreground/50 uppercase tracking-widest">Part Of</div>
+                                <div className="px-3 space-y-0.5">
+                                    {projects.filter(p => !p.isOwner).map((project) => (
+                                        <button
+                                            key={project.id}
+                                            onClick={() => onSelectProject(project.id)}
+                                            className={cn(
+                                                "w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-[13px] transition-all group",
+                                                selectedProjectId === project.id 
+                                                    ? "bg-primary/10 text-primary" 
+                                                    : "text-muted-foreground hover:text-foreground hover:bg-secondary/30"
+                                            )}
+                                        >
+                                            <Folder size={14} className={cn(
+                                                selectedProjectId === project.id ? "text-primary" : "text-muted-foreground"
+                                            )} />
+                                            <span className="truncate flex-1 text-left">{project.name}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

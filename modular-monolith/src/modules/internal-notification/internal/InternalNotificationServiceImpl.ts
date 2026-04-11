@@ -24,12 +24,11 @@ export class InternalNotificationServiceImpl implements InternalNotificationServ
         await Queries.markAllAsRead(userId);
     }
 
-    async getNotifications(userId: string, params: { limit?: number; offset?: number }): Promise<InternalNotification[]> {
-        return await Queries.getNotifications(
-            userId, 
-            params.limit ?? 20, 
-            params.offset ?? 0
-        );
+    async getNotifications(
+        userId: string,
+        params: { cursor?: string; limit?: number }
+    ): Promise<{ notifications: InternalNotification[]; nextCursor: string | null }> {
+        return await Queries.getNotifications(userId, params);
     }
 
     async getUnreadCount(userId: string): Promise<number> {

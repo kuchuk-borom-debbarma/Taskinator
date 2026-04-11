@@ -56,5 +56,9 @@ export interface TaskService extends BaseService {
 
     updateTasks(data: UpdateTasksParam): Promise<string[]>;
 
-    getTasks(userId: string, projectId: string): Promise<ProjectTask[]>;
+    getTasks(
+        userId: string,
+        projectId: string,
+        params?: { cursor?: string; limit?: number }
+    ): Promise<{ tasks: ProjectTask[]; nextCursor: string | null }>;
 }

@@ -22,8 +22,12 @@ export class TaskTriggerServiceImpl implements TaskTriggerService {
         await insertTaskTrigger(data);
     }
 
-    async getTriggersForTask(data: { taskId: string }): Promise<TaskTrigger[]> {
-        return await getTaskTriggersByTaskId(data);
+    async getTriggersForTask(data: {
+        taskId: string;
+        cursor?: string;
+        limit?: number;
+    }): Promise<{ triggers: TaskTrigger[]; nextCursor: string | null }> {
+        return getTaskTriggersByTaskId(data);
     }
 
     async deleteTrigger(data: {

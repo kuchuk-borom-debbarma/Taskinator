@@ -136,6 +136,7 @@ export class AuthServiceImpl implements AuthService {
                     ${cursor}::uuid IS NULL
                     OR id > ${cursor}::uuid
                 )
+                ${params.actorId ? sql`AND id <> ${params.actorId}::uuid` : sql``}
             ORDER BY id
             LIMIT ${limit + 1}
         `.execute(db);

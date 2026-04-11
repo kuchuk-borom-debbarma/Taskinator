@@ -125,12 +125,23 @@ export const UserSearchDropdown: React.FC<UserSearchDropdownProps> = ({
                         </div>
                     )}
                     <div className="overflow-y-auto custom-scrollbar flex-1">
-                        {allUsers.length === 0 && !isFetching && (
+                        {allUsers.length === 0 && (
                             <div className="flex flex-col items-center justify-center py-6 text-muted-foreground/50 gap-1">
-                                <UserIcon size={18} />
-                                <p className="text-[11px]">
-                                    {debouncedQ ? 'No users found' : 'Start typing to search'}
-                                </p>
+                                {isFetching ? (
+                                    <>
+                                        <Loader2 size={18} className="animate-spin text-primary/40" />
+                                        <p className="text-[11px]">Searching...</p>
+                                    </>
+                                ) : (
+                                    <>
+                                        <UserIcon size={18} />
+                                        <p className="text-[11px]">
+                                            {debouncedQ 
+                                                ? 'No members matching search' 
+                                                : (teamContext ? 'No members found in this team' : 'Start typing to search')}
+                                        </p>
+                                    </>
+                                )}
                             </div>
                         )}
 
