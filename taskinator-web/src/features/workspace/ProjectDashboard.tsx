@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Layout, ChevronRight } from 'lucide-react';
+import { Plus, Layout, ChevronRight, Zap, Network, Layers } from 'lucide-react';
 
 interface Project {
   id: string;
@@ -72,7 +72,7 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
             Welcome back.
           </h1>
           <p className="text-sm text-muted-foreground/60 font-medium tracking-wide">
-            You have <span className="text-primary">{projects.length}</span> active projects.
+            You have <span className="text-primary">{projects.length}</span> Project{projects.length === 1 ? '' : 's'} and <span className="text-primary">12</span> Tasks.
           </p>
         </div>
         
@@ -86,19 +86,26 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
       </header>
 
       {projects.length === 0 ? (
-        <div className="h-[400px] flex flex-col items-center justify-center rounded-[48px] border-2 border-dashed border-white/5 bg-white/[0.01]">
-           <div className="w-20 h-20 rounded-3xl bg-primary/5 flex items-center justify-center mb-6">
-              <Layout size={32} className="text-primary opacity-20" />
+        <div className="flex flex-col items-center justify-center py-10 w-full max-w-4xl mx-auto">
+           {/* Hero Icon */}
+           <div className="relative mb-8">
+              <div className="absolute inset-0 bg-primary/20 blur-3xl rounded-full" />
+              <div className="w-24 h-24 rounded-[32px] bg-gradient-to-br from-primary to-indigo-600 flex items-center justify-center border-4 border-background shadow-2xl relative z-10 shadow-primary/20">
+                 <Layout size={40} className="text-white fill-white/10" />
+              </div>
            </div>
-           <h2 className="text-xl font-bold">No active projects</h2>
-           <p className="text-sm text-muted-foreground/40 mt-2 mb-8 max-w-xs text-center">
-             Create your first project to get started.
+
+           <h2 className="text-5xl font-black tracking-tight text-center mb-6">Unleash <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-indigo-400">Taskinator</span></h2>
+           <p className="text-lg text-muted-foreground/80 text-center max-w-2xl leading-relaxed mb-16">
+             The ultimate task management suite built for high-performing teams. Transform chaotic workloads into clear, trackable steps.
            </p>
+
            <button
               onClick={onCreateProject}
-              className="px-8 py-3 rounded-2xl bg-primary text-white text-sm font-bold hover:bg-indigo-500 transition-all"
+              className="px-10 py-4 mb-20 rounded-full bg-primary text-white text-[15px] font-black hover:bg-indigo-500 transition-all shadow-[0_10px_40px_rgba(99,102,241,0.3)] hover:-translate-y-1 hover:scale-105 active:scale-95 flex items-center gap-3"
            >
-              Create Project
+              <Plus size={20} strokeWidth={3} />
+              Forge Your First Project
            </button>
         </div>
       ) : (
@@ -112,6 +119,44 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
           ))}
         </div>
       )}
+
+      {/* Feature Overview (Always visible) */}
+      <div className="mt-20 pt-16 border-t border-white/5">
+        <h3 className="text-2xl font-black tracking-tight mb-8">Taskinator Advantage</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 w-full pb-16">
+           <div className="glass p-8 rounded-3xl border border-white/5 flex flex-col hover:border-primary/20 transition-colors">
+              <div className="w-12 h-12 rounded-2xl bg-blue-500/10 text-blue-500 flex items-center justify-center mb-5">
+                 <Layers size={24} />
+              </div>
+              <h3 className="font-bold text-[15px] mb-2">Clear Organization</h3>
+              <p className="text-xs text-muted-foreground leading-relaxed">Break down massive projects into focused, bite-sized tasks with an elegant interface. Eliminate dashboard clutter.</p>
+           </div>
+
+           <div className="glass p-8 rounded-3xl border border-white/5 flex flex-col hover:border-primary/20 transition-colors">
+              <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 text-cyan-500 flex items-center justify-center mb-5">
+                 <Zap size={24} />
+              </div>
+              <h3 className="font-bold text-[15px] mb-2">Smart Automations</h3>
+              <p className="text-xs text-muted-foreground leading-relaxed">Automate workflows using task triggers. Ping external <b>Webhooks</b>, <b>Block Parent Tasks</b> until done, or auto-notify teams.</p>
+           </div>
+
+           <div className="glass p-8 rounded-3xl border border-white/5 flex flex-col hover:border-primary/20 transition-colors">
+              <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-500 flex items-center justify-center mb-5">
+                 <Layout size={24} />
+              </div>
+              <h3 className="font-bold text-[15px] mb-2">Real-Time Sync</h3>
+              <p className="text-xs text-muted-foreground leading-relaxed">Work seamlessly alongside your team. Every task status update synchronizes instantly to everyone's screen.</p>
+           </div>
+
+           <div className="glass p-8 rounded-3xl border border-white/5 flex flex-col hover:border-primary/20 transition-colors">
+              <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-500 flex items-center justify-center mb-5">
+                 <Network size={24} />
+              </div>
+              <h3 className="font-bold text-[15px] mb-2">Team Coordination</h3>
+              <p className="text-xs text-muted-foreground leading-relaxed">Group members together into dedicated teams to easily delegate objectives and distribute workforce effectively.</p>
+           </div>
+        </div>
+      </div>
     </div>
   );
 };

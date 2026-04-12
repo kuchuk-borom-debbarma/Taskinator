@@ -33,7 +33,7 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
           <Hexagon size={24} className="text-white fill-white/20" />
         </div>
         <div className="absolute left-[calc(100%+12px)] top-1/2 -translate-y-1/2 px-2 py-1 bg-white text-background text-[10px] font-bold rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-[100]">
-          Nebula Core
+          Taskinator
         </div>
       </div>
 
