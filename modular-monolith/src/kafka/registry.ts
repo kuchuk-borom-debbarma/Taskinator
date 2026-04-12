@@ -17,6 +17,8 @@ import { taskDeletedListener as triggerTaskCleanup } from '../modules/task-trigg
 
 import { userSignupStartedListener } from '../modules/auth/internal/listeners/UserSignupStartedListener.ts';
 import { userCreatedListener } from '../modules/auth/internal/listeners/UserCreatedListener.ts';
+import { realtimeKafkaConsumer } from '../modules/realtime/internal/RealtimeKafkaConsumer';
+
 
 export {
     taskProjectCleanup,
@@ -33,6 +35,7 @@ export {
     triggerTaskCleanup,
     userSignupStartedListener,
     userCreatedListener,
+    realtimeKafkaConsumer,
 };
 
 export const startConsumers = async () => {
@@ -60,6 +63,7 @@ export const startConsumers = async () => {
 
         userSignupStartedListener.init(),
         userCreatedListener.init(),
+        realtimeKafkaConsumer.init(),
     ]);
 };
 
@@ -84,5 +88,6 @@ export const stopConsumers = async () => {
 
         userSignupStartedListener.stop(),
         userCreatedListener.stop(),
+        realtimeKafkaConsumer.stop(),
     ]);
 };

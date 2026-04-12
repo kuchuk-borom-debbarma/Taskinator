@@ -1,73 +1,96 @@
 import React, { useEffect } from 'react';
 import { X } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '../utils/cn';
 
 interface ModalProps {
-    isOpen: boolean;
-    onClose: () => void;
-    title: string;
-    description?: string;
-    children: React.ReactNode;
-    footer?: React.ReactNode;
+  isOpen: boolean;
+  onClose: () => void;
+  title: string;
+  description?: string;
+  children: React.ReactNode;
+  footer?: React.ReactNode;
+  size?: 'sm' | 'md' | 'lg' | 'xl';
 }
 
-export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, description, children, footer }) => {
-    useEffect(() => {
-        const handleEsc = (e: KeyboardEvent) => {
-            if (e.key === 'Escape') onClose();
-        };
-        if (isOpen) {
-            document.body.style.overflow = 'hidden';
-            window.addEventListener('keydown', handleEsc);
-        }
-        return () => {
-            document.body.style.overflow = 'unset';
-            window.removeEventListener('keydown', handleEsc);
-        };
-    }, [isOpen, onClose]);
+const sizes = {
+  sm: 'max-w-md',
+  md: 'max-w-xl',
+  lg: 'max-w-3xl',
+  xl: 'max-w-5xl',
+};
 
-    if (!isOpen) return null;
+export const Modal: React.FC<ModalProps> = ({
+  isOpen,
+  onClose,
+  title,
+  description,
+  children,
+  footer,
+  size = 'sm',
+}) => {
+  useEffect(() => {
+    if (isOpen) document.body.style.overflow = 'hidden';
+    else document.body.style.overflow = 'unset';
+    return () => { document.body.style.overflow = 'unset'; };
+  }, [isOpen]);
 
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
-            {/* Backdrop */}
-            <div 
-                className="fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity animate-in fade-in duration-200"
-                onClick={onClose}
-            />
-            
-            {/* Modal Panel */}
-            <div 
-                className={cn(
-                    "relative w-full max-w-lg bg-[#0d0d0d] border border-border/50 rounded-xl shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200",
-                )}
-            >
-                {/* Header */}
-                <div className="flex items-center justify-between px-6 py-4 border-b border-border/30 bg-secondary/10">
-                    <div className="space-y-1">
-                        <h3 className="text-sm font-bold tracking-tight text-foreground">{title}</h3>
-                        {description && <p className="text-[11px] text-muted-foreground">{description}</p>}
-                    </div>
-                    <button 
-                        onClick={onClose}
-                        className="p-1.5 hover:bg-secondary rounded-md text-muted-foreground hover:text-foreground transition-all"
-                    >
-                        <X size={16} />
-                    </button>
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Backdrop */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="absolute inset-0 bg-background/80 backdrop-blur-md"
+          />
+
+          {/* Modal Container */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+            className={cn(
+              "relative w-full glass rounded-[24px] shadow-2xl flex flex-col overflow-hidden border border-white/5",
+              sizes[size]
+            )}
+          >
+            {/* Header */}
+            <div className="px-8 pt-8 pb-4">
+              <div className="flex items-center justify-between">
+                <div className="space-y-1">
+                  <h3 className="text-xl font-bold tracking-tight text-foreground">{title}</h3>
+                  {description && (
+                    <p className="text-sm text-muted-foreground/60">{description}</p>
+                  )}
                 </div>
-                
-                {/* Body */}
-                <div className="flex-1 p-6 overflow-y-auto">
-                    {children}
-                </div>
-
-                {/* Footer */}
-                {footer && (
-                    <div className="px-6 py-4 bg-secondary/5 border-t border-border/30 flex items-center justify-end gap-3">
-                        {footer}
-                    </div>
-                )}
+                <button
+                  onClick={onClose}
+                  className="p-2 hover:bg-white/5 rounded-full text-muted-foreground hover:text-foreground transition-all"
+                >
+                  <X size={20} />
+                </button>
+              </div>
             </div>
+
+            {/* Content */}
+            <div className="px-8 pb-8 pt-2 overflow-y-auto max-h-[70vh] custom-scrollbar">
+              {children}
+            </div>
+
+            {/* Footer */}
+            {footer && (
+              <div className="px-8 py-6 bg-white/[0.02] border-t border-white/5 flex items-center justify-end gap-3">
+                {footer}
+              </div>
+            )}
+          </motion.div>
         </div>
-    );
+      )}
+    </AnimatePresence>
+  );
 };
