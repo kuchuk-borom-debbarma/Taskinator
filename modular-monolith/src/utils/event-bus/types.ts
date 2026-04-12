@@ -27,13 +27,4 @@ export interface Bus {
     init(): Promise<void>;
 
     destroy(): Promise<void>;
-
-    // Legacy support for manual topic/event management
-    emit(topic: string, event: DomainEvent | DomainEvent[]): Promise<void>;
-
-    on(
-        topic: string,
-        groupId: string,
-        handlers: Record<string, (data: any) => Promise<void>>,
-    ): Promise<void>;
 }
