@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Layout, ChevronRight, Zap, Network, Layers } from 'lucide-react';
+import { Plus, Layout, ChevronRight, Zap, Network, Layers, GitBranch, Server, Database, Cpu, Code, Shield } from 'lucide-react';
 
 interface Project {
   id: string;
@@ -155,6 +155,86 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
               <h3 className="font-bold text-[15px] mb-2">Team Coordination</h3>
               <p className="text-xs text-muted-foreground leading-relaxed">Group members together into dedicated teams to easily delegate objectives and distribute workforce effectively.</p>
            </div>
+        </div>
+      </div>
+
+      {/* For Developers / Technical Architecture */}
+      <div className="mt-8 pt-16 border-t border-white/5 pb-20">
+        <div className="flex flex-col md:flex-row gap-12 items-start justify-between">
+            <div className="md:w-1/3">
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-6">
+                 <Code size={12} /> Under the hood
+              </div>
+              <h3 className="text-3xl font-black tracking-tight mb-4">Architecture.</h3>
+              <p className="text-sm text-muted-foreground/80 leading-relaxed mb-8">
+                 Taskinator is built on a modular monolith with an emphasis on data integrity, event-driven patterns, and high throughput.
+              </p>
+              <a 
+                 href="https://github.com/kuchuk-borom-debbarma/Taskinator" 
+                 target="_blank" 
+                 rel="noreferrer"
+                 className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-sm font-bold transition-all hover:border-white/20"
+              >
+                 <GitBranch size={18} />
+                 Open Source on GitHub
+              </a>
+            </div>
+
+            <div className="md:w-2/3 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+               {/* 1 */}
+               <div className="glass p-6 rounded-2xl border border-white/5 hover:border-primary/20 transition-all flex flex-col gap-3">
+                  <div className="p-3 bg-indigo-500/10 text-indigo-400 rounded-xl w-max"><Zap size={18} /></div>
+                  <div>
+                     <h4 className="font-bold text-[13px] mb-1">Event-Driven Pattern</h4>
+                     <p className="text-[11px] text-muted-foreground leading-relaxed">A decoupled message bus powered by Kafka. Domains communicate entirely via asynchronous pub/sub events.</p>
+                  </div>
+               </div>
+
+               {/* 2 */}
+               <div className="glass p-6 rounded-2xl border border-white/5 hover:border-primary/20 transition-all flex flex-col gap-3">
+                  <div className="p-3 bg-amber-500/10 text-amber-500 rounded-xl w-max"><Database size={18} /></div>
+                  <div>
+                     <h4 className="font-bold text-[13px] mb-1">Transactional Outbox</h4>
+                     <p className="text-[11px] text-muted-foreground leading-relaxed">Prevents dual-write failures. Domain mutations and outgoing events are persisted atomically to guarantee exactly-once delivery.</p>
+                  </div>
+               </div>
+
+               {/* 3 */}
+               <div className="glass p-6 rounded-2xl border border-white/5 hover:border-primary/20 transition-all flex flex-col gap-3">
+                  <div className="p-3 bg-red-500/10 text-red-500 rounded-xl w-max"><Server size={18} /></div>
+                  <div>
+                     <h4 className="font-bold text-[13px] mb-1">Batched Mutations</h4>
+                     <p className="text-[11px] text-muted-foreground leading-relaxed">Optimized for high-throughput writes. Uses database-level batching and 2-call validation buffers to handle mass requests.</p>
+                  </div>
+               </div>
+
+               {/* 4 */}
+               <div className="glass p-6 rounded-2xl border border-white/5 hover:border-primary/20 transition-all flex flex-col gap-3">
+                  <div className="p-3 bg-emerald-500/10 text-emerald-500 rounded-xl w-max"><Network size={18} /></div>
+                  <div>
+                     <h4 className="font-bold text-[13px] mb-1">Hierarchical Data</h4>
+                     <p className="text-[11px] text-muted-foreground leading-relaxed">Uses combination of Closure Tables and Materialized Paths in Postgres to ensure O(1) read performance for deep hierarchies.</p>
+                  </div>
+               </div>
+               
+               {/* 5 */}
+               <div className="glass p-6 rounded-2xl border border-white/5 hover:border-primary/20 transition-all flex flex-col gap-3">
+                  <div className="p-3 bg-pink-500/10 text-pink-500 rounded-xl w-max"><Cpu size={18} /></div>
+                  <div>
+                     <h4 className="font-bold text-[13px] mb-1">Apollo DataLoaders</h4>
+                     <p className="text-[11px] text-muted-foreground leading-relaxed">Eliminates N+1 relational bottlenecks via batched GraphQL DataLoaders, utilizing deterministic tie-breakers for cursor pagination.</p>
+                  </div>
+               </div>
+
+               {/* 6 */}
+               <div className="glass p-6 rounded-2xl border border-white/5 hover:border-primary/20 transition-all flex flex-col gap-3">
+                  <div className="p-3 bg-cyan-500/10 text-cyan-500 rounded-xl w-max"><Shield size={18} /></div>
+                  <div>
+                     <h4 className="font-bold text-[13px] mb-1">Optimistic Concurrency</h4>
+                     <p className="text-[11px] text-muted-foreground leading-relaxed">Maintains distributed data integrity using version-based optimistic locking and strict UTC timelines across the data layer.</p>
+                  </div>
+               </div>
+            </div>
         </div>
       </div>
     </div>
