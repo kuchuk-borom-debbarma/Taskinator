@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle2, Circle, ChevronRight, Folder, MoreVertical, Plus } from 'lucide-react';
+import { CheckCircle2, Circle, ChevronRight, Folder, MoreVertical, Plus, Zap, Users2, User } from 'lucide-react';
 import { cn } from '../utils/cn';
 
 interface Task {
@@ -9,6 +9,9 @@ interface Task {
   status: string;
   parentTaskId?: string | null;
   version: number;
+  team?: { id: string; name: string } | null;
+  assignee?: { id: string; username: string } | null;
+  triggers?: any[];
 }
 
 interface TaskDrillViewProps {
@@ -122,6 +125,39 @@ export const TaskDrillView: React.FC<TaskDrillViewProps> = ({
                      )}>
                         {task.title}
                      </span>
+                     
+                     <div className="flex items-center gap-2 mt-2 flex-wrap">
+                        {/* Status Badge */}
+                        <div className={cn("px-2 py-0.5 rounded-[6px] text-[10px] font-black uppercase tracking-widest border",
+                           task.status === 'DONE' ? "bg-primary/10 text-primary border-primary/20" :
+                           task.status === 'BLOCKED' ? "bg-red-500/10 text-red-500 border-red-500/20" :
+                           task.status === 'IN_PROGRESS' ? "bg-amber-500/10 text-amber-500 border-amber-500/20" :
+                           "bg-white/5 text-muted-foreground border-white/10"
+                        )}>
+                           {task.status === 'IN_PROGRESS' ? 'In Progress' : task.status}
+                        </div>
+
+                        {/* Team Badge */}
+                        {task.team && (
+                          <div className="px-2 py-0.5 rounded-[6px] bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-[10px] font-bold flex items-center gap-1">
+                             <Users2 size={10} /> <span className="truncate max-w-[100px]">{task.team.name}</span>
+                          </div>
+                        )}
+
+                        {/* Assignee Badge */}
+                        {task.assignee && (
+                          <div className="px-2 py-0.5 rounded-[6px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-bold flex items-center gap-1">
+                             <User size={10} /> <span className="truncate max-w-[80px]">{task.assignee.username}</span>
+                          </div>
+                        )}
+
+                        {/* Trigger / Automation Badge */}
+                        {(task.triggers?.length ?? 0) > 0 && (
+                          <div className="px-2 py-0.5 rounded-[6px] bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 text-[10px] font-bold flex items-center gap-1" title="Active Automations">
+                             <Zap size={10} /> {task.triggers!.length} active
+                          </div>
+                        )}
+                     </div>
                   </div>
                </div>
 

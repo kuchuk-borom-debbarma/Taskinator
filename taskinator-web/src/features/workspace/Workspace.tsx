@@ -743,19 +743,81 @@ export const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
         }
       >
         <div className="space-y-4">
-           <input 
-             placeholder="Automation Name"
-             value={triggerForm.name}
-             onChange={(e) => setTriggerForm({...triggerForm, name: e.target.value})}
-             className="w-full glass rounded-xl p-3 text-sm outline-none"
-           />
-           <select 
-              value={triggerForm.type}
-              onChange={(e) => setTriggerForm({...triggerForm, type: e.target.value as any})}
-              className="w-full glass rounded-xl p-3 text-sm outline-none"
-           >
-              <option value="BLOCK_PARENT_DONE">Block Parent until Done</option>
-           </select>
+           <div>
+             <label className="text-[10px] font-bold text-muted-foreground uppercase pl-1 block mb-1">Automation Name</label>
+             <input 
+               placeholder="e.g., Ping Marketing Team on Done"
+               value={triggerForm.name}
+               onChange={(e) => setTriggerForm({...triggerForm, name: e.target.value})}
+               className="w-full glass border border-white/5 focus:border-amber-500/50 rounded-xl p-3 text-sm outline-none transition-colors"
+             />
+           </div>
+
+           <div>
+             <label className="text-[10px] font-bold text-muted-foreground uppercase pl-1 block mb-1">Trigger Type</label>
+             <select 
+                value={triggerForm.type}
+                onChange={(e) => {
+                  const type = e.target.value as TaskTriggerType;
+                  let data = {};
+                  if (type === 'BLOCK_PARENT_DONE') data = { revertStatusTo: 'IN_PROGRESS' };
+                  if (type === 'WEBHOOK') data = { url: '' };
+                  if (type === 'NOTIFY_PARENT_TEAM' || type === 'NOTIFY_TASK_TEAM') data = { message: '' };
+                  setTriggerForm({...triggerForm, type, data});
+                }}
+                className="w-full glass border border-white/5 focus:border-amber-500/50 rounded-xl p-3 text-sm outline-none transition-colors"
+             >
+                <option value="BLOCK_PARENT_DONE">Guard: Block Parent Completion</option>
+                <option value="WEBHOOK">System: Outbound Webhook</option>
+                <option value="NOTIFY_PARENT_TEAM">Alert: Notify Parent Team</option>
+                <option value="NOTIFY_TASK_TEAM">Alert: Notify Task Team</option>
+             </select>
+           </div>
+
+           {/* Dynamic Parameter Rendering */}
+           <div className="pt-4 border-t border-white/5 space-y-4">
+             {triggerForm.type === 'BLOCK_PARENT_DONE' && (
+               <div>
+                 <label className="text-[10px] font-bold text-muted-foreground uppercase pl-1 block mb-1">Revert Status To</label>
+                 <select 
+                    value={triggerForm.data.revertStatusTo || 'IN_PROGRESS'}
+                    onChange={(e) => setTriggerForm({...triggerForm, data: { ...triggerForm.data, revertStatusTo: e.target.value }})}
+                    className="w-full glass border border-white/5 focus:border-amber-500/50 rounded-xl p-3 text-sm outline-none transition-colors"
+                 >
+                    <option value="TODO">TODO (Not Started)</option>
+                    <option value="IN_PROGRESS">IN_PROGRESS (Working)</option>
+                    <option value="BLOCKED">BLOCKED (Blocked)</option>
+                    <option value="DONE">DONE (Completed)</option>
+                 </select>
+                 <p className="text-[10px] text-muted-foreground/60 mt-1 pl-1">If the parent task is marked DONE prematurely, it will be immediately reverted to this status.</p>
+               </div>
+             )}
+
+             {triggerForm.type === 'WEBHOOK' && (
+               <div>
+                 <label className="text-[10px] font-bold text-muted-foreground uppercase pl-1 block mb-1">Webhook Target URL</label>
+                 <input 
+                   placeholder="https://api.example.com/webhook"
+                   value={triggerForm.data.url || ''}
+                   onChange={(e) => setTriggerForm({...triggerForm, data: { ...triggerForm.data, url: e.target.value }})}
+                   className="w-full glass border border-white/5 focus:border-amber-500/50 rounded-xl p-3 text-sm outline-none transition-colors"
+                 />
+                 <p className="text-[10px] text-muted-foreground/60 mt-1 pl-1">We will POST a JSON payload to this endpoint when the task updates.</p>
+               </div>
+             )}
+
+             {(triggerForm.type === 'NOTIFY_PARENT_TEAM' || triggerForm.type === 'NOTIFY_TASK_TEAM') && (
+               <div>
+                 <label className="text-[10px] font-bold text-muted-foreground uppercase pl-1 block mb-1">Notification Message</label>
+                 <textarea 
+                   placeholder="This task has been completed. Please review."
+                   value={triggerForm.data.message || ''}
+                   onChange={(e) => setTriggerForm({...triggerForm, data: { ...triggerForm.data, message: e.target.value }})}
+                   className="w-full glass border border-white/5 focus:border-amber-500/50 rounded-xl p-3 text-sm outline-none transition-colors resize-none h-24"
+                 />
+               </div>
+             )}
+           </div>
         </div>
       </Modal>
       <Modal
