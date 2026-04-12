@@ -5,7 +5,6 @@ import teamRoutes from '../modules/team/team.routes';
 import taskRoutes from '../modules/task/task.routes';
 import authRoutes from '../modules/auth/auth.routes.ts';
 import notificationRoutes from '../modules/internal-notification/internal-notification.routes.ts';
-import realtimeRoutes from '../modules/realtime/realtime.routes.ts';
 import { yoga } from '../graphql';
 
 /**
@@ -39,7 +38,6 @@ export const startRestServer = (port: number = 3000): Promise<express.Applicatio
         app.use('/tasks', taskRoutes);
         app.use('/auth', authRoutes);
         app.use('/notifications', notificationRoutes);
-        app.use('/realtime', realtimeRoutes);
         app.use('/graphql', (req, res) => yoga(req, res));
 
         const server = app.listen(port, () => {
