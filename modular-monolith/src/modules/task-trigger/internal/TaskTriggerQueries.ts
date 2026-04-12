@@ -114,28 +114,20 @@ export const countIncompleteChildren = async (
     taskId: string,
 ): Promise<number> => {
     // We use materialized_path to find all descendants in one efficient query.
-    // A descendant's path starts with 'parentPath/taskId' or is just 'taskId'.
+    // A descendant's path either equals the parent's full path (Path + ID) or starts with it.
+    // This consolidated query leverages the idx_project_task_path index.
     const result = await sql<{ count: string }>`
-        WITH parent_task AS (
-            SELECT id, materialized_path 
-            FROM project_task 
-            WHERE id = ${taskId}::uuid
-        )
         SELECT count(*) as count
         FROM project_task
         WHERE status != 'DONE'
           AND (
-            -- Case 1: Direct children (legacy check for safety)
-            fk_parent_task_id = ${taskId}::uuid
-            OR 
-            -- Case 2: Deep descendants using materialized path
-            materialized_path = (SELECT CASE WHEN materialized_path = '' THEN id::text ELSE materialized_path || '/' || id::text END FROM parent_task)
-            OR
             materialized_path LIKE (
                 SELECT CASE 
-                    WHEN materialized_path = '' THEN id::text || '/%'
-                    ELSE materialized_path || '/' || id::text || '/%'
-                END FROM parent_task
+                    WHEN materialized_path = '' THEN id::text || '%'
+                    ELSE materialized_path || '/' || id::text || '%'
+                END 
+                FROM project_task 
+                WHERE id = ${taskId}::uuid
             )
           )
     `.execute(db);
