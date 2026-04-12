@@ -16,9 +16,9 @@ import {
     getProjectsByIds,
     getUserProjectIds,
     insertProject,
-    insertProjectMembers,
     insertProjects,
     searchProjectMembers,
+    updateProject,
 } from './ProjectQueries.ts';
 
 import eventBus, { KAFKA_EVENTS } from '../../../utils/EventBus.ts';
@@ -122,5 +122,11 @@ export class ProjectServiceImpl implements ProjectService {
         limit?: number;
     }): Promise<{ users: { id: string; username: string; email: string }[]; nextCursor: string | null }> {
         return searchProjectMembers(params);
+    }
+
+    async updateProject(data: { userId: string; projectId: string; name?: string; description?: string | null }): Promise<Project | null> {
+        const project = await updateProject(data);
+        if (!project) throw new Error('Failed to update project or unauthorized');
+        return project;
     }
 }

@@ -60,6 +60,15 @@ export const projectResolvers = {
         userId: context.userId,
       });
     },
+    updateProject: async (_: any, { id, name, description }: any, context: GraphQLContext) => {
+      if (!context.userId) throw new Error('Unauthorized');
+      return projectService.updateProject({
+        userId: context.userId,
+        projectId: id,
+        name,
+        description,
+      });
+    },
     deleteProjects: async (_: any, { projectIds }: any, context: GraphQLContext) => {
       if (!context.userId) throw new Error('Unauthorized');
       await projectService.deleteProjects({

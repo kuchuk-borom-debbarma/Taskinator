@@ -47,17 +47,6 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
           isActive={!selectedProjectId}
           onClick={() => onSelectProject('')}
         />
-        <RailItem
-          icon={<Hash size={20} />}
-          label="Projects"
-          isActive={!!selectedProjectId}
-          onClick={() => {/* could open project switcher */}}
-        />
-        <RailItem
-          icon={<Users2 size={20} />}
-          label="Teams"
-          onClick={() => {}}
-        />
 
         <div className="w-8 h-[1px] bg-white/5 shrink-0 my-2" />
 
@@ -82,11 +71,6 @@ export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
 
       {/* Footer Actions */}
       <div className="flex flex-col gap-4 mt-auto">
-        <RailItem
-          icon={<Settings size={20} />}
-          label="Settings"
-          onClick={() => {}}
-        />
         <div className="relative group">
            <div className="h-10 w-10 rounded-xl bg-secondary border border-white/5 flex items-center justify-center text-xs font-bold cursor-pointer hover:border-primary/40 transition-all">
              {username?.substring(0, 1).toUpperCase() || '?'}

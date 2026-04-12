@@ -41,27 +41,19 @@ const ProjectCard: React.FC<{ project: Project; onClick: () => void }> = ({ proj
             {project.name}
           </h3>
           <p className="text-xs text-muted-foreground/60 mt-1 line-clamp-2 leading-relaxed">
-            {project.description || 'Global workspace for distributed engineering and agile coordination.'}
+            {project.description || 'No description provided.'}
           </p>
         </div>
       </div>
 
       <div className="flex items-center justify-between pt-4 border-t border-white/5">
         <div className="flex items-center gap-2">
-           <div className="flex -space-x-2">
-              {[1, 2].map((i) => (
-                <div key={i} className="w-6 h-6 rounded-full border-2 border-[#0d0d0d] bg-secondary flex items-center justify-center text-[8px] font-bold">
-                  {project.creator?.username?.substring(0, 1).toUpperCase() || 'U'}
-                </div>
-              ))}
+           <div className="w-6 h-6 rounded-full border-2 border-[#0d0d0d] bg-secondary flex items-center justify-center text-[8px] font-bold">
+             {project.creator?.username?.substring(0, 1).toUpperCase() || '?'}
            </div>
-           <span className="text-[10px] font-bold text-muted-foreground/40 uppercase tracking-widest">
-             {project.memberCount || 2} Members
+           <span className="text-[10px] font-bold text-muted-foreground/40 tracking-widest">
+             Owner: {project.creator?.username || 'Unknown'}
            </span>
-        </div>
-        <div className="flex items-center gap-1.5 text-[10px] font-bold text-muted-foreground/30 capitalize">
-          <Clock size={12} />
-          Active
         </div>
       </div>
     </motion.div>
@@ -81,7 +73,7 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
             Welcome back.
           </h1>
           <p className="text-sm text-muted-foreground/60 font-medium tracking-wide">
-            You have <span className="text-primary">{projects.length}</span> active workspaces under surveillance.
+            You have <span className="text-primary">{projects.length}</span> active projects.
           </p>
         </div>
         
@@ -90,7 +82,7 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
           className="flex items-center gap-2.5 px-6 py-3 rounded-2xl bg-white text-background text-[13px] font-bold hover:bg-white/90 transition-all shadow-2xl shadow-white/10 active:scale-95"
         >
           <Plus size={18} strokeWidth={2.5} />
-          Forge Project
+          Create Project
         </button>
       </header>
 
@@ -99,15 +91,15 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
            <div className="w-20 h-20 rounded-3xl bg-primary/5 flex items-center justify-center mb-6">
               <Layout size={32} className="text-primary opacity-20" />
            </div>
-           <h2 className="text-xl font-bold">No active repositories</h2>
+           <h2 className="text-xl font-bold">No active projects</h2>
            <p className="text-sm text-muted-foreground/40 mt-2 mb-8 max-w-xs text-center">
-             Create your first top-level workspace to begin high-performance orchestration.
+             Create your first project to get started.
            </p>
            <button
               onClick={onCreateProject}
               className="px-8 py-3 rounded-2xl bg-primary text-white text-sm font-bold hover:bg-indigo-500 transition-all"
            >
-              Create Repository
+              Create Project
            </button>
         </div>
       ) : (

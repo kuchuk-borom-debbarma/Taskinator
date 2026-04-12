@@ -211,6 +211,17 @@ export const DELETE_PROJECTS = gql`
   }
 `;
 
+export const UPDATE_PROJECT = gql`
+  mutation UpdateProject($id: ID!, $name: String, $description: String) {
+    updateProject(id: $id, name: $name, description: $description) {
+      id
+      name
+      description
+      updatedAt
+    }
+  }
+`;
+
 export const CREATE_TASK = gql`
   mutation CreateTask($projectId: ID!, $title: String!, $description: String!, $teamId: ID, $parentTaskId: ID) {
     createTask(projectId: $projectId, title: $title, description: $description, teamId: $teamId, parentTaskId: $parentTaskId) {

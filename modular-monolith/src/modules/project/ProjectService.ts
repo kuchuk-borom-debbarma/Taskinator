@@ -57,6 +57,8 @@ export interface ProjectService extends BaseService {
      */
     createProjects(data: CreateProjectParam[]): Promise<Project[]>;
 
+    updateProject(data: { userId: string; projectId: string; name?: string; description?: string | null }): Promise<Project | null>;
+
     deleteProjects(data: DeleteProjectsParam): Promise<void>;
 
     /**

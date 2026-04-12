@@ -457,3 +457,56 @@ export const getProjectsByIds = async (
 
     return result.rows;
 };
+
+export interface UpdateProjectParam {
+    userId: string;
+    projectId: string;
+    name?: string;
+    description?: string | null;
+}
+
+export const updateProject = async (
+    data: UpdateProjectParam,
+): Promise<Project | null> => {
+    const result = await sql<Project>`
+        WITH auth_check AS (
+            SELECT 1 FROM project WHERE id = ${data.projectId}::uuid AND fk_user_id = ${data.userId}
+            UNION ALL
+            SELECT 1 FROM project_member WHERE fk_project_id = ${data.projectId}::uuid AND fk_user_id = ${data.userId}
+            LIMIT 1
+        ),
+        updated_project AS (
+            UPDATE project
+            SET name = CASE WHEN ${data.name !== undefined} THEN ${data.name ?? null} ELSE name END,
+                description = CASE WHEN ${data.description !== undefined} THEN ${data.description ?? null} ELSE description END,
+                version = version + 1,
+                updated_at = ${getTimeString()}
+            WHERE id = ${data.projectId}::uuid
+              AND EXISTS (SELECT 1 FROM auth_check)
+            RETURNING *
+        ),
+        inserted_outbox AS (
+            INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
+            SELECT 'project.updated',
+                   id::text,
+                   jsonb_build_object(
+                       'projectId', id,
+                       'userId', ${data.userId}::text,
+                       'updates', ${JSON.stringify({ name: data.name, description: data.description })}::jsonb
+                   )
+            FROM updated_project
+        )
+        SELECT 
+            id,
+            name,
+            description,
+            fk_user_id AS "userId",
+            version,
+            last_event_id AS "lastEventId",
+            created_at AS "createdAt",
+            updated_at AS "updatedAt"
+        FROM updated_project
+    `.execute(db);
+
+    return result.rows[0] || null;
+};
