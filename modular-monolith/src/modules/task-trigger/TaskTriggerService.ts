@@ -26,6 +26,13 @@ export interface TaskTriggerService extends BaseService {
         triggerType: TaskTriggerType;
         triggerData: any;
     }): Promise<void>;
+    updateTrigger(data: {
+        userId: string;
+        triggerId: string;
+        name?: string;
+        triggerType?: TaskTriggerType;
+        triggerData?: any;
+    }): Promise<void>;
     getTriggersForTask(data: {
         taskId: string;
         cursor?: string;

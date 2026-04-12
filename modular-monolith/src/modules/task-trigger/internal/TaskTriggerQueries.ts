@@ -29,6 +29,33 @@ export const insertTaskTrigger = async (data: {
     `.execute(db);
 };
 
+export const updateTaskTrigger = async (data: {
+    userId: string;
+    triggerId: string;
+    name?: string;
+    triggerType?: TaskTriggerType;
+    triggerData?: any;
+}) => {
+    await sql`
+        WITH auth_check AS (
+            SELECT 1 FROM project p
+            WHERE p.id = (SELECT fk_project_id FROM project_task_trigger_table WHERE id = ${data.triggerId}::uuid)
+              AND (p.fk_user_id = ${data.userId} OR EXISTS (
+                SELECT 1 FROM project_member pm 
+                WHERE pm.fk_project_id = p.id AND pm.fk_user_id = ${data.userId}
+              ))
+            LIMIT 1
+        )
+        UPDATE project_task_trigger_table
+        SET name = CASE WHEN ${data.name !== undefined} THEN ${data.name ?? null} ELSE name END,
+            trigger_type = CASE WHEN ${data.triggerType !== undefined} THEN ${data.triggerType ?? null} ELSE trigger_type END,
+            trigger_data = CASE WHEN ${data.triggerData !== undefined} THEN ${data.triggerData}::jsonb ELSE trigger_data END,
+            updated_at = ${getTimeString()}
+        WHERE id = ${data.triggerId}::uuid
+          AND EXISTS (SELECT 1 FROM auth_check)
+    `.execute(db);
+};
+
 export const getTaskTriggersByTaskId = async (data: {
     taskId: string;
     cursor?: string;

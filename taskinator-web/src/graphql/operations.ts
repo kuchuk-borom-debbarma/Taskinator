@@ -428,6 +428,16 @@ export const DELETE_TASK_TRIGGER = gql`
   }
 `;
 
+export const UPDATE_TASK_TRIGGER = gql`
+  mutation UpdateTaskTrigger($triggerId: ID!, $name: String, $triggerType: String, $triggerData: String) {
+    updateTaskTrigger(triggerId: $triggerId, name: $name, triggerType: $triggerType, triggerData: $triggerData) {
+      id
+      name
+      triggerType
+    }
+  }
+`;
+
 export const MARK_NOTIFICATION_READ = gql`
   mutation MarkRead($id: ID!) {
     markNotificationAsRead(id: $id)

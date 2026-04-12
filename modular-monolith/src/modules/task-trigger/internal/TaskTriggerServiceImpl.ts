@@ -8,6 +8,7 @@ import {
     getTaskTriggersByTaskId,
     getTriggersByTaskIds,
     insertTaskTrigger,
+    updateTaskTrigger
 } from './TaskTriggerQueries.ts';
 import eventBus from '../../../utils/EventBus.ts';
 
@@ -21,6 +22,16 @@ export class TaskTriggerServiceImpl implements TaskTriggerService {
         triggerData: any;
     }): Promise<void> {
         await insertTaskTrigger(data);
+    }
+
+    async updateTrigger(data: {
+        userId: string;
+        triggerId: string;
+        name?: string;
+        triggerType?: TaskTriggerType;
+        triggerData?: any;
+    }): Promise<void> {
+        await updateTaskTrigger(data);
     }
 
     async getTriggersForTask(data: {

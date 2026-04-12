@@ -26,7 +26,7 @@ import { gqlClient } from '../../graphql/client';
 import {
   GET_PROJECTS, GET_WORKSPACE_DATA, GET_PROJECT_MEMBERS, GET_TEAM_MEMBERS, GET_UNREAD_NOTIFICATIONS_COUNT,
   CREATE_PROJECT, UPDATE_PROJECT, DELETE_PROJECTS, CREATE_TEAM, DELETE_TEAMS, ADD_PROJECT_MEMBERS, REMOVE_PROJECT_MEMBERS, ADD_TEAM_MEMBERS, REMOVE_TEAM_MEMBERS,
-  CREATE_TASK, UPDATE_TASKS, DELETE_TASKS, ADD_TASK_TRIGGER, DELETE_TASK_TRIGGER
+  CREATE_TASK, UPDATE_TASKS, DELETE_TASKS, ADD_TASK_TRIGGER, DELETE_TASK_TRIGGER, UPDATE_TASK_TRIGGER
 } from '../../graphql/operations';
 import { cn } from '../../utils/cn';
 
@@ -59,6 +59,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
   const [parentTaskIdForNew, setParentTaskIdForNew] = useState<string>();
 
   const [isCreateTriggerOpen, setIsCreateTriggerOpen] = useState(false);
+  const [editTriggerId, setEditTriggerId] = useState<string | null>(null);
   const [triggerForm, setTriggerForm] = useState<{ name: string; type: TaskTriggerType; data: any }>({
     name: '',
     type: 'BLOCK_PARENT_DONE',
@@ -133,6 +134,17 @@ export const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
         name: data.name,
         triggerType: data.triggerType,
         triggerData: JSON.stringify(data.triggerData)
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['workspace', selectedProjectId, userId] }),
+  });
+
+  const updateTaskTriggerMutation = useMutation({
+    mutationFn: (data: { triggerId: string; name?: string; triggerType?: TaskTriggerType; triggerData?: any }) =>
+      gqlClient.request<any>(UPDATE_TASK_TRIGGER, {
+        triggerId: data.triggerId,
+        name: data.name,
+        triggerType: data.triggerType,
+        triggerData: data.triggerData ? JSON.stringify(data.triggerData) : undefined
       }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['workspace', selectedProjectId, userId] }),
   });
@@ -579,24 +591,48 @@ export const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
                     Automations
                  </h4>
                  <div className="grid grid-cols-1 gap-2">
-                    {taskTriggers.map(t => (
-                      <div key={t.id} className="group p-3 glass rounded-xl flex items-center justify-between border-white/[0.02]">
-                         <div className="flex flex-col">
-                            <span className="text-xs font-bold">{t.name}</span>
-                            <span className="text-[9px] uppercase tracking-wider text-muted-foreground opacity-60">{t.triggerType}</span>
-                         </div>
-                         <button 
-                            onClick={() => deleteTaskTriggerMutation.mutate(t.id)}
-                            className="p-1 px-2.5 bg-red-500/10 text-red-500 rounded-lg text-[10px] font-bold opacity-0 group-hover:opacity-100 transition-opacity"
-                         >
-                            Delete
-                         </button>
-                      </div>
-                    ))}
-                    <button 
-                      onClick={() => setIsCreateTriggerOpen(true)}
-                      className="w-full py-2.5 border border-dashed border-white/10 rounded-2xl text-[11px] font-bold text-muted-foreground hover:bg-white/5 hover:border-primary/20 transition-all"
-                    >
+                     {taskTriggers.map(t => (
+                       <div key={t.id} className="group p-3 glass rounded-xl flex items-center justify-between border-white/[0.02]">
+                          <div className="flex flex-col flex-1 truncate pr-3">
+                             <span className="text-xs font-bold truncate">{t.name}</span>
+                             <span className="text-[9px] uppercase tracking-wider text-muted-foreground opacity-60">{t.triggerType}</span>
+                          </div>
+                          <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                             <button 
+                                onClick={() => {
+                                  setEditTriggerId(t.id);
+                                  setTriggerForm({
+                                    name: t.name,
+                                    type: t.triggerType as TaskTriggerType,
+                                    data: t.triggerData || {}
+                                  });
+                                  setIsCreateTriggerOpen(true);
+                                }}
+                                className="p-1 px-2.5 bg-blue-500/10 text-blue-400 rounded-lg text-[10px] font-bold"
+                             >
+                                Edit
+                             </button>
+                             <button 
+                                onClick={() => deleteTaskTriggerMutation.mutate(t.id)}
+                                className="p-1 px-2.5 bg-red-500/10 text-red-500 rounded-lg text-[10px] font-bold"
+                             >
+                                Delete
+                             </button>
+                          </div>
+                       </div>
+                     ))}
+                     <button 
+                       onClick={() => {
+                         setEditTriggerId(null);
+                         setTriggerForm({
+                           name: '',
+                           type: 'BLOCK_PARENT_DONE',
+                           data: { revertStatusTo: 'IN_PROGRESS' }
+                         });
+                         setIsCreateTriggerOpen(true);
+                       }}
+                       className="w-full py-2.5 border border-dashed border-white/10 rounded-2xl text-[11px] font-bold text-muted-foreground hover:bg-white/5 hover:border-primary/20 transition-all"
+                     >
                        + Add Automation
                     </button>
                  </div>
@@ -725,20 +761,30 @@ export const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
       <Modal
         isOpen={isCreateTriggerOpen}
         onClose={() => setIsCreateTriggerOpen(false)}
-        title="Add Automation"
+        title={editTriggerId ? "Edit Automation" : "Add Automation"}
         footer={
           <button 
+            disabled={!triggerForm.name.trim()}
             onClick={() => {
-              addTaskTriggerMutation.mutate({ 
-                name: triggerForm.name, 
-                triggerType: triggerForm.type, 
-                triggerData: triggerForm.data 
-              });
+              if (editTriggerId) {
+                updateTaskTriggerMutation.mutate({ 
+                  triggerId: editTriggerId,
+                  name: triggerForm.name, 
+                  triggerType: triggerForm.type, 
+                  triggerData: triggerForm.data 
+                });
+              } else {
+                addTaskTriggerMutation.mutate({ 
+                  name: triggerForm.name, 
+                  triggerType: triggerForm.type, 
+                  triggerData: triggerForm.data 
+                });
+              }
               setIsCreateTriggerOpen(false);
             }}
-            className="px-6 py-2.5 bg-amber-500 text-white rounded-xl text-[12px] font-bold"
+            className="px-6 py-2.5 bg-amber-500 text-white rounded-xl text-[12px] font-bold disabled:opacity-50"
           >
-            Save Automation
+            {editTriggerId ? "Save Changes" : "Save Automation"}
           </button>
         }
       >

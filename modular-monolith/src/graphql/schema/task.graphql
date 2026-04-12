@@ -86,6 +86,7 @@ extend type Mutation {
   updateTasks(projectId: ID!, tasks: [UpdateTaskInput!]!): [ID]
   deleteTasks(projectId: ID!, taskIds: [ID!]!): [ID]
   addTaskTrigger(taskId: ID!, projectId: ID!, name: String!, triggerType: String!, triggerData: String!): TaskTrigger
+  updateTaskTrigger(triggerId: ID!, name: String, triggerType: String, triggerData: String): TaskTrigger
   deleteTaskTrigger(taskId: ID!, triggerId: ID!): Boolean
 }
 
