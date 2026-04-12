@@ -1,6 +1,7 @@
 import type { GraphQLContext } from '../context.ts';
 import { pubsub } from '../pubsub';
 import { logger } from '../../logger';
+import { redisPublisher, INSTANCE_ID } from '../../redis/index.ts';
 
 /**
  * realtimeResolvers handles the unified event stream for Task and Notification events.
@@ -9,11 +10,6 @@ import { logger } from '../../logger';
 export const realtimeResolvers = {
   RealtimeEvent: {
     __resolveType(obj: any) {
-      if ('task' in obj && obj.task?.id) {
-        // We yield { task } so types like TaskCreated and TaskUpdated match
-        // But wait, our TaskEvent union expects TaskCreated/Updated types.
-        // We'll wrap them in the generator.
-      }
       if (obj.__typename) return obj.__typename;
       return null;
     },
@@ -24,7 +20,13 @@ export const realtimeResolvers = {
         const userId = context.userId;
         if (!userId) throw new Error('Unauthorized');
 
-        logger.info(`[Realtime] Unified stream connection established for user: ${userId}, project: ${projectId || 'all'}`);
+        logger.info(`[Realtime] Unified stream connection established for user: ${userId}, project: ${projectId || 'all'} on node: ${INSTANCE_ID}`);
+
+        // Register the routing in Redis
+        redisPublisher.sadd(`route:user:${userId}`, INSTANCE_ID).catch(console.error);
+        if (projectId) {
+            redisPublisher.sadd(`route:project:${projectId}`, INSTANCE_ID).catch(console.error);
+        }
 
         return (async function* () {
           const taskCreatedIter = pubsub.subscribe('task_created');
@@ -82,7 +84,12 @@ export const realtimeResolvers = {
             }
           } finally {
             logger.info(`[Realtime] Unified stream connection closed for user: ${userId}`);
-            // Cleanup: Close all iterators if possible (Yoga handles this usually)
+            
+            // Clean up routing table
+            redisPublisher.srem(`route:user:${userId}`, INSTANCE_ID).catch(console.error);
+            if (projectId) {
+                redisPublisher.srem(`route:project:${projectId}`, INSTANCE_ID).catch(console.error);
+            }
           }
         })();
       },

@@ -4,12 +4,12 @@ import { taskService } from './modules/task';
 import { authService } from './modules/auth/index.ts';
 import { externalNotificationService } from './modules/external-notification/index.ts';
 import { internalNotificationService } from './modules/internal-notification/index.ts';
-import { realtimeKafkaConsumer } from './modules/realtime/internal/RealtimeKafkaConsumer.ts';
-import { startConsumers } from './kafka/registry';
+import { startConsumers } from './kafka/registry.ts';
 import { startRestServer } from './restful';
-import { taskTriggerService } from './modules/task-trigger';
-import { startOutboxRelay } from './utils/event-bus/OutboxRelay.ts';
-import eventBus from './utils/EventBus.ts';
+import { taskTriggerService } from './modules/task-trigger/index.ts';
+import { startOutboxRelay } from './utils/event-bus/OutboxRelay';
+import { startRedisBridge } from './redis/RealtimeRedisBridge';
+import eventBus from './utils/EventBus';
 
 /**
  * Main Application Boot Sequence
@@ -37,8 +37,8 @@ async function bootstrap() {
             authService.init(),
             externalNotificationService.init(),
             internalNotificationService.init(),
-            realtimeKafkaConsumer.init(),
             startConsumers(),
+            startRedisBridge(),
         ]);
         console.log('[Boot] Phase 2: Domain modules and listeners ready');
 

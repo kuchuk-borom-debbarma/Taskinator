@@ -1,51 +1,65 @@
 import eventBus from '../../../utils/EventBus.ts';
 import { KAFKA_EVENTS } from '../../../utils/event-bus/constants.ts';
-import { pubsub } from '../../../graphql/pubsub';
 import { logger } from '../../../logger';
-import os from 'os';
-import { v4 as uuidv4 } from 'uuid';
+import { redisPublisher } from '../../../redis/index.ts';
 
 /**
- * RealtimeKafkaConsumer listens to Kafka events and fans them out
- * to locally connected SSE clients via SSEManager.
+ * RealtimeRouterConsumer acts as the single routing gateway between 
+ * the durable Kafka log and the volatile Redis PubSub network.
  * 
  * Scalability:
- * Each instance uses a unique Group ID to ensure every server 
- * receives every event (Fan-out/Broadcast pattern).
+ * Uses a static Group ID so Kafka load-balances events to exactly ONE node.
+ * That node then queries the Redis routing table and punches the payload
+ * exclusively to active instances hosting connected clients.
  */
-export class RealtimeKafkaConsumer {
-    // Generate a unique, ephemeral group ID for this instance
-    private groupId = `realtime-fanout-${os.hostname()}-${uuidv4().substring(0, 8)}`;
+export class RealtimeRouterConsumer {
+    // Static group ID triggers Kafka Load Balancing (Prevents Fan-out multiplier)
+    private groupId = `realtime-targeted-router-group`;
+
+    private async routeEvent(targetKey: string, topic: string, payload: any) {
+        // Find which physical instances are currently hosting these WebSockets
+        const instances = await redisPublisher.smembers(targetKey);
+        if (!instances || instances.length === 0) return;
+
+        const message = JSON.stringify({ topic, payload });
+        
+        // Punch the payload directly to the active hardware nodes
+        const promises = instances.map(iid => 
+            redisPublisher.publish(`instance:${iid}`, message)
+        );
+        
+        await Promise.all(promises);
+    }
 
     async init() {
         logger.info(`[Realtime] Initializing Kafka Fan-out Consumer with group: ${this.groupId}`);
 
         await eventBus.subscribe(this.groupId, {
-            // 1. Task Updates: Broadcast to all connected members of the project
+            // 1. Task Updates: Route to active members of the project
             [KAFKA_EVENTS.PROJECT_TASK.CREATED]: async (data: any) => {
-                pubsub.publish('task_created', {
+                await this.routeEvent(`route:project:${data.projectId}`, 'task_created', {
                     id: data.id,
                     projectId: data.projectId,
                     title: data.title
                 });
             },
             [KAFKA_EVENTS.PROJECT_TASK.UPDATED]: async (data: any) => {
-                pubsub.publish('task_updated', {
+                await this.routeEvent(`route:project:${data.projectId}`, 'task_updated', {
                     id: data.id,
                     projectId: data.projectId,
                     version: data.version
                 });
             },
             [KAFKA_EVENTS.PROJECT_TASK.DELETED]: async (data: any) => {
-                pubsub.publish('task_deleted', {
+                await this.routeEvent(`route:project:${data.projectId}`, 'task_deleted', {
                     id: data.id,
                     projectId: data.projectId
                 });
             },
 
-            // 2. Notifications: Push to specific users via individual CREATED events
+            // 2. Notifications: Route directly to the targeted user
             [KAFKA_EVENTS.NOTIFICATION.CREATED]: async (data: any) => {
-                pubsub.publish('notification_created', {
+                await this.routeEvent(`route:user:${data.userId}`, 'notification_created', {
                     id: data.id,
                     userId: data.userId,
                     title: data.title,
@@ -66,4 +80,4 @@ export class RealtimeKafkaConsumer {
     }
 }
 
-export const realtimeKafkaConsumer = new RealtimeKafkaConsumer();
+export const realtimeRouterConsumer = new RealtimeRouterConsumer();
