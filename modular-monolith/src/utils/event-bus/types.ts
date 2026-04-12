@@ -12,7 +12,7 @@ export interface Bus {
      */
     publish(
         type: string,
-        payload: { key: string; data: any } | Array<{ key: string; data: any }>,
+        payload: { id?: string; key: string; data: any } | Array<{ id?: string; key: string; data: any }>,
     ): Promise<void>;
 
     /**
@@ -27,13 +27,4 @@ export interface Bus {
     init(): Promise<void>;
 
     destroy(): Promise<void>;
-
-    // Legacy support for manual topic/event management
-    emit(topic: string, event: DomainEvent | DomainEvent[]): Promise<void>;
-
-    on(
-        topic: string,
-        groupId: string,
-        handlers: Record<string, (data: any) => Promise<void>>,
-    ): Promise<void>;
 }

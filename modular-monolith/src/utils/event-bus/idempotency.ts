@@ -42,9 +42,9 @@ export async function withIdempotency(
     }
 }
 
-export function createEvent(type: string, key: string, data: any): DomainEvent {
+export function createEvent(type: string, key: string, data: any, id?: string): DomainEvent {
     return {
-        eventId: uuid(),
+        eventId: id || uuid(),
         type,
         key,
         data,

@@ -73,14 +73,12 @@ export const taskResolvers = {
       });
     },
     addTaskTrigger: async (_: any, args: any, context: GraphQLContext) => {
-      await taskTriggerService.addTriggerToTask({
+      const trigger = await taskTriggerService.addTriggerToTask({
         ...args,
         userId: context.userId!,
         triggerData: JSON.parse(args.triggerData),
       });
-      const { triggers } = await taskTriggerService.getTriggersForTask({ taskId: args.taskId, limit: 1 });
-      if (!triggers[0]) throw new Error('Failed to create trigger');
-      return { ...triggers[0], triggerData: JSON.stringify(triggers[0].triggerData) };
+      return { ...trigger, triggerData: JSON.stringify(trigger.triggerData) };
     },
     updateTaskTrigger: async (_: any, args: any, context: GraphQLContext) => {
       if (!context.userId) throw new Error('Unauthorized');

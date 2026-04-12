@@ -52,52 +52,46 @@ export class KafkaBus implements Bus {
 
     async publish(
         type: string,
-        payload: { key: string; data: any } | Array<{ key: string; data: any }>,
+        payload: { id?: string; key: string; data: any } | Array<{ id?: string; key: string; data: any }>,
     ) {
         const items = Array.isArray(payload) ? payload : [payload];
         const topic = EVENT_TO_TOPIC[type];
         if (!topic) throw new Error(`Unknown event type: ${type}`);
-        const events = items.map((i) => createEvent(type, i.key, i.data));
-        await this.emit(topic, events);
+        const events = items.map((i) => createEvent(type, i.key, i.data, i.id));
+        await this.emit(events, topic);
     }
 
     async subscribe(
         groupId: string,
         handlers: Record<string, (data: any) => Promise<void>>,
     ) {
-        const topicsToHandlers: Record<
-            string,
-            Record<string, (data: any) => Promise<void>>
-        > = {};
-        for (const [type, handler] of Object.entries(handlers)) {
-            const topic = EVENT_TO_TOPIC[type];
+        // Group handlers by their Kafka topic, then spin up one consumer per topic.
+        const byTopic: Record<string, Record<string, (data: any) => Promise<void>>> = {};
+        for (const [eventType, handler] of Object.entries(handlers)) {
+            const topic = EVENT_TO_TOPIC[eventType];
             if (!topic) continue;
-            topicsToHandlers[topic] = topicsToHandlers[topic] || {};
-            topicsToHandlers[topic][type] = handler;
+            byTopic[topic] ??= {};
+            byTopic[topic]![eventType] = handler;
         }
-        for (const [topic, topicHandlers] of Object.entries(topicsToHandlers)) {
-            await this.on(topic, groupId, topicHandlers);
-        }
+        await Promise.all(
+            Object.entries(byTopic).map(([topic, topicHandlers]) =>
+                this.createConsumer(topic, groupId, topicHandlers),
+            ),
+        );
     }
 
-    async emit(topic: string, event: DomainEvent | DomainEvent[]) {
-        const events = Array.isArray(event) ? event : [event];
+    private async emit(events: DomainEvent[], topic: string) {
         await this.producer.send({
             topic,
             messages: events.map((e) => {
                 const headers: Record<string, string> = {};
-                // Manually inject current trace context into headers so it doesn't get lost
                 propagation.inject(context.active(), headers);
-                return {
-                    key: e.key,
-                    value: JSON.stringify(e),
-                    headers,
-                };
+                return { key: e.key, value: JSON.stringify(e), headers };
             }),
         });
     }
 
-    async on(
+    private async createConsumer(
         topic: string,
         groupId: string,
         handlers: Record<string, (data: any) => Promise<void>>,
@@ -144,12 +138,37 @@ export class KafkaBus implements Bus {
                                     allEvents,
                                     groupId,
                                     async (unprocessed) => {
-                                        for (const e of unprocessed) {
-                                            if (!isRunning() || isStale())
-                                                break;
-                                            const handler = handlers[e.type];
-                                            if (handler) await handler(e.data);
+                                        // Pre-filter: drop any events if the consumer was
+                                        // revoked mid-batch (rebalance / shutdown).
+                                        const live = unprocessed.filter(
+                                            () => isRunning() && !isStale(),
+                                        );
+
+                                        // Group events by type so that:
+                                        //   - Events of DIFFERENT types run concurrently (Promise.all)
+                                        //   - Events of the SAME type run in arrival order (serial)
+                                        //     to preserve per-type consistency.
+                                        const byType = new Map<
+                                            string,
+                                            DomainEvent[]
+                                        >();
+                                        for (const e of live) {
+                                            const bucket = byType.get(e.type) ?? [];
+                                            bucket.push(e);
+                                            byType.set(e.type, bucket);
                                         }
+
+                                        await Promise.all(
+                                            Array.from(byType.entries()).map(
+                                                async ([type, events]) => {
+                                                    const handler = handlers[type];
+                                                    if (!handler) return;
+                                                    for (const e of events) {
+                                                        await handler(e.data);
+                                                    }
+                                                },
+                                            ),
+                                        );
                                     },
                                 );
 

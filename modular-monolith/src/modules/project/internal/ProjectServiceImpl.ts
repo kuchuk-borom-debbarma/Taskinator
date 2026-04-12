@@ -16,6 +16,7 @@ import {
     getProjectsByIds,
     getUserProjectIds,
     insertProject,
+    insertProjectMembers,
     insertProjects,
     searchProjectMembers,
     updateProject,

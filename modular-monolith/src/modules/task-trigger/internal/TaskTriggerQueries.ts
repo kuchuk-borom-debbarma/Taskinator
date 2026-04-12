@@ -3,6 +3,28 @@ import type { TaskTrigger, TaskTriggerType } from '../TaskTriggerService.ts';
 import { sql } from 'kysely';
 import { getTimeString } from '../../../utils/utils.ts';
 
+type RawTaskTrigger = {
+    id: string;
+    name: string;
+    fk_project_id: string;
+    fk_task_id: string;
+    trigger_type: string;
+    trigger_data: any;
+    created_at: Date;
+    updated_at: Date;
+};
+
+const mapTrigger = (r: RawTaskTrigger): TaskTrigger => ({
+    id: r.id,
+    name: r.name,
+    projectId: r.fk_project_id,
+    taskId: r.fk_task_id,
+    triggerType: r.trigger_type as TaskTriggerType,
+    triggerData: r.trigger_data,
+    createdAt: r.created_at,
+    updatedAt: r.updated_at,
+});
+
 export const insertTaskTrigger = async (data: {
     userId: string;
     name: string;
@@ -10,12 +32,12 @@ export const insertTaskTrigger = async (data: {
     taskId: string;
     triggerType: TaskTriggerType;
     triggerData: any;
-}) => {
+}): Promise<TaskTrigger> => {
     const targetTaskIds = data.triggerData?.targetTaskIds || [];
     if (targetTaskIds.length > 100) {
         throw new Error("Cannot target more than 100 tasks in a single notification automation.");
     }
-    await sql`
+    const result = await sql<RawTaskTrigger>`
         WITH auth_check AS (
             SELECT 1 FROM project WHERE id = ${data.projectId}::uuid AND fk_user_id = ${data.userId}
             UNION ALL
@@ -26,6 +48,11 @@ export const insertTaskTrigger = async (data: {
             SELECT COUNT(*) as ct FROM project_task 
             WHERE id = ANY(${targetTaskIds}::uuid[]) 
               AND fk_project_id = ${data.projectId}::uuid
+        ),
+        trigger_count_check AS (
+            SELECT COUNT(*) < 50 as can_add 
+            FROM project_task_trigger_table 
+            WHERE fk_task_id = ${data.taskId}::uuid
         )
         INSERT INTO project_task_trigger_table (fk_project_id, name, fk_task_id, trigger_data, trigger_type)
         SELECT 
@@ -35,12 +62,18 @@ export const insertTaskTrigger = async (data: {
             ${data.triggerData}::jsonb, 
             ${data.triggerType}
         WHERE EXISTS (SELECT 1 FROM auth_check)
+          AND (SELECT can_add FROM trigger_count_check)
           AND (
             ${targetTaskIds.length} = 0
             OR
             (SELECT ct FROM target_tasks_check) = ${targetTaskIds.length}
           )
+        RETURNING *
     `.execute(db);
+
+    const row = result.rows[0];
+    if (!row) throw new Error('Unauthorized or invalid task IDs provided.');
+    return mapTrigger(row);
 };
 
 export const updateTaskTrigger = async (data: {

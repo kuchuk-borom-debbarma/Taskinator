@@ -1,6 +1,6 @@
 import eventBus, { KAFKA_EVENTS } from '../../../../utils/event-bus/index.ts';
-import { db } from '../../../../database/index.ts';
-import { logger } from '../../../../logger/index.ts';
+import { db } from '../../../../database';
+import { logger } from '../../../../logger';
 
 export class UserCreatedListener {
     async init() {

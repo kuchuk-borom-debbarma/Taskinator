@@ -9,89 +9,65 @@ export const KAFKA_TOPICS = {
     NOTIFICATION: 'notification-events',
 } as const;
 
+// Event type constants — values match exactly what the outbox SQL writes,
+// so there's a single name end-to-end (no translation table needed).
 export const KAFKA_EVENTS = {
-    PROJECT: { CREATED: 'PROJECT_CREATED', DELETED: 'PROJECT_DELETED' },
+    PROJECT: {
+        CREATED: 'project.created',
+        DELETED: 'project.deleted',
+    },
     PROJECT_MEMBER: {
-        ADDED: 'PROJECT_MEMBER_ADDED',
-        DELETED: 'PROJECT_MEMBER_DELETED',
+        ADDED: 'project.member.added',
+        DELETED: 'project.member.deleted',
     },
     PROJECT_TEAM: {
-        ADDED: 'PROJECT_TEAM_ADDED',
-        DELETED: 'PROJECT_TEAM_DELETED',
+        ADDED: 'project.team.created',
+        DELETED: 'project.team.deleted',
     },
     PROJECT_TEAM_MEMBER: {
-        ADDED: 'PROJECT_TEAM_MEMBER_ADDED',
-        DELETED: 'PROJECT_TEAM_MEMBER_DELETED',
+        ADDED: 'project.team.member.added',
+        DELETED: 'project.team.member.deleted',
     },
     PROJECT_TASK: {
-        CREATED: 'PROJECT_TASK_CREATED',
-        UPDATED: 'PROJECT_TASK_UPDATED',
-        DELETED: 'PROJECT_TASK_DELETED',
-        PARENT_DELETED: 'PROJECT_TASK_PARENT_DELETED',
-        CHILDREN_DELETED: 'PROJECT_TASK_CHILDREN_DELETED',
+        CREATED: 'project.task.created',
+        UPDATED: 'project.task.updated',
+        DELETED: 'project.task.deleted',
+        PARENT_DELETED: 'project.task.parent.deleted',
+        CHILDREN_DELETED: 'project.task.children.deleted',
     },
     PROJECT_TASK_TRIGGER: {
-        TRIGGER: 'PROJECT_TASK_TRIGGER',
-        DELETED: 'PROJECT_TASK_TRIGGER_DELETED',
+        TRIGGER: 'project.task.trigger',
+        DELETED: 'project.task.trigger.deleted',
     },
     AUTH: {
-        SIGNUP_STARTED: 'AUTH_SIGNUP_STARTED',
-        USER_CREATED: 'AUTH_USER_CREATED',
+        SIGNUP_STARTED: 'auth.signup.started',
+        USER_CREATED: 'auth.user.created',
     },
     NOTIFICATION: {
-        REQUESTED: 'NOTIFICATION_REQUESTED',
-        CREATED: 'NOTIFICATION_CREATED',
+        REQUESTED: 'notification.requested',
+        CREATED: 'notification.created',
     },
 } as const;
 
+// Maps event type → Kafka topic (the actual broker topic name).
 export const EVENT_TO_TOPIC: Record<string, string> = {
-    [KAFKA_EVENTS.PROJECT.CREATED]: KAFKA_TOPICS.PROJECT,
-    [KAFKA_EVENTS.PROJECT.DELETED]: KAFKA_TOPICS.PROJECT,
-    [KAFKA_EVENTS.PROJECT_MEMBER.ADDED]: KAFKA_TOPICS.PROJECT_MEMBER,
-    [KAFKA_EVENTS.PROJECT_MEMBER.DELETED]: KAFKA_TOPICS.PROJECT_MEMBER,
-    [KAFKA_EVENTS.PROJECT_TEAM.ADDED]: KAFKA_TOPICS.PROJECT_TEAM,
-    [KAFKA_EVENTS.PROJECT_TEAM.DELETED]: KAFKA_TOPICS.PROJECT_TEAM,
-    [KAFKA_EVENTS.PROJECT_TEAM_MEMBER.ADDED]: KAFKA_TOPICS.PROJECT_TEAM_MEMBER,
-    [KAFKA_EVENTS.PROJECT_TEAM_MEMBER.DELETED]:
-        KAFKA_TOPICS.PROJECT_TEAM_MEMBER,
-    [KAFKA_EVENTS.PROJECT_TASK.CREATED]: KAFKA_TOPICS.PROJECT_TASK,
-    [KAFKA_EVENTS.PROJECT_TASK.UPDATED]: KAFKA_TOPICS.PROJECT_TASK,
-    [KAFKA_EVENTS.PROJECT_TASK.DELETED]: KAFKA_TOPICS.PROJECT_TASK,
-    [KAFKA_EVENTS.PROJECT_TASK.PARENT_DELETED]: KAFKA_TOPICS.PROJECT_TASK,
-    [KAFKA_EVENTS.PROJECT_TASK.CHILDREN_DELETED]: KAFKA_TOPICS.PROJECT_TASK,
-    [KAFKA_EVENTS.PROJECT_TASK_TRIGGER.TRIGGER]:
-        KAFKA_TOPICS.PROJECT_TASK_TRIGGER,
-    [KAFKA_EVENTS.PROJECT_TASK_TRIGGER.DELETED]:
-        KAFKA_TOPICS.PROJECT_TASK_TRIGGER,
-    [KAFKA_EVENTS.AUTH.SIGNUP_STARTED]: KAFKA_TOPICS.AUTH,
-    [KAFKA_EVENTS.AUTH.USER_CREATED]: KAFKA_TOPICS.AUTH,
-    [KAFKA_EVENTS.NOTIFICATION.REQUESTED]: KAFKA_TOPICS.NOTIFICATION,
-    [KAFKA_EVENTS.NOTIFICATION.CREATED]: KAFKA_TOPICS.NOTIFICATION,
+    'project.created': KAFKA_TOPICS.PROJECT,
+    'project.deleted': KAFKA_TOPICS.PROJECT,
+    'project.member.added': KAFKA_TOPICS.PROJECT_MEMBER,
+    'project.member.deleted': KAFKA_TOPICS.PROJECT_MEMBER,
+    'project.team.created': KAFKA_TOPICS.PROJECT_TEAM,
+    'project.team.deleted': KAFKA_TOPICS.PROJECT_TEAM,
+    'project.team.member.added': KAFKA_TOPICS.PROJECT_TEAM_MEMBER,
+    'project.team.member.deleted': KAFKA_TOPICS.PROJECT_TEAM_MEMBER,
+    'project.task.created': KAFKA_TOPICS.PROJECT_TASK,
+    'project.task.updated': KAFKA_TOPICS.PROJECT_TASK,
+    'project.task.deleted': KAFKA_TOPICS.PROJECT_TASK,
+    'project.task.parent.deleted': KAFKA_TOPICS.PROJECT_TASK,
+    'project.task.children.deleted': KAFKA_TOPICS.PROJECT_TASK,
+    'project.task.trigger': KAFKA_TOPICS.PROJECT_TASK_TRIGGER,
+    'project.task.trigger.deleted': KAFKA_TOPICS.PROJECT_TASK_TRIGGER,
+    'auth.signup.started': KAFKA_TOPICS.AUTH,
+    'auth.user.created': KAFKA_TOPICS.AUTH,
+    'notification.requested': KAFKA_TOPICS.NOTIFICATION,
+    'notification.created': KAFKA_TOPICS.NOTIFICATION,
 };
-
-/**
- * Maps the raw kafka_topic strings stored in outbox_events rows
- * back to the KAFKA_EVENTS type codes that Bus.publish() expects.
- * This allows the OutboxRelay to bridge between the DB and the MemoryBus.
- */
-export const OUTBOX_TOPIC_TO_EVENT_TYPE: Record<string, string> = {
-    'project.created': KAFKA_EVENTS.PROJECT.CREATED,
-    'project.deleted': KAFKA_EVENTS.PROJECT.DELETED,
-    'project.member.added': KAFKA_EVENTS.PROJECT_MEMBER.ADDED,
-    'project.member.deleted': KAFKA_EVENTS.PROJECT_MEMBER.DELETED,
-    'project.team.created': KAFKA_EVENTS.PROJECT_TEAM.ADDED,
-    'project.team.deleted': KAFKA_EVENTS.PROJECT_TEAM.DELETED,
-    'project.team.member.added': KAFKA_EVENTS.PROJECT_TEAM_MEMBER.ADDED,
-    'project.team.member.deleted': KAFKA_EVENTS.PROJECT_TEAM_MEMBER.DELETED,
-    'project.task.created': KAFKA_EVENTS.PROJECT_TASK.CREATED,
-    'project.task.updated': KAFKA_EVENTS.PROJECT_TASK.UPDATED,
-    'project.task.deleted': KAFKA_EVENTS.PROJECT_TASK.DELETED,
-    'project.task.parent.deleted': KAFKA_EVENTS.PROJECT_TASK.PARENT_DELETED,
-    'project.task.children.deleted': KAFKA_EVENTS.PROJECT_TASK.CHILDREN_DELETED,
-    'project.task.trigger': KAFKA_EVENTS.PROJECT_TASK_TRIGGER.TRIGGER,
-    'project.task.trigger.deleted': KAFKA_EVENTS.PROJECT_TASK_TRIGGER.DELETED,
-    'auth.signup.started': KAFKA_EVENTS.AUTH.SIGNUP_STARTED,
-    'auth.user.created': KAFKA_EVENTS.AUTH.USER_CREATED,
-    'notification.requested': KAFKA_EVENTS.NOTIFICATION.REQUESTED,
-};
-
