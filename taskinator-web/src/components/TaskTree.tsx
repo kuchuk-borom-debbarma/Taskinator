@@ -5,7 +5,6 @@ import {
   Circle, 
   Plus, 
   ChevronDown, 
-  ChevronRight, 
   Trash2, 
   Hash, 
   User, 

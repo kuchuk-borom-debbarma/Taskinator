@@ -1,7 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { Plus, Users, Layout, Clock, ChevronRight } from 'lucide-react';
-import { cn } from '../../utils/cn';
+import { Plus, Layout, ChevronRight } from 'lucide-react';
 
 interface Project {
   id: string;

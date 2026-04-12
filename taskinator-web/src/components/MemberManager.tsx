@@ -2,7 +2,6 @@ import React from 'react';
 import { Trash2, Users, UserPlus } from 'lucide-react';
 import { UserSearchDropdown } from './UserSearchDropdown';
 import type { UserSearchResult } from '../api/client';
-import { cn } from '../utils/cn';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface Member {

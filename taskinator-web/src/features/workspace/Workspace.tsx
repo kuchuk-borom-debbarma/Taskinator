@@ -2,13 +2,11 @@ import React, { useState, useMemo } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   Plus, 
-  Settings, 
-  Trash2, 
   FolderEdit, 
-  Zap, 
+  Trash2, 
+  Users2, 
   AlertTriangle,
-  Target,
-  Users2,
+  Zap,
   CheckCircle2,
   Circle
 } from 'lucide-react';
@@ -27,7 +25,7 @@ import type { JWTPayload, TaskTriggerType, TaskTrigger } from '../../types';
 import { gqlClient } from '../../graphql/client';
 import {
   GET_PROJECTS, GET_WORKSPACE_DATA, GET_PROJECT_MEMBERS, GET_TEAM_MEMBERS, GET_UNREAD_NOTIFICATIONS_COUNT,
-  CREATE_PROJECT, DELETE_PROJECTS, CREATE_TEAM, DELETE_TEAMS, ADD_PROJECT_MEMBERS, REMOVE_PROJECT_MEMBERS, ADD_TEAM_MEMBERS, REMOVE_TEAM_MEMBERS,
+  CREATE_PROJECT, UPDATE_PROJECT, DELETE_PROJECTS, CREATE_TEAM, DELETE_TEAMS, ADD_PROJECT_MEMBERS, REMOVE_PROJECT_MEMBERS, ADD_TEAM_MEMBERS, REMOVE_TEAM_MEMBERS,
   CREATE_TASK, UPDATE_TASKS, DELETE_TASKS, ADD_TASK_TRIGGER, DELETE_TASK_TRIGGER
 } from '../../graphql/operations';
 import { cn } from '../../utils/cn';
@@ -280,16 +278,16 @@ export const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
           onOpenNotifications={() => setIsNotifPanelOpen(!isNotifPanelOpen)}
           onOpenSettings={() => setIsProjectSettingsOpen(true)}
           unreadCount={unreadCount}
-        />
+        >
+          <NotificationPanel 
+            isOpen={isNotifPanelOpen}
+            onClose={() => setIsNotifPanelOpen(false)}
+            userId={userId}
+          />
+        </Header>
       }
       sidePanel={undefined}
     >
-      <NotificationPanel 
-        isOpen={isNotifPanelOpen}
-        onClose={() => setIsNotifPanelOpen(false)}
-        userId={userId}
-      />
-
       {selectedProjectId ? (
         <div className="h-full flex flex-col min-h-0 relative">
           {/* Focused View Hero */}
@@ -730,7 +728,11 @@ export const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
         footer={
           <button 
             onClick={() => {
-              addTaskTriggerMutation.mutate(triggerForm);
+              addTaskTriggerMutation.mutate({ 
+                name: triggerForm.name, 
+                triggerType: triggerForm.type, 
+                triggerData: triggerForm.data 
+              });
               setIsCreateTriggerOpen(false);
             }}
             className="px-6 py-2.5 bg-amber-500 text-white rounded-xl text-[12px] font-bold"
@@ -754,6 +756,41 @@ export const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
               <option value="BLOCK_PARENT_DONE">Block Parent until Done</option>
            </select>
         </div>
+      </Modal>
+      <Modal
+        isOpen={isCreateTeamOpen}
+        onClose={() => setIsCreateTeamOpen(false)}
+        title="Forge New Team"
+        description="Organize participants into a dedicated task group."
+        footer={
+           <button 
+            disabled={!teamName.trim()}
+            onClick={() => {
+              createTeamMutation.mutate(teamName);
+              setIsCreateTeamOpen(false);
+              setTeamName('');
+            }}
+            className="px-6 py-2.5 bg-primary text-white rounded-xl text-[13px] font-bold hover:bg-indigo-500 transition-all disabled:opacity-30"
+           >
+             Forge Team
+           </button>
+        }
+      >
+         <input 
+            autoFocus
+            type="text"
+            placeholder="Team designation..."
+            value={teamName}
+            onChange={(e) => setTeamName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && teamName.trim()) {
+                createTeamMutation.mutate(teamName);
+                setIsCreateTeamOpen(false);
+                setTeamName('');
+              }
+            }}
+            className="w-full glass rounded-2xl p-4 outline-none border-white/10 focus:border-primary/40 text-sm"
+         />
       </Modal>
     </WorkspaceLayout>
   );

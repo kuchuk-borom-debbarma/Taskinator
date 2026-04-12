@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { LayoutGrid, Hash, Users2, Settings, LogOut, Hexagon, Plus } from 'lucide-react';
+import { LayoutGrid, LogOut, Hexagon, Plus } from 'lucide-react';
 import { cn } from '../utils/cn';
 
 interface Project {

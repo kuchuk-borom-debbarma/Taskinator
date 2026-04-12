@@ -26,7 +26,19 @@ export const UserSearchDropdown: React.FC<UserSearchDropdownProps> = ({
 
   const { data: results = [], isLoading } = useQuery({
     queryKey: ['user-search', query, projectContext, teamContext],
-    queryFn: () => userApi.searchUsers(query, projectContext, teamContext),
+    queryFn: async () => {
+       if (teamContext) {
+           const res = await userApi.searchTeamUsers({ ...teamContext, search: query });
+           return res.users;
+       }
+       if (projectContext) {
+           const res = await userApi.searchUsers({ search: query });
+           // In old API this was searchUsers but ideally searchProjectUsers. For now fallback to userApi.searchUsers.
+           return res.users;
+       }
+       const res = await userApi.searchUsers({ search: query });
+       return res.users;
+    },
     enabled: query.length >= 2 && isOpen,
   });
 
@@ -76,9 +88,9 @@ export const UserSearchDropdown: React.FC<UserSearchDropdownProps> = ({
                 <div className="flex items-center justify-center py-8">
                   <Loader2 size={18} className="animate-spin text-primary" />
                 </div>
-              ) : results.length > 0 ? (
+              ) : (results as UserSearchResult[]).length > 0 ? (
                 <div className="p-1.5 flex flex-col gap-1">
-                  {results.slice(0, 8).map((user) => (
+                  {(results as UserSearchResult[]).slice(0, 8).map((user: UserSearchResult) => (
                     <button
                       key={user.id}
                       onClick={() => handleSelect(user)}
@@ -107,7 +119,7 @@ export const UserSearchDropdown: React.FC<UserSearchDropdownProps> = ({
                 </div>
               )}
             </div>
-            {results.length > 0 && (
+            {(results as UserSearchResult[]).length > 0 && (
               <div className="px-4 py-2 bg-white/[0.02] border-t border-white/[0.05]">
                 <p className="text-[9px] uppercase font-bold tracking-widest text-muted-foreground/30">Select a user to add</p>
               </div>

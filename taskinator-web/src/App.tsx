@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Auth } from './components/Auth';
 import { Workspace } from './features/workspace/Workspace';
