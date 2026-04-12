@@ -591,11 +591,30 @@ export const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
                     Automations
                  </h4>
                  <div className="grid grid-cols-1 gap-2">
-                     {taskTriggers.map(t => (
+                     {taskTriggers.map(t => {
+                        const targetTitles: string[] = [];
+                        if (t.triggerType === 'NOTIFY_TASK' && t.triggerData?.targetTaskIds?.length) {
+                             t.triggerData.targetTaskIds.forEach((id: string) => {
+                                const found = projectTasks?.find((pt: any) => pt.id === id);
+                                if (found) targetTitles.push(found.title);
+                             });
+                        }
+
+                        return (
                        <div key={t.id} className="group p-3 glass rounded-xl flex items-center justify-between border-white/[0.02]">
                           <div className="flex flex-col flex-1 truncate pr-3">
                              <span className="text-xs font-bold truncate">{t.name}</span>
-                             <span className="text-[9px] uppercase tracking-wider text-muted-foreground opacity-60">{t.triggerType}</span>
+                             <span className="text-[9px] uppercase tracking-wider text-muted-foreground flex items-center gap-1.5 mt-0.5">
+                               {t.triggerType}
+                               {targetTitles.length > 0 && (
+                                  <span className="flex items-center gap-1">
+                                    <span className="opacity-40">→</span> 
+                                    <span className="px-1.5 py-0.5 rounded-[4px] bg-white/10 text-white font-bold truncate max-w-[150px] inline-block" title={targetTitles.join(', ')}>
+                                       {targetTitles.join(', ')}
+                                    </span>
+                                  </span>
+                               )}
+                             </span>
                           </div>
                           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                              <button 
@@ -620,7 +639,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
                              </button>
                           </div>
                        </div>
-                     ))}
+                     )})}
                      <button 
                        onClick={() => {
                          setEditTriggerId(null);
@@ -808,15 +827,14 @@ export const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
                   let data = {};
                   if (type === 'BLOCK_PARENT_DONE') data = { revertStatusTo: 'IN_PROGRESS' };
                   if (type === 'WEBHOOK') data = { url: '' };
-                  if (type === 'NOTIFY_PARENT_TEAM' || type === 'NOTIFY_TASK_TEAM') data = { message: '' };
+                  if (type === 'NOTIFY_TASK') data = { targetTaskIds: [], message: '' };
                   setTriggerForm({...triggerForm, type, data});
                 }}
                 className="w-full glass border border-white/5 focus:border-amber-500/50 rounded-xl p-3 text-sm outline-none transition-colors"
              >
                 <option value="BLOCK_PARENT_DONE">Guard: Block Parent Completion</option>
                 <option value="WEBHOOK">System: Outbound Webhook</option>
-                <option value="NOTIFY_PARENT_TEAM">Alert: Notify Parent Team</option>
-                <option value="NOTIFY_TASK_TEAM">Alert: Notify Task Team</option>
+                <option value="NOTIFY_TASK">Alert: Notify Tasks</option>
              </select>
            </div>
 
@@ -852,15 +870,79 @@ export const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
                </div>
              )}
 
-             {(triggerForm.type === 'NOTIFY_PARENT_TEAM' || triggerForm.type === 'NOTIFY_TASK_TEAM') && (
-               <div>
-                 <label className="text-[10px] font-bold text-muted-foreground uppercase pl-1 block mb-1">Notification Message</label>
-                 <textarea 
-                   placeholder="This task has been completed. Please review."
-                   value={triggerForm.data.message || ''}
-                   onChange={(e) => setTriggerForm({...triggerForm, data: { ...triggerForm.data, message: e.target.value }})}
-                   className="w-full glass border border-white/5 focus:border-amber-500/50 rounded-xl p-3 text-sm outline-none transition-colors resize-none h-24"
-                 />
+             {triggerForm.type === 'NOTIFY_TASK' && (
+               <div className="space-y-3">
+                 <div>
+                   <label className="text-[10px] font-bold text-muted-foreground uppercase pl-1 block mb-1">Target Task IDs</label>
+                   <textarea 
+                     placeholder="Paste one or more Task IDs separated by commas"
+                     value={(triggerForm.data.targetTaskIds || []).join(', ')}
+                     onChange={(e) => {
+                       const ids = e.target.value.split(',').map((s: string) => s.trim()).filter(Boolean);
+                       setTriggerForm({...triggerForm, data: { ...triggerForm.data, targetTaskIds: ids }})
+                     }}
+                     className="w-full glass border border-white/5 focus:border-amber-500/50 rounded-xl p-3 text-[11px] font-mono outline-none transition-colors resize-y h-16"
+                   />
+                 </div>
+                 <div className="flex gap-2 flex-wrap">
+                    <button 
+                      onClick={() => {
+                        if (!selectedTaskId) return;
+                        const task = projectTasks?.find(t => t.id === selectedTaskId);
+                        if (task?.parentTaskId) {
+                           setTriggerForm(prev => ({
+                             ...prev,
+                             data: { ...prev.data, targetTaskIds: Array.from(new Set([...(prev.data.targetTaskIds || []), task.parentTaskId])) }
+                           }));
+                        }
+                      }}
+                      className="px-3 py-1.5 rounded-lg border border-dashed border-white/20 text-muted-foreground hover:bg-white/5 hover:text-white transition-all text-[10px] font-bold"
+                    >
+                      + Add Parent Task
+                    </button>
+                    <button 
+                      onClick={() => {
+                        if (!selectedTaskId) return;
+                        const children = projectTasks?.filter(t => t.parentTaskId === selectedTaskId).map(t => t.id) || [];
+                        if (children.length) {
+                           setTriggerForm(prev => ({
+                             ...prev,
+                             data: { ...prev.data, targetTaskIds: Array.from(new Set([...(prev.data.targetTaskIds || []), ...children])) }
+                           }));
+                        }
+                      }}
+                      className="px-3 py-1.5 rounded-lg border border-dashed border-white/20 text-muted-foreground hover:bg-white/5 hover:text-white transition-all text-[10px] font-bold"
+                    >
+                      + Add Child Tasks
+                    </button>
+                    <button 
+                      onClick={() => {
+                        if (!selectedTaskId) return;
+                        const task = projectTasks?.find(t => t.id === selectedTaskId);
+                        if (task?.parentTaskId) {
+                           const siblings = projectTasks?.filter(t => t.parentTaskId === task.parentTaskId && t.id !== task.id).map(t => t.id) || [];
+                           if (siblings.length) {
+                               setTriggerForm(prev => ({
+                                 ...prev,
+                                 data: { ...prev.data, targetTaskIds: Array.from(new Set([...(prev.data.targetTaskIds || []), ...siblings])) }
+                               }));
+                           }
+                        }
+                      }}
+                      className="px-3 py-1.5 rounded-lg border border-dashed border-white/20 text-muted-foreground hover:bg-white/5 hover:text-white transition-all text-[10px] font-bold"
+                    >
+                      + Add Sibling Tasks
+                    </button>
+                 </div>
+                 <div>
+                   <label className="text-[10px] font-bold text-muted-foreground uppercase pl-1 block mb-1">Notification Message</label>
+                   <textarea 
+                     placeholder="This task requires your attention."
+                     value={triggerForm.data.message || ''}
+                     onChange={(e) => setTriggerForm({...triggerForm, data: { ...triggerForm.data, message: e.target.value }})}
+                     className="w-full glass border border-white/5 focus:border-amber-500/50 rounded-xl p-3 text-sm outline-none transition-colors resize-none h-16"
+                   />
+                 </div>
                </div>
              )}
            </div>

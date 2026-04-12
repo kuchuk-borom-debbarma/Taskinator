@@ -11,12 +11,21 @@ export const insertTaskTrigger = async (data: {
     triggerType: TaskTriggerType;
     triggerData: any;
 }) => {
+    const targetTaskIds = data.triggerData?.targetTaskIds || [];
+    if (targetTaskIds.length > 100) {
+        throw new Error("Cannot target more than 100 tasks in a single notification automation.");
+    }
     await sql`
         WITH auth_check AS (
             SELECT 1 FROM project WHERE id = ${data.projectId}::uuid AND fk_user_id = ${data.userId}
             UNION ALL
             SELECT 1 FROM project_member WHERE fk_project_id = ${data.projectId}::uuid AND fk_user_id = ${data.userId}
             LIMIT 1
+        ),
+        target_tasks_check AS (
+            SELECT COUNT(*) as ct FROM project_task 
+            WHERE id = ANY(${targetTaskIds}::uuid[]) 
+              AND fk_project_id = ${data.projectId}::uuid
         )
         INSERT INTO project_task_trigger_table (fk_project_id, name, fk_task_id, trigger_data, trigger_type)
         SELECT 
@@ -26,6 +35,11 @@ export const insertTaskTrigger = async (data: {
             ${data.triggerData}::jsonb, 
             ${data.triggerType}
         WHERE EXISTS (SELECT 1 FROM auth_check)
+          AND (
+            ${targetTaskIds.length} = 0
+            OR
+            (SELECT ct FROM target_tasks_check) = ${targetTaskIds.length}
+          )
     `.execute(db);
 };
 
@@ -36,15 +50,27 @@ export const updateTaskTrigger = async (data: {
     triggerType?: TaskTriggerType;
     triggerData?: any;
 }) => {
+    const targetTaskIds = data.triggerData?.targetTaskIds || [];
+    if (targetTaskIds.length > 100) {
+        throw new Error("Cannot target more than 100 tasks in a single notification automation.");
+    }
     await sql`
-        WITH auth_check AS (
+        WITH project_lookup AS (
+            SELECT fk_project_id as pid FROM project_task_trigger_table WHERE id = ${data.triggerId}::uuid
+        ),
+        auth_check AS (
             SELECT 1 FROM project p
-            WHERE p.id = (SELECT fk_project_id FROM project_task_trigger_table WHERE id = ${data.triggerId}::uuid)
-              AND (p.fk_user_id = ${data.userId} OR EXISTS (
+            JOIN project_lookup pl ON p.id = pl.pid
+            WHERE (p.fk_user_id = ${data.userId} OR EXISTS (
                 SELECT 1 FROM project_member pm 
                 WHERE pm.fk_project_id = p.id AND pm.fk_user_id = ${data.userId}
-              ))
+            ))
             LIMIT 1
+        ),
+        target_tasks_check AS (
+            SELECT COUNT(*) as ct FROM project_task pt
+            JOIN project_lookup pl ON pt.fk_project_id = pl.pid
+            WHERE pt.id = ANY(${targetTaskIds}::uuid[]) 
         )
         UPDATE project_task_trigger_table
         SET name = CASE WHEN ${data.name !== undefined} THEN ${data.name ?? null} ELSE name END,
@@ -53,6 +79,11 @@ export const updateTaskTrigger = async (data: {
             updated_at = ${getTimeString()}
         WHERE id = ${data.triggerId}::uuid
           AND EXISTS (SELECT 1 FROM auth_check)
+          AND (
+            ${targetTaskIds.length} = 0
+            OR
+            (SELECT ct FROM target_tasks_check) = ${targetTaskIds.length}
+          )
     `.execute(db);
 };
 
@@ -159,6 +190,23 @@ export const countIncompleteChildren = async (
           )
     `.execute(db);
     return parseInt(result.rows[0]?.count ?? '0');
+};
+
+/**
+ * Resolves target task assignments in a single query batch.
+ * It sweeps all provided task IDs and grabs any direct fk_member_id 
+ * or the team creator of any fk_team_id assigned in a single trip.
+ */
+export const getTargetTaskNotificationUsers = async (taskIds: string[]): Promise<string[]> => {
+    if (!taskIds.length) return [];
+    const result = await sql<{ userId: string }>`
+        SELECT DISTINCT COALESCE(pt.fk_member_id, t.fk_user_id) as "userId"
+        FROM project_task pt
+        LEFT JOIN project_team t ON pt.fk_team_id = t.id
+        WHERE pt.id = ANY(${taskIds}::uuid[])
+          AND (pt.fk_member_id IS NOT NULL OR t.fk_user_id IS NOT NULL)
+    `.execute(db);
+    return result.rows.map((r: any) => r.userId);
 };
 
 /**

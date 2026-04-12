@@ -43,10 +43,8 @@ export class TaskServiceImpl implements TaskService {
     }
 
     async updateTasks(data: UpdateTasksParam): Promise<string[]> {
-        const updatedIds: string[] = [];
-
-        for (const taskUpdate of data.tasks) {
-            const result = await updateTask({
+        const updatePromises = data.tasks.map(taskUpdate =>
+            updateTask({
                 userId: data.userId,
                 projectId: data.projectId,
                 taskId: taskUpdate.id,
@@ -56,12 +54,11 @@ export class TaskServiceImpl implements TaskService {
                 teamId: taskUpdate.teamId,
                 memberId: taskUpdate.memberId,
                 parentTaskId: taskUpdate.parentTaskId,
-            });
+            })
+        );
 
-            if (result) {
-                updatedIds.push(result);
-            }
-        }
+        const results = await Promise.all(updatePromises);
+        const updatedIds: string[] = results.filter((r): r is string => r !== null);
 
         if (updatedIds.length !== data.tasks.length) {
             throw new Error(

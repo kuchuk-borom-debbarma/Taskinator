@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle2, Circle, ChevronRight, Folder, MoreVertical, Plus, Zap, Users2, User } from 'lucide-react';
+import { CheckCircle2, Circle, ChevronRight, Folder, MoreVertical, Plus, Zap, Users2, User, Copy } from 'lucide-react';
 import { cn } from '../utils/cn';
 
 interface Task {
@@ -119,12 +119,24 @@ export const TaskDrillView: React.FC<TaskDrillViewProps> = ({
                   </button>
 
                   <div className="flex flex-col flex-1 w-0 min-w-0" onClick={() => onOpenDetails(task.id)}>
-                     <span className={cn(
-                       "text-sm font-bold truncate transition-colors cursor-pointer w-full text-left",
-                       task.status === 'DONE' ? "line-through text-muted-foreground/60" : "text-foreground hover:text-primary"
-                     )}>
-                        {task.title}
-                     </span>
+                     <div className="flex items-center gap-2">
+                       <span className={cn(
+                         "text-sm font-bold truncate transition-colors cursor-pointer text-left",
+                         task.status === 'DONE' ? "line-through text-muted-foreground/60" : "text-foreground hover:text-primary"
+                       )}>
+                          {task.title}
+                       </span>
+                       <button 
+                         onClick={(e) => {
+                           e.stopPropagation();
+                           navigator.clipboard.writeText(task.id);
+                         }}
+                         className="opacity-0 group-hover:opacity-100 p-1 hover:bg-white/10 rounded transition-all text-muted-foreground hover:text-white"
+                         title="Copy Task ID"
+                       >
+                         <Copy size={12} />
+                       </button>
+                     </div>
                      
                      <div className="flex items-center gap-2 mt-2 flex-wrap">
                         {/* Status Badge */}

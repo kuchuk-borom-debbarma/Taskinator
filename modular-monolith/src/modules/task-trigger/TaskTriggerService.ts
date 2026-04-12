@@ -3,8 +3,7 @@ import type { BaseService } from '../project';
 export type TaskTriggerType =
     | 'WEBHOOK'
     | 'BLOCK_PARENT_DONE'
-    | 'NOTIFY_PARENT_TEAM'
-    | 'NOTIFY_TASK_TEAM';
+    | 'NOTIFY_TASK';
 
 export type TaskTrigger = {
     id: string;

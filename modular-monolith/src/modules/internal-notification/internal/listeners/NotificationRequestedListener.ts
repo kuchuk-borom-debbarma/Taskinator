@@ -21,8 +21,9 @@ export class NotificationRequestedListener {
                 );
 
                 // Push individual CREATED events to Kafka for fan-out to all SSE instances
-                for (const n of notifications) {
-                    eventBus.publish(KAFKA_EVENTS.NOTIFICATION.CREATED, {
+                await eventBus.publish(
+                    KAFKA_EVENTS.NOTIFICATION.CREATED,
+                    notifications.map(n => ({
                         key: n.userId,
                         data: {
                             id: n.id,
@@ -34,8 +35,8 @@ export class NotificationRequestedListener {
                             isRead: n.isRead,
                             createdAt: n.createdAt,
                         }
-                    });
-                }
+                    }))
+                );
             },
         });
     }
