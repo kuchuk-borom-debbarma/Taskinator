@@ -372,3 +372,10 @@ export const getTeamsByIds = async (userId: string, teamIds: string[]): Promise<
     `.execute(db);
     return result.rows;
 };
+
+export const getTeamCreator = async (teamId: string): Promise<string | null> => {
+    const result = await sql<{ fk_user_id: string }>`
+        SELECT fk_user_id FROM project_team WHERE id = ${teamId}::uuid
+    `.execute(db);
+    return result.rows[0]?.fk_user_id ?? null;
+};

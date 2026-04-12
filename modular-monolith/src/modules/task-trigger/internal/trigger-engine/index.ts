@@ -2,9 +2,8 @@ import type { TaskTrigger } from '../../TaskTriggerService.ts';
 import { blockParentDoneTrigger } from './processors/blockParentDoneTrigger.ts';
 import { webhookTrigger } from './processors/webhookTrigger.ts';
 import {
-    notifyParentTeamTrigger,
-    notifyTaskTeamTrigger,
-} from './processors/notifyTeamTrigger.ts';
+    notifyTaskTrigger,
+} from './processors/notifyTaskTrigger.ts';
 
 type TriggerProcessor = {
     [K in TaskTrigger['triggerType']]: (
@@ -22,8 +21,7 @@ type TriggerProcessor = {
 const processor: TriggerProcessor = {
     WEBHOOK: webhookTrigger,
     BLOCK_PARENT_DONE: blockParentDoneTrigger,
-    NOTIFY_PARENT_TEAM: notifyParentTeamTrigger,
-    NOTIFY_TASK_TEAM: notifyTaskTeamTrigger,
+    NOTIFY_TASK: notifyTaskTrigger,
 };
 
 export default processor;
