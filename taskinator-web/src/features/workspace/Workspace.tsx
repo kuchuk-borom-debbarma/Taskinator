@@ -168,8 +168,24 @@ export const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
   });
 
   const createProjectMutation = useMutation({
-    mutationFn: (name: string) => gqlClient.request<any>(CREATE_PROJECT, { name }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['projects', userId] }),
+    mutationFn: async (name: string) => {
+      console.log("[Workspace] Sending CreateProject mutation for:", name);
+      try {
+        const res = await gqlClient.request<any>(CREATE_PROJECT, { name });
+        console.log("[Workspace] CreateProject Success response:", res);
+        return res;
+      } catch (err) {
+        console.error("[Workspace] CreateProject Network Error:", err);
+        throw err;
+      }
+    },
+    onSuccess: (data) => {
+      qc.invalidateQueries({ queryKey: ['projects', userId] });
+      if (data?.createProject?.id) setSelectedProjectId(data.createProject.id);
+    },
+    onError: (err) => {
+      console.error("[Workspace] CreateProject Mutation Error:", err);
+    }
   });
 
   const deleteProjectMutation = useMutation({
@@ -581,6 +597,12 @@ export const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
             placeholder="Repository label..."
             value={projectName}
             onChange={(e) => setProjectName(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && projectName.trim()) {
+                createProjectMutation.mutate(projectName);
+                setIsCreateProjectOpen(false);
+              }
+            }}
             className="w-full glass rounded-2xl p-4 outline-none border-white/10 focus:border-primary/40 text-sm"
          />
       </Modal>
@@ -608,6 +630,12 @@ export const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
            placeholder="Task label..."
            value={taskTitle}
            onChange={(e) => setTaskTitle(e.target.value)}
+           onKeyDown={(e) => {
+             if (e.key === 'Enter' && taskTitle.trim()) {
+               createTaskMutation.mutate({ title: taskTitle, parentTaskId: parentTaskIdForNew });
+               setIsCreateTaskOpen(false);
+             }
+           }}
            className="w-full glass rounded-2xl p-4 outline-none border-white/10 text-sm focus:border-primary/30"
          />
       </Modal>

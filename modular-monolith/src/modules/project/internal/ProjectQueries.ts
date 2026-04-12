@@ -16,7 +16,7 @@ export const insertProject = async (
     const result = await sql<Project>`
         WITH inserted_project AS (
             INSERT INTO project (name, description, fk_user_id, created_at)
-            VALUES (${data.name}, ${data.description}, ${data.userId}, ${getTimeString()})
+            VALUES (${data.name}, ${data.description ?? null}, ${data.userId}, ${getTimeString()})
             RETURNING *
         ),
         inserted_outbox AS (
@@ -344,8 +344,8 @@ export const getProjectMembers = async (
         WHERE fk_project_id = ${projectId}::uuid
           AND EXISTS (SELECT 1 FROM auth_check)
           AND (
-              ${cursor}::uuid IS NULL
-              OR id > ${cursor}::uuid
+              ${cursor ?? null}::uuid IS NULL
+              OR id > ${cursor ?? null}::uuid
           )
         ORDER BY id
         LIMIT ${limit + 1}
@@ -413,8 +413,8 @@ export const searchProjectMembers = async (params: {
             OR id::text = ${search}
           )
           AND (
-            ${cursor}::uuid IS NULL
-            OR id > ${cursor}::uuid
+            ${cursor ?? null}::uuid IS NULL
+            OR id > ${cursor ?? null}::uuid
           )
         ORDER BY id
         LIMIT ${limit + 1}

@@ -30,11 +30,21 @@ function App() {
     setUser(null);
   };
 
+  const handleLogin = (token: string) => {
+    localStorage.setItem('token', token);
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      setUser(payload);
+    } catch {
+      setUser(null);
+    }
+  };
+
   return (
     <QueryClientProvider client={queryClient}>
       <div className="h-screen w-screen bg-background text-foreground overflow-hidden">
         {!user ? (
-          <Auth onLogin={setUser} />
+          <Auth onLogin={handleLogin} />
         ) : (
           <Workspace user={user} onLogout={handleLogout} />
         )}

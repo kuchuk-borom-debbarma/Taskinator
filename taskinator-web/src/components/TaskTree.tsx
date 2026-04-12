@@ -231,7 +231,7 @@ export const TaskTree: React.FC<TaskTreeProps> = ({
               onClickTask={onClickTask}
               onDeleteTask={onDeleteTask}
               treeMap={rootTasks.treeMap}
-              triggerMap={rootTasks.treeMap} // bug fix from previous: use triggerMap
+              triggerMap={triggerMap}
             />
           ))}
         </AnimatePresence>

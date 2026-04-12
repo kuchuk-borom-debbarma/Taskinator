@@ -1,5 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { cn } from '../utils/cn';
+
 
 interface WorkspaceLayoutProps {
   sidebar: React.ReactNode;
@@ -13,7 +15,8 @@ export const WorkspaceLayout: React.FC<WorkspaceLayoutProps> = ({
   sidebar, 
   header, 
   children, 
-  sidePanel 
+  sidePanel,
+  isFocused
 }) => {
   return (
     <div className="flex h-screen w-screen bg-background text-foreground overflow-hidden font-sans selection:bg-primary/30">

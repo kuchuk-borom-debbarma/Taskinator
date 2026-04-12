@@ -39,9 +39,9 @@ export const insertTask = async (
                    ${data.teamId ?? null}::uuid,
                    ${data.memberId ?? null},
                    ${data.parentTaskId ?? null}::uuid,
-                   ${data.title},
-                   ${data.description},
-                   ${data.initialStatus},
+                   ${data.title ?? null},
+                   ${data.description ?? null},
+                   ${data.initialStatus ?? null},
                    CASE
                        WHEN ${data.parentTaskId ?? null}::text IS NOT NULL THEN
                            (SELECT CASE
@@ -218,6 +218,8 @@ export interface UpdateTaskParam {
     version: number;
     lastEventId?: string;
     status?: string;
+    title?: string;
+    description?: string;
     teamId?: string;
     memberId?: string;
     parentTaskId?: string;
@@ -255,14 +257,16 @@ export const updateTask = async (
         ),
         updated_task AS (
             UPDATE project_task
-            SET status = CASE WHEN ${data.status !== undefined} THEN ${data.status} ELSE status END,
-                fk_team_id = CASE WHEN ${data.teamId !== undefined} THEN ${data.teamId}::uuid ELSE fk_team_id END,
-                fk_member_id = CASE WHEN ${data.memberId !== undefined} THEN ${data.memberId} ELSE fk_member_id END,
-                fk_parent_task_id = CASE WHEN ${data.parentTaskId !== undefined} THEN ${data.parentTaskId}::uuid ELSE fk_parent_task_id END,
+            SET status = CASE WHEN ${data.status !== undefined} THEN ${data.status ?? null} ELSE status END,
+                title = CASE WHEN ${data.title !== undefined} THEN ${data.title ?? null} ELSE title END,
+                description = CASE WHEN ${data.description !== undefined} THEN ${data.description ?? null} ELSE description END,
+                fk_team_id = CASE WHEN ${data.teamId !== undefined} THEN ${data.teamId ?? null}::uuid ELSE fk_team_id END,
+                fk_member_id = CASE WHEN ${data.memberId !== undefined} THEN ${data.memberId ?? null} ELSE fk_member_id END,
+                fk_parent_task_id = CASE WHEN ${data.parentTaskId !== undefined} THEN ${data.parentTaskId ?? null}::uuid ELSE fk_parent_task_id END,
                 materialized_path = (SELECT new_path FROM path_calculation),
                 last_event_id = ${data.lastEventId ?? null}::uuid,
                 version = version + 1,
-                updated_by = ${data.userId},
+                updated_by = ${data.userId ?? null},
                 updated_at = ${getTimeString()}
             WHERE id = ${data.taskId}::uuid
               AND fk_project_id = ${data.projectId}::uuid

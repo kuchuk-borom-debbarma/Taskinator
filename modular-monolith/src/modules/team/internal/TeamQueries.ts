@@ -237,8 +237,8 @@ export const getTeams = async (
         WHERE fk_project_id = ${projectId}::uuid
           AND EXISTS (SELECT 1 FROM auth_check)
           AND (
-              ${cursor}::uuid IS NULL
-              OR id > ${cursor}::uuid
+              ${cursor ?? null}::uuid IS NULL
+              OR id > ${cursor ?? null}::uuid
           )
         ORDER BY id
         LIMIT ${limit + 1}
@@ -281,8 +281,8 @@ export const getTeamMembers = async (
           AND fk_project_id = ${projectId}::uuid
           AND EXISTS (SELECT 1 FROM auth_check)
           AND (
-              ${cursor}::uuid IS NULL
-              OR id > ${cursor}::uuid
+              ${cursor ?? null}::uuid IS NULL
+              OR id > ${cursor ?? null}::uuid
           )
         ORDER BY id
         LIMIT ${limit + 1}
