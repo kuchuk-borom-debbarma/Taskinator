@@ -14,17 +14,8 @@ export class NotificationRequestedListener {
                 const { userIds, title, message } = data;
                 console.log(`[External Notification] Processing notification for ${userIds.length} users`);
 
-                // External notification usually involves looking up user preferences (Email, Slack, etc.)
-                // For now, we delegate to the service which acts as a placeholder
-                await Promise.all(
-                    userIds.map(userId => 
-                        externalNotificationService.sendNotification({
-                            userId,
-                            title,
-                            message
-                        })
-                    )
-                );
+                // Single provider-level batch call — O(1) outbound HTTP regardless of recipient count
+                await externalNotificationService.sendNotificationBatch({ userIds, title, message });
             },
         });
     }

@@ -20,8 +20,8 @@ export class TaskTriggerServiceImpl implements TaskTriggerService {
         taskId: string;
         triggerType: TaskTriggerType;
         triggerData: any;
-    }): Promise<void> {
-        await insertTaskTrigger(data);
+    }): Promise<TaskTrigger> {
+        return insertTaskTrigger(data);
     }
 
     async updateTrigger(data: {
