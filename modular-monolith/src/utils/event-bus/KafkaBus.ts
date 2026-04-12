@@ -52,12 +52,12 @@ export class KafkaBus implements Bus {
 
     async publish(
         type: string,
-        payload: { key: string; data: any } | Array<{ key: string; data: any }>,
+        payload: { id?: string; key: string; data: any } | Array<{ id?: string; key: string; data: any }>,
     ) {
         const items = Array.isArray(payload) ? payload : [payload];
         const topic = EVENT_TO_TOPIC[type];
         if (!topic) throw new Error(`Unknown event type: ${type}`);
-        const events = items.map((i) => createEvent(type, i.key, i.data));
+        const events = items.map((i) => createEvent(type, i.key, i.data, i.id));
         await this.emit(events, topic);
     }
 

@@ -12,7 +12,7 @@ export interface Bus {
      */
     publish(
         type: string,
-        payload: { key: string; data: any } | Array<{ key: string; data: any }>,
+        payload: { id?: string; key: string; data: any } | Array<{ id?: string; key: string; data: any }>,
     ): Promise<void>;
 
     /**
