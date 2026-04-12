@@ -261,7 +261,11 @@ export const updateTask = async (
                 title = CASE WHEN ${data.title !== undefined} THEN ${data.title ?? null} ELSE title END,
                 description = CASE WHEN ${data.description !== undefined} THEN ${data.description ?? null} ELSE description END,
                 fk_team_id = CASE WHEN ${data.teamId !== undefined} THEN ${data.teamId ?? null}::uuid ELSE fk_team_id END,
-                fk_member_id = CASE WHEN ${data.memberId !== undefined} THEN ${data.memberId ?? null} ELSE fk_member_id END,
+                fk_member_id = CASE 
+                                  WHEN ${data.teamId === null} THEN null
+                                  WHEN ${data.memberId !== undefined} THEN ${data.memberId ?? null} 
+                                  ELSE fk_member_id 
+                               END,
                 fk_parent_task_id = CASE WHEN ${data.parentTaskId !== undefined} THEN ${data.parentTaskId ?? null}::uuid ELSE fk_parent_task_id END,
                 materialized_path = (SELECT new_path FROM path_calculation),
                 last_event_id = ${data.lastEventId ?? null}::uuid,
