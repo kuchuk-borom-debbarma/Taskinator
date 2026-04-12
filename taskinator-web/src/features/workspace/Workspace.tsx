@@ -393,6 +393,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
         </div>
       ) : (
         <ProjectDashboard 
+          username={user.username}
           projects={projects}
           onSelectProject={setSelectedProjectId}
           onCreateProject={() => setIsCreateProjectOpen(true)}

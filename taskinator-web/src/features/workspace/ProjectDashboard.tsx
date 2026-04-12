@@ -11,6 +11,7 @@ interface Project {
 }
 
 interface ProjectDashboardProps {
+  username: string;
   projects: Project[];
   onSelectProject: (id: string) => void;
   onCreateProject: () => void;
@@ -60,20 +61,29 @@ const ProjectCard: React.FC<{ project: Project; onClick: () => void }> = ({ proj
 };
 
 export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
+  username,
   projects,
   onSelectProject,
   onCreateProject,
 }) => {
   return (
     <div className="flex-1 w-full max-w-7xl mx-auto px-10 py-12 overflow-y-auto custom-scrollbar">
-      <header className="mb-12 flex items-end justify-between">
-        <div className="space-y-2">
-          <h1 className="text-4xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-foreground to-foreground/40">
-            Welcome back.
+      <header className="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-6">
+        <div className="space-y-4 max-w-2xl">
+          <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight flex flex-wrap items-baseline gap-x-3">
+            <span className="text-foreground/90">Welcome back,</span>
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-indigo-400 truncate max-w-full lg:max-w-[400px]" title={username}>
+               {username}
+            </span>
           </h1>
-          <p className="text-sm text-muted-foreground/60 font-medium tracking-wide">
-            You have <span className="text-primary">{projects.length}</span> Project{projects.length === 1 ? '' : 's'} and <span className="text-primary">12</span> Tasks.
-          </p>
+          <div className="space-y-1">
+             <p className="text-base text-foreground/80 font-medium">
+               Taskinator is your central workspace for organizing complex projects, orchestrating teams, and keeping everyone strictly aligned.
+             </p>
+             <p className="text-sm text-muted-foreground/60 font-medium tracking-wide">
+               You currently have <span className="text-primary">{projects.length}</span> Project{projects.length === 1 ? '' : 's'} and <span className="text-primary">12</span> Tasks.
+             </p>
+          </div>
         </div>
         
         <button
