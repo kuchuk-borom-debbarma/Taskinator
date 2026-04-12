@@ -48,6 +48,11 @@ export const insertTaskTrigger = async (data: {
             SELECT COUNT(*) as ct FROM project_task 
             WHERE id = ANY(${targetTaskIds}::uuid[]) 
               AND fk_project_id = ${data.projectId}::uuid
+        ),
+        trigger_count_check AS (
+            SELECT COUNT(*) < 50 as can_add 
+            FROM project_task_trigger_table 
+            WHERE fk_task_id = ${data.taskId}::uuid
         )
         INSERT INTO project_task_trigger_table (fk_project_id, name, fk_task_id, trigger_data, trigger_type)
         SELECT 
@@ -57,6 +62,7 @@ export const insertTaskTrigger = async (data: {
             ${data.triggerData}::jsonb, 
             ${data.triggerType}
         WHERE EXISTS (SELECT 1 FROM auth_check)
+          AND (SELECT can_add FROM trigger_count_check)
           AND (
             ${targetTaskIds.length} = 0
             OR
