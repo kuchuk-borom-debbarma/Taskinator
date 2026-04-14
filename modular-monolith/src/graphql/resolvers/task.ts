@@ -1,6 +1,6 @@
 import type { GraphQLContext } from '../context.ts';
 import { taskService } from '../../modules/task';
-import { taskTriggerService } from '../../modules/task-trigger';
+import { automationService } from '../../modules/automation';
 import { pubsub } from '../pubsub';
 
 export const taskResolvers = {
@@ -11,10 +11,9 @@ export const taskResolvers = {
     team: (t: any, _: any, context: GraphQLContext) => (t.teamId ? context.loaders.team.load(t.teamId) : null),
     assignee: (t: any, _: any, context: GraphQLContext) => (t.memberId ? context.loaders.user.load(t.memberId) : null),
     creator: (t: any, _: any, context: GraphQLContext) => context.loaders.user.load(t.createdBy),
-    triggers: (t: any, _: any, context: GraphQLContext) => context.loaders.taskTriggers.load(t.id),
   },
-  TaskTrigger: {
-    triggerData: (t: any) => (typeof t.triggerData === 'string' ? t.triggerData : JSON.stringify(t.triggerData)),
+  AutomationRule: {
+    rules: (t: any) => (typeof t.rules === 'string' ? t.rules : JSON.stringify(t.rules)),
     createdAt: (t: any) => (t.createdAt instanceof Date ? t.createdAt.toISOString() : t.createdAt),
     updatedAt: (t: any) => (t.updatedAt instanceof Date ? t.updatedAt.toISOString() : t.updatedAt),
   },
@@ -35,14 +34,14 @@ export const taskResolvers = {
         },
       };
     },
-    taskTriggers: async (_: any, { taskId, first, after }: any, context: GraphQLContext) => {
-      const { triggers, nextCursor } = await taskTriggerService.getTriggersForTask({
-        taskId,
-        limit: first,
-        cursor: after,
+    automations: async (_: any, args: any, context: GraphQLContext) => {
+      const { automations, nextCursor } = await automationService.getAutomationsByFilter({
+        ...args,
+        limit: args.first,
+        cursor: args.after,
       });
       return {
-        edges: triggers.map((t) => ({ node: t, cursor: t.id })),
+        edges: automations.map((t) => ({ node: t, cursor: t.id })),
         pageInfo: { hasNextPage: !!nextCursor, endCursor: nextCursor, hasPreviousPage: false },
       };
     },
@@ -72,33 +71,36 @@ export const taskResolvers = {
         taskIds,
       });
     },
-    addTaskTrigger: async (_: any, args: any, context: GraphQLContext) => {
-      const trigger = await taskTriggerService.addTriggerToTask({
-        ...args,
-        userId: context.userId!,
-        triggerData: JSON.parse(args.triggerData),
-      });
-      return { ...trigger, triggerData: JSON.stringify(trigger.triggerData) };
-    },
-    updateTaskTrigger: async (_: any, args: any, context: GraphQLContext) => {
+    addAutomation: async (_: any, args: any, context: GraphQLContext) => {
       if (!context.userId) throw new Error('Unauthorized');
-      await taskTriggerService.updateTrigger({
+      const automation = await automationService.addAutomation({
         ...args,
         userId: context.userId,
-        triggerData: args.triggerData ? JSON.parse(args.triggerData) : undefined,
+        rules: JSON.parse(args.rules),
+      });
+      return { ...automation, rules: JSON.stringify(automation.rules) };
+    },
+    updateAutomation: async (_: any, args: any, context: GraphQLContext) => {
+      if (!context.userId) throw new Error('Unauthorized');
+      await automationService.updateAutomation({
+        ...args,
+        userId: context.userId,
+        rules: args.rules ? JSON.parse(args.rules) : undefined,
       });
       return {
-         id: args.triggerId,
-         name: args.name,
-         triggerType: args.triggerType,
-         triggerData: args.triggerData ? args.triggerData : null
+         id: args.automationId,
+         targetScope: args.targetScope,
+         taskId: args.taskId,
+         teamId: args.teamId,
+         rules: args.rules ? args.rules : null,
+         isActive: args.isActive,
       };
     },
-    deleteTaskTrigger: async (_: any, { taskId, triggerId }: any, context: GraphQLContext) => {
+    deleteAutomation: async (_: any, { automationId }: any, context: GraphQLContext) => {
       if (!context.userId) throw new Error('Unauthorized');
-      await taskTriggerService.deleteTrigger({
+      await automationService.deleteAutomation({
         userId: context.userId,
-        triggerId,
+        automationId,
       });
       return true;
     },

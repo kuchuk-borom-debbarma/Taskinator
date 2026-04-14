@@ -16,7 +16,6 @@ type Task {
   createdAt: String!
   updatedAt: String
   version: Int!
-  triggers: [TaskTrigger!]!
 }
 
 type TaskEdge {
@@ -29,24 +28,26 @@ type TaskConnection {
   pageInfo: PageInfo!
 }
 
-type TaskTrigger {
+type AutomationRule {
   id: ID!
-  name: String!
   projectId: ID!
-  taskId: ID!
-  triggerType: String!
-  triggerData: String!
+  actorId: String!
+  targetScope: String!
+  taskId: ID
+  teamId: ID
+  rules: String!
+  isActive: Boolean!
   createdAt: String!
   updatedAt: String
 }
 
-type TaskTriggerEdge {
-  node: TaskTrigger!
+type AutomationRuleEdge {
+  node: AutomationRule!
   cursor: String!
 }
 
-type TaskTriggerConnection {
-  edges: [TaskTriggerEdge!]!
+type AutomationRuleConnection {
+  edges: [AutomationRuleEdge!]!
   pageInfo: PageInfo!
 }
 
@@ -78,16 +79,16 @@ input UpdateTaskInput {
 
 extend type Query {
   tasks(projectId: ID!, first: Int, after: String): TaskConnection!
-  taskTriggers(taskId: ID!, first: Int, after: String): TaskTriggerConnection!
+  automations(projectId: ID, actorId: ID, taskId: ID, teamId: ID, targetScope: String, first: Int, after: String): AutomationRuleConnection!
 }
 
 extend type Mutation {
   createTask(projectId: ID!, title: String!, description: String!, teamId: ID, parentTaskId: ID): Task
   updateTasks(projectId: ID!, tasks: [UpdateTaskInput!]!): [ID]
   deleteTasks(projectId: ID!, taskIds: [ID!]!): [ID]
-  addTaskTrigger(taskId: ID!, projectId: ID!, name: String!, triggerType: String!, triggerData: String!): TaskTrigger
-  updateTaskTrigger(triggerId: ID!, name: String, triggerType: String, triggerData: String): TaskTrigger
-  deleteTaskTrigger(taskId: ID!, triggerId: ID!): Boolean
+  addAutomation(projectId: ID!, targetScope: String!, taskId: ID, teamId: ID, rules: String!, isActive: Boolean): AutomationRule
+  updateAutomation(automationId: ID!, targetScope: String, taskId: ID, teamId: ID, rules: String, isActive: Boolean): AutomationRule
+  deleteAutomation(automationId: ID!): Boolean
 }
 
 

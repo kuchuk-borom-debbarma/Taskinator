@@ -9,11 +9,7 @@ import { projectTeamDeletedListener as taskTeamCleanup } from '../modules/task/i
 import { projectTeamDeletedListener as teamTeamCleanup } from '../modules/team/internal/listeners/ProjectTeamDeletedListener';
 
 import { projectTeamMemberDeletedListener as taskTeamMemberCleanup } from '../modules/task/internal/listeners/ProjectTeamMemberDeletedListener';
-import { taskTriggerListener as taskTriggerDelegator } from '../modules/task-trigger/internal/listeners/ProjectTaskUpdatedListener';
-
-import { taskTriggerListener } from '../modules/task-trigger/internal/listeners/TaskTriggerListener';
 import { taskDeleteListener as taskRecursiveCleanup } from '../modules/task/internal/listeners/TaskDeleteListener';
-import { taskDeletedListener as triggerTaskCleanup } from '../modules/task-trigger/internal/listeners/TaskDeletedListener';
 
 import { userSignupStartedListener } from '../modules/auth/internal/listeners/UserSignupStartedListener.ts';
 import { userCreatedListener } from '../modules/auth/internal/listeners/UserCreatedListener.ts';
@@ -29,10 +25,7 @@ export {
     taskTeamCleanup,
     teamTeamCleanup,
     taskTeamMemberCleanup,
-    taskTriggerDelegator,
-    taskTriggerListener,
     taskRecursiveCleanup,
-    triggerTaskCleanup,
     userSignupStartedListener,
     userCreatedListener,
     realtimeRouterConsumer,
@@ -53,13 +46,7 @@ export const startConsumers = async () => {
 
         taskTeamMemberCleanup.init(),
 
-        taskTriggerDelegator.init(),
-
-        taskTriggerListener.init(),
-
         taskRecursiveCleanup.init(),
-
-        triggerTaskCleanup.init(),
 
         userSignupStartedListener.init(),
         userCreatedListener.init(),
@@ -83,8 +70,6 @@ export const stopConsumers = async () => {
         taskTeamMemberCleanup.stop(),
 
         taskRecursiveCleanup.stop(),
-
-        triggerTaskCleanup.stop(),
 
         userSignupStartedListener.stop(),
         userCreatedListener.stop(),

@@ -2,7 +2,7 @@ import { Router } from 'express';
 import type { Response } from 'express';
 import { taskService } from './index';
 import { requireAuth } from '../auth/auth.middleware.ts';
-import { taskTriggerService } from '../task-trigger';
+import { automationService } from '../automation';
 
 const router = Router();
 
@@ -93,12 +93,12 @@ router.delete('/', async (req: any, res: Response) => {
     }
 });
 
-// Task Triggers
-router.get('/:taskId/triggers', async (req: any, res: Response) => {
+// Task Automations
+router.get('/:taskId/automations', async (req: any, res: Response) => {
     try {
         const { taskId } = req.params;
         const { cursor, limit } = req.query;
-        const result = await taskTriggerService.getTriggersForTask({
+        const result = await automationService.getAutomationsByFilter({
             taskId,
             cursor: cursor as string,
             limit: parseInt(limit as string) || 20,
@@ -109,30 +109,30 @@ router.get('/:taskId/triggers', async (req: any, res: Response) => {
     }
 });
 
-router.post('/:taskId/triggers', async (req: any, res: Response) => {
+router.post('/:taskId/automations', async (req: any, res: Response) => {
     try {
         const { taskId } = req.params;
-        const { name, projectId, triggerType, triggerData } = req.body;
+        const { projectId, targetScope, rules, isActive } = req.body;
         const userId = req.userId;
-        await taskTriggerService.addTriggerToTask({
+        const automation = await automationService.addAutomation({
             userId,
-            name,
             projectId,
+            targetScope: targetScope || 'TASK',
             taskId,
-            triggerType,
-            triggerData,
+            rules,
+            isActive
         });
-        res.status(201).send();
+        res.status(201).json(automation);
     } catch (error: any) {
         res.status(400).json({ error: error.message });
     }
 });
 
-router.delete('/:taskId/triggers/:triggerId', async (req: any, res: Response) => {
+router.delete('/:taskId/automations/:automationId', async (req: any, res: Response) => {
     try {
-        const { triggerId } = req.params;
+        const { automationId } = req.params;
         const userId = req.userId;
-        await taskTriggerService.deleteTrigger({ userId, triggerId });
+        await automationService.deleteAutomation({ userId, automationId });
         res.status(200).send();
     } catch (error: any) {
         res.status(400).json({ error: error.message });
