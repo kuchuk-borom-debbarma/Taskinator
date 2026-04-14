@@ -1,4 +1,5 @@
-import type { BaseService } from '../project/ProjectService.ts';
+import type { BaseService } from "../project";
+
 
 export type AutomationScope = 'TASK' | 'PROJECT' | 'TEAM';
 
