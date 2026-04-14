@@ -1,28 +1,42 @@
 # Automation Engine - Architecture
 
-ok so we will have automations that users can create so lets define them
+Automations define reactive rules for Tasks, Projects, and Teams. They operate via an **Array of Rules** evaluated sequentially.
 
-actorId (the user who created it)
-projectId (the project the automation belongs to)
-for : TASK, PROJECT, TEAM
-automations: JSONB
+An automation payload is structured exactly like this:
+`[Rule, Rule, ...]`
 
-automation is going to look something like this
+Each `Rule` evaluates a logical tree (`when`) and executes a list of actions (`then`) if the logic passes.
 
+```json
 [
     {
-        conditions: [{condition}]
-        actions: [{actions}]
+        "when": {
+            "match": "ALL",
+            "conditions": [
+                { "field": "status", "op": "CHANGED_TO", "value": "DONE" }
+            ]
+        },
+        "then": [
+            {
+                "type": "UPDATE_TASK",
+                "target": "@parent",
+                "params": { "status": "READY" }
+            }
+        ]
     }
 ]
+```
 
-they will be executed in order
+## DSL Core Logic
+### 1. `when` (RuleGroup)
+A highly nested query builder structure.
+- `match`: Evaluates if `ALL` or `ANY` child checks pass.
+- `conditions`: Array containing strict equality, delta checks (`CHANGED_TO`), or nested `RuleGroup` blocks.
 
-when the conditions are true then the actions will be executed in order
-
-now lets define the structure of the condition
-
-
-so we can have a list of automations that are going to be executed for a task
-
-it can also be single automation in that case only one automation in the automations JSONB list
+### 2. `then` (Action)
+Actions are strictly hierarchical. They mutate task state at explicit scopes:
+- `@self`
+- `@parent`
+- `@children` (immediate)
+- `@descendants` (recursive)
+- `SPECIFIC_TASKS`
