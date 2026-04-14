@@ -16,6 +16,7 @@ type Task {
   createdAt: String!
   updatedAt: String
   version: Int!
+  automations: [AutomationRule!]!
 }
 
 type TaskEdge {
@@ -28,28 +29,7 @@ type TaskConnection {
   pageInfo: PageInfo!
 }
 
-type AutomationRule {
-  id: ID!
-  projectId: ID!
-  actorId: String!
-  targetScope: String!
-  taskId: ID
-  teamId: ID
-  rules: String!
-  isActive: Boolean!
-  createdAt: String!
-  updatedAt: String
-}
 
-type AutomationRuleEdge {
-  node: AutomationRule!
-  cursor: String!
-}
-
-type AutomationRuleConnection {
-  edges: [AutomationRuleEdge!]!
-  pageInfo: PageInfo!
-}
 
 union TaskEvent = TaskCreated | TaskUpdated | TaskDeleted
 
@@ -79,16 +59,12 @@ input UpdateTaskInput {
 
 extend type Query {
   tasks(projectId: ID!, first: Int, after: String): TaskConnection!
-  automations(projectId: ID, actorId: ID, taskId: ID, teamId: ID, targetScope: String, first: Int, after: String): AutomationRuleConnection!
 }
 
 extend type Mutation {
   createTask(projectId: ID!, title: String!, description: String!, teamId: ID, parentTaskId: ID): Task
   updateTasks(projectId: ID!, tasks: [UpdateTaskInput!]!): [ID]
   deleteTasks(projectId: ID!, taskIds: [ID!]!): [ID]
-  addAutomation(projectId: ID!, targetScope: String!, taskId: ID, teamId: ID, rules: String!, isActive: Boolean): AutomationRule
-  updateAutomation(automationId: ID!, targetScope: String, taskId: ID, teamId: ID, rules: String, isActive: Boolean): AutomationRule
-  deleteAutomation(automationId: ID!): Boolean
 }
 
 

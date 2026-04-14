@@ -7,6 +7,8 @@ import { taskService } from '../modules/task';
 import type { ProjectTask } from '../modules/task/TaskService';
 import { authService } from '../modules/auth';
 import type { UserResult } from '../modules/auth/AuthService';
+import { automationService } from '../modules/automation';
+import type { AutomationRule } from '../modules/automation/AutomationService';
 
 export const createLoaders = (userId: string) => {
     return {
@@ -24,6 +26,18 @@ export const createLoaders = (userId: string) => {
             const users = await authService.getUsersByIds(ids as string[]);
             const map = new Map(users.map(u => [u.id, u]));
             return ids.map(id => map.get(id) || null);
+        }),
+        taskAutomations: new DataLoader<string, AutomationRule[]>(async (taskIds) => {
+            const map = await automationService.getAutomationsByTaskIds(taskIds as string[]);
+            return taskIds.map(id => map.get(id) || []);
+        }),
+        projectAutomations: new DataLoader<string, AutomationRule[]>(async (projectIds) => {
+            const map = await automationService.getAutomationsByProjectIds(projectIds as string[]);
+            return projectIds.map(id => map.get(id) || []);
+        }),
+        teamAutomations: new DataLoader<string, AutomationRule[]>(async (teamIds) => {
+            const map = await automationService.getAutomationsByTeamIds(teamIds as string[]);
+            return teamIds.map(id => map.get(id) || []);
         }),
     };
 };

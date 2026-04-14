@@ -8,6 +8,9 @@ import {
     getAutomationsQuery,
     insertAutomation,
     updateAutomationQuery,
+    getAutomationsByTaskIdsQuery,
+    getAutomationsByProjectIdsQuery,
+    getAutomationsByTeamIdsQuery
 } from './AutomationQueries.ts';
 import eventBus from '../../../utils/EventBus.ts';
 
@@ -46,6 +49,18 @@ export class AutomationServiceImpl implements AutomationService {
         limit?: number;
     }): Promise<{ automations: AutomationRule[]; nextCursor: string | null }> {
         return getAutomationsQuery(data);
+    }
+
+    async getAutomationsByTaskIds(taskIds: string[]): Promise<Map<string, AutomationRule[]>> {
+        return getAutomationsByTaskIdsQuery(taskIds);
+    }
+
+    async getAutomationsByProjectIds(projectIds: string[]): Promise<Map<string, AutomationRule[]>> {
+        return getAutomationsByProjectIdsQuery(projectIds);
+    }
+
+    async getAutomationsByTeamIds(teamIds: string[]): Promise<Map<string, AutomationRule[]>> {
+        return getAutomationsByTeamIdsQuery(teamIds);
     }
 
     async deleteAutomation(data: {

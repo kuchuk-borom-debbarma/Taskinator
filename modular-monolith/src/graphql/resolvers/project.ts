@@ -6,6 +6,7 @@ export const projectResolvers = {
     createdAt: (p: any) => (p.createdAt instanceof Date ? p.createdAt.toISOString() : p.createdAt),
     updatedAt: (p: any) => (p.updatedAt instanceof Date ? p.updatedAt.toISOString() : p.updatedAt),
     creator: (p: any, _: any, context: GraphQLContext) => context.loaders.user.load(p.userId),
+    automations: (p: any, _: any, context: GraphQLContext) => context.loaders.projectAutomations.load(p.id),
   },
   ProjectMember: {
     createdAt: (m: any) => (m.createdAt instanceof Date ? m.createdAt.toISOString() : m.createdAt),

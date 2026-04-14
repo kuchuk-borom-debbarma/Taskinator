@@ -46,6 +46,10 @@ export interface AutomationService extends BaseService {
         cursor?: string;
         limit?: number;
     }): Promise<{ automations: AutomationRule[]; nextCursor: string | null }>;
+    
+    getAutomationsByTaskIds(taskIds: string[]): Promise<Map<string, AutomationRule[]>>;
+    getAutomationsByProjectIds(projectIds: string[]): Promise<Map<string, AutomationRule[]>>;
+    getAutomationsByTeamIds(teamIds: string[]): Promise<Map<string, AutomationRule[]>>;
 
     deleteAutomation(data: { userId: string; automationId: string }): Promise<void>;
 }

@@ -188,3 +188,62 @@ export const deleteAutomationQuery = async (data: {
 
     await db.deleteFrom('automations').where('id', '=', data.automationId).execute();
 };
+
+const mapAutomations = (rows: any[]): AutomationRule[] => {
+    return rows.map((r) => ({
+        id: r.id,
+        projectId: r.fk_project_id,
+        actorId: r.actor_id,
+        targetScope: r.target_scope as AutomationScope,
+        taskId: r.fk_task_id,
+        teamId: r.fk_team_id,
+        rules: r.rules,
+        isActive: r.is_active,
+        createdAt: r.created_at as Date,
+        updatedAt: r.updated_at as Date,
+    }));
+};
+
+export const getAutomationsByTaskIdsQuery = async (taskIds: string[]): Promise<Map<string, AutomationRule[]>> => {
+    if (taskIds.length === 0) return new Map();
+    const rows = await db.selectFrom('automations').selectAll().where('fk_task_id', 'in', taskIds).execute();
+    
+    const automations = mapAutomations(rows);
+    const map = new Map<string, AutomationRule[]>();
+    for (const auto of automations) {
+        if (!auto.taskId) continue;
+        const list = map.get(auto.taskId) || [];
+        list.push(auto);
+        map.set(auto.taskId, list);
+    }
+    return map;
+};
+
+export const getAutomationsByProjectIdsQuery = async (projectIds: string[]): Promise<Map<string, AutomationRule[]>> => {
+    if (projectIds.length === 0) return new Map();
+    const rows = await db.selectFrom('automations').selectAll().where('fk_project_id', 'in', projectIds).where('target_scope', '=', 'PROJECT').execute();
+    
+    const automations = mapAutomations(rows);
+    const map = new Map<string, AutomationRule[]>();
+    for (const auto of automations) {
+        const list = map.get(auto.projectId) || [];
+        list.push(auto);
+        map.set(auto.projectId, list);
+    }
+    return map;
+};
+
+export const getAutomationsByTeamIdsQuery = async (teamIds: string[]): Promise<Map<string, AutomationRule[]>> => {
+    if (teamIds.length === 0) return new Map();
+    const rows = await db.selectFrom('automations').selectAll().where('fk_team_id', 'in', teamIds).execute();
+    
+    const automations = mapAutomations(rows);
+    const map = new Map<string, AutomationRule[]>();
+    for (const auto of automations) {
+        if (!auto.teamId) continue;
+        const list = map.get(auto.teamId) || [];
+        list.push(auto);
+        map.set(auto.teamId, list);
+    }
+    return map;
+};
