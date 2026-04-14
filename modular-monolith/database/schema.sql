@@ -145,3 +145,18 @@ CREATE TABLE outbox_events (
     status TEXT NOT NULL DEFAULT 'PENDING',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Automation Rules Table
+CREATE TABLE automation_rules (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    fk_project_id UUID NOT NULL,
+    actor_id TEXT NOT NULL,
+    target_scope TEXT NOT NULL, -- 'TASK', 'PROJECT', 'TEAM'
+    rules JSONB NOT NULL, -- Array of { conditions, actions }
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_automation_rules_project ON automation_rules(fk_project_id);
+
