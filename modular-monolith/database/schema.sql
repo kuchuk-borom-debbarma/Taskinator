@@ -135,8 +135,8 @@ CREATE TABLE outbox_events (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- Automation Rules Table
-CREATE TABLE automation_rules (
+-- Automations Engine Table
+CREATE TABLE automations (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     fk_project_id UUID NOT NULL,
     actor_id TEXT NOT NULL,
@@ -147,5 +147,5 @@ CREATE TABLE automation_rules (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
-CREATE INDEX idx_automation_rules_project ON automation_rules(fk_project_id);
+CREATE INDEX idx_automations_project ON automations(fk_project_id);
 

@@ -7,7 +7,7 @@ import type {
 } from './tables/ProjectTeam.ts';
 import type {
     ProjectTaskTable,
-    AutomationRulesTable,
+    AutomationsTable,
 } from './tables/Task.ts';
 import type { ProcessedEventTable } from './tables/ProcessedEvent.ts';
 import type { UserTable, PendingUserTable } from './tables/User.ts';
@@ -19,7 +19,7 @@ export interface Database {
     project_team: ProjectTeamTable;
     project_team_member: ProjectTeamMemberTable;
     project_task: ProjectTaskTable;
-    automation_rules: AutomationRulesTable;
+    automations: AutomationsTable;
     processed_event: ProcessedEventTable;
     users: UserTable;
     pending_users: PendingUserTable;

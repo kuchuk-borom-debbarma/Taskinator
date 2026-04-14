@@ -24,7 +24,7 @@ export const insertAutomation = async (data: {
     }
 
     const result = await db
-        .insertInto('automation_rules')
+        .insertInto('automations')
         .values({
             fk_project_id: data.projectId,
             actor_id: data.userId,
@@ -61,7 +61,7 @@ export const updateAutomationQuery = async (data: {
     isActive?: boolean;
 }): Promise<void> => {
     const authCheck = await sql`
-        SELECT 1 FROM automation_rules ar
+        SELECT 1 FROM automations ar
         JOIN project p ON ar.fk_project_id = p.id
         LEFT JOIN project_member pm ON pm.fk_project_id = p.id
         WHERE ar.id = ${data.automationId}::uuid
@@ -73,7 +73,7 @@ export const updateAutomationQuery = async (data: {
         throw new Error('Unauthorized');
     }
 
-    let updateQuery = db.updateTable('automation_rules').where('id', '=', data.automationId);
+    let updateQuery = db.updateTable('automations').where('id', '=', data.automationId);
 
     let hasUpdates = false;
 
@@ -115,7 +115,7 @@ export const getAutomationsQuery = async (data: {
 }): Promise<{ automations: AutomationRule[]; nextCursor: string | null }> => {
     const limit = data.limit && data.limit > 0 ? data.limit : 50;
 
-    let query = db.selectFrom('automation_rules').selectAll().orderBy('created_at', 'desc').limit(limit + 1);
+    let query = db.selectFrom('automations').selectAll().orderBy('created_at', 'desc').limit(limit + 1);
 
     if (data.projectId) {
         query = query.where('fk_project_id', '=', data.projectId);
@@ -174,7 +174,7 @@ export const deleteAutomationQuery = async (data: {
     automationId: string;
 }): Promise<void> => {
     const authCheck = await sql`
-        SELECT 1 FROM automation_rules ar
+        SELECT 1 FROM automations ar
         JOIN project p ON ar.fk_project_id = p.id
         LEFT JOIN project_member pm ON pm.fk_project_id = p.id
         WHERE ar.id = ${data.automationId}::uuid
@@ -186,5 +186,5 @@ export const deleteAutomationQuery = async (data: {
         throw new Error('Unauthorized');
     }
 
-    await db.deleteFrom('automation_rules').where('id', '=', data.automationId).execute();
+    await db.deleteFrom('automations').where('id', '=', data.automationId).execute();
 };

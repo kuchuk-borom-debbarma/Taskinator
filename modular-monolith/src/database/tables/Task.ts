@@ -29,7 +29,7 @@ export type ProjectTask = Selectable<ProjectTaskTable>;
 export type NewProjectTask = Insertable<ProjectTaskTable>;
 export type ProjectTaskUpdate = Updateable<ProjectTaskTable>;
 
-export interface AutomationRulesTable {
+export interface AutomationsTable {
     id: Generated<string>;
     fk_project_id: string;
     actor_id: string;
