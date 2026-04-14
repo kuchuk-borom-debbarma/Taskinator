@@ -95,31 +95,6 @@ CREATE TABLE project_task_trigger_table (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- IFTTT Automation Groups
-CREATE TABLE automation_groups (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    name TEXT NOT NULL,
-    scope TEXT NOT NULL, -- 'TASK', 'PROJECT', 'TEAM', 'MEMBER'
-    target_id UUID,      -- Link to the specific scope entity
-    trigger_event TEXT NOT NULL, -- e.g., 'project.task.updated'
-    is_enabled BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
--- IFTTT Automation Rules (Sequential within a group)
-CREATE TABLE automation_rules (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    group_id UUID NOT NULL REFERENCES automation_groups(id) ON DELETE CASCADE,
-    sequence_number INTEGER NOT NULL,
-    conditions JSONB NOT NULL,   -- Predicate tree (all/any)
-    actions JSONB NOT NULL,      -- Array of {type, params}
-    can_propagate BOOLEAN DEFAULT TRUE, -- Controls silent updates
-    version INTEGER NOT NULL DEFAULT 1,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
 -- Users Table
 CREATE TABLE users (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

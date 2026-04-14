@@ -223,17 +223,15 @@ export interface UpdateTaskParam {
     teamId?: string;
     memberId?: string;
     parentTaskId?: string;
-    shouldPropagate?: boolean;
-    incomingDepth?: number;
 }
 
 export const updateTask = async (
     data: UpdateTaskParam,
-): Promise<ProjectTask | null> => {
+): Promise<string | null> => {
     // Optimized for 10k RPS: Consolidating subqueries into one WITH block
-    const result = await sql<ProjectTask>`
+    const result = await sql<{ id: string }>`
         WITH current_task AS (
-            SELECT *
+            SELECT materialized_path, version, fk_team_id
             FROM project_task
             WHERE id = ${data.taskId}::uuid AND fk_project_id = ${data.projectId}::uuid
         ),
@@ -294,7 +292,7 @@ export const updateTask = async (
                     AND fk_team_id = COALESCE(${data.teamId ?? undefined}::uuid, (SELECT fk_team_id FROM current_task))
               ))
               AND (${data.parentTaskId === undefined} OR ${data.parentTaskId === null} OR EXISTS (SELECT 1 FROM parent_info))
-            RETURNING *
+            RETURNING id
         ),
         updated_descendants AS (
             UPDATE project_task
@@ -310,26 +308,19 @@ export const updateTask = async (
         inserted_outbox AS (
             INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
             SELECT 'project.task.updated',
-                   ut.id::text,
+                   id::text,
                    jsonb_build_object(
-                       'taskId', ut.id,
+                       'taskId', id,
                        'projectId', ${data.projectId}::text,
                        'userId', ${data.userId}::text,
-                       'updates', ${JSON.stringify(data)}::jsonb,
-                       'oldState', to_jsonb(ct.*),
-                       'newState', to_jsonb(ut.*),
-                       'metadata', jsonb_build_object(
-                           'depth', ${data.incomingDepth ?? 0} + 1,
-                           'timestamp', NOW()
-                       )
+                       'updates', ${JSON.stringify(data)}::jsonb
                    )
-            FROM updated_task ut, current_task ct
-            WHERE ${data.shouldPropagate ?? true} = TRUE
+            FROM updated_task
         )
-        SELECT * FROM updated_task
+        SELECT id FROM updated_task
     `.execute(db);
 
-    return result.rows[0] ?? null;
+    return result.rows[0]?.id ?? null;
 };
 
 export const deleteAllProjectTasks = async (projectId: string) => {
