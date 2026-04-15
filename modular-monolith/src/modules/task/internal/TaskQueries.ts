@@ -495,3 +495,291 @@ export const getTasks = async (
 
     return { tasks, nextCursor };
 };
+export const getTasksByIdsQuery = async (
+    projectId: string,
+    taskIds: string[],
+): Promise<ProjectTask[]> => {
+    if (taskIds.length === 0) return [];
+    const result = await sql<ProjectTask>`
+        SELECT * FROM project_task 
+        WHERE fk_project_id = ${projectId}::uuid 
+          AND id = ANY(${taskIds}::uuid[])
+    `.execute(db);
+    return result.rows;
+};
+
+export const createTaskLinkQuery = async (data: {
+    userId: string;
+    projectId: string;
+    fromTaskId: string;
+    toTaskId: string;
+    linkType: string;
+}): Promise<string> => {
+    if (data.linkType.length > 50) {
+        throw new Error('Link type must be 50 characters or less');
+    }
+
+    // 1. Auth & Cycle Check in one go
+    // A cycle exists if TO is already an ancestor of FROM
+    const check = await sql`
+        WITH auth_check AS (
+            SELECT 1 FROM project WHERE id = ${data.projectId}::uuid AND fk_user_id = ${data.userId}
+            UNION ALL
+            SELECT 1 FROM project_member WHERE fk_project_id = ${data.projectId}::uuid AND fk_user_id = ${data.userId}
+            LIMIT 1
+        ),
+        cycle_check AS (
+            SELECT 1 FROM task_link_materialized
+            WHERE origin_id = ${data.toTaskId}::uuid 
+              AND terminal_id = ${data.fromTaskId}::uuid
+              AND fk_project_id = ${data.projectId}::uuid
+        )
+        SELECT 
+            (SELECT COUNT(*) FROM auth_check) > 0 AS authorized,
+            (SELECT COUNT(*) FROM cycle_check) > 0 AS has_cycle
+    `.execute(db);
+
+    const { authorized, has_cycle } = check.rows[0] as { authorized: boolean; has_cycle: boolean };
+
+    if (!authorized) throw new Error('Unauthorized');
+    if (has_cycle) throw new Error('Circular dependency detected');
+
+    // 2. Insert link and outbox event
+    const result = await sql<{ id: string }>`
+        WITH inserted_link AS (
+            INSERT INTO task_link (fk_project_id, from_task_id, to_task_id, link_type)
+            VALUES (${data.projectId}::uuid, ${data.fromTaskId}::uuid, ${data.toTaskId}::uuid, ${data.linkType})
+            RETURNING id
+        ),
+        outbox AS (
+            INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
+            SELECT 
+                'task.link.created',
+                ${data.projectId},
+                jsonb_build_object(
+                    'linkId', id,
+                    'projectId', ${data.projectId},
+                    'fromTaskId', ${data.fromTaskId},
+                    'toTaskId', ${data.toTaskId},
+                    'linkType', ${data.linkType}
+                )
+            FROM inserted_link
+        )
+        SELECT id FROM inserted_link
+    `.execute(db);
+
+    return result.rows[0]!.id;
+};
+
+export const deleteTaskLinkQuery = async (data: {
+    userId: string;
+    projectId: string;
+    linkId: string;
+}): Promise<void> => {
+    const result = await sql`
+        WITH auth_check AS (
+            SELECT 1 FROM project WHERE id = ${data.projectId}::uuid AND fk_user_id = ${data.userId}
+            UNION ALL
+            SELECT 1 FROM project_member WHERE fk_project_id = ${data.projectId}::uuid AND fk_user_id = ${data.userId}
+            LIMIT 1
+        ),
+        deleted_link AS (
+            DELETE FROM task_link
+            WHERE id = ${data.linkId}::uuid 
+              AND fk_project_id = ${data.projectId}::uuid
+              AND EXISTS (SELECT 1 FROM auth_check)
+            RETURNING *
+        )
+        INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
+        SELECT 
+            'task.link.deleted',
+            ${data.projectId},
+            jsonb_build_object(
+                'linkId', id,
+                'projectId', fk_project_id,
+                'fromTaskId', from_task_id,
+                'toTaskId', to_task_id,
+                'linkType', link_type
+            )
+        FROM deleted_link
+    `.execute(db);
+};
+
+export const getLinksQuery = async (data: {
+    userId: string;
+    projectId: string;
+    taskId: string;
+}): Promise<{ direct: TaskLink[]; story: TaskLinkMaterialized[] }> => {
+    const authCheck = await sql`
+        SELECT 1 FROM project WHERE id = ${data.projectId}::uuid AND fk_user_id = ${data.userId}
+        UNION ALL
+        SELECT 1 FROM project_member WHERE fk_project_id = ${data.projectId}::uuid AND fk_user_id = ${data.userId}
+        LIMIT 1
+    `.execute(db);
+
+    if (authCheck.rows.length === 0) throw new Error('Unauthorized');
+
+    const [direct, story] = await Promise.all([
+        sql<TaskLink>`
+            SELECT 
+                id, 
+                fk_project_id AS "projectId", 
+                from_task_id AS "fromTaskId", 
+                to_task_id AS "toTaskId", 
+                link_type AS "linkType", 
+                created_at AS "createdAt"
+            FROM task_link
+            WHERE fk_project_id = ${data.projectId}::uuid
+              AND (from_task_id = ${data.taskId}::uuid OR to_task_id = ${data.taskId}::uuid)
+        `.execute(db),
+        sql<TaskLinkMaterialized>`
+            SELECT 
+                id, 
+                fk_project_id AS "projectId", 
+                origin_id AS "originId", 
+                terminal_id AS "terminalId", 
+                path_task_ids AS "pathTaskIds", 
+                path_link_types AS "pathLinkTypes", 
+                depth, 
+                created_at AS "createdAt"
+            FROM task_link_materialized
+            WHERE fk_project_id = ${data.projectId}::uuid
+              AND (origin_id = ${data.taskId}::uuid OR terminal_id = ${data.taskId}::uuid)
+        `.execute(db)
+    ]);
+
+    return {
+        direct: direct.rows,
+        story: story.rows
+    };
+};
+
+/**
+ * Iterative Path Re-builder (The "Re-baker")
+ * 
+ * Given a terminal task, this completely reconstructs its task_link_materialized entries
+ * based on the current adjacency list (task_link).
+ * 
+ * It filters by origin_id to support batching if needed, but usually we bake all paths
+ * for a single terminal at once.
+ */
+export const rebuildTerminalPathsQuery = async (data: {
+    projectId: string;
+    terminalId: string;
+}): Promise<string[]> => {
+    // 1. Clear existing paths for this terminal
+    await sql`
+        DELETE FROM task_link_materialized
+        WHERE fk_project_id = ${data.projectId}::uuid
+          AND terminal_id = ${data.terminalId}::uuid
+    `.execute(db);
+
+    // 2. Reconstruct using recursive CTE (but only for THIS terminal)
+    // Capped at 50 depth for safety
+    const result = await sql<{ id: string }>`
+        WITH RECURSIVE paths(origin_id, terminal_id, path_task_ids, path_link_types, depth) AS (
+            -- Anchor: Direct links to this terminal
+            SELECT 
+                from_task_id as origin_id,
+                to_task_id as terminal_id,
+                ARRAY[from_task_id, to_task_id]::uuid[] as path_task_ids,
+                ARRAY[link_type]::text[] as path_link_types,
+                1 as depth
+            FROM task_link
+            WHERE to_task_id = ${data.terminalId}::uuid
+              AND fk_project_id = ${data.projectId}::uuid
+
+            UNION ALL
+
+            -- Recursive: Find ancestors of current origins
+            SELECT
+                tl.from_task_id as origin_id,
+                p.terminal_id,
+                tl.from_task_id || p.path_task_ids as path_task_ids,
+                tl.link_type || p.path_link_types as path_link_types,
+                p.depth + 1
+            FROM task_link tl
+            JOIN paths p ON tl.to_task_id = p.origin_id
+            WHERE p.depth < 50
+              AND NOT (tl.from_task_id = ANY(p.path_task_ids)) -- Cycle protection
+        )
+        INSERT INTO task_link_materialized (fk_project_id, origin_id, terminal_id, path_task_ids, path_link_types, depth)
+        SELECT ${data.projectId}::uuid, origin_id, terminal_id, path_task_ids, path_link_types, depth
+        FROM paths
+        RETURNING origin_id::text
+    `.execute(db);
+
+    return result.rows.map(r => r.id);
+};
+
+export const getDownstreamTaskIdsQuery = async (data: {
+    projectId: string;
+    taskId: string;
+    limit: number;
+    offset: number;
+}): Promise<string[]> => {
+    const result = await sql<{ to_task_id: string }>`
+        SELECT to_task_id
+        FROM task_link
+        WHERE from_task_id = ${data.taskId}::uuid
+          AND fk_project_id = ${data.projectId}::uuid
+        LIMIT ${data.limit}
+        OFFSET ${data.offset}
+    `.execute(db);
+
+    return result.rows.map(r => r.to_task_id);
+};
+
+export const getLinksByTaskIdsQuery = async (
+    projectId: string,
+    taskIds: string[],
+): Promise<Map<string, { direct: TaskLink[]; story: TaskLinkMaterialized[] }>> => {
+    if (taskIds.length === 0) return new Map();
+
+    const [direct, story] = await Promise.all([
+        sql<TaskLink>`
+            SELECT 
+                id, 
+                fk_project_id AS "projectId", 
+                from_task_id AS "fromTaskId", 
+                to_task_id AS "toTaskId", 
+                link_type AS "linkType", 
+                created_at AS "createdAt"
+            FROM task_link
+            WHERE fk_project_id = ${projectId}::uuid
+              AND (from_task_id = ANY(${taskIds}::uuid[]) OR to_task_id = ANY(${taskIds}::uuid[]))
+        `.execute(db),
+        sql<TaskLinkMaterialized>`
+            SELECT 
+                id, 
+                fk_project_id AS "projectId", 
+                origin_id AS "originId", 
+                terminal_id AS "terminalId", 
+                path_task_ids AS "pathTaskIds", 
+                path_link_types AS "pathLinkTypes", 
+                depth, 
+                created_at AS "createdAt"
+            FROM task_link_materialized
+            WHERE fk_project_id = ${projectId}::uuid
+              AND (origin_id = ANY(${taskIds}::uuid[]) OR terminal_id = ANY(${taskIds}::uuid[]))
+        `.execute(db)
+    ]);
+
+    const resultMap = new Map<string, { direct: TaskLink[]; story: TaskLinkMaterialized[] }>();
+    taskIds.forEach(id => resultMap.set(id, { direct: [], story: [] }));
+
+    direct.rows.forEach(link => {
+        if (resultMap.has(link.fromTaskId)) resultMap.get(link.fromTaskId)!.direct.push(link);
+        if (resultMap.has(link.toTaskId)) resultMap.get(link.toTaskId)!.direct.push(link);
+    });
+
+    story.rows.forEach(s => {
+        if (resultMap.has(s.originId)) resultMap.get(s.originId)!.story.push(s);
+        if (resultMap.has(s.terminalId)) resultMap.get(s.terminalId)!.story.push(s);
+    });
+
+    return resultMap;
+};
+
+
+

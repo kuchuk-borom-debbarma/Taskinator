@@ -39,5 +39,33 @@ export const createLoaders = (userId: string) => {
             const map = await automationService.getAutomationsByTeamIds(teamIds as string[]);
             return teamIds.map(id => map.get(id) || []);
         }),
+        taskLinks: new DataLoader<{ projectId: string; taskId: string }, { direct: any[]; story: any[] }>(
+            async (keys) => {
+                const projectGroups = new Map<string, string[]>();
+                keys.forEach((k) => {
+                    const taskIds = projectGroups.get(k.projectId) || [];
+                    taskIds.push(k.taskId);
+                    projectGroups.set(k.projectId, taskIds);
+                });
+
+                const resultMap = new Map<string, { direct: any[]; story: any[] }>();
+                for (const [projectId, taskIds] of projectGroups.entries()) {
+                    const linksMap = await taskService.getLinksByTaskIds(projectId, taskIds);
+                    linksMap.forEach((val, tid) =>
+                        resultMap.set(`${projectId}|${tid}`, val),
+                    );
+                }
+
+                return keys.map(
+                    (k) =>
+                        resultMap.get(`${k.projectId}|${k.taskId}`) || {
+                            direct: [],
+                            story: [],
+                        },
+                );
+            },
+            { cacheKeyFn: (key) => `${key.projectId}|${key.taskId}` },
+        ),
     };
 };
+

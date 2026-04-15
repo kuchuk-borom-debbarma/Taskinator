@@ -17,6 +17,26 @@ type Task {
   updatedAt: String
   version: Int!
   automations: [AutomationRule!]!
+  links: [TaskLink!]!
+  story: [TaskStory!]!
+}
+
+type TaskLink {
+  id: ID!
+  fromTaskId: ID!
+  toTaskId: ID!
+  linkType: String!
+  createdAt: String!
+}
+
+type TaskStory {
+  id: ID!
+  originId: ID!
+  terminalId: ID!
+  pathTaskIds: [ID!]!
+  pathLinkTypes: [String!]!
+  depth: Int!
+  createdAt: String!
 }
 
 type TaskEdge {
@@ -28,8 +48,6 @@ type TaskConnection {
   edges: [TaskEdge!]!
   pageInfo: PageInfo!
 }
-
-
 
 union TaskEvent = TaskCreated | TaskUpdated | TaskDeleted
 
@@ -65,6 +83,10 @@ extend type Mutation {
   createTask(projectId: ID!, title: String!, description: String!, teamId: ID, parentTaskId: ID): Task
   updateTasks(projectId: ID!, tasks: [UpdateTaskInput!]!): [ID]
   deleteTasks(projectId: ID!, taskIds: [ID!]!): [ID]
+  
+  createTaskLink(projectId: ID!, fromTaskId: ID!, toTaskId: ID!, linkType: String!): ID
+  deleteTaskLink(projectId: ID!, linkId: ID!): Boolean
 }
+
 
 

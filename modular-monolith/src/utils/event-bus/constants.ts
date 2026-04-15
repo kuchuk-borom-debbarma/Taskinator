@@ -8,6 +8,7 @@ export const KAFKA_TOPICS = {
     AUTH: 'auth-events',
     NOTIFICATION: 'notification-events',
     AUTOMATION: 'automation-events',
+    PROJECT_RELATIONSHIP: 'project-relationship-events',
 } as const;
 
 // Event type constants — values match exactly what the outbox SQL writes,
@@ -51,6 +52,11 @@ export const KAFKA_EVENTS = {
     AUTOMATION: {
         TRIGGER: 'automation.trigger.task',
     },
+    TASK_LINK: {
+        CREATED: 'task.link.created',
+        DELETED: 'task.link.deleted',
+        PROPAGATE: 'task.link.propagate',
+    },
 } as const;
 
 // Maps event type → Kafka topic (the actual broker topic name).
@@ -75,4 +81,7 @@ export const EVENT_TO_TOPIC: Record<string, string> = {
     'notification.requested': KAFKA_TOPICS.NOTIFICATION,
     'notification.created': KAFKA_TOPICS.NOTIFICATION,
     'automation.trigger.task': KAFKA_TOPICS.AUTOMATION,
+    'task.link.created': KAFKA_TOPICS.PROJECT_RELATIONSHIP,
+    'task.link.deleted': KAFKA_TOPICS.PROJECT_RELATIONSHIP,
+    'task.link.propagate': KAFKA_TOPICS.PROJECT_RELATIONSHIP,
 };

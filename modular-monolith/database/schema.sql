@@ -153,3 +153,36 @@ CREATE INDEX idx_automations_project ON automations(fk_project_id);
 CREATE INDEX idx_automations_task ON automations(fk_task_id) WHERE fk_task_id IS NOT NULL;
 CREATE INDEX idx_automations_team ON automations(fk_team_id) WHERE fk_team_id IS NOT NULL;
 
+-- Task Relationships (Direct Adjacency)
+CREATE TABLE task_link (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    fk_project_id UUID NOT NULL,
+    from_task_id UUID NOT NULL,
+    to_task_id UUID NOT NULL,
+    link_type TEXT NOT NULL, -- Max 50 chars enforced in code
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_task_link_project FOREIGN KEY (fk_project_id) REFERENCES project(id) ON DELETE CASCADE,
+    CONSTRAINT fk_task_link_from FOREIGN KEY (from_task_id) REFERENCES project_task(id) ON DELETE CASCADE,
+    CONSTRAINT fk_task_link_to FOREIGN KEY (to_task_id) REFERENCES project_task(id) ON DELETE CASCADE
+);
+
+-- Task Relationships Materialized (Path Closure)
+-- Stores the transitive reachability and the "Story Chain"
+CREATE TABLE task_link_materialized (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    fk_project_id UUID NOT NULL,
+    origin_id UUID NOT NULL,
+    terminal_id UUID NOT NULL,
+    path_task_ids UUID[] NOT NULL,
+    path_link_types TEXT[] NOT NULL,
+    depth INTEGER NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_task_path_project FOREIGN KEY (fk_project_id) REFERENCES project(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_task_link_terminal ON task_link_materialized(terminal_id);
+CREATE INDEX idx_task_link_origin ON task_link_materialized(origin_id);
+CREATE INDEX idx_task_link_types ON task_link_materialized USING GIN (path_link_types);
+CREATE INDEX idx_task_link_project_id ON task_link(fk_project_id);
+
+

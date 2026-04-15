@@ -12,6 +12,14 @@ export const taskResolvers = {
     assignee: (t: any, _: any, context: GraphQLContext) => (t.memberId ? context.loaders.user.load(t.memberId) : null),
     creator: (t: any, _: any, context: GraphQLContext) => context.loaders.user.load(t.createdBy),
     automations: (t: any, _: any, context: GraphQLContext) => context.loaders.taskAutomations.load(t.id),
+    links: async (t: any, _: any, context: GraphQLContext) => {
+      const result = await context.loaders.taskLinks.load({ projectId: t.projectId, taskId: t.id });
+      return result.direct;
+    },
+    story: async (t: any, _: any, context: GraphQLContext) => {
+      const result = await context.loaders.taskLinks.load({ projectId: t.projectId, taskId: t.id });
+      return result.story;
+    },
   },
   Query: {
     tasks: async (_: any, { projectId, first, after }: any, context: GraphQLContext) => {
@@ -56,5 +64,21 @@ export const taskResolvers = {
         taskIds,
       });
     },
+    createTaskLink: async (_: any, args: any, context: GraphQLContext) => {
+      if (!context.userId) throw new Error('Unauthorized');
+      return taskService.createLink({
+        ...args,
+        userId: context.userId,
+      });
+    },
+    deleteTaskLink: async (_: any, args: any, context: GraphQLContext) => {
+      if (!context.userId) throw new Error('Unauthorized');
+      await taskService.deleteLink({
+        ...args,
+        userId: context.userId,
+      });
+      return true;
+    },
   },
 };
+

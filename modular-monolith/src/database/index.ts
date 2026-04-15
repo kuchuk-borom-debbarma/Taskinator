@@ -8,6 +8,8 @@ import type {
 import type {
     ProjectTaskTable,
     AutomationsTable,
+    TaskLinkTable,
+    TaskLinkMaterializedTable,
 } from './tables/Task.ts';
 import type { ProcessedEventTable } from './tables/ProcessedEvent.ts';
 import type { UserTable, PendingUserTable } from './tables/User.ts';
@@ -24,6 +26,8 @@ export interface Database {
     users: UserTable;
     pending_users: PendingUserTable;
     outbox_events: OutboxEventTable;
+    task_link: TaskLinkTable;
+    task_link_materialized: TaskLinkMaterializedTable;
 }
 
 const dialect = new PostgresDialect({

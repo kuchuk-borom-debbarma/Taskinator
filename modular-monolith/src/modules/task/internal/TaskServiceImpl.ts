@@ -11,7 +11,14 @@ import {
     getTasks,
     insertTask,
     updateTask,
+    getLinksByTaskIdsQuery,
 } from './TaskQueries.ts';
+import { taskDeleteListener } from './listeners/TaskDeleteListener.ts';
+import { linkPropagationListener } from './listeners/LinkPropagationListener.ts';
+import { projectDeletedListener } from './listeners/ProjectDeletedListener.ts';
+import { projectMemberDeletedListener } from './listeners/ProjectMemberDeletedListener.ts';
+import { projectTeamDeletedListener } from './listeners/ProjectTeamDeletedListener.ts';
+import { projectTeamMemberDeletedListener } from './listeners/ProjectTeamMemberDeletedListener.ts';
 
 export class TaskServiceImpl implements TaskService {
     async getTasks(
@@ -25,6 +32,14 @@ export class TaskServiceImpl implements TaskService {
     async init(): Promise<void> {
         console.log(`Initializing event bus ${this.constructor.name}`);
         await eventBus.init();
+        await Promise.all([
+            taskDeleteListener.init(),
+            linkPropagationListener.init(),
+            projectDeletedListener.init(),
+            projectMemberDeletedListener.init(),
+            projectTeamDeletedListener.init(),
+            projectTeamMemberDeletedListener.init(),
+        ]);
     }
 
     async destroy(): Promise<void> {
@@ -70,4 +85,42 @@ export class TaskServiceImpl implements TaskService {
 
         return updatedIds;
     }
+
+    async createLink(data: {
+        userId: string;
+        projectId: string;
+        fromTaskId: string;
+        toTaskId: string;
+        linkType: string;
+    }): Promise<string> {
+        return createTaskLinkQuery(data);
+    }
+
+    async deleteLink(data: {
+        userId: string;
+        projectId: string;
+        linkId: string;
+    }): Promise<void> {
+        return deleteTaskLinkQuery(data);
+    }
+
+    async getLinks(
+        userId: string,
+        projectId: string,
+        taskId: string,
+    ): Promise<{
+        direct: any[];
+        story: any[];
+    }> {
+        return getLinksQuery({ userId, projectId, taskId });
+    }
+
+    async getLinksByTaskIds(
+        projectId: string,
+        taskIds: string[],
+    ): Promise<Map<string, { direct: TaskLink[]; story: TaskLinkMaterialized[] }>> {
+        return getLinksByTaskIdsQuery(projectId, taskIds);
+    }
 }
+
+
