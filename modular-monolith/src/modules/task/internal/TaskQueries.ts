@@ -231,7 +231,17 @@ export const updateTask = async (
     // Optimized for 10k RPS: Consolidating subqueries into one WITH block
     const result = await sql<{ id: string }>`
         WITH current_task AS (
-            SELECT materialized_path, version, fk_team_id
+            -- Snapshot state BEFORE update for the Logic Lane
+            SELECT 
+                materialized_path, 
+                version, 
+                fk_team_id,
+                status,
+                title,
+                description,
+                fk_member_id,
+                updated_at,
+                fk_project_id
             FROM project_task
             WHERE id = ${data.taskId}::uuid AND fk_project_id = ${data.projectId}::uuid
         ),
@@ -292,7 +302,19 @@ export const updateTask = async (
                     AND fk_team_id = COALESCE(${data.teamId ?? undefined}::uuid, (SELECT fk_team_id FROM current_task))
               ))
               AND (${data.parentTaskId === undefined} OR ${data.parentTaskId === null} OR EXISTS (SELECT 1 FROM parent_info))
-            RETURNING id
+            RETURNING 
+                id, 
+                status, 
+                title, 
+                description, 
+                fk_team_id AS "teamId", 
+                fk_member_id AS "memberId", 
+                version, 
+                updated_at AS "updatedAt", 
+                fk_project_id AS "projectId"
+        ),
+        metadata AS (
+            SELECT gen_random_uuid() AS correlation_id
         ),
         updated_descendants AS (
             UPDATE project_task
@@ -305,17 +327,53 @@ export const updateTask = async (
               AND materialized_path LIKE (SELECT old_path FROM path_calculation) || CASE WHEN (SELECT old_path FROM path_calculation) = '' THEN '' ELSE '/' END || ${data.taskId}::text || '/%'
             RETURNING id
         ),
-        inserted_outbox AS (
+        display_outbox AS (
+            -- Display Lane: keeps UI fresh
             INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
             SELECT 'project.task.updated',
-                   id::text,
+                   ut.id::text,
                    jsonb_build_object(
-                       'taskId', id,
-                       'projectId', ${data.projectId}::text,
+                       'taskId', ut.id,
+                       'projectId', ut."projectId",
                        'userId', ${data.userId}::text,
+                       'correlationId', m.correlation_id,
                        'updates', ${JSON.stringify(data)}::jsonb
                    )
-            FROM updated_task
+            FROM updated_task ut, metadata m
+        ),
+        logic_outbox AS (
+            -- Logic Lane: triggers the Automation Engine
+            INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
+            SELECT 
+                'automation.trigger.task',
+                ut.id::text,
+                jsonb_build_object(
+                    'taskId',        ut.id,
+                    'projectId',     ut."projectId",
+                    'correlationId', m.correlation_id,
+                    'depth',         0,
+                    'oldState', jsonb_build_object(
+                         'status',      os.status,
+                         'title',       os.title,
+                         'description', os.description,
+                         'teamId',      os.fk_team_id,
+                         'memberId',    os.fk_member_id,
+                         'version',     os.version,
+                         'updatedAt',   os.updated_at
+                    ),
+                    'newState', jsonb_build_object(
+                         'status',      ut.status,
+                         'title',       ut.title,
+                         'description', ut.description,
+                         'teamId',      ut."teamId",
+                         'memberId',    ut."memberId",
+                         'version',     ut.version,
+                         'updatedAt',   ut."updatedAt"
+                    )
+                )
+            FROM updated_task ut
+            JOIN current_task os ON true
+            JOIN metadata m ON true
         )
         SELECT id FROM updated_task
     `.execute(db);

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   Plus, 
@@ -6,12 +6,11 @@ import {
   Trash2, 
   Users2, 
   AlertTriangle,
-  Zap,
-  CheckCircle2,
-  Circle
+  Zap
 } from 'lucide-react';
 import { ProjectSidebar } from '../../components/ProjectSidebar';
 import { TaskDrillView } from '../../components/TaskDrillView';
+import { StatusPicker } from '../../components/StatusPicker';
 import { Drawer } from '../../components/Drawer';
 import { MemberManager } from '../../components/MemberManager';
 import { Modal } from '../../components/Modal';
@@ -20,13 +19,14 @@ import { NotificationPanel } from '../../components/NotificationPanel';
 import { UserSearchDropdown } from '../../components/UserSearchDropdown';
 import { WorkspaceLayout } from '../../layouts/WorkspaceLayout';
 import { ProjectDashboard } from './ProjectDashboard';
+import { AutomationBuilderModal, type AutomationRule } from '../../components/AutomationBuilderModal';
 import { useRealtime } from '../../hooks/useRealtime.ts';
-import type { JWTPayload, TaskTriggerType, TaskTrigger } from '../../types';
+import type { JWTPayload } from '../../types';
 import { gqlClient } from '../../graphql/client';
 import {
-  GET_PROJECTS, GET_WORKSPACE_DATA, GET_PROJECT_MEMBERS, GET_TEAM_MEMBERS, GET_UNREAD_NOTIFICATIONS_COUNT,
+  GET_PROJECTS, GET_WORKSPACE_DATA, GET_PROJECT_MEMBERS, GET_TEAM_MEMBERS, GET_UNREAD_NOTIFICATIONS_COUNT, GET_AUTOMATIONS,
   CREATE_PROJECT, UPDATE_PROJECT, DELETE_PROJECTS, CREATE_TEAM, DELETE_TEAMS, ADD_PROJECT_MEMBERS, REMOVE_PROJECT_MEMBERS, ADD_TEAM_MEMBERS, REMOVE_TEAM_MEMBERS,
-  CREATE_TASK, UPDATE_TASKS, DELETE_TASKS, ADD_TASK_TRIGGER, DELETE_TASK_TRIGGER, UPDATE_TASK_TRIGGER
+  CREATE_TASK, UPDATE_TASKS, DELETE_TASKS, ADD_AUTOMATION, DELETE_AUTOMATION, UPDATE_AUTOMATION
 } from '../../graphql/operations';
 import { cn } from '../../utils/cn';
 
@@ -56,15 +56,12 @@ export const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
 
   const [isCreateTaskOpen, setIsCreateTaskOpen] = useState(false);
   const [taskTitle, setTaskTitle] = useState('');
+  const [taskDescription, setTaskDescription] = useState('');
   const [parentTaskIdForNew, setParentTaskIdForNew] = useState<string>();
 
-  const [isCreateTriggerOpen, setIsCreateTriggerOpen] = useState(false);
-  const [editTriggerId, setEditTriggerId] = useState<string | null>(null);
-  const [triggerForm, setTriggerForm] = useState<{ name: string; type: TaskTriggerType; data: any }>({
-    name: '',
-    type: 'BLOCK_PARENT_DONE',
-    data: { revertStatusTo: 'IN_PROGRESS' }
-  });
+  const [isAutomationModalOpen, setIsAutomationModalOpen] = useState(false);
+  const [editAutomationId, setEditAutomationId] = useState<string | null>(null);
+  const [editAutomationRule, setEditAutomationRule] = useState<AutomationRule>();
 
   const [confirmModal, setConfirmModal] = useState<{
     isOpen: boolean;
@@ -97,13 +94,12 @@ export const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
   const projectTasks = (workspaceData?.tasks?.edges ?? []).map((e: any) => e.node);
   const teams = (workspaceData?.teams?.edges ?? []).map((e: any) => e.node);
 
-  const triggerMap = useMemo(() => {
-    const map: Record<string, TaskTrigger[]> = {};
-    projectTasks.forEach((t: any) => {
-      map[t.id] = t.triggers ?? [];
-    });
-    return map;
-  }, [projectTasks]);
+  const { data: automationsData } = useQuery({
+    queryKey: ['automations', selectedTaskId],
+    queryFn: () => gqlClient.request<any>(GET_AUTOMATIONS, { taskId: selectedTaskId }),
+    enabled: !!selectedTaskId,
+  });
+  const taskAutomations = (automationsData?.automations?.edges ?? []).map((e: any) => e.node);
 
   const { data: memberData } = useQuery({
     queryKey: ['project-members', selectedProjectId, userId],
@@ -126,40 +122,40 @@ export const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
   const unreadCount = unreadData?.unreadNotificationsCount ?? 0;
 
   // Mutations
-  const addTaskTriggerMutation = useMutation({
-    mutationFn: (data: { name: string; triggerType: TaskTriggerType; triggerData: any }) =>
-      gqlClient.request<any>(ADD_TASK_TRIGGER, {
+  const addAutomationMutation = useMutation({
+    mutationFn: (rules: AutomationRule[]) =>
+      gqlClient.request<any>(ADD_AUTOMATION, {
         taskId: selectedTaskId!,
         projectId: selectedProjectId!,
-        name: data.name,
-        triggerType: data.triggerType,
-        triggerData: JSON.stringify(data.triggerData)
+        name: rules[0].name,
+        targetScope: 'TASK',
+        rules: JSON.stringify(rules),
+        isActive: true
       }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['workspace', selectedProjectId, userId] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['automations', selectedTaskId] }),
   });
 
-  const updateTaskTriggerMutation = useMutation({
-    mutationFn: (data: { triggerId: string; name?: string; triggerType?: TaskTriggerType; triggerData?: any }) =>
-      gqlClient.request<any>(UPDATE_TASK_TRIGGER, {
-        triggerId: data.triggerId,
-        name: data.name,
-        triggerType: data.triggerType,
-        triggerData: data.triggerData ? JSON.stringify(data.triggerData) : undefined
+  const updateAutomationMutation = useMutation({
+    mutationFn: (data: { automationId: string; rules: AutomationRule[] }) =>
+      gqlClient.request<any>(UPDATE_AUTOMATION, {
+        automationId: data.automationId,
+        name: data.rules[0].name,
+        rules: JSON.stringify(data.rules)
       }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['workspace', selectedProjectId, userId] }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['automations', selectedTaskId] }),
   });
 
-  const deleteTaskTriggerMutation = useMutation({
-    mutationFn: (triggerId: string) => gqlClient.request<any>(DELETE_TASK_TRIGGER, { taskId: selectedTaskId!, triggerId }),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ['workspace', selectedProjectId, userId] }),
+  const deleteAutomationMutation = useMutation({
+    mutationFn: (automationId: string) => gqlClient.request<any>(DELETE_AUTOMATION, { automationId }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['automations', selectedTaskId] }),
   });
 
   const createTaskMutation = useMutation({
-    mutationFn: (data: { title: string; parentTaskId?: string }) =>
+    mutationFn: (data: { title: string; description?: string; parentTaskId?: string }) =>
       gqlClient.request<any>(CREATE_TASK, {
         projectId: selectedProjectId!,
         title: data.title,
-        description: '',
+        description: data.description || '',
         parentTaskId: data.parentTaskId,
       }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['workspace', selectedProjectId, userId] }),
@@ -268,8 +264,6 @@ export const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
   const selectedProject = projects.find((p: any) => p.id === selectedProjectId);
   const selectedTeam = teams.find((t: any) => t.id === selectedTeamId);
   const selectedTask = projectTasks.find((t: any) => t.id === selectedTaskId);
-
-  const taskTriggers: TaskTrigger[] = selectedTaskId ? (triggerMap[selectedTaskId] ?? []) : [];
 
   return (
     <WorkspaceLayout
@@ -532,12 +526,14 @@ export const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
          {selectedTask && (
            <div className="space-y-8">
               <div className="flex items-center gap-4 p-5 glass rounded-2xl">
-                 <button 
-                  onClick={() => updateTaskMutation.mutate({ id: selectedTask.id, version: selectedTask.version, status: selectedTask.status === 'DONE' ? 'TODO' : 'DONE' })}
-                  className="p-1 hover:scale-110 transition-transform"
-                 >
-                    {selectedTask.status === 'DONE' ? <CheckCircle2 size={26} className="text-primary" /> : <Circle size={26} className="text-muted-foreground/40" />}
-                 </button>
+                 <StatusPicker 
+                   status={selectedTask.status} 
+                   onChange={(newStatus) => updateTaskMutation.mutate({ 
+                     id: selectedTask.id, 
+                     version: selectedTask.version, 
+                     status: newStatus 
+                   })} 
+                 />
                  <input 
                    type="text"
                    defaultValue={selectedTask.title}
@@ -591,68 +587,53 @@ export const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
                     Automations
                  </h4>
                  <div className="grid grid-cols-1 gap-2">
-                     {taskTriggers.map(t => {
-                        const targetTitles: string[] = [];
-                        if (t.triggerType === 'NOTIFY_TASK' && t.triggerData?.targetTaskIds?.length) {
-                             t.triggerData.targetTaskIds.forEach((id: string) => {
-                                const found = projectTasks?.find((pt: any) => pt.id === id);
-                                if (found) targetTitles.push(found.title);
-                             });
-                        }
+                     {taskAutomations.map((a: any) => {
+                        const parsedRules: AutomationRule[] = typeof a.rules === 'string' ? JSON.parse(a.rules) : a.rules;
+                        const firstRule = parsedRules[0];
+                        const actionsCount = firstRule?.then?.length || 0;
 
                         return (
-                       <div key={t.id} className="group p-3 glass rounded-xl flex items-center justify-between border-white/[0.02]">
+                       <div key={a.id} className="group p-3 glass rounded-xl flex items-center justify-between border-white/[0.02]">
                           <div className="flex flex-col flex-1 truncate pr-3">
-                             <span className="text-xs font-bold truncate">{t.name}</span>
+                             <span className="text-xs font-bold truncate">{a.name || 'Untitled Flow'}</span>
                              <span className="text-[9px] uppercase tracking-wider text-muted-foreground flex items-center gap-1.5 mt-0.5">
-                               {t.triggerType}
-                               {targetTitles.length > 0 && (
-                                  <span className="flex items-center gap-1">
-                                    <span className="opacity-40">→</span> 
-                                    <span className="px-1.5 py-0.5 rounded-[4px] bg-white/10 text-white font-bold truncate max-w-[150px] inline-block" title={targetTitles.join(', ')}>
-                                       {targetTitles.join(', ')}
-                                    </span>
-                                  </span>
-                               )}
+                               {actionsCount} Action{actionsCount !== 1 ? 's' : ''} • Task Scoped
                              </span>
                           </div>
                           <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                              <button 
                                 onClick={() => {
-                                  setEditTriggerId(t.id);
-                                  setTriggerForm({
-                                    name: t.name,
-                                    type: t.triggerType as TaskTriggerType,
-                                    data: t.triggerData || {}
-                                  });
-                                  setIsCreateTriggerOpen(true);
+                                  setEditAutomationId(a.id);
+                                  setEditAutomationRule(firstRule);
+                                  setIsAutomationModalOpen(true);
                                 }}
-                                className="p-1 px-2.5 bg-blue-500/10 text-blue-400 rounded-lg text-[10px] font-bold"
+                                className="p-1 px-2.5 bg-blue-500/10 text-blue-400 rounded-lg text-[10px] font-bold hover:bg-blue-500 hover:text-white transition-colors"
                              >
                                 Edit
                              </button>
                              <button 
-                                onClick={() => deleteTaskTriggerMutation.mutate(t.id)}
-                                className="p-1 px-2.5 bg-red-500/10 text-red-500 rounded-lg text-[10px] font-bold"
+                                onClick={() => deleteAutomationMutation.mutate(a.id)}
+                                className="p-1 px-2.5 bg-red-500/10 text-red-500 rounded-lg text-[10px] font-bold hover:bg-red-500 hover:text-white transition-colors"
                              >
                                 Delete
                              </button>
                           </div>
                        </div>
                      )})}
+                     
+                     {taskAutomations.length === 0 && (
+                       <div className="text-xs text-muted-foreground/50 italic px-2 py-1">No automations active on this task.</div>
+                     )}
+
                      <button 
                        onClick={() => {
-                         setEditTriggerId(null);
-                         setTriggerForm({
-                           name: '',
-                           type: 'BLOCK_PARENT_DONE',
-                           data: { revertStatusTo: 'IN_PROGRESS' }
-                         });
-                         setIsCreateTriggerOpen(true);
+                         setEditAutomationId(null);
+                         setEditAutomationRule(undefined);
+                         setIsAutomationModalOpen(true);
                        }}
-                       className="w-full py-2.5 border border-dashed border-white/10 rounded-2xl text-[11px] font-bold text-muted-foreground hover:bg-white/5 hover:border-primary/20 transition-all"
+                       className="w-full py-2.5 border border-dashed border-white/10 rounded-2xl text-[11px] font-bold text-muted-foreground hover:bg-white/5 hover:border-primary/20 transition-all flex items-center justify-center gap-2"
                      >
-                       + Add Automation
+                       <Zap size={14} className="text-amber-500/50" /> Add Automation
                     </button>
                  </div>
               </div>
@@ -725,7 +706,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
           <button 
             disabled={!taskTitle.trim()}
             onClick={() => {
-              createTaskMutation.mutate({ title: taskTitle, parentTaskId: parentTaskIdForNew });
+              createTaskMutation.mutate({ title: taskTitle, description: taskDescription, parentTaskId: parentTaskIdForNew });
               setIsCreateTaskOpen(false);
             }}
             className="px-6 py-2.5 bg-primary text-white rounded-xl text-[12px] font-bold active:scale-95 transition-transform"
@@ -734,20 +715,22 @@ export const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
           </button>
         }
       >
-         <input 
-           autoFocus
-           type="text"
-           placeholder="Task title..."
-           value={taskTitle}
-           onChange={(e) => setTaskTitle(e.target.value)}
-           onKeyDown={(e) => {
-             if (e.key === 'Enter' && taskTitle.trim()) {
-               createTaskMutation.mutate({ title: taskTitle, parentTaskId: parentTaskIdForNew });
-               setIsCreateTaskOpen(false);
-             }
-           }}
-           className="w-full glass rounded-2xl p-4 outline-none border-white/10 text-sm focus:border-primary/30"
-         />
+         <div className="space-y-4">
+           <input 
+             autoFocus
+             type="text"
+             placeholder="Task title..."
+             value={taskTitle}
+             onChange={(e) => setTaskTitle(e.target.value)}
+             className="w-full glass rounded-2xl p-4 outline-none border-white/10 text-sm focus:border-primary/30"
+           />
+           <textarea
+             placeholder="Task description (optional)..."
+             value={taskDescription}
+             onChange={(e) => setTaskDescription(e.target.value)}
+             className="w-full glass rounded-2xl p-4 outline-none border-white/10 text-sm min-h-[100px] resize-none focus:border-primary/30"
+           />
+         </div>
       </Modal>
 
       <Modal
@@ -777,177 +760,22 @@ export const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
          </div>
       </Modal>
 
-      <Modal
-        isOpen={isCreateTriggerOpen}
-        onClose={() => setIsCreateTriggerOpen(false)}
-        title={editTriggerId ? "Edit Automation" : "Add Automation"}
-        footer={
-          <button 
-            disabled={!triggerForm.name.trim()}
-            onClick={() => {
-              if (editTriggerId) {
-                updateTaskTriggerMutation.mutate({ 
-                  triggerId: editTriggerId,
-                  name: triggerForm.name, 
-                  triggerType: triggerForm.type, 
-                  triggerData: triggerForm.data 
-                });
-              } else {
-                addTaskTriggerMutation.mutate({ 
-                  name: triggerForm.name, 
-                  triggerType: triggerForm.type, 
-                  triggerData: triggerForm.data 
-                });
-              }
-              setIsCreateTriggerOpen(false);
-            }}
-            className="px-6 py-2.5 bg-amber-500 text-white rounded-xl text-[12px] font-bold disabled:opacity-50"
-          >
-            {editTriggerId ? "Save Changes" : "Save Automation"}
-          </button>
-        }
-      >
-        <div className="space-y-4">
-           <div>
-             <label className="text-[10px] font-bold text-muted-foreground uppercase pl-1 block mb-1">Automation Name</label>
-             <input 
-               placeholder="e.g., Ping Marketing Team on Done"
-               value={triggerForm.name}
-               onChange={(e) => setTriggerForm({...triggerForm, name: e.target.value})}
-               className="w-full glass border border-white/5 focus:border-amber-500/50 rounded-xl p-3 text-sm outline-none transition-colors"
-             />
-           </div>
-
-           <div>
-             <label className="text-[10px] font-bold text-muted-foreground uppercase pl-1 block mb-1">Trigger Type</label>
-             <select 
-                value={triggerForm.type}
-                onChange={(e) => {
-                  const type = e.target.value as TaskTriggerType;
-                  let data = {};
-                  if (type === 'BLOCK_PARENT_DONE') data = { revertStatusTo: 'IN_PROGRESS' };
-                  if (type === 'WEBHOOK') data = { url: '' };
-                  if (type === 'NOTIFY_TASK') data = { targetTaskIds: [], message: '' };
-                  setTriggerForm({...triggerForm, type, data});
-                }}
-                className="w-full glass border border-white/5 focus:border-amber-500/50 rounded-xl p-3 text-sm outline-none transition-colors"
-             >
-                <option value="BLOCK_PARENT_DONE">Guard: Block Parent Completion</option>
-                <option value="WEBHOOK">System: Outbound Webhook</option>
-                <option value="NOTIFY_TASK">Alert: Notify Tasks</option>
-             </select>
-           </div>
-
-           {/* Dynamic Parameter Rendering */}
-           <div className="pt-4 border-t border-white/5 space-y-4">
-             {triggerForm.type === 'BLOCK_PARENT_DONE' && (
-               <div>
-                 <label className="text-[10px] font-bold text-muted-foreground uppercase pl-1 block mb-1">Revert Status To</label>
-                 <select 
-                    value={triggerForm.data.revertStatusTo || 'IN_PROGRESS'}
-                    onChange={(e) => setTriggerForm({...triggerForm, data: { ...triggerForm.data, revertStatusTo: e.target.value }})}
-                    className="w-full glass border border-white/5 focus:border-amber-500/50 rounded-xl p-3 text-sm outline-none transition-colors"
-                 >
-                    <option value="TODO">TODO (Not Started)</option>
-                    <option value="IN_PROGRESS">IN_PROGRESS (Working)</option>
-                    <option value="BLOCKED">BLOCKED (Blocked)</option>
-                    <option value="DONE">DONE (Completed)</option>
-                 </select>
-                 <p className="text-[10px] text-muted-foreground/60 mt-1 pl-1">If the parent task is marked DONE prematurely, it will be immediately reverted to this status.</p>
-               </div>
-             )}
-
-             {triggerForm.type === 'WEBHOOK' && (
-               <div>
-                 <label className="text-[10px] font-bold text-muted-foreground uppercase pl-1 block mb-1">Webhook Target URL</label>
-                 <input 
-                   placeholder="https://api.example.com/webhook"
-                   value={triggerForm.data.url || ''}
-                   onChange={(e) => setTriggerForm({...triggerForm, data: { ...triggerForm.data, url: e.target.value }})}
-                   className="w-full glass border border-white/5 focus:border-amber-500/50 rounded-xl p-3 text-sm outline-none transition-colors"
-                 />
-                 <p className="text-[10px] text-muted-foreground/60 mt-1 pl-1">We will POST a JSON payload to this endpoint when the task updates.</p>
-               </div>
-             )}
-
-             {triggerForm.type === 'NOTIFY_TASK' && (
-               <div className="space-y-3">
-                 <div>
-                   <label className="text-[10px] font-bold text-muted-foreground uppercase pl-1 block mb-1">Target Task IDs</label>
-                   <textarea 
-                     placeholder="Paste one or more Task IDs separated by commas"
-                     value={(triggerForm.data.targetTaskIds || []).join(', ')}
-                     onChange={(e) => {
-                       const ids = e.target.value.split(',').map((s: string) => s.trim()).filter(Boolean);
-                       setTriggerForm({...triggerForm, data: { ...triggerForm.data, targetTaskIds: ids }})
-                     }}
-                     className="w-full glass border border-white/5 focus:border-amber-500/50 rounded-xl p-3 text-[11px] font-mono outline-none transition-colors resize-y h-16"
-                   />
-                 </div>
-                 <div className="flex gap-2 flex-wrap">
-                    <button 
-                      onClick={() => {
-                        if (!selectedTaskId) return;
-                        const task = projectTasks?.find(t => t.id === selectedTaskId);
-                        if (task?.parentTaskId) {
-                           setTriggerForm(prev => ({
-                             ...prev,
-                             data: { ...prev.data, targetTaskIds: Array.from(new Set([...(prev.data.targetTaskIds || []), task.parentTaskId])) }
-                           }));
-                        }
-                      }}
-                      className="px-3 py-1.5 rounded-lg border border-dashed border-white/20 text-muted-foreground hover:bg-white/5 hover:text-white transition-all text-[10px] font-bold"
-                    >
-                      + Add Parent Task
-                    </button>
-                    <button 
-                      onClick={() => {
-                        if (!selectedTaskId) return;
-                        const children = projectTasks?.filter(t => t.parentTaskId === selectedTaskId).map(t => t.id) || [];
-                        if (children.length) {
-                           setTriggerForm(prev => ({
-                             ...prev,
-                             data: { ...prev.data, targetTaskIds: Array.from(new Set([...(prev.data.targetTaskIds || []), ...children])) }
-                           }));
-                        }
-                      }}
-                      className="px-3 py-1.5 rounded-lg border border-dashed border-white/20 text-muted-foreground hover:bg-white/5 hover:text-white transition-all text-[10px] font-bold"
-                    >
-                      + Add Child Tasks
-                    </button>
-                    <button 
-                      onClick={() => {
-                        if (!selectedTaskId) return;
-                        const task = projectTasks?.find(t => t.id === selectedTaskId);
-                        if (task?.parentTaskId) {
-                           const siblings = projectTasks?.filter(t => t.parentTaskId === task.parentTaskId && t.id !== task.id).map(t => t.id) || [];
-                           if (siblings.length) {
-                               setTriggerForm(prev => ({
-                                 ...prev,
-                                 data: { ...prev.data, targetTaskIds: Array.from(new Set([...(prev.data.targetTaskIds || []), ...siblings])) }
-                               }));
-                           }
-                        }
-                      }}
-                      className="px-3 py-1.5 rounded-lg border border-dashed border-white/20 text-muted-foreground hover:bg-white/5 hover:text-white transition-all text-[10px] font-bold"
-                    >
-                      + Add Sibling Tasks
-                    </button>
-                 </div>
-                 <div>
-                   <label className="text-[10px] font-bold text-muted-foreground uppercase pl-1 block mb-1">Notification Message</label>
-                   <textarea 
-                     placeholder="This task requires your attention."
-                     value={triggerForm.data.message || ''}
-                     onChange={(e) => setTriggerForm({...triggerForm, data: { ...triggerForm.data, message: e.target.value }})}
-                     className="w-full glass border border-white/5 focus:border-amber-500/50 rounded-xl p-3 text-sm outline-none transition-colors resize-none h-16"
-                   />
-                 </div>
-               </div>
-             )}
-           </div>
-        </div>
-      </Modal>
+      <AutomationBuilderModal
+        key={editAutomationId || 'new'}
+        isOpen={isAutomationModalOpen}
+        onClose={() => setIsAutomationModalOpen(false)}
+        initialRule={editAutomationRule}
+        title={editAutomationId ? "Edit Automation" : "Design New Automation"}
+        tasks={projectTasks}
+        onSave={(rules) => {
+           if (editAutomationId) {
+             updateAutomationMutation.mutate({ automationId: editAutomationId, rules });
+           } else {
+             addAutomationMutation.mutate(rules);
+           }
+           setIsAutomationModalOpen(false);
+        }}
+      />
       <Modal
         isOpen={isCreateTeamOpen}
         onClose={() => setIsCreateTeamOpen(false)}

@@ -16,7 +16,7 @@ type Task {
   createdAt: String!
   updatedAt: String
   version: Int!
-  triggers: [TaskTrigger!]!
+  automations: [AutomationRule!]!
 }
 
 type TaskEdge {
@@ -29,26 +29,7 @@ type TaskConnection {
   pageInfo: PageInfo!
 }
 
-type TaskTrigger {
-  id: ID!
-  name: String!
-  projectId: ID!
-  taskId: ID!
-  triggerType: String!
-  triggerData: String!
-  createdAt: String!
-  updatedAt: String
-}
 
-type TaskTriggerEdge {
-  node: TaskTrigger!
-  cursor: String!
-}
-
-type TaskTriggerConnection {
-  edges: [TaskTriggerEdge!]!
-  pageInfo: PageInfo!
-}
 
 union TaskEvent = TaskCreated | TaskUpdated | TaskDeleted
 
@@ -78,16 +59,12 @@ input UpdateTaskInput {
 
 extend type Query {
   tasks(projectId: ID!, first: Int, after: String): TaskConnection!
-  taskTriggers(taskId: ID!, first: Int, after: String): TaskTriggerConnection!
 }
 
 extend type Mutation {
   createTask(projectId: ID!, title: String!, description: String!, teamId: ID, parentTaskId: ID): Task
   updateTasks(projectId: ID!, tasks: [UpdateTaskInput!]!): [ID]
   deleteTasks(projectId: ID!, taskIds: [ID!]!): [ID]
-  addTaskTrigger(taskId: ID!, projectId: ID!, name: String!, triggerType: String!, triggerData: String!): TaskTrigger
-  updateTaskTrigger(triggerId: ID!, name: String, triggerType: String, triggerData: String): TaskTrigger
-  deleteTaskTrigger(taskId: ID!, triggerId: ID!): Boolean
 }
 
 

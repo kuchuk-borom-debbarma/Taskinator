@@ -214,26 +214,3 @@ export async function addTeamMember(
     return result.rows[0]!;
 }
 
-/**
- * Inserts a task trigger directly (no auth check).
- */
-export async function createTaskTrigger(data: {
-    projectId: string;
-    taskId: string;
-    triggerType: string;
-    triggerData: Record<string, unknown>;
-    name?: string;
-}): Promise<{ id: string }> {
-    const result = await db
-        .insertInto('project_task_trigger_table')
-        .values({
-            fk_project_id: sql`${data.projectId}::uuid` as any,
-            fk_task_id: sql`${data.taskId}::uuid` as any,
-            trigger_type: data.triggerType,
-            trigger_data: data.triggerData as any,
-            name: data.name ?? `Trigger-${data.triggerType}`,
-        })
-        .returning('id')
-        .executeTakeFirstOrThrow();
-    return { id: result.id };
-}

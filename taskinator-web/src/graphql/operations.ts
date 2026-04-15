@@ -75,16 +75,7 @@ export const GET_TASKS = gql`
           }
           createdAt
           updatedAt
-          triggers {
-            id
-            name
-            projectId
-            taskId
-            triggerType
-            triggerData
-            createdAt
-            updatedAt
-          }
+
         }
         cursor
       }
@@ -126,16 +117,7 @@ export const GET_WORKSPACE_DATA = gql`
           }
           createdAt
           updatedAt
-          triggers {
-            id
-            name
-            projectId
-            taskId
-            triggerType
-            triggerData
-            createdAt
-            updatedAt
-          }
+
         }
         cursor
       }
@@ -304,18 +286,22 @@ export const GET_TEAM_MEMBERS = gql`
   }
 `;
 
-export const GET_TASK_TRIGGERS = gql`
-  query GetTaskTriggers($taskId: ID!, $first: Int, $after: String) {
-    taskTriggers(taskId: $taskId, first: $first, after: $after) {
+export const GET_AUTOMATIONS = gql`
+  query GetAutomations($projectId: ID, $actorId: ID, $taskId: ID, $teamId: ID, $targetScope: String, $first: Int, $after: String) {
+    automations(projectId: $projectId, actorId: $actorId, taskId: $taskId, teamId: $teamId, targetScope: $targetScope, first: $first, after: $after) {
       edges {
         node {
           id
-          name
           projectId
+          actorId
+          name
+          targetScope
           taskId
-          triggerType
-          triggerData
+          teamId
+          rules
+          isActive
           createdAt
+          updatedAt
         }
         cursor
       }
@@ -413,27 +399,44 @@ export const REMOVE_TEAM_MEMBERS = gql`
   }
 `;
 
-export const ADD_TASK_TRIGGER = gql`
-  mutation AddTaskTrigger($taskId: ID!, $projectId: ID!, $name: String!, $triggerType: String!, $triggerData: String!) {
-    addTaskTrigger(taskId: $taskId, projectId: $projectId, name: $name, triggerType: $triggerType, triggerData: $triggerData) {
+export const ADD_AUTOMATION = gql`
+  mutation AddAutomation($projectId: ID!, $name: String!, $targetScope: String!, $taskId: ID, $teamId: ID, $rules: String!, $isActive: Boolean) {
+    addAutomation(projectId: $projectId, name: $name, targetScope: $targetScope, taskId: $taskId, teamId: $teamId, rules: $rules, isActive: $isActive) {
       id
+      projectId
+      actorId
       name
+      targetScope
+      taskId
+      teamId
+      rules
+      isActive
+      createdAt
+      updatedAt
     }
   }
 `;
 
-export const DELETE_TASK_TRIGGER = gql`
-  mutation DeleteTaskTrigger($taskId: ID!, $triggerId: ID!) {
-    deleteTaskTrigger(taskId: $taskId, triggerId: $triggerId)
+export const DELETE_AUTOMATION = gql`
+  mutation DeleteAutomation($automationId: ID!) {
+    deleteAutomation(automationId: $automationId)
   }
 `;
 
-export const UPDATE_TASK_TRIGGER = gql`
-  mutation UpdateTaskTrigger($triggerId: ID!, $name: String, $triggerType: String, $triggerData: String) {
-    updateTaskTrigger(triggerId: $triggerId, name: $name, triggerType: $triggerType, triggerData: $triggerData) {
+export const UPDATE_AUTOMATION = gql`
+  mutation UpdateAutomation($automationId: ID!, $name: String, $targetScope: String, $taskId: ID, $teamId: ID, $rules: String, $isActive: Boolean) {
+    updateAutomation(automationId: $automationId, name: $name, targetScope: $targetScope, taskId: $taskId, teamId: $teamId, rules: $rules, isActive: $isActive) {
       id
+      projectId
+      actorId
       name
-      triggerType
+      targetScope
+      taskId
+      teamId
+      rules
+      isActive
+      createdAt
+      updatedAt
     }
   }
 `;

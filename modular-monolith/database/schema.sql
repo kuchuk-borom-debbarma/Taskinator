@@ -83,17 +83,6 @@ CREATE INDEX idx_project_member_user ON project_member(fk_user_id);
 CREATE INDEX idx_project_task_path ON project_task(materialized_path);
 CREATE INDEX idx_project_task_project ON project_task(fk_project_id);
 
--- Project Task Trigger Table
-CREATE TABLE project_task_trigger_table (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    name TEXT NOT NULL,
-    fk_project_id UUID NOT NULL,
-    fk_task_id UUID NOT NULL,
-    trigger_type TEXT NOT NULL,
-    trigger_data JSONB NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
 
 -- Users Table
 CREATE TABLE users (
@@ -145,3 +134,22 @@ CREATE TABLE outbox_events (
     status TEXT NOT NULL DEFAULT 'PENDING',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Automations Engine Table
+CREATE TABLE automations (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    fk_project_id UUID NOT NULL,
+    actor_id TEXT NOT NULL,
+    target_scope TEXT NOT NULL, -- 'TASK', 'PROJECT', 'TEAM'
+    fk_task_id UUID,            -- Specific task this automation is pinned to (optional)
+    fk_team_id UUID,            -- Specific team this automation is pinned to (optional)
+    rules JSONB NOT NULL, -- Array of { conditions, actions }
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_automations_project ON automations(fk_project_id);
+CREATE INDEX idx_automations_task ON automations(fk_task_id) WHERE fk_task_id IS NOT NULL;
+CREATE INDEX idx_automations_team ON automations(fk_team_id) WHERE fk_team_id IS NOT NULL;
+

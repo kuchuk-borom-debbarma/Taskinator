@@ -10,9 +10,6 @@
  *   task-recursive-cleanup-group (TaskDeleteListener)
  *       ↓ deleteChildrenTasksBatch → if more: re-emits PARENT_DELETED (loop)
  *       ↓ publishes PROJECT_TASK_CHILDREN_DELETED
- *   trigger-task-deleted-group (TaskDeletedListener in task-trigger module)
- *       ↓ deleteTaskTriggers(parentId)
- *       ↓ deleteTaskTriggers(childIds)
  */
 import {
     afterAll,
@@ -29,12 +26,11 @@ import {
     createProject,
     createTask,
     createChildTask,
-    createTaskTrigger,
+    createChildTask,
 } from './helpers/factories.ts';
 import { waitFor } from './helpers/waitFor.ts';
 import { taskService } from '../modules/task/index.ts';
 import { taskDeleteListener as taskRecursiveCleanup } from '../modules/task/internal/listeners/TaskDeleteListener.ts';
-import { taskDeletedListener as triggerTaskCleanup } from '../modules/task-trigger/internal/listeners/TaskDeletedListener.ts';
 import {
     startOutboxRelay,
     stopOutboxRelay,
@@ -47,7 +43,6 @@ describe('Task Deleted EDA Flow — Recursive Cleanup', () => {
     beforeAll(async () => {
         await taskService.init();
         await taskRecursiveCleanup.init();
-        await triggerTaskCleanup.init();
         startOutboxRelay();
     });
 
@@ -138,62 +133,5 @@ describe('Task Deleted EDA Flow — Recursive Cleanup', () => {
         expect(grandchildRow).toBeUndefined();
     });
 
-    it('cleans up task triggers for the deleted parent task', async () => {
-        const task = await createTask(projectId, ownerId, {
-            title: 'TaskWithTrigger',
-        });
-        await createTaskTrigger({
-            projectId,
-            taskId: task.id,
-            triggerType: 'UPDATE_PARENT_STATUS',
-            triggerData: { parentStatusToSet: 'DONE' },
-            name: 'MyTrigger',
-        });
 
-        await taskService.deleteTask({
-            userId: ownerId,
-            projectId,
-            taskIds: [task.id],
-        });
-
-        await waitFor(async () => {
-            const triggers = await db
-                .selectFrom('project_task_trigger_table')
-                .selectAll()
-                .where('fk_task_id', '=', task.id as any)
-                .execute();
-            expect(triggers).toHaveLength(0);
-        });
-    });
-
-    it('cleans up triggers for child tasks after recursive deletion', async () => {
-        const parent = await createTask(projectId, ownerId, {
-            title: 'Parent',
-        });
-        const child = await createChildTask(projectId, ownerId, parent, {
-            title: 'Child',
-        });
-
-        await createTaskTrigger({
-            projectId,
-            taskId: child.id,
-            triggerType: 'UPDATE_PARENT_STATUS',
-            triggerData: { parentStatusToSet: 'DONE' },
-        });
-
-        await taskService.deleteTask({
-            userId: ownerId,
-            projectId,
-            taskIds: [parent.id],
-        });
-
-        await waitFor(async () => {
-            const triggers = await db
-                .selectFrom('project_task_trigger_table')
-                .selectAll()
-                .where('fk_task_id', '=', child.id as any)
-                .execute();
-            expect(triggers).toHaveLength(0);
-        }, 5000);
-    });
 });

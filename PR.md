@@ -1,23 +1,36 @@
-# Pull Request: Performance Batching & Distributed Event Bus Hardening
+# Pull Request: Automation Engine Maturity & Workspace Stabilization
 
-## Overview
-This PR overhauls the internal messaging bus and query execution logic to dramatically improve horizontal scaling safety, remove N+1 query bottlenecks, and completely lock down exactly-once event execution across multiple server instances. 
+## 🚀 Overview
+This PR completes the foundational development of the **Taskinator Automation Engine** and stabilizes core Task management across the modular monolith. It resolves critical "silent failure" bugs in distributed background processing and introduces advanced UI components for professional workflow management.
 
-## Key Changes
+---
 
-### 🚀 Performance & Throughput
-- **Zero-Lock Outbox Relay**: Re-architected the `OutboxRelay` to perform 100% dirty reads without `FOR UPDATE SKIP LOCKED`. By aggressively relying on the consumer's idempotency engine, the relay avoids all database lock contention, vastly optimizing PostgreSQL throughput.
-- **Provider-Level Batching**: Refactored the `ExternalNotificationService` interface and SQL queries to pass user IDs as a complete array payload. External network calls (like emails) now happen in true O(1) batches under the hood rather than looping over N requests.
-- **Mutation Optimizations**: Simplified the `addTaskTrigger` resolver by leveraging PostgreSQL `INSERT ... RETURNING *`. This eliminated a completely redundant, secondary database round-trip that was happening on every trigger creation. 
-- **Array-Level Protection limits**: Hard-capped task trigger creation logic to `50` per task within the database CTE. This prevents abusive requests from circumventing pagination bounds and causing memory exhaustion / DoS when GraphQL DataLoaders load extensive arrays.
+## 🏗 Key Changes
 
-### 🔐 Distributed Systems & Idempotency
-- **Deterministic Exactly-Once UUIDs**: Diagnosed and fixed a critical distributed bug where `KafkaBus` was generating new random UUIDs during runtime publish loops. Mapped the native `outbox_events.id` directly through the bus interface into Kafka. This locks the idempotency ID to the stone-cold database transaction, ensuring parallel relays can blindly double-publish the same events simultaneously without **ever** triggering duplicate business logic on the consumer end.
-- **Parallel Bus Destruction**: Fixed sequential bottlenecks during server termination; `KafkaBus.destroy()` now concurrently terminates all topic subscriptions via `Promise.all`.
+### 🤖 Automation Engine: Scalability & Reliability
+- **Postgres Engine Hardening**: Resolved "Indeterminate Data Type" (`42P18`) errors by implementing explicit SQL type-casting (`::text`, `::uuid`, `::jsonb`) across all bulk-update CTEs.
+- **Enhanced Observability**: Integrated structured diagnostic logging into `AutomationQueries` and `AutomationListener`, providing real-time visibility into `rowsUpdated` counts and match/action dispatch sequences.
+- **Fail-Fast Batching**: Patched the `allSettled` loop in the event processor to stop swallowing rejections, ensuring database-level errors are correctly surfaced in system logs.
+- **State Integrity**: Expanded the `old_states` result set to include `version` and `fk_project_id`, ensuring cascading triggers operate on 100% accurate entity snapshots.
 
-### 🧹 Architectural Simplification
-- **Zero-Translation Event Names**: Shredded the complex and ambiguous translation tables (`OUTBOX_TOPIC_TO_EVENT_TYPE`) that mapped internal DB strings into screaming TS constants. The entire stack now seamlessly uses the exact same dot-notation format (`"project.task.updated"`) end-to-end.
-- **Refactored Readability**: Rewrote `OutboxRelay.ts` into flat, single-responsibility blocks (`fetchPendingEvents`, `dispatchToEventBus`, `clearProcessedEvents`) erasing deep `try...catch` loop indirection.
+### 🖼 Workspace UI: Professional Status Management
+- **Inline Status Picker**: Designed and implemented a custom, layout-aware status component using `Framer Motion`.
+  - **Preset Support**: Integrated `TODO`, `IN_PROGRESS`, `DONE`, and `BLOCKED` with distinct brand themes.
+  - **Dynamic Extension**: Added an "Occupies Space" layout mode that pushes drawer content down to resolve Z-index conflicts.
+  - **Custom Workflow Strings**: Enabled users to define and persist arbitrary status strings (e.g., "PENDING LEGAL") directly from the UI.
+- **Drawer Sync Fix**: Resolved a critical data-loss bug where `Title` and `Description` edits were being dropped during the mutation lifecycle.
 
-## Review Notes
-The combination of dirty-read outbox polling arrays + deterministic DB-native event IDs means you can safely run 5, 20, or 100 node instances of the monolith, and they will load balance messaging perfectly with absolute zero risk of double-processing. 
+### 🔐 Multi-Node & Data Safety
+- **Zero-Lock Outbox Relay**: Hardened the relay to perform dirty reads without database lock contention.
+- **Idempotency Locking**: Mapped native `outbox_events.id` directly to Kafka bus interfaces, ensuring exactly-once processing across horizontally scaled server instances.
+- **Type Safety**: Synchronized `UpdateTasksParam` and `AutomationsTable` interfaces to reflect recent schema changes, resolving several long-standing TypeScript compiler errors.
+
+---
+
+## 📝 Review Notes
+The automation engine is now "trusted-by-default"—meaning it perfectly mirrors user-driven changes while bypassing unnecessary auth checks for internal cascades. All field updates are now explicitly cast in Postgres, preventing runtime failures even under high-load heterogeneous data scenarios.
+
+## 🧪 Verification
+- **Automation Test**: Verified `UPDATE_TASK` cascading from child (DONE) to parent (DONE).
+- **UI Test**: Verified multi-state status transitions and custom text persistence.
+- **Performance**: Verified outbox relay throughput on current dev environment.

@@ -42,6 +42,8 @@ export interface UpdateTasksParam {
         id: string;
         version: number;
         lastEventId?: string;
+        title?: string;
+        description?: string;
         status?: string;
         teamId?: string;
         memberId?: string;

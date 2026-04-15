@@ -6,6 +6,7 @@ export const teamResolvers = {
     createdAt: (t: any) => (t.createdAt instanceof Date ? t.createdAt.toISOString() : t.createdAt),
     updatedAt: (t: any) => (t.updatedAt instanceof Date ? t.updatedAt.toISOString() : t.updatedAt),
     creator: (t: any, _: any, context: GraphQLContext) => context.loaders.user.load(t.createdBy),
+    automations: (t: any, _: any, context: GraphQLContext) => context.loaders.teamAutomations.load(t.id),
   },
   TeamMember: {
     createdAt: (m: any) => (m.createdAt instanceof Date ? m.createdAt.toISOString() : m.createdAt),
