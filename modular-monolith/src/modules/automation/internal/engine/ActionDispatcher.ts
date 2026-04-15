@@ -31,15 +31,20 @@ export const dispatchRules = async (
 
     const targetCache = new Map<string, string[]>();
 
-    for (const rule of payload) {
+    for (const rule of payload as any[]) {
         if (!rule.when || !rule.then || rule.then.length === 0) continue;
 
         const conditionsPassed = evaluateRuleGroup(oldState, newState, rule.when);
         if (!conditionsPassed) continue;
 
+        console.info(
+            `[AutomationEngine] MATCH: "${rule.name || 'Untitled'}" for Task:${context.triggerTaskId} ` + 
+            `[ID:${context.correlationId.slice(0, 8)}] (Depth:${context.depth})`
+        );
+
         // Conditions passed — execute all actions for this rule sequentially
         for (const action of rule.then) {
-            await dispatchAction(context, action, targetCache);
+            await dispatchAction(context, action, targetCache, rule.name);
         }
     }
 };
@@ -53,7 +58,8 @@ export const dispatchRules = async (
 const dispatchAction = async (
     context: DispatchContext, 
     action: Action,
-    cache: Map<string, string[]>
+    cache: Map<string, string[]>,
+    ruleName?: string
 ): Promise<void> => {
     const taskIds = await resolveTarget(context.triggerTaskId, context.projectId, action, cache);
 
@@ -61,6 +67,11 @@ const dispatchAction = async (
         // Target resolved to nothing (e.g. @parent on a root task) — skip silently
         return;
     }
+
+    console.log(
+        `[AutomationEngine] ACTION: "${action.type}" on ${taskIds.length} tasks ` +
+        `from Rule: "${ruleName || 'Untitled'}" [ID:${context.correlationId.slice(0, 8)}]`
+    );
 
     const shouldPropagate = action.shouldPropagate ?? true;
 
