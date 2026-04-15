@@ -26,7 +26,6 @@ import {
     createProject,
     createTask,
     createChildTask,
-    createChildTask,
 } from './helpers/factories.ts';
 import { waitFor } from './helpers/waitFor.ts';
 import { taskService } from '../modules/task/index.ts';
@@ -132,6 +131,4 @@ describe('Task Deleted EDA Flow — Recursive Cleanup', () => {
             .executeTakeFirst();
         expect(grandchildRow).toBeUndefined();
     });
-
-
 });

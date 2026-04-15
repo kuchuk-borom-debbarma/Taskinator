@@ -489,7 +489,10 @@ export const getTasks = async (
     let nextCursor: string | null = null;
     if (hasMore && tasks.length > 0) {
         const last = tasks[tasks.length - 1]!;
-        const dateStr = last.createdAt instanceof Date ? last.createdAt.toISOString() : last.createdAt;
+        const dateStr =
+            last.createdAt instanceof Date
+                ? last.createdAt.toISOString()
+                : last.createdAt;
         nextCursor = `${dateStr}|${last.id}`;
     }
 
@@ -539,7 +542,10 @@ export const createTaskLinkQuery = async (data: {
             (SELECT COUNT(*) FROM cycle_check) > 0 AS has_cycle
     `.execute(db);
 
-    const { authorized, has_cycle } = check.rows[0] as { authorized: boolean; has_cycle: boolean };
+    const { authorized, has_cycle } = check.rows[0] as {
+        authorized: boolean;
+        has_cycle: boolean;
+    };
 
     if (!authorized) throw new Error('Unauthorized');
     if (has_cycle) throw new Error('Circular dependency detected');
@@ -645,21 +651,21 @@ export const getLinksQuery = async (data: {
             FROM task_link_materialized
             WHERE fk_project_id = ${data.projectId}::uuid
               AND (origin_id = ${data.taskId}::uuid OR terminal_id = ${data.taskId}::uuid)
-        `.execute(db)
+        `.execute(db),
     ]);
 
     return {
         direct: direct.rows,
-        story: story.rows
+        story: story.rows,
     };
 };
 
 /**
  * Iterative Path Re-builder (The "Re-baker")
- * 
+ *
  * Given a terminal task, this completely reconstructs its task_link_materialized entries
  * based on the current adjacency list (task_link).
- * 
+ *
  * It filters by origin_id to support batching if needed, but usually we bake all paths
  * for a single terminal at once.
  */
@@ -709,7 +715,7 @@ export const rebuildTerminalPathsQuery = async (data: {
         RETURNING origin_id::text
     `.execute(db);
 
-    return result.rows.map(r => r.id);
+    return result.rows.map((r) => r.id);
 };
 
 export const getDownstreamTaskIdsQuery = async (data: {
@@ -727,13 +733,15 @@ export const getDownstreamTaskIdsQuery = async (data: {
         OFFSET ${data.offset}
     `.execute(db);
 
-    return result.rows.map(r => r.to_task_id);
+    return result.rows.map((r) => r.to_task_id);
 };
 
 export const getLinksByTaskIdsQuery = async (
     projectId: string,
     taskIds: string[],
-): Promise<Map<string, { direct: TaskLink[]; story: TaskLinkMaterialized[] }>> => {
+): Promise<
+    Map<string, { direct: TaskLink[]; story: TaskLinkMaterialized[] }>
+> => {
     if (taskIds.length === 0) return new Map();
 
     const [direct, story] = await Promise.all([
@@ -762,24 +770,27 @@ export const getLinksByTaskIdsQuery = async (
             FROM task_link_materialized
             WHERE fk_project_id = ${projectId}::uuid
               AND (origin_id = ANY(${taskIds}::uuid[]) OR terminal_id = ANY(${taskIds}::uuid[]))
-        `.execute(db)
+        `.execute(db),
     ]);
 
-    const resultMap = new Map<string, { direct: TaskLink[]; story: TaskLinkMaterialized[] }>();
-    taskIds.forEach(id => resultMap.set(id, { direct: [], story: [] }));
+    const resultMap = new Map<
+        string,
+        { direct: TaskLink[]; story: TaskLinkMaterialized[] }
+    >();
+    taskIds.forEach((id) => resultMap.set(id, { direct: [], story: [] }));
 
-    direct.rows.forEach(link => {
-        if (resultMap.has(link.fromTaskId)) resultMap.get(link.fromTaskId)!.direct.push(link);
-        if (resultMap.has(link.toTaskId)) resultMap.get(link.toTaskId)!.direct.push(link);
+    direct.rows.forEach((link) => {
+        if (resultMap.has(link.fromTaskId))
+            resultMap.get(link.fromTaskId)!.direct.push(link);
+        if (resultMap.has(link.toTaskId))
+            resultMap.get(link.toTaskId)!.direct.push(link);
     });
 
-    story.rows.forEach(s => {
+    story.rows.forEach((s) => {
         if (resultMap.has(s.originId)) resultMap.get(s.originId)!.story.push(s);
-        if (resultMap.has(s.terminalId)) resultMap.get(s.terminalId)!.story.push(s);
+        if (resultMap.has(s.terminalId))
+            resultMap.get(s.terminalId)!.story.push(s);
     });
 
     return resultMap;
 };
-
-
-

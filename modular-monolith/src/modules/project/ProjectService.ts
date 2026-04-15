@@ -57,7 +57,12 @@ export interface ProjectService extends BaseService {
      */
     createProjects(data: CreateProjectParam[]): Promise<Project[]>;
 
-    updateProject(data: { userId: string; projectId: string; name?: string; description?: string | null }): Promise<Project | null>;
+    updateProject(data: {
+        userId: string;
+        projectId: string;
+        name?: string;
+        description?: string | null;
+    }): Promise<Project | null>;
 
     deleteProjects(data: DeleteProjectsParam): Promise<void>;
 
@@ -73,7 +78,7 @@ export interface ProjectService extends BaseService {
      */
     getProjects(
         userId: string,
-        params?: { cursor?: string; limit?: number }
+        params?: { cursor?: string; limit?: number },
     ): Promise<{ projects: Project[]; nextCursor: string | null }>;
 
     getProject(userId: string, projectId: string): Promise<Project | null>;
@@ -81,7 +86,7 @@ export interface ProjectService extends BaseService {
     getProjectMembers(
         userId: string,
         projectId: string,
-        params?: { cursor?: string; limit?: number }
+        params?: { cursor?: string; limit?: number },
     ): Promise<{ members: ProjectMember[]; nextCursor: string | null }>;
 
     /**
@@ -100,5 +105,8 @@ export interface ProjectService extends BaseService {
         search?: string;
         cursor?: string;
         limit?: number;
-    }): Promise<{ users: { id: string; username: string; email: string }[]; nextCursor: string | null }>;
+    }): Promise<{
+        users: { id: string; username: string; email: string }[];
+        nextCursor: string | null;
+    }>;
 }

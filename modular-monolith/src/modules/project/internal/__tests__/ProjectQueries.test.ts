@@ -284,7 +284,10 @@ describe('ProjectQueries — Integration (Real DB + wCTE)', () => {
             const project = await createProject(userId);
             await addProjectMember(project.id, (await createUser()).id);
 
-            const { members } = await getProjectMembers(attacker.id, project.id);
+            const { members } = await getProjectMembers(
+                attacker.id,
+                project.id,
+            );
             expect(members).toHaveLength(0);
         });
     });

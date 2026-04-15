@@ -8,11 +8,11 @@ import { realtimeResolvers } from './realtime';
 import { automationResolvers } from './automation';
 
 export const resolvers = mergeResolvers([
-  authResolvers,
-  projectResolvers,
-  teamResolvers,
-  taskResolvers,
-  notificationResolvers,
-  realtimeResolvers,
-  automationResolvers,
+    authResolvers,
+    projectResolvers,
+    teamResolvers,
+    taskResolvers,
+    notificationResolvers,
+    realtimeResolvers,
+    automationResolvers,
 ]);

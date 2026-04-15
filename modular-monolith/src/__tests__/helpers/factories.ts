@@ -213,4 +213,3 @@ export async function addTeamMember(
     `.execute(db);
     return result.rows[0]!;
 }
-

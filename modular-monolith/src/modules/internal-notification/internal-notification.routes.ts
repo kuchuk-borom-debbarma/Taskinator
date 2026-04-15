@@ -12,9 +12,12 @@ router.get('/', async (req: any, res: Response) => {
     try {
         const userId = req.userId;
         const cursor = req.query.cursor as string | undefined;
-        const limit  = parseInt(req.query.limit as string) || 20;
+        const limit = parseInt(req.query.limit as string) || 20;
 
-        const result = await internalNotificationService.getNotifications(userId, { cursor, limit });
+        const result = await internalNotificationService.getNotifications(
+            userId,
+            { cursor, limit },
+        );
         res.status(200).json(result);
     } catch (error: any) {
         console.error('[REST] Error fetching notifications:', error);

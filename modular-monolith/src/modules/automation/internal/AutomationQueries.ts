@@ -5,6 +5,7 @@ import type { AutomationRule, AutomationScope } from '../AutomationService.ts';
 export const insertAutomation = async (data: {
     userId: string;
     projectId: string;
+    name: string;
     targetScope: AutomationScope;
     taskId?: string;
     teamId?: string;
@@ -76,7 +77,9 @@ export const updateAutomationQuery = async (data: {
         throw new Error('Unauthorized');
     }
 
-    let updateQuery = db.updateTable('automations').where('id', '=', data.automationId);
+    let updateQuery = db
+        .updateTable('automations')
+        .where('id', '=', data.automationId);
 
     let hasUpdates = false;
 
@@ -97,7 +100,9 @@ export const updateAutomationQuery = async (data: {
         hasUpdates = true;
     }
     if (data.rules !== undefined) {
-        updateQuery = updateQuery.set({ rules: JSON.stringify(data.rules) as any });
+        updateQuery = updateQuery.set({
+            rules: JSON.stringify(data.rules) as any,
+        });
         hasUpdates = true;
     }
     if (data.isActive !== undefined) {
@@ -106,20 +111,25 @@ export const updateAutomationQuery = async (data: {
     }
 
     if (!hasUpdates) {
-         // If no updates, just fetch the existing record
-         return db.selectFrom('automations').selectAll().where('id', '=', data.automationId).executeTakeFirstOrThrow().then(r => ({
-            id: r.id,
-            projectId: r.fk_project_id,
-            actorId: r.actor_id,
-            name: r.name,
-            targetScope: r.target_scope as AutomationScope,
-            taskId: r.fk_task_id,
-            teamId: r.fk_team_id,
-            rules: r.rules,
-            isActive: r.is_active,
-            createdAt: r.created_at as Date,
-            updatedAt: r.updated_at as Date,
-        }));
+        // If no updates, just fetch the existing record
+        return db
+            .selectFrom('automations')
+            .selectAll()
+            .where('id', '=', data.automationId)
+            .executeTakeFirstOrThrow()
+            .then((r) => ({
+                id: r.id,
+                projectId: r.fk_project_id,
+                actorId: r.actor_id,
+                name: r.name,
+                targetScope: r.target_scope as AutomationScope,
+                taskId: r.fk_task_id,
+                teamId: r.fk_team_id,
+                rules: r.rules,
+                isActive: r.is_active,
+                createdAt: r.created_at as Date,
+                updatedAt: r.updated_at as Date,
+            }));
     }
 
     const result = await updateQuery
@@ -153,7 +163,11 @@ export const getAutomationsQuery = async (data: {
 }): Promise<{ automations: AutomationRule[]; nextCursor: string | null }> => {
     const limit = data.limit && data.limit > 0 ? data.limit : 50;
 
-    let query = db.selectFrom('automations').selectAll().orderBy('created_at', 'desc').limit(limit + 1);
+    let query = db
+        .selectFrom('automations')
+        .selectAll()
+        .orderBy('created_at', 'desc')
+        .limit(limit + 1);
 
     if (data.projectId) {
         query = query.where('fk_project_id', '=', data.projectId);
@@ -184,7 +198,7 @@ export const getAutomationsQuery = async (data: {
     }
 
     const rows = await query.execute();
-    
+
     let nextCursor: string | null = null;
     if (rows.length > limit) {
         const nextRow = rows.pop();
@@ -225,7 +239,10 @@ export const deleteAutomationQuery = async (data: {
         throw new Error('Unauthorized');
     }
 
-    await db.deleteFrom('automations').where('id', '=', data.automationId).execute();
+    await db
+        .deleteFrom('automations')
+        .where('id', '=', data.automationId)
+        .execute();
 };
 
 const mapAutomations = (rows: any[]): AutomationRule[] => {
@@ -244,7 +261,9 @@ const mapAutomations = (rows: any[]): AutomationRule[] => {
     }));
 };
 
-export const getAutomationsByTaskIdsQuery = async (taskIds: string[]): Promise<Map<string, AutomationRule[]>> => {
+export const getAutomationsByTaskIdsQuery = async (
+    taskIds: string[],
+): Promise<Map<string, AutomationRule[]>> => {
     if (taskIds.length === 0) return new Map();
     const rows = await db
         .selectFrom('automations')
@@ -252,7 +271,7 @@ export const getAutomationsByTaskIdsQuery = async (taskIds: string[]): Promise<M
         .where('fk_task_id', 'in', taskIds)
         .where('is_active', '=', true)
         .execute();
-    
+
     const automations = mapAutomations(rows);
     const map = new Map<string, AutomationRule[]>();
     for (const auto of automations) {
@@ -264,7 +283,9 @@ export const getAutomationsByTaskIdsQuery = async (taskIds: string[]): Promise<M
     return map;
 };
 
-export const getAutomationsByProjectIdsQuery = async (projectIds: string[]): Promise<Map<string, AutomationRule[]>> => {
+export const getAutomationsByProjectIdsQuery = async (
+    projectIds: string[],
+): Promise<Map<string, AutomationRule[]>> => {
     if (projectIds.length === 0) return new Map();
     const rows = await db
         .selectFrom('automations')
@@ -273,7 +294,7 @@ export const getAutomationsByProjectIdsQuery = async (projectIds: string[]): Pro
         .where('target_scope', '=', 'PROJECT')
         .where('is_active', '=', true)
         .execute();
-    
+
     const automations = mapAutomations(rows);
     const map = new Map<string, AutomationRule[]>();
     for (const auto of automations) {
@@ -284,7 +305,9 @@ export const getAutomationsByProjectIdsQuery = async (projectIds: string[]): Pro
     return map;
 };
 
-export const getAutomationsByTeamIdsQuery = async (teamIds: string[]): Promise<Map<string, AutomationRule[]>> => {
+export const getAutomationsByTeamIdsQuery = async (
+    teamIds: string[],
+): Promise<Map<string, AutomationRule[]>> => {
     if (teamIds.length === 0) return new Map();
     const rows = await db
         .selectFrom('automations')
@@ -292,7 +315,7 @@ export const getAutomationsByTeamIdsQuery = async (teamIds: string[]): Promise<M
         .where('fk_team_id', 'in', teamIds)
         .where('is_active', '=', true)
         .execute();
-    
+
     const automations = mapAutomations(rows);
     const map = new Map<string, AutomationRule[]>();
     for (const auto of automations) {
@@ -310,7 +333,7 @@ export const getAutomationsByTeamIdsQuery = async (teamIds: string[]): Promise<M
  * Unlike the user-facing updateTask query, this:
  * - Skips auth checks (engine operates in a trusted context).
  * - Skips optimistic locking (no version check — engine is the source of truth).
- * - Restricts updates to non-structural fields only (no parentTaskId / materialized_path changes).
+ * - Restricts updates to non-structural fields only.
  * - Emits to BOTH Kafka lanes in one atomic CTE:
  *     - Display Lane: 'project.task.updated'  (always fires — keeps UI fresh)
  *     - Logic Lane:   'automation.trigger.task' (only if shouldPropagate is true)
@@ -326,20 +349,22 @@ export const automationBulkUpdateTasks = async (
 
     const { correlationId, depth } = context;
 
-    console.log(`[AutomationQuery] Executing bulk update: ids=${taskIds.length}, params=${JSON.stringify(params)}, correlation=${correlationId.slice(0, 8)}`);
+    console.log(
+        `[AutomationQuery] Executing bulk update: ids=${taskIds.length}, params=${JSON.stringify(params)}, correlation=${correlationId.slice(0, 8)}`,
+    );
 
     // Extract allowed params (structural fields excluded deliberately)
-    const status    = params.status    ?? null;
-    const title     = params.title     ?? null;
-    const desc      = params.description ?? null;
-    const teamId    = params.teamId    ?? null;
-    const memberId  = params.memberId  ?? null;
+    const status = params.status ?? null;
+    const title = params.title ?? null;
+    const desc = params.description ?? null;
+    const teamId = params.teamId ?? null;
+    const memberId = params.memberId ?? null;
 
-    const hasStatus  = 'status'      in params;
-    const hasTitle   = 'title'       in params;
-    const hasDesc    = 'description' in params;
-    const hasTeam    = 'teamId'      in params;
-    const hasMember  = 'memberId'    in params;
+    const hasStatus = 'status' in params;
+    const hasTitle = 'title' in params;
+    const hasDesc = 'description' in params;
+    const hasTeam = 'teamId' in params;
+    const hasMember = 'memberId' in params;
 
     const result = await sql`
         WITH old_states AS (
@@ -435,5 +460,7 @@ export const automationBulkUpdateTasks = async (
         SELECT id FROM updated_tasks
     `.execute(db);
 
-    console.log(`[AutomationQuery] Update complete: correlation=${correlationId.slice(0, 8)}, rowsUpdated=${result.rows.length}`);
+    console.log(
+        `[AutomationQuery] Update complete: correlation=${correlationId.slice(0, 8)}, rowsUpdated=${result.rows.length}`,
+    );
 };

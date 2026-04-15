@@ -8,7 +8,7 @@ async function test() {
             projectId: '3cde0ca8-092e-4fa4-97d6-3bf4665b37ba', // dummy uuids just to test syntax
             teamId: '3cde0ca8-092e-4fa4-97d6-3bf4665b37ba',
             search: '',
-            cursor: undefined
+            cursor: undefined,
         });
         console.log(res);
     } catch (e: any) {

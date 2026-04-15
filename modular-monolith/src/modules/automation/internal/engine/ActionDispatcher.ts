@@ -24,7 +24,10 @@ export const dispatchRules = async (
     if (context.depth >= MAX_DEPTH) {
         console.warn(
             `[AutomationEngine] Max cascade depth (${MAX_DEPTH}) reached. Halting chain.`,
-            { correlationId: context.correlationId, taskId: context.triggerTaskId },
+            {
+                correlationId: context.correlationId,
+                taskId: context.triggerTaskId,
+            },
         );
         return;
     }
@@ -34,12 +37,16 @@ export const dispatchRules = async (
     for (const rule of payload as any[]) {
         if (!rule.when || !rule.then || rule.then.length === 0) continue;
 
-        const conditionsPassed = evaluateRuleGroup(oldState, newState, rule.when);
+        const conditionsPassed = evaluateRuleGroup(
+            oldState,
+            newState,
+            rule.when,
+        );
         if (!conditionsPassed) continue;
 
         console.info(
-            `[AutomationEngine] MATCH: "${rule.name || 'Untitled'}" for Task:${context.triggerTaskId} ` + 
-            `[ID:${context.correlationId.slice(0, 8)}] (Depth:${context.depth})`
+            `[AutomationEngine] MATCH: "${rule.name || 'Untitled'}" for Task:${context.triggerTaskId} ` +
+                `[ID:${context.correlationId.slice(0, 8)}] (Depth:${context.depth})`,
         );
 
         // Conditions passed — execute all actions for this rule sequentially
@@ -56,12 +63,17 @@ export const dispatchRules = async (
  * 3. Emits to the Display Lane (always) and Logic Lane (if shouldPropagate)
  */
 const dispatchAction = async (
-    context: DispatchContext, 
+    context: DispatchContext,
     action: Action,
     cache: Map<string, string[]>,
-    ruleName?: string
+    ruleName?: string,
 ): Promise<void> => {
-    const taskIds = await resolveTarget(context.triggerTaskId, context.projectId, action, cache);
+    const taskIds = await resolveTarget(
+        context.triggerTaskId,
+        context.projectId,
+        action,
+        cache,
+    );
 
     if (taskIds.length === 0) {
         // Target resolved to nothing (e.g. @parent on a root task) — skip silently
@@ -70,7 +82,7 @@ const dispatchAction = async (
 
     console.log(
         `[AutomationEngine] ACTION: "${action.type}" on ${taskIds.length} tasks ` +
-        `from Rule: "${ruleName || 'Untitled'}" [ID:${context.correlationId.slice(0, 8)}]`
+            `from Rule: "${ruleName || 'Untitled'}" [ID:${context.correlationId.slice(0, 8)}]`,
     );
 
     const shouldPropagate = action.shouldPropagate ?? true;

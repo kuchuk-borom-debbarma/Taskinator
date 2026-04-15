@@ -2,6 +2,8 @@ import type {
     CreateTaskParam,
     DeleteTasksParam,
     ProjectTask,
+    TaskLink,
+    TaskLinkMaterialized,
     TaskService,
     UpdateTasksParam,
 } from '../TaskService.ts';
@@ -11,6 +13,9 @@ import {
     getTasks,
     insertTask,
     updateTask,
+    createTaskLinkQuery,
+    deleteTaskLinkQuery,
+    getLinksQuery,
     getLinksByTaskIdsQuery,
 } from './TaskQueries.ts';
 import { taskDeleteListener } from './listeners/TaskDeleteListener.ts';
@@ -58,7 +63,7 @@ export class TaskServiceImpl implements TaskService {
     }
 
     async updateTasks(data: UpdateTasksParam): Promise<string[]> {
-        const updatePromises = data.tasks.map(taskUpdate =>
+        const updatePromises = data.tasks.map((taskUpdate) =>
             updateTask({
                 userId: data.userId,
                 projectId: data.projectId,
@@ -71,11 +76,13 @@ export class TaskServiceImpl implements TaskService {
                 teamId: taskUpdate.teamId,
                 memberId: taskUpdate.memberId,
                 parentTaskId: taskUpdate.parentTaskId,
-            })
+            }),
         );
 
         const results = await Promise.all(updatePromises);
-        const updatedIds: string[] = results.filter((r): r is string => r !== null);
+        const updatedIds: string[] = results.filter(
+            (r): r is string => r !== null,
+        );
 
         if (updatedIds.length !== data.tasks.length) {
             throw new Error(
@@ -118,9 +125,9 @@ export class TaskServiceImpl implements TaskService {
     async getLinksByTaskIds(
         projectId: string,
         taskIds: string[],
-    ): Promise<Map<string, { direct: TaskLink[]; story: TaskLinkMaterialized[] }>> {
+    ): Promise<
+        Map<string, { direct: TaskLink[]; story: TaskLinkMaterialized[] }>
+    > {
         return getLinksByTaskIdsQuery(projectId, taskIds);
     }
 }
-
-

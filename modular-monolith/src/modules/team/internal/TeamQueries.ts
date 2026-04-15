@@ -302,10 +302,13 @@ export const searchTeamUsers = async (params: {
     search?: string;
     cursor?: string;
     limit?: number;
-}): Promise<{ users: { id: string; username: string; email: string }[]; nextCursor: string | null }> => {
+}): Promise<{
+    users: { id: string; username: string; email: string }[];
+    nextCursor: string | null;
+}> => {
     const search = params.search?.trim() ?? '';
     const cursor = params.cursor;
-    const limit  = Math.min(params.limit ?? 20, 50);
+    const limit = Math.min(params.limit ?? 20, 50);
 
     const cursorVal = params.cursor || null;
 
@@ -335,14 +338,17 @@ export const searchTeamUsers = async (params: {
         LIMIT ${limit + 1}
     `.execute(db);
 
-    const hasMore    = rows.rows.length > limit;
-    const users      = hasMore ? rows.rows.slice(0, limit) : rows.rows;
+    const hasMore = rows.rows.length > limit;
+    const users = hasMore ? rows.rows.slice(0, limit) : rows.rows;
     const nextCursor = hasMore ? users[users.length - 1]!.id : null;
 
     return { users, nextCursor };
 };
 
-export const getTeamsByIds = async (userId: string, teamIds: string[]): Promise<Team[]> => {
+export const getTeamsByIds = async (
+    userId: string,
+    teamIds: string[],
+): Promise<Team[]> => {
     if (teamIds.length === 0) return [];
     const result = await sql<Team>`
         SELECT 
@@ -373,7 +379,9 @@ export const getTeamsByIds = async (userId: string, teamIds: string[]): Promise<
     return result.rows;
 };
 
-export const getTeamCreator = async (teamId: string): Promise<string | null> => {
+export const getTeamCreator = async (
+    teamId: string,
+): Promise<string | null> => {
     const result = await sql<{ fk_user_id: string }>`
         SELECT fk_user_id FROM project_team WHERE id = ${teamId}::uuid
     `.execute(db);

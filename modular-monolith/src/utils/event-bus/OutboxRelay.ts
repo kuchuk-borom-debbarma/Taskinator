@@ -15,10 +15,18 @@ const fetchPendingEvents = async () => {
 };
 
 const dispatchToEventBus = async (
-    events: { id: string; kafka_topic: string; kafka_key: string; payload: any }[],
+    events: {
+        id: string;
+        kafka_topic: string;
+        kafka_key: string;
+        payload: any;
+    }[],
 ) => {
     // Group events by topic to optimize kafka publishing
-    const byTopic: Record<string, Array<{ id: string; key: string; data: any }>> = {};
+    const byTopic: Record<
+        string,
+        Array<{ id: string; key: string; data: any }>
+    > = {};
 
     for (const event of events) {
         byTopic[event.kafka_topic] ??= [];
@@ -38,10 +46,7 @@ const dispatchToEventBus = async (
 };
 
 const clearProcessedEvents = async (eventIds: string[]) => {
-    await db
-        .deleteFrom('outbox_events')
-        .where('id', 'in', eventIds)
-        .execute();
+    await db.deleteFrom('outbox_events').where('id', 'in', eventIds).execute();
 };
 
 const processOutboxBatch = async () => {

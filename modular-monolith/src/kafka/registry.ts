@@ -15,7 +15,6 @@ import { userSignupStartedListener } from '../modules/auth/internal/listeners/Us
 import { userCreatedListener } from '../modules/auth/internal/listeners/UserCreatedListener.ts';
 import { realtimeRouterConsumer } from '../modules/realtime/internal/RealtimeKafkaConsumer.ts';
 
-
 export {
     taskProjectCleanup,
     teamProjectCleanup,

@@ -38,7 +38,6 @@ export type TaskLinkMaterialized = {
     createdAt: Date;
 };
 
-
 export interface CreateTaskParam {
     userId: string;
     projectId: string;
@@ -82,7 +81,7 @@ export interface TaskService extends BaseService {
     getTasks(
         userId: string,
         projectId: string,
-        params?: { cursor?: string; limit?: number }
+        params?: { cursor?: string; limit?: number },
     ): Promise<{ tasks: ProjectTask[]; nextCursor: string | null }>;
 
     createLink(data: {
@@ -102,7 +101,7 @@ export interface TaskService extends BaseService {
     getLinks(
         userId: string,
         projectId: string,
-        taskId: string
+        taskId: string,
     ): Promise<{
         direct: TaskLink[];
         story: TaskLinkMaterialized[];
@@ -110,8 +109,8 @@ export interface TaskService extends BaseService {
 
     getLinksByTaskIds(
         projectId: string,
-        taskIds: string[]
-    ): Promise<Map<string, { direct: TaskLink[]; story: TaskLinkMaterialized[] }>>;
+        taskIds: string[],
+    ): Promise<
+        Map<string, { direct: TaskLink[]; story: TaskLinkMaterialized[] }>
+    >;
 }
-
-

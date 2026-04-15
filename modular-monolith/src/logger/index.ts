@@ -7,7 +7,10 @@ export interface Logger {
 
 export class LoggerImpl implements Logger {
     debug(message: string, ...meta: any[]): void {
-        if (process.env.DEBUG === 'true' || process.env.NODE_ENV !== 'production') {
+        if (
+            process.env.DEBUG === 'true' ||
+            process.env.NODE_ENV !== 'production'
+        ) {
             console.log(
                 `[DEBUG] ${new Date().toISOString()} - ${message}`,
                 ...meta,

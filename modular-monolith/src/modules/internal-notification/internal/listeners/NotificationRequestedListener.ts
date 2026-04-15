@@ -13,17 +13,26 @@ export class NotificationRequestedListener {
                 metadata: any;
             }) => {
                 const { userIds, title, message, type, metadata } = data;
-                console.log(`[Internal Notification] Batch-inserting notifications for ${userIds.length} users`);
+                console.log(
+                    `[Internal Notification] Batch-inserting notifications for ${userIds.length} users`,
+                );
 
                 // Single INSERT ... SELECT unnest(...) — one DB round-trip for all recipients
-                const notifications = await internalNotificationService.createNotificationsBatch(
-                    userIds.map((userId) => ({ userId, title, message, type, metadata })),
-                );
+                const notifications =
+                    await internalNotificationService.createNotificationsBatch(
+                        userIds.map((userId) => ({
+                            userId,
+                            title,
+                            message,
+                            type,
+                            metadata,
+                        })),
+                    );
 
                 // Push individual CREATED events to Kafka for fan-out to all SSE instances
                 await eventBus.publish(
                     KAFKA_EVENTS.NOTIFICATION.CREATED,
-                    notifications.map(n => ({
+                    notifications.map((n) => ({
                         key: n.userId,
                         data: {
                             id: n.id,
@@ -34,14 +43,15 @@ export class NotificationRequestedListener {
                             metadata: n.metadata,
                             isRead: n.isRead,
                             createdAt: n.createdAt,
-                        }
-                    }))
+                        },
+                    })),
                 );
             },
         });
     }
 
-    async stop() { }
+    async stop() {}
 }
 
-export const notificationRequestedListener = new NotificationRequestedListener();
+export const notificationRequestedListener =
+    new NotificationRequestedListener();

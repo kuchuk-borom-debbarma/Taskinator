@@ -18,9 +18,9 @@ router.get('/', async (req: any, res: Response) => {
             return;
         }
 
-        const result = await taskService.getTasks(userId, projectId as string, { 
-            cursor: cursor as string, 
-            limit: parseInt(limit as string) || 20 
+        const result = await taskService.getTasks(userId, projectId as string, {
+            cursor: cursor as string,
+            limit: parseInt(limit as string) || 20,
         });
         res.status(200).json(result);
     } catch (error: any) {
@@ -120,7 +120,7 @@ router.post('/:taskId/automations', async (req: any, res: Response) => {
             targetScope: targetScope || 'TASK',
             taskId,
             rules,
-            isActive
+            isActive,
         });
         res.status(201).json(automation);
     } catch (error: any) {
@@ -128,15 +128,18 @@ router.post('/:taskId/automations', async (req: any, res: Response) => {
     }
 });
 
-router.delete('/:taskId/automations/:automationId', async (req: any, res: Response) => {
-    try {
-        const { automationId } = req.params;
-        const userId = req.userId;
-        await automationService.deleteAutomation({ userId, automationId });
-        res.status(200).send();
-    } catch (error: any) {
-        res.status(400).json({ error: error.message });
-    }
-});
+router.delete(
+    '/:taskId/automations/:automationId',
+    async (req: any, res: Response) => {
+        try {
+            const { automationId } = req.params;
+            const userId = req.userId;
+            await automationService.deleteAutomation({ userId, automationId });
+            res.status(200).send();
+        } catch (error: any) {
+            res.status(400).json({ error: error.message });
+        }
+    },
+);
 
 export default router;

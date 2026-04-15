@@ -11,7 +11,9 @@ import { yoga } from '../graphql';
  * startRestServer initializes the Express application and routes.
  * It returns a Promise that resolves once the server is actually listening on the port.
  */
-export const startRestServer = (port: number = 3000): Promise<express.Application> => {
+export const startRestServer = (
+    port: number = 3000,
+): Promise<express.Application> => {
     return new Promise((resolve) => {
         const app = express();
 

@@ -1,18 +1,24 @@
-import type { 
-    CreateNotificationParam, 
-    InternalNotification, 
-    InternalNotificationService 
+import type {
+    CreateNotificationParam,
+    InternalNotification,
+    InternalNotificationService,
 } from '../InternalNotificationService.ts';
 import * as Queries from './InternalNotificationQueries.ts';
 import eventBus from '../../../utils/EventBus.ts';
 import { notificationRequestedListener } from './listeners/NotificationRequestedListener.ts';
 
-export class InternalNotificationServiceImpl implements InternalNotificationService {
-    async createNotification(data: CreateNotificationParam): Promise<InternalNotification> {
+export class InternalNotificationServiceImpl
+    implements InternalNotificationService
+{
+    async createNotification(
+        data: CreateNotificationParam,
+    ): Promise<InternalNotification> {
         return await Queries.insertNotification(data);
     }
 
-    async createNotificationsBatch(rows: CreateNotificationParam[]): Promise<InternalNotification[]> {
+    async createNotificationsBatch(
+        rows: CreateNotificationParam[],
+    ): Promise<InternalNotification[]> {
         return await Queries.insertNotificationsBatch(rows);
     }
 
@@ -26,8 +32,11 @@ export class InternalNotificationServiceImpl implements InternalNotificationServ
 
     async getNotifications(
         userId: string,
-        params: { cursor?: string; limit?: number }
-    ): Promise<{ notifications: InternalNotification[]; nextCursor: string | null }> {
+        params: { cursor?: string; limit?: number },
+    ): Promise<{
+        notifications: InternalNotification[];
+        nextCursor: string | null;
+    }> {
         return await Queries.getNotifications(userId, params);
     }
 

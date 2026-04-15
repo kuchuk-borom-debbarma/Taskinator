@@ -1,52 +1,65 @@
 type Team {
-  id: ID!
-  name: String!
-  projectId: ID!
-  createdBy: String!
-  creator: User
-  createdAt: String!
-  updatedAt: String
-  version: Int!
-  automations: [AutomationRule!]!
+    id: ID!
+    name: String!
+    projectId: ID!
+    createdBy: String!
+    creator: User
+    createdAt: String!
+    updatedAt: String
+    version: Int!
+    automations: [AutomationRule!]!
 }
 
 type TeamMember {
-  id: ID!
-  teamId: ID!
-  userId: String!
-  user: User
-  createdAt: String!
-  version: Int!
+    id: ID!
+    teamId: ID!
+    userId: String!
+    user: User
+    createdAt: String!
+    version: Int!
 }
 
 type TeamEdge {
-  node: Team!
-  cursor: String!
+    node: Team!
+    cursor: String!
 }
 
 type TeamConnection {
-  edges: [TeamEdge!]!
-  pageInfo: PageInfo!
+    edges: [TeamEdge!]!
+    pageInfo: PageInfo!
 }
 
 type TeamMemberEdge {
-  node: TeamMember!
-  cursor: String!
+    node: TeamMember!
+    cursor: String!
 }
 
 type TeamMemberConnection {
-  edges: [TeamMemberEdge!]!
-  pageInfo: PageInfo!
+    edges: [TeamMemberEdge!]!
+    pageInfo: PageInfo!
 }
 
 extend type Query {
-  teams(projectId: ID!, first: Int, after: String): TeamConnection!
-  teamMembers(projectId: ID!, teamId: ID!, first: Int, after: String): TeamMemberConnection!
+    teams(projectId: ID!, first: Int, after: String): TeamConnection!
+    teamMembers(
+        projectId: ID!
+        teamId: ID!
+        first: Int
+        after: String
+    ): TeamMemberConnection!
 }
 
 extend type Mutation {
-  createTeam(projectId: ID!, name: String!): Team
-  deleteTeams(projectId: ID!, teamIds: [ID!]!): [ID]
-  addTeamMembers(projectId: ID!, teamId: ID!, userIds: [String!]!): [TeamMember]
-  removeTeamMembers(projectId: ID!, teamId: ID!, userIds: [String!]!): [String]
+    createTeam(projectId: ID!, name: String!): Team
+    deleteTeams(projectId: ID!, teamIds: [ID!]!): [ID]
+    addTeamMembers(
+        projectId: ID!
+        teamId: ID!
+        userIds: [String!]!
+    ): [TeamMember]
+    removeTeamMembers(
+        projectId: ID!
+        teamId: ID!
+        userIds: [String!]!
+    ): [String]
 }

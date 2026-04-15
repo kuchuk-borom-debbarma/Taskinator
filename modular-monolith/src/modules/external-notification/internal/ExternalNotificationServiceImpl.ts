@@ -19,12 +19,22 @@ export class ExternalNotificationServiceImpl
         logger.info(`Sending sign up email to ${email} with link: ${link}`);
     }
 
-    async sendNotification(data: { userId: string; title: string; message: string }): Promise<void> {
-        logger.info(`[External Notification] Sending to user ${data.userId}: ${data.title} - ${data.message}`);
+    async sendNotification(data: {
+        userId: string;
+        title: string;
+        message: string;
+    }): Promise<void> {
+        logger.info(
+            `[External Notification] Sending to user ${data.userId}: ${data.title} - ${data.message}`,
+        );
         // Real implementation would look up user Slack/Discord/Email prefs
     }
 
-    async sendNotificationBatch(data: { userIds: string[]; title: string; message: string }): Promise<void> {
+    async sendNotificationBatch(data: {
+        userIds: string[];
+        title: string;
+        message: string;
+    }): Promise<void> {
         if (data.userIds.length === 0) return;
         logger.info(
             `[External Notification] Batch-sending to ${data.userIds.length} users: "${data.title}"`,

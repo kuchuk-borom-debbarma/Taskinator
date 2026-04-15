@@ -42,7 +42,12 @@ export async function withIdempotency(
     }
 }
 
-export function createEvent(type: string, key: string, data: any, id?: string): DomainEvent {
+export function createEvent(
+    type: string,
+    key: string,
+    data: any,
+    id?: string,
+): DomainEvent {
     return {
         eventId: id || uuid(),
         type,

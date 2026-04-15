@@ -9,11 +9,19 @@ router.post('/signup', async (req, res) => {
     try {
         const { email, username, password } = req.body;
         if (!email || !username || !password) {
-            res.status(400).json({ error: 'Email, username, and password are required' });
+            res.status(400).json({
+                error: 'Email, username, and password are required',
+            });
             return;
         }
-        await authService.startSignUp({ email, username, password_raw: password });
-        res.status(202).json({ message: 'Signup started, check your email to verify' });
+        await authService.startSignUp({
+            email,
+            username,
+            password_raw: password,
+        });
+        res.status(202).json({
+            message: 'Signup started, check your email to verify',
+        });
     } catch (error: any) {
         res.status(500).json({ error: error.message });
     }
@@ -27,7 +35,9 @@ router.get('/finish-sign-up', async (req, res) => {
             return;
         }
         await authService.finishSignUp(token);
-        res.status(201).json({ message: 'Signup finished successfully. You can now login.' });
+        res.status(201).json({
+            message: 'Signup finished successfully. You can now login.',
+        });
     } catch (error: any) {
         res.status(500).json({ error: error.message });
     }
@@ -40,7 +50,10 @@ router.post('/signin', async (req, res) => {
             res.status(400).json({ error: 'Email and password are required' });
             return;
         }
-        const result = await authService.signIn({ email, password_raw: password });
+        const result = await authService.signIn({
+            email,
+            password_raw: password,
+        });
         if (!result) {
             res.status(401).json({ error: 'Invalid credentials' });
             return;
@@ -59,13 +72,13 @@ router.get('/users', requireAuth as any, async (req: any, res: Response) => {
     try {
         const search = req.query.search as string | undefined;
         const cursor = req.query.cursor as string | undefined;
-        const limit  = parseInt(req.query.limit as string) || 20;
+        const limit = parseInt(req.query.limit as string) || 20;
 
-        const result = await authService.searchUsers({ 
-            search, 
-            cursor, 
+        const result = await authService.searchUsers({
+            search,
+            cursor,
             limit,
-            actorId: req.userId
+            actorId: req.userId,
         });
         res.status(200).json(result);
     } catch (error: any) {

@@ -116,10 +116,12 @@ export class AuthServiceImpl implements AuthService {
         return { token };
     }
 
-    async searchUsers(params: SearchUsersParam): Promise<{ users: UserResult[]; nextCursor: string | null }> {
+    async searchUsers(
+        params: SearchUsersParam,
+    ): Promise<{ users: UserResult[]; nextCursor: string | null }> {
         const search = params.search?.trim() ?? '';
         const cursor = params.cursor || null;
-        const limit  = Math.min(params.limit ?? 20, 50);
+        const limit = Math.min(params.limit ?? 20, 50);
 
         // Exact match only: username = search OR id = search (cast to uuid if possible)
         // Cursor is the last-seen id for forward pagination (ORDER BY id)
@@ -141,11 +143,9 @@ export class AuthServiceImpl implements AuthService {
             LIMIT ${limit + 1}
         `.execute(db);
 
-
-        const hasMore   = rows.rows.length > limit;
-        const users     = hasMore ? rows.rows.slice(0, limit) : rows.rows;
+        const hasMore = rows.rows.length > limit;
+        const users = hasMore ? rows.rows.slice(0, limit) : rows.rows;
         const nextCursor = hasMore ? users[users.length - 1]!.id : null;
-
 
         return { users, nextCursor };
     }
