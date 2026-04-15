@@ -13,6 +13,7 @@ import {
     getAutomationsByTeamIdsQuery
 } from './AutomationQueries.ts';
 import eventBus from '../../../utils/EventBus.ts';
+import { automationListener } from './listeners/AutomationListener.ts';
 
 export class AutomationServiceImpl implements AutomationService {
     async addAutomation(data: {
@@ -72,11 +73,13 @@ export class AutomationServiceImpl implements AutomationService {
 
     async destroy(): Promise<void> {
         console.log(`Disconnecting event bus ${this.constructor.name}`);
+        await automationListener.stop();
         await eventBus.destroy();
     }
 
     async init(): Promise<void> {
         console.log(`Initializing event bus ${this.constructor.name}`);
         await eventBus.init();
+        await automationListener.init();
     }
 }

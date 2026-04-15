@@ -206,7 +206,12 @@ const mapAutomations = (rows: any[]): AutomationRule[] => {
 
 export const getAutomationsByTaskIdsQuery = async (taskIds: string[]): Promise<Map<string, AutomationRule[]>> => {
     if (taskIds.length === 0) return new Map();
-    const rows = await db.selectFrom('automations').selectAll().where('fk_task_id', 'in', taskIds).execute();
+    const rows = await db
+        .selectFrom('automations')
+        .selectAll()
+        .where('fk_task_id', 'in', taskIds)
+        .where('is_active', '=', true)
+        .execute();
     
     const automations = mapAutomations(rows);
     const map = new Map<string, AutomationRule[]>();
@@ -221,7 +226,13 @@ export const getAutomationsByTaskIdsQuery = async (taskIds: string[]): Promise<M
 
 export const getAutomationsByProjectIdsQuery = async (projectIds: string[]): Promise<Map<string, AutomationRule[]>> => {
     if (projectIds.length === 0) return new Map();
-    const rows = await db.selectFrom('automations').selectAll().where('fk_project_id', 'in', projectIds).where('target_scope', '=', 'PROJECT').execute();
+    const rows = await db
+        .selectFrom('automations')
+        .selectAll()
+        .where('fk_project_id', 'in', projectIds)
+        .where('target_scope', '=', 'PROJECT')
+        .where('is_active', '=', true)
+        .execute();
     
     const automations = mapAutomations(rows);
     const map = new Map<string, AutomationRule[]>();
@@ -235,7 +246,12 @@ export const getAutomationsByProjectIdsQuery = async (projectIds: string[]): Pro
 
 export const getAutomationsByTeamIdsQuery = async (teamIds: string[]): Promise<Map<string, AutomationRule[]>> => {
     if (teamIds.length === 0) return new Map();
-    const rows = await db.selectFrom('automations').selectAll().where('fk_team_id', 'in', teamIds).execute();
+    const rows = await db
+        .selectFrom('automations')
+        .selectAll()
+        .where('fk_team_id', 'in', teamIds)
+        .where('is_active', '=', true)
+        .execute();
     
     const automations = mapAutomations(rows);
     const map = new Map<string, AutomationRule[]>();
@@ -329,6 +345,7 @@ export const automationBulkUpdateTasks = async (
                 jsonb_build_object(
                     'taskId',    id,
                     'projectId', "projectId",
+                    'correlationId', ${correlationId},
                     'updates',   ${JSON.stringify(params)}::jsonb
                 )
             FROM updated_tasks

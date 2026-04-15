@@ -13,11 +13,20 @@ export const resolveTarget = async (
     triggerTaskId: string,
     projectId: string,
     action: Action,
+    cache?: Map<string, string[]>,
 ): Promise<string[]> => {
+    // 0. Check cache first for relational targets
+    const cacheKey = `${action.target}`;
+    if (cache && cache.has(cacheKey)) {
+        return cache.get(cacheKey)!;
+    }
+
+    let resultIds: string[] = [];
+
     switch (action.target) {
         case '@self':
-            // No query needed — the trigger task IS the target.
-            return [triggerTaskId];
+            resultIds = [triggerTaskId];
+            break;
 
         case '@parent': {
             const result = await sql<{ parent: string | null }>`
@@ -27,7 +36,8 @@ export const resolveTarget = async (
                   AND fk_project_id = ${projectId}::uuid
             `.execute(db);
             const parent = result.rows[0]?.parent;
-            return parent ? [parent] : []; // Tasks without a parent are silently skipped
+            resultIds = parent ? [parent] : [];
+            break;
         }
 
         case '@children': {
@@ -37,12 +47,11 @@ export const resolveTarget = async (
                 WHERE fk_parent_task_id = ${triggerTaskId}::uuid
                   AND fk_project_id = ${projectId}::uuid
             `.execute(db);
-            return result.rows.map((r) => r.id);
+            resultIds = result.rows.map((r) => r.id);
+            break;
         }
 
         case '@descendants': {
-            // Fetch the trigger task's own materialized_path first to build
-            // the ancestor prefix that all descendants will share in their path.
             const taskRow = await sql<{ path: string }>`
                 SELECT materialized_path AS path
                 FROM project_task
@@ -51,29 +60,36 @@ export const resolveTarget = async (
             `.execute(db);
 
             const ownPath = taskRow.rows[0]?.path;
-            if (ownPath === undefined) return [];
+            if (ownPath === undefined) {
+                resultIds = [];
+            } else {
+                const prefix = ownPath === '' ? triggerTaskId : `${ownPath}/${triggerTaskId}`;
 
-            // Ancestor prefix = parent's path + '/' + trigger task's own id
-            // All descendants will have their materialized_path starting with this prefix.
-            const prefix = ownPath === '' ? triggerTaskId : `${ownPath}/${triggerTaskId}`;
-
-            const result = await sql<{ id: string }>`
-                SELECT id
-                FROM project_task
-                WHERE fk_project_id = ${projectId}::uuid
-                  AND (
-                      materialized_path = ${prefix}
-                      OR materialized_path LIKE ${prefix + '/%'}
-                  )
-            `.execute(db);
-            return result.rows.map((r) => r.id);
+                const result = await sql<{ id: string }>`
+                    SELECT id
+                    FROM project_task
+                    WHERE fk_project_id = ${projectId}::uuid
+                      AND (
+                          materialized_path = ${prefix}
+                          OR materialized_path LIKE ${prefix + '/%'}
+                      )
+                `.execute(db);
+                resultIds = result.rows.map((r) => r.id);
+            }
+            break;
         }
 
         case 'SPECIFIC_TASKS':
-            // IDs already baked into the rule by the user — no query needed.
-            return action.targetIds ?? [];
+            resultIds = action.targetIds ?? [];
+            break;
 
         default:
-            return [];
+            resultIds = [];
     }
+
+    if (cache) {
+        cache.set(cacheKey, resultIds);
+    }
+
+    return resultIds;
 };

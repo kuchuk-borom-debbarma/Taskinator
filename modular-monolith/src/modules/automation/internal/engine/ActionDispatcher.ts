@@ -1,4 +1,5 @@
-import type { AutomationPayload, Action, DispatchContext, MAX_CASCADE_DEPTH } from './DSL.ts';
+import type { AutomationPayload, Action, DispatchContext } from './DSL.ts';
+import { MAX_CASCADE_DEPTH } from './DSL.ts';
 import { evaluateRuleGroup } from './ConditionEvaluator.ts';
 import { resolveTarget } from './TargetResolver.ts';
 import { automationBulkUpdateTasks } from '../AutomationQueries.ts';
@@ -28,6 +29,8 @@ export const dispatchRules = async (
         return;
     }
 
+    const targetCache = new Map<string, string[]>();
+
     for (const rule of payload) {
         if (!rule.when || !rule.then || rule.then.length === 0) continue;
 
@@ -36,7 +39,7 @@ export const dispatchRules = async (
 
         // Conditions passed — execute all actions for this rule sequentially
         for (const action of rule.then) {
-            await dispatchAction(context, action);
+            await dispatchAction(context, action, targetCache);
         }
     }
 };
@@ -47,8 +50,12 @@ export const dispatchRules = async (
  * 2. Bulk-updates those tasks with action.params
  * 3. Emits to the Display Lane (always) and Logic Lane (if shouldPropagate)
  */
-const dispatchAction = async (context: DispatchContext, action: Action): Promise<void> => {
-    const taskIds = await resolveTarget(context.triggerTaskId, context.projectId, action);
+const dispatchAction = async (
+    context: DispatchContext, 
+    action: Action,
+    cache: Map<string, string[]>
+): Promise<void> => {
+    const taskIds = await resolveTarget(context.triggerTaskId, context.projectId, action, cache);
 
     if (taskIds.length === 0) {
         // Target resolved to nothing (e.g. @parent on a root task) — skip silently
