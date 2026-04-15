@@ -11,7 +11,6 @@ interface Task {
   version: number;
   team?: { id: string; name: string } | null;
   assignee?: { id: string; username: string } | null;
-  triggers?: any[];
 }
 
 interface TaskDrillViewProps {
@@ -163,12 +162,7 @@ export const TaskDrillView: React.FC<TaskDrillViewProps> = ({
                           </div>
                         )}
 
-                        {/* Trigger / Automation Badge */}
-                        {(task.triggers?.length ?? 0) > 0 && (
-                          <div className="px-2 py-0.5 rounded-[6px] bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 text-[10px] font-bold flex items-center gap-1" title="Active Automations">
-                             <Zap size={10} /> {task.triggers!.length} active
-                          </div>
-                        )}
+
                      </div>
                   </div>
                </div>

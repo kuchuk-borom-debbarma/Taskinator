@@ -141,6 +141,8 @@ CREATE TABLE automations (
     fk_project_id UUID NOT NULL,
     actor_id TEXT NOT NULL,
     target_scope TEXT NOT NULL, -- 'TASK', 'PROJECT', 'TEAM'
+    fk_task_id UUID,            -- Specific task this automation is pinned to (optional)
+    fk_team_id UUID,            -- Specific team this automation is pinned to (optional)
     rules JSONB NOT NULL, -- Array of { conditions, actions }
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
@@ -148,4 +150,6 @@ CREATE TABLE automations (
 );
 
 CREATE INDEX idx_automations_project ON automations(fk_project_id);
+CREATE INDEX idx_automations_task ON automations(fk_task_id) WHERE fk_task_id IS NOT NULL;
+CREATE INDEX idx_automations_team ON automations(fk_team_id) WHERE fk_team_id IS NOT NULL;
 

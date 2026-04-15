@@ -7,10 +7,11 @@ export type AutomationRule = {
     id: string;
     projectId: string;
     actorId: string;
+    name: string;
     targetScope: AutomationScope;
     taskId?: string | null;
     teamId?: string | null;
-    rules: any; // JSONB Array of { conditions, actions }
+    rules: any; // JSONB Array of { operator, rules, actions }
     isActive: boolean;
     createdAt: Date;
     updatedAt: Date;
@@ -20,6 +21,7 @@ export interface AutomationService extends BaseService {
     addAutomation(data: {
         userId: string;
         projectId: string;
+        name: string;
         targetScope: AutomationScope;
         taskId?: string;
         teamId?: string;
@@ -30,12 +32,13 @@ export interface AutomationService extends BaseService {
     updateAutomation(data: {
         userId: string;
         automationId: string;
+        name?: string;
         targetScope?: AutomationScope;
         taskId?: string | null;
         teamId?: string | null;
         rules?: any;
         isActive?: boolean;
-    }): Promise<void>;
+    }): Promise<AutomationRule>;
 
     getAutomationsByFilter(data: {
         projectId?: string;

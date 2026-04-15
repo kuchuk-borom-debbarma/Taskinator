@@ -78,6 +78,8 @@ export class AutomationListener {
         for (let i = 0; i < events.length; i += CONCURRENCY_LIMIT) {
             const chunk = events.slice(i, i + CONCURRENCY_LIMIT);
             
+            let rulesTriggered = 0;
+
             const chunkPromises = chunk.map(async (event) => {
                 const { taskId, projectId, newState, correlationId, depth, oldState } = event;
                 const teamId = newState.teamId;
@@ -90,7 +92,13 @@ export class AutomationListener {
 
                 if (rules.length === 0) return;
 
-                const payload = rules.flatMap(r => r.rules);
+                // rules Triggered metric: count of rules where at least one action is likely to run
+                rulesTriggered += rules.length;
+
+                const payload = rules.flatMap(r => ({
+                    ...r.rules[0], // rules are stored as [{ when, then }] usually but DSL allows array
+                    name: r.name // Pass name down for logging
+                }));
 
                 const context: DispatchContext = {
                     triggerTaskId: taskId,
@@ -103,6 +111,10 @@ export class AutomationListener {
             });
 
             await Promise.allSettled(chunkPromises);
+
+            if (rulesTriggered > 0) {
+                console.log(`[Automation Module] Batch finished. Triggered ${rulesTriggered} rule evaluations.`);
+            }
         }
     }
 

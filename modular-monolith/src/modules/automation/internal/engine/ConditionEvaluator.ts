@@ -1,13 +1,13 @@
 import type { RuleGroup, Condition, Operator } from './DSL.ts';
 
 export const evaluateRuleGroup = (oldState: Record<string, any>, newState: Record<string, any>, group: RuleGroup): boolean => {
-    if (!group || !group.conditions || group.conditions.length === 0) {
+    if (!group || !group.rules || group.rules.length === 0) {
         return false;
     }
 
-    if (group.match === 'ALL') {
-        // AND logic: Every condition must pass
-        for (const item of group.conditions) {
+    if (group.operator === 'AND') {
+        // AND logic: Every rule must pass
+        for (const item of group.rules) {
             const pass = isRuleGroup(item) 
                 ? evaluateRuleGroup(oldState, newState, item)
                 : evaluateCondition(oldState, newState, item);
@@ -15,8 +15,8 @@ export const evaluateRuleGroup = (oldState: Record<string, any>, newState: Recor
         }
         return true;
     } else {
-        // ANY logic: At least one condition must pass
-        for (const item of group.conditions) {
+        // OR logic: At least one rule must pass
+        for (const item of group.rules) {
             const pass = isRuleGroup(item)
                 ? evaluateRuleGroup(oldState, newState, item)
                 : evaluateCondition(oldState, newState, item);
@@ -27,7 +27,7 @@ export const evaluateRuleGroup = (oldState: Record<string, any>, newState: Recor
 };
 
 const isRuleGroup = (item: Condition | RuleGroup): item is RuleGroup => {
-    return (item as RuleGroup).match !== undefined;
+    return (item as RuleGroup).operator !== undefined;
 };
 
 export type OperatorStrategy = (oldVal: any, newVal: any, expectedVal?: any) => boolean;

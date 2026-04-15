@@ -32,19 +32,12 @@ export const automationResolvers = {
     },
     updateAutomation: async (_: any, args: any, context: GraphQLContext) => {
       if (!context.userId) throw new Error('Unauthorized');
-      await automationService.updateAutomation({
+      const automation = await automationService.updateAutomation({
         ...args,
         userId: context.userId,
         rules: args.rules ? JSON.parse(args.rules) : undefined,
       });
-      return {
-         id: args.automationId,
-         targetScope: args.targetScope,
-         taskId: args.taskId,
-         teamId: args.teamId,
-         rules: args.rules ? args.rules : null,
-         isActive: args.isActive,
-      };
+      return { ...automation, rules: JSON.stringify(automation.rules) };
     },
     deleteAutomation: async (_: any, { automationId }: any, context: GraphQLContext) => {
       if (!context.userId) throw new Error('Unauthorized');

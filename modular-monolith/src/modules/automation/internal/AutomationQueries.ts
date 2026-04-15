@@ -28,6 +28,7 @@ export const insertAutomation = async (data: {
         .values({
             fk_project_id: data.projectId,
             actor_id: data.userId,
+            name: data.name,
             target_scope: data.targetScope,
             fk_task_id: data.taskId || null,
             fk_team_id: data.teamId || null,
@@ -41,6 +42,7 @@ export const insertAutomation = async (data: {
         id: result.id,
         projectId: result.fk_project_id,
         actorId: result.actor_id,
+        name: result.name,
         targetScope: result.target_scope as AutomationScope,
         taskId: result.fk_task_id,
         teamId: result.fk_team_id,
@@ -54,12 +56,13 @@ export const insertAutomation = async (data: {
 export const updateAutomationQuery = async (data: {
     userId: string;
     automationId: string;
+    name?: string;
     targetScope?: AutomationScope;
     taskId?: string | null;
     teamId?: string | null;
     rules?: any;
     isActive?: boolean;
-}): Promise<void> => {
+}): Promise<AutomationRule> => {
     const authCheck = await sql`
         SELECT 1 FROM automations ar
         JOIN project p ON ar.fk_project_id = p.id
@@ -77,6 +80,10 @@ export const updateAutomationQuery = async (data: {
 
     let hasUpdates = false;
 
+    if (data.name !== undefined) {
+        updateQuery = updateQuery.set({ name: data.name });
+        hasUpdates = true;
+    }
     if (data.targetScope !== undefined) {
         updateQuery = updateQuery.set({ target_scope: data.targetScope });
         hasUpdates = true;
@@ -98,10 +105,41 @@ export const updateAutomationQuery = async (data: {
         hasUpdates = true;
     }
 
-    if (hasUpdates) {
-        updateQuery = updateQuery.set({ updated_at: sql`CURRENT_TIMESTAMP` });
-        await updateQuery.execute();
+    if (!hasUpdates) {
+         // If no updates, just fetch the existing record
+         return db.selectFrom('automations').selectAll().where('id', '=', data.automationId).executeTakeFirstOrThrow().then(r => ({
+            id: r.id,
+            projectId: r.fk_project_id,
+            actorId: r.actor_id,
+            name: r.name,
+            targetScope: r.target_scope as AutomationScope,
+            taskId: r.fk_task_id,
+            teamId: r.fk_team_id,
+            rules: r.rules,
+            isActive: r.is_active,
+            createdAt: r.created_at as Date,
+            updatedAt: r.updated_at as Date,
+        }));
     }
+
+    const result = await updateQuery
+        .set({ updated_at: sql`CURRENT_TIMESTAMP` })
+        .returningAll()
+        .executeTakeFirstOrThrow();
+
+    return {
+        id: result.id,
+        projectId: result.fk_project_id,
+        actorId: result.actor_id,
+        name: result.name,
+        targetScope: result.target_scope as AutomationScope,
+        taskId: result.fk_task_id,
+        teamId: result.fk_team_id,
+        rules: result.rules,
+        isActive: result.is_active,
+        createdAt: result.created_at as Date,
+        updatedAt: result.updated_at as Date,
+    };
 };
 
 export const getAutomationsQuery = async (data: {
@@ -157,6 +195,7 @@ export const getAutomationsQuery = async (data: {
         id: r.id,
         projectId: r.fk_project_id,
         actorId: r.actor_id,
+        name: r.name,
         targetScope: r.target_scope as AutomationScope,
         taskId: r.fk_task_id,
         teamId: r.fk_team_id,
@@ -194,6 +233,7 @@ const mapAutomations = (rows: any[]): AutomationRule[] => {
         id: r.id,
         projectId: r.fk_project_id,
         actorId: r.actor_id,
+        name: r.name,
         targetScope: r.target_scope as AutomationScope,
         taskId: r.fk_task_id,
         teamId: r.fk_team_id,

@@ -26,8 +26,8 @@ export interface Condition {
 }
 
 export interface RuleGroup {
-    match: 'ALL' | 'ANY';                     // ALL = AND, ANY = OR
-    conditions: (Condition | RuleGroup)[];     // An array of checks or sub-groups
+    operator: 'AND' | 'OR';                   // AND = match all, OR = match any
+    rules: (Condition | RuleGroup)[];          // An array of checks or sub-groups
 }
 
 export type TargetDirection = 

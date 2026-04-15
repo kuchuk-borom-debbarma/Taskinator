@@ -27,6 +27,7 @@ export const taskResolvers = {
           hasNextPage: !!nextCursor,
           endCursor: nextCursor,
           hasPreviousPage: false,
+        }
       };
     },
   },
@@ -52,7 +53,8 @@ export const taskResolvers = {
       return taskService.deleteTask({
         userId: context.userId,
         projectId,
+        taskIds,
+      });
     },
   },
-
 };

@@ -19,6 +19,7 @@ export class AutomationServiceImpl implements AutomationService {
     async addAutomation(data: {
         userId: string;
         projectId: string;
+        name: string;
         targetScope: AutomationScope;
         taskId?: string;
         teamId?: string;
@@ -31,13 +32,14 @@ export class AutomationServiceImpl implements AutomationService {
     async updateAutomation(data: {
         userId: string;
         automationId: string;
+        name?: string;
         targetScope?: AutomationScope;
         taskId?: string | null;
         teamId?: string | null;
         rules?: any;
         isActive?: boolean;
-    }): Promise<void> {
-        await updateAutomationQuery(data);
+    }): Promise<AutomationRule> {
+        return await updateAutomationQuery(data);
     }
 
     async getAutomationsByFilter(data: {
