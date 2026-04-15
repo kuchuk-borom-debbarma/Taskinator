@@ -53,3 +53,17 @@ export interface Rule {
 }
 
 export type AutomationPayload = Rule[];
+
+/**
+ * Carries execution context through the entire cascade chain.
+ * correlationId traces a full chain across multiple events.
+ * depth increments on each cascade hop — capped at MAX_CASCADE_DEPTH.
+ */
+export interface DispatchContext {
+    triggerTaskId: string;
+    projectId: string;
+    correlationId: string;
+    depth: number;
+}
+
+export const MAX_CASCADE_DEPTH = 5;
