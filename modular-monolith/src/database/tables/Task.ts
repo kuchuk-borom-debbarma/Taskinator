@@ -33,6 +33,7 @@ export interface AutomationsTable {
     id: Generated<string>;
     fk_project_id: string;
     actor_id: string;
+    name: string;
     target_scope: string;
     fk_task_id: string | null;
     fk_team_id: string | null;

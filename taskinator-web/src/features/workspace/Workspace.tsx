@@ -57,6 +57,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
 
   const [isCreateTaskOpen, setIsCreateTaskOpen] = useState(false);
   const [taskTitle, setTaskTitle] = useState('');
+  const [taskDescription, setTaskDescription] = useState('');
   const [parentTaskIdForNew, setParentTaskIdForNew] = useState<string>();
 
   const [isAutomationModalOpen, setIsAutomationModalOpen] = useState(false);
@@ -151,11 +152,11 @@ export const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
   });
 
   const createTaskMutation = useMutation({
-    mutationFn: (data: { title: string; parentTaskId?: string }) =>
+    mutationFn: (data: { title: string; description?: string; parentTaskId?: string }) =>
       gqlClient.request<any>(CREATE_TASK, {
         projectId: selectedProjectId!,
         title: data.title,
-        description: '',
+        description: data.description || '',
         parentTaskId: data.parentTaskId,
       }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['workspace', selectedProjectId, userId] }),
@@ -704,7 +705,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
           <button 
             disabled={!taskTitle.trim()}
             onClick={() => {
-              createTaskMutation.mutate({ title: taskTitle, parentTaskId: parentTaskIdForNew });
+              createTaskMutation.mutate({ title: taskTitle, description: taskDescription, parentTaskId: parentTaskIdForNew });
               setIsCreateTaskOpen(false);
             }}
             className="px-6 py-2.5 bg-primary text-white rounded-xl text-[12px] font-bold active:scale-95 transition-transform"
@@ -713,20 +714,22 @@ export const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
           </button>
         }
       >
-         <input 
-           autoFocus
-           type="text"
-           placeholder="Task title..."
-           value={taskTitle}
-           onChange={(e) => setTaskTitle(e.target.value)}
-           onKeyDown={(e) => {
-             if (e.key === 'Enter' && taskTitle.trim()) {
-               createTaskMutation.mutate({ title: taskTitle, parentTaskId: parentTaskIdForNew });
-               setIsCreateTaskOpen(false);
-             }
-           }}
-           className="w-full glass rounded-2xl p-4 outline-none border-white/10 text-sm focus:border-primary/30"
-         />
+         <div className="space-y-4">
+           <input 
+             autoFocus
+             type="text"
+             placeholder="Task title..."
+             value={taskTitle}
+             onChange={(e) => setTaskTitle(e.target.value)}
+             className="w-full glass rounded-2xl p-4 outline-none border-white/10 text-sm focus:border-primary/30"
+           />
+           <textarea
+             placeholder="Task description (optional)..."
+             value={taskDescription}
+             onChange={(e) => setTaskDescription(e.target.value)}
+             className="w-full glass rounded-2xl p-4 outline-none border-white/10 text-sm min-h-[100px] resize-none focus:border-primary/30"
+           />
+         </div>
       </Modal>
 
       <Modal
@@ -757,6 +760,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
       </Modal>
 
       <AutomationBuilderModal
+        key={editAutomationId || 'new'}
         isOpen={isAutomationModalOpen}
         onClose={() => setIsAutomationModalOpen(false)}
         initialRule={editAutomationRule}

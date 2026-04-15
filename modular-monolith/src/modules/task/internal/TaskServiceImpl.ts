@@ -51,6 +51,8 @@ export class TaskServiceImpl implements TaskService {
                 version: taskUpdate.version,
                 lastEventId: taskUpdate.lastEventId,
                 status: taskUpdate.status,
+                title: taskUpdate.title,
+                description: taskUpdate.description,
                 teamId: taskUpdate.teamId,
                 memberId: taskUpdate.memberId,
                 parentTaskId: taskUpdate.parentTaskId,

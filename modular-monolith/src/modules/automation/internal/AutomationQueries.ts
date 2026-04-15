@@ -326,6 +326,8 @@ export const automationBulkUpdateTasks = async (
 
     const { correlationId, depth } = context;
 
+    console.log(`[AutomationQuery] Executing bulk update: ids=${taskIds.length}, params=${JSON.stringify(params)}, correlation=${correlationId.slice(0, 8)}`);
+
     // Extract allowed params (structural fields excluded deliberately)
     const status    = params.status    ?? null;
     const title     = params.title     ?? null;
@@ -339,16 +341,20 @@ export const automationBulkUpdateTasks = async (
     const hasTeam    = 'teamId'      in params;
     const hasMember  = 'memberId'    in params;
 
-    await sql`
+    const result = await sql`
         WITH old_states AS (
             -- Snapshot the state BEFORE the update for the Logic Lane payload
+            -- Critical for triggering subsequent automations correctly
             SELECT
                 id,
                 status,
                 title,
                 description,
                 fk_team_id   AS "teamId",
-                fk_member_id AS "memberId"
+                fk_member_id AS "memberId",
+                version,
+                fk_project_id AS "projectId",
+                updated_at   AS "updatedAt"
             FROM project_task
             WHERE id = ANY(${taskIds}::uuid[])
               AND fk_project_id = ${projectId}::uuid
@@ -356,11 +362,11 @@ export const automationBulkUpdateTasks = async (
         updated_tasks AS (
             UPDATE project_task
             SET
-                status       = CASE WHEN ${hasStatus}  THEN ${status}          ELSE status       END,
-                title        = CASE WHEN ${hasTitle}   THEN ${title}           ELSE title        END,
-                description  = CASE WHEN ${hasDesc}    THEN ${desc}            ELSE description  END,
-                fk_team_id   = CASE WHEN ${hasTeam}    THEN ${teamId}::uuid    ELSE fk_team_id   END,
-                fk_member_id = CASE WHEN ${hasMember}  THEN ${memberId}        ELSE fk_member_id END,
+                status       = CASE WHEN ${hasStatus}::boolean  THEN ${status}::text          ELSE status       END,
+                title        = CASE WHEN ${hasTitle}::boolean   THEN ${title}::text           ELSE title        END,
+                description  = CASE WHEN ${hasDesc}::boolean    THEN ${desc}::text            ELSE description  END,
+                fk_team_id   = CASE WHEN ${hasTeam}::boolean    THEN ${teamId}::uuid          ELSE fk_team_id   END,
+                fk_member_id = CASE WHEN ${hasMember}::boolean  THEN ${memberId}::text        ELSE fk_member_id END,
                 updated_by   = 'system',
                 updated_at   = CURRENT_TIMESTAMP,
                 version      = version + 1
@@ -374,7 +380,8 @@ export const automationBulkUpdateTasks = async (
                 fk_team_id   AS "teamId",
                 fk_member_id AS "memberId",
                 fk_project_id AS "projectId",
-                version
+                version,
+                updated_at AS "updatedAt"
         ),
         display_outbox AS (
             -- Display Lane: always fires so the UI stays in sync
@@ -385,7 +392,7 @@ export const automationBulkUpdateTasks = async (
                 jsonb_build_object(
                     'taskId',    id,
                     'projectId', "projectId",
-                    'correlationId', ${correlationId},
+                    'correlationId', ${correlationId}::text,
                     'updates',   ${JSON.stringify(params)}::jsonb
                 )
             FROM updated_tasks
@@ -400,27 +407,33 @@ export const automationBulkUpdateTasks = async (
                 jsonb_build_object(
                     'taskId',        ut.id,
                     'projectId',     ut."projectId",
-                    'correlationId', ${correlationId},
-                    'depth',         ${depth + 1},
+                    'correlationId', ${correlationId}::text,
+                    'depth',         ${depth + 1}::int,
                     'oldState', jsonb_build_object(
-                        'status',   os.status,
-                        'title',    os.title,
+                        'status',      os.status,
+                        'title',       os.title,
                         'description', os.description,
-                        'teamId',   os."teamId",
-                        'memberId', os."memberId"
+                        'teamId',      os."teamId",
+                        'memberId',    os."memberId",
+                        'version',     os.version,
+                        'updatedAt',   os."updatedAt"
                     ),
                     'newState', jsonb_build_object(
-                        'status',   ut.status,
-                        'title',    ut.title,
+                        'status',      ut.status,
+                        'title',       ut.title,
                         'description', ut.description,
-                        'teamId',   ut."teamId",
-                        'memberId', ut."memberId"
+                        'teamId',      ut."teamId",
+                        'memberId',    ut."memberId",
+                        'version',     ut.version,
+                        'updatedAt',   ut."updatedAt"
                     )
                 )
             FROM updated_tasks ut
             JOIN old_states os ON os.id = ut.id
-            WHERE ${shouldPropagate} = true
+            WHERE ${shouldPropagate}::boolean = true
         )
-        SELECT 1
+        SELECT id FROM updated_tasks
     `.execute(db);
+
+    console.log(`[AutomationQuery] Update complete: correlation=${correlationId.slice(0, 8)}, rowsUpdated=${result.rows.length}`);
 };

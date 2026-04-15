@@ -56,6 +56,9 @@ export class AutomationListener {
             await this.processBatch(currentBatch);
         } catch (err) {
             console.error('[Automation Module] Error processing automation batch:', err);
+            if (err instanceof Error) {
+                console.error(err.stack);
+            }
         }
     }
 
@@ -110,7 +113,14 @@ export class AutomationListener {
                 await dispatchRules(payload, oldState, newState, context);
             });
 
-            await Promise.allSettled(chunkPromises);
+            const results = await Promise.allSettled(chunkPromises);
+
+            // Log any failures that occurred during processing
+            results.forEach((res, idx) => {
+                if (res.status === 'rejected') {
+                    console.error(`[Automation Module] Event processing failed (Index ${idx}):`, res.reason);
+                }
+            });
 
             if (rulesTriggered > 0) {
                 console.log(`[Automation Module] Batch finished. Triggered ${rulesTriggered} rule evaluations.`);
