@@ -4,6 +4,8 @@ import {
   Plus, 
   FolderEdit, 
   Trash2, 
+  Users2, 
+  AlertTriangle,
   Zap
 } from 'lucide-react';
 import { ProjectSidebar } from '../../components/ProjectSidebar';
