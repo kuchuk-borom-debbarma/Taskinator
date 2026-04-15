@@ -1,17 +1,14 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { 
   Plus, 
   FolderEdit, 
   Trash2, 
-  Users2, 
-  AlertTriangle,
-  Zap,
-  CheckCircle2,
-  Circle
+  Zap
 } from 'lucide-react';
 import { ProjectSidebar } from '../../components/ProjectSidebar';
 import { TaskDrillView } from '../../components/TaskDrillView';
+import { StatusPicker } from '../../components/StatusPicker';
 import { Drawer } from '../../components/Drawer';
 import { MemberManager } from '../../components/MemberManager';
 import { Modal } from '../../components/Modal';
@@ -527,12 +524,14 @@ export const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
          {selectedTask && (
            <div className="space-y-8">
               <div className="flex items-center gap-4 p-5 glass rounded-2xl">
-                 <button 
-                  onClick={() => updateTaskMutation.mutate({ id: selectedTask.id, version: selectedTask.version, status: selectedTask.status === 'DONE' ? 'TODO' : 'DONE' })}
-                  className="p-1 hover:scale-110 transition-transform"
-                 >
-                    {selectedTask.status === 'DONE' ? <CheckCircle2 size={26} className="text-primary" /> : <Circle size={26} className="text-muted-foreground/40" />}
-                 </button>
+                 <StatusPicker 
+                   status={selectedTask.status} 
+                   onChange={(newStatus) => updateTaskMutation.mutate({ 
+                     id: selectedTask.id, 
+                     version: selectedTask.version, 
+                     status: newStatus 
+                   })} 
+                 />
                  <input 
                    type="text"
                    defaultValue={selectedTask.title}
