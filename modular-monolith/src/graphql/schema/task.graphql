@@ -22,6 +22,36 @@ type TaskLinkConnection {
   pageInfo: PageInfo!
 }
 
+enum NeighbourDirection {
+  incoming
+  outgoing
+  both
+}
+
+type NeighbourhoodNode {
+  # The actual task data (hydrated via DataLoader)
+  task: ProjectTask!
+
+  # Depth from the focused task (1 = direct, 2 = one hop away, etc.)
+  depth: Int!
+
+  # Which side of the focused task this node sits on
+  direction: NeighbourDirection!
+}
+
+type TaskNeighbourhood {
+  # Always the root/centre — NOT in nodes
+  focusedTask: ProjectTask!
+
+  # Arranged nodes, ordered by (depth ASC, direction) — server does the work
+  nodes: [NeighbourhoodNode!]!
+
+  # Direct links between any two nodes in {focusedTask} ∪ {nodes}
+  edges: [TaskLink!]!
+
+  pageInfo: PageInfo!
+}
+
 type ProjectTask {
   id: ID!
   projectId: ID!
@@ -66,6 +96,16 @@ extend type Query {
   ): ProjectTaskConnection!
 
   task(id: ID!): ProjectTask
+
+  taskNeighbourhood(
+    projectId: ID!
+    taskId: ID!
+    maxDepth: Int
+    first: Int
+    after: String
+    last: Int
+    before: String
+  ): TaskNeighbourhood!
 }
 
 extend type Mutation {

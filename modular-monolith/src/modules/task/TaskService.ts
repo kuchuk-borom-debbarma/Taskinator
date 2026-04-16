@@ -91,4 +91,37 @@ export interface TaskService extends BaseService {
         params: GetTaskLinksParam,
         pagination: PaginationParams,
     ): Promise<LinkConnection>;
+
+    getTaskNeighbourhood(params: GetNeighbourhoodParam): Promise<TaskNeighbourhoodResult>;
+}
+
+// ─── Neighbourhood (Radial Graph View) ──────────────────────────────────────
+
+export type NeighbourDirection = 'incoming' | 'outgoing' | 'both';
+
+/** A single neighbour node as returned from the reachability query, before task hydration */
+export interface NeighbourRecord {
+    taskId: string;
+    depth: number;
+    direction: NeighbourDirection;
+}
+
+export interface TaskNeighbourhoodResult {
+    /** Raw neighbour records — resolver hydrates task data via DataLoader */
+    neighbours: NeighbourRecord[];
+    /** Direct links between all nodes in {focusedTask} ∪ {neighbours} */
+    edges: TaskLink[];
+    nextCursor: string | null;
+    prevCursor: string | null;
+}
+
+export interface GetNeighbourhoodParam {
+    userId: string;
+    projectId: string;
+    taskId: string;
+    maxDepth?: number;   // default 3, hard cap 5
+    first?: number;
+    last?: number;
+    after?: string;
+    before?: string;
 }

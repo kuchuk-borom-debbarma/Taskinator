@@ -30,6 +30,11 @@ export const taskResolvers = {
             context.loaders.task.load(l.targetTaskId),
     },
 
+    NeighbourhoodNode: {
+        task: (n: any, _: any, context: GraphQLContext) =>
+            context.loaders.task.load(n.taskId),
+    },
+
     ProjectTask: {
         createdAt: (t: any) =>
             t.createdAt instanceof Date ? t.createdAt.toISOString() : t.createdAt,
@@ -96,6 +101,41 @@ export const taskResolvers = {
         task: async (_: any, { id }: any, context: GraphQLContext) => {
             if (!context.userId) throw new Error('Unauthorized');
             return context.loaders.task.load(id);
+        },
+        taskNeighbourhood: async (
+            _: any,
+            { projectId, taskId, maxDepth, first, after, last, before }: any,
+            context: GraphQLContext,
+        ) => {
+            if (!context.userId) throw new Error('Unauthorized');
+
+            const [focusedTask, result] = await Promise.all([
+                context.loaders.task.load(taskId),
+                taskService.getTaskNeighbourhood({
+                    userId: context.userId,
+                    projectId,
+                    taskId,
+                    maxDepth,
+                    first,
+                    after,
+                    last,
+                    before,
+                }),
+            ]);
+
+            if (!focusedTask) throw new Error('Task not found');
+
+            return {
+                focusedTask,
+                nodes: result.neighbours,
+                edges: result.edges,
+                pageInfo: {
+                    hasNextPage: !!result.nextCursor,
+                    hasPreviousPage: !!result.prevCursor,
+                    startCursor: result.prevCursor,
+                    endCursor: result.nextCursor,
+                },
+            };
         },
     },
 

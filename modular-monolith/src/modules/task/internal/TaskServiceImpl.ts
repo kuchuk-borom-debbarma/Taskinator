@@ -1,17 +1,20 @@
 import type {
     CreateLinkParam,
     CreateTaskParam,
+    GetNeighbourhoodParam,
     GetTaskLinksParam,
     LinkConnection,
     PaginationParams,
     ProjectTask,
     TaskConnection,
     TaskLink,
+    TaskNeighbourhoodResult,
     TaskService,
 } from '../TaskService.ts';
 import {
     deleteLinkQuery,
     deleteTaskQuery,
+    getNeighbourhood,
     getTaskLinksPage,
     getTasksByIds as getTasksByIdsQuery,
     getTasksPage,
@@ -59,6 +62,12 @@ export class TaskServiceImpl implements TaskService {
             params.direction,
             pagination,
         );
+    }
+
+    async getTaskNeighbourhood(
+        params: GetNeighbourhoodParam,
+    ): Promise<TaskNeighbourhoodResult> {
+        return await getNeighbourhood(params);
     }
 
     async init(): Promise<void> {

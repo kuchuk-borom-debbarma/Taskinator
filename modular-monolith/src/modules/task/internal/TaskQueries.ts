@@ -3,9 +3,12 @@ import { sql } from 'kysely';
 import type {
     CreateLinkParam,
     CreateTaskParam,
+    GetNeighbourhoodParam,
+    NeighbourRecord,
     PaginationParams,
     ProjectTask,
     TaskLink,
+    TaskNeighbourhoodResult,
 } from '../TaskService.ts';
 import { getTimeString } from '../../../utils/utils.ts';
 
@@ -491,4 +494,151 @@ export const getTaskLinksPage = async (
     }
 
     return { links: rows, nextCursor, prevCursor };
+};
+
+export const getNeighbourhood = async (
+    params: GetNeighbourhoodParam,
+): Promise<TaskNeighbourhoodResult> => {
+    const maxDepth = Math.min(params.maxDepth ?? 3, 5);
+    const limit = Math.min(params.first || params.last || 20, 50);
+    const isBackward = !!params.before;
+    const cursor = params.before || params.after;
+
+    let cursorDepth: number | null = null;
+    let cursorId: string | null = null;
+
+    if (cursor && cursor.includes('|')) {
+        const parts = cursor.split('|');
+        if (parts.length === 2) {
+            cursorDepth = parseInt(parts[0]!, 10);
+            cursorId = parts[1]!;
+        }
+    }
+
+    // ── Step 1: Paginate neighbours from task_reachability ──────────────────
+    // Union incoming ancestors + outgoing descendants, deduplicate by choosing
+    // MIN depth and marking as 'both' if the same task appears on both sides.
+    type ReachRow = { neighbour_id: string; min_depth: number; direction: string };
+
+    const reachResult = await sql<ReachRow>`
+        WITH auth_check AS (
+            SELECT 1 FROM project WHERE id = ${params.projectId}::uuid AND fk_user_id = ${params.userId}::text
+            UNION ALL
+            SELECT 1 FROM project_member WHERE fk_project_id = ${params.projectId}::uuid AND fk_user_id = ${params.userId}::text
+            LIMIT 1
+        ),
+        incoming AS (
+            SELECT ancestor_task_id AS neighbour_id, min_depth, 'incoming' AS direction
+            FROM task_reachability
+            WHERE fk_project_id = ${params.projectId}::uuid
+              AND descendant_task_id = ${params.taskId}::uuid
+              AND min_depth <= ${maxDepth}
+              AND EXISTS (SELECT 1 FROM auth_check)
+        ),
+        outgoing AS (
+            SELECT descendant_task_id AS neighbour_id, min_depth, 'outgoing' AS direction
+            FROM task_reachability
+            WHERE fk_project_id = ${params.projectId}::uuid
+              AND ancestor_task_id = ${params.taskId}::uuid
+              AND min_depth <= ${maxDepth}
+              AND EXISTS (SELECT 1 FROM auth_check)
+        ),
+        neighbourhood AS (
+            SELECT neighbour_id, min_depth, direction FROM incoming
+            UNION ALL
+            SELECT neighbour_id, min_depth, direction FROM outgoing
+        ),
+        deduped AS (
+            SELECT
+                neighbour_id,
+                MIN(min_depth) AS min_depth,
+                CASE WHEN COUNT(DISTINCT direction) > 1 THEN 'both' ELSE MIN(direction) END AS direction
+            FROM neighbourhood
+            GROUP BY neighbour_id
+        )
+        SELECT neighbour_id, min_depth, direction
+        FROM deduped
+        WHERE (
+            ${cursorDepth}::int IS NULL
+            OR (
+                CASE
+                  WHEN ${isBackward} THEN
+                    (min_depth < ${cursorDepth}::int OR (min_depth = ${cursorDepth}::int AND neighbour_id < ${cursorId}::uuid))
+                  ELSE
+                    (min_depth > ${cursorDepth}::int OR (min_depth = ${cursorDepth}::int AND neighbour_id > ${cursorId}::uuid))
+                END
+            )
+        )
+        ORDER BY min_depth ${sql.raw(isBackward ? 'DESC' : 'ASC')}, neighbour_id ${sql.raw(isBackward ? 'DESC' : 'ASC')}
+        LIMIT ${limit + 1}
+    `.execute(db);
+
+    let reachRows = reachResult.rows;
+    const hasMore = reachRows.length > limit;
+    if (hasMore) reachRows = reachRows.slice(0, limit);
+    if (isBackward) reachRows.reverse();
+
+    // Build cursor from the page
+    let nextCursor: string | null = null;
+    let prevCursor: string | null = null;
+
+    if (reachRows.length > 0) {
+        const first = reachRows[0]!;
+        const last = reachRows[reachRows.length - 1]!;
+
+        if (isBackward) {
+            nextCursor = hasMore ? `${first.min_depth}|${first.neighbour_id}` : null;
+            prevCursor = `${last.min_depth}|${last.neighbour_id}`;
+        } else {
+            nextCursor = hasMore ? `${last.min_depth}|${last.neighbour_id}` : null;
+            prevCursor = params.after ? `${first.min_depth}|${first.neighbour_id}` : null;
+        }
+    }
+
+    const neighbours: NeighbourRecord[] = reachRows.map((r) => ({
+        taskId: r.neighbour_id,
+        depth: r.min_depth,
+        direction: r.direction as NeighbourRecord['direction'],
+    }));
+
+    if (neighbours.length === 0) {
+        return { neighbours: [], edges: [], nextCursor, prevCursor };
+    }
+
+    // ── Step 2: Fetch direct edges involving the current page nodes ─────────
+    // To ensure consistency during 'Load More', we fetch links where at least 
+    // one end is in our current nodeIds, and the other end is within the graph scope.
+    const nodeIds = [params.taskId, ...neighbours.map((n) => n.taskId)];
+
+    const edgeResult = await sql<TaskLink>`
+        WITH reachable_ids AS (
+            SELECT ancestor_task_id AS id FROM task_reachability 
+            WHERE descendant_task_id = ${params.taskId}::uuid AND min_depth <= ${maxDepth}
+            UNION
+            SELECT descendant_task_id AS id FROM task_reachability 
+            WHERE ancestor_task_id = ${params.taskId}::uuid AND min_depth <= ${maxDepth}
+            UNION
+            SELECT ${params.taskId}::uuid AS id
+        )
+        SELECT
+            id,
+            fk_project_id AS "projectId",
+            source_task_id AS "sourceTaskId",
+            target_task_id AS "targetTaskId",
+            label,
+            created_by AS "createdBy",
+            created_at AS "createdAt"
+        FROM task_link
+        WHERE fk_project_id = ${params.projectId}::uuid
+          AND (source_task_id = ANY(${nodeIds}::uuid[]) OR target_task_id = ANY(${nodeIds}::uuid[]))
+          AND source_task_id IN (SELECT id FROM reachable_ids)
+          AND target_task_id IN (SELECT id FROM reachable_ids)
+    `.execute(db);
+
+    return {
+        neighbours,
+        edges: edgeResult.rows,
+        nextCursor,
+        prevCursor,
+    };
 };
