@@ -29,6 +29,16 @@ export const RelationshipLines: React.FC<RelationshipLinesProps> = ({ connection
       aria-hidden="true"
     >
       <defs>
+        <marker
+          id="arrowhead"
+          markerWidth="10"
+          markerHeight="7"
+          refX="9"
+          refY="3.5"
+          orient="auto"
+        >
+          <polygon points="0 0, 10 3.5, 0 7" fill="currentColor" fillOpacity="0.2" />
+        </marker>
         {connections.map(conn => {
           const colors = getHashColor(conn.type);
           return (
@@ -43,40 +53,63 @@ export const RelationshipLines: React.FC<RelationshipLinesProps> = ({ connection
       {connections.map(conn => {
         const colors = getHashColor(conn.type);
         
-        // Calculate Bezier control points for a smooth flow
-        const dx = Math.abs(conn.end.x - conn.start.x);
-        const cp1x = conn.start.x + (conn.direction === 'out' ? dx * 0.5 : -dx * 0.5);
-        const cp2x = conn.end.x + (conn.direction === 'out' ? -dx * 0.5 : dx * 0.5);
+        // Calculate dynamic Bezier control points for arbitrary 2D orientation
+        const dx = conn.end.x - conn.start.x;
+        const dy = conn.end.y - conn.start.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        
+        // Curvature strength based on distance, but capped for stability
+        const curvature = Math.min(dist * 0.3, 100);
+        
+        // Primary flow direction (horizontal-leaning for mind map feel)
+        const cp1x = conn.start.x + (dx > 0 ? curvature : -curvature);
+        const cp2x = conn.end.x - (dx > 0 ? curvature : -curvature);
         
         const d = `M ${conn.start.x} ${conn.start.y} C ${cp1x} ${conn.start.y}, ${cp2x} ${conn.end.y}, ${conn.end.x} ${conn.end.y}`;
 
         return (
-          <g key={conn.id}>
-            {/* Glow Path */}
+          <g key={conn.id} className="transition-opacity duration-1000">
+            {/* ID for textPath referencing */}
+            <path id={`path-${conn.id}`} d={d} fill="none" />
+
+            {/* Shadow/Glow Path */}
             <path
               d={d}
               fill="none"
               stroke={colors.css}
-              strokeWidth="4"
-              strokeOpacity="0.1"
-              className="animate-pulse"
+              strokeWidth="8"
+              strokeOpacity="0.03"
             />
-            {/* Core Path */}
+
+            {/* Core Path with Animation */}
             <path
               d={d}
               fill="none"
-              stroke={`url(#grad-${conn.id})`}
-              strokeWidth="1.5"
-              strokeDasharray="4 4"
-              className="opacity-40"
+              stroke={colors.css}
+              strokeWidth="1.2"
+              strokeOpacity="0.25"
+              strokeDasharray="3 8"
+              markerEnd="url(#arrowhead)"
+              className="transition-all duration-300"
             >
                <animate 
                  attributeName="stroke-dashoffset" 
                  from="100" to="0" 
-                 dur="10s" 
+                 dur={`${Math.max(3, dist / 80)}s`} 
                  repeatCount="indefinite" 
                />
             </path>
+
+            {/* Label Overlay - Using textPath for perfect alignment */}
+            <text dy="-6" className="font-black uppercase tracking-[0.3em] pointer-events-none fill-current opacity-40 select-none italic" style={{ fontSize: '7px', fill: colors.css }}>
+              <textPath 
+                href={`#path-${conn.id}`} 
+                startOffset="50%" 
+                textAnchor="middle"
+              >
+                {conn.type}
+              </textPath>
+            </text>
           </g>
         );
       })}

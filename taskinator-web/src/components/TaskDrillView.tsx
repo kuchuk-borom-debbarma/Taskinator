@@ -27,6 +27,8 @@ interface TaskDrillViewProps {
   onCreateTask: () => void;
 }
 
+import { MindMapTaskNode } from './MindMapTaskNode';
+
 export const TaskDrillView: React.FC<TaskDrillViewProps> = ({
   tasks,
   focusedTaskId,
@@ -35,72 +37,182 @@ export const TaskDrillView: React.FC<TaskDrillViewProps> = ({
   onToggleStatus,
   onCreateTask
 }) => {
-  // 1. Resolve Focal Task
-  const focalTask = useMemo(() => 
-    tasks.find(t => t.id === focusedTaskId) || null
-  , [tasks, focusedTaskId]);
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const [nodePositions, setNodePositions] = useState<{ [key: string]: { x: number, y: number } }>({});
+  const [canvasOffset, setCanvasOffset] = useState({ x: 0, y: 0 });
+  
+  // Center of the 4000x4000 canvas
+  const CANVAS_SIZE = 4000;
+  const cx = CANVAS_SIZE / 2;
+  const cy = CANVAS_SIZE / 2;
 
-  // 2. Resolve Inbound Links (Who links TO focalTask?)
-  const inboundLinks = useMemo(() => {
+  // 1. Resolve Links
+  const focalTask = useMemo(() => tasks.find(t => t.id === focusedTaskId) || null, [tasks, focusedTaskId]);
+  
+  const allConnections = useMemo(() => {
     if (!focusedTaskId) return [];
-    return tasks.filter(t => 
-      t.links?.some(l => l.toTaskId === focusedTaskId)
-    ).map(t => ({
-        task: t,
-        linkType: t.links!.find(l => l.toTaskId === focusedTaskId)!.type
+    const conns: any[] = [];
+    const seenLinks = new Set<string>();
+
+    // Inbound: Tasks linking to focus
+    tasks.forEach(t => {
+        t.links?.forEach(l => {
+            if (l.toTaskId === focusedTaskId && !seenLinks.has(l.id)) {
+                conns.push({ id: l.id, type: l.type, sourceId: t.id, targetId: focusedTaskId, direction: 'in' });
+                seenLinks.add(l.id);
+            }
+        });
+    });
+
+    // Outbound: Focus linking to tasks
+    focalTask?.links?.forEach(l => {
+        if (!seenLinks.has(l.id)) {
+            conns.push({ id: l.id, type: l.type, sourceId: focusedTaskId, targetId: l.toTaskId, direction: 'out' });
+            seenLinks.add(l.id);
+        }
+    });
+
+    return conns;
+  }, [tasks, focusedTaskId, focalTask]);
+
+  const inboundNeighbors = useMemo(() => {
+    const list: any[] = [];
+    const seen = new Set<string>();
+    allConnections.filter(c => c.direction === 'in').forEach(c => {
+        if (!seen.has(c.sourceId) && c.sourceId !== focusedTaskId) {
+            const t = tasks.find(task => task.id === c.sourceId);
+            if (t) {
+                list.push(t);
+                seen.add(t.id);
+            }
+        }
+    });
+    return list;
+  }, [allConnections, tasks, focusedTaskId]);
+
+  const outboundNeighbors = useMemo(() => {
+    const list: any[] = [];
+    const seen = new Set<string>();
+    allConnections.filter(c => c.direction === 'out').forEach(c => {
+        if (!seen.has(c.targetId) && c.targetId !== focusedTaskId) {
+            const t = tasks.find(task => task.id === c.targetId);
+            if (t) {
+                list.push(t);
+                seen.add(t.id);
+            }
+        }
+    });
+    return list;
+  }, [allConnections, tasks, focusedTaskId]);
+
+  // 2. Initial Radial Layout & Centering Logic
+  useEffect(() => {
+    if (!focusedTaskId) return;
+
+    // Reset layout around canvas center
+    const newPositions: { [key: string]: { x: number, y: number } } = {};
+    newPositions[focusedTaskId] = { x: cx - 150, y: cy - 60 };
+
+    inboundNeighbors.forEach((task, index) => {
+        const offset = inboundNeighbors.length > 1 ? (index - (inboundNeighbors.length - 1) / 2) : 0;
+        const angle = (Math.PI * 0.5 * offset) / Math.max(inboundNeighbors.length - 1, 1) + Math.PI;
+        const radius = 500;
+        newPositions[task.id] = {
+            x: cx + Math.cos(angle) * radius - 110,
+            y: cy + Math.sin(angle) * radius - 40
+        };
+    });
+
+    outboundNeighbors.forEach((task, index) => {
+        const offset = outboundNeighbors.length > 1 ? (index - (outboundNeighbors.length - 1) / 2) : 0;
+        const angle = (Math.PI * 0.5 * offset) / Math.max(outboundNeighbors.length - 1, 1);
+        const radius = 500;
+        newPositions[task.id] = {
+            x: cx + Math.cos(angle) * radius - 110,
+            y: cy + Math.sin(angle) * radius - 40
+        };
+    });
+
+    setNodePositions(newPositions);
+
+    // Initial Pan to Center
+    if (containerRef.current) {
+        const rect = containerRef.current.getBoundingClientRect();
+        setCanvasOffset({
+            x: rect.width / 2 - cx,
+            y: rect.height / 2 - cy
+        });
+    }
+  }, [focusedTaskId, inboundNeighbors.length, outboundNeighbors.length]);
+
+  // 3. Coordinate Handling for SVG
+  const connectionPaths = useMemo(() => {
+    if (!focusedTaskId || !nodePositions) return [];
+
+    return allConnections.map(conn => {
+        const startNodePos = nodePositions[conn.sourceId];
+        const endNodePos = nodePositions[conn.targetId];
+
+        if (!startNodePos || !endNodePos) return null;
+
+        // Visual offsets based on node type
+        const isStartFocal = conn.sourceId === focusedTaskId;
+        const isEndFocal = conn.targetId === focusedTaskId;
+
+        return {
+            id: conn.id,
+            type: conn.type,
+            start: { 
+                x: startNodePos.x + (isStartFocal ? 300 : 220), 
+                y: startNodePos.y + (isStartFocal ? 60 : 40) 
+            },
+            end: { 
+                x: endNodePos.x + (isEndFocal ? 0 : 0), 
+                y: endNodePos.y + (isEndFocal ? 60 : 40) 
+            },
+            direction: conn.direction
+        };
+    }).filter(c => !!c);
+  }, [nodePositions, focusedTaskId, allConnections]);
+
+  const handleNodeDrag = (id: string, point: { x: number, y: number }) => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    // Translate screen point to lattice coordinate (compensating for pan)
+    setNodePositions(prev => ({ 
+        ...prev, 
+        [id]: { 
+            x: point.x - rect.left - canvasOffset.x - (id === focusedTaskId ? 150 : 110), 
+            y: point.y - rect.top - canvasOffset.y - (id === focusedTaskId ? 60 : 40)
+        } 
     }));
-  }, [tasks, focusedTaskId]);
-
-  // 3. Resolve Outbound Links (Who does focalTask link TO?)
-  const outboundLinks = useMemo(() => {
-    if (!focalTask || !focalTask.links) return [];
-    return focalTask.links.map(link => ({
-        task: tasks.find(t => t.id === link.toTaskId),
-        linkType: link.type,
-        linkId: link.id
-    })).filter(l => !!l.task);
-  }, [tasks, focalTask]);
-
-  // 4. Coordinates for SVG lines (Simplified for now - can be enhanced with refs)
-  const connections = useMemo(() => {
-    // This is a placeholder for dynamic coordinate calculation
-    return [];
-  }, [inboundLinks, outboundLinks]);
+  };
 
   if (!focusedTaskId || !focalTask) {
     return (
       <div className="flex flex-col items-center justify-center h-full max-w-5xl mx-auto px-10">
-        <motion.div 
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="text-center"
-        >
-            <div className="w-20 h-20 rounded-3xl bg-primary/10 flex items-center justify-center mx-auto mb-6 text-primary">
-                <Target size={40} />
+        <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="text-center">
+            <div className="w-24 h-24 rounded-[2rem] bg-primary/10 border border-primary/20 flex items-center justify-center mx-auto mb-8 text-primary shadow-2xl shadow-primary/20 animate-pulse">
+                <Target size={48} />
             </div>
-            <h2 className="text-3xl font-black mb-2">Project Neural Map</h2>
-            <p className="text-muted-foreground mb-8">Select a task to anchor your focus and explore its network.</p>
+            <h2 className="text-4xl font-black mb-3 tracking-tighter italic">NEURAL LATTICE</h2>
+            <p className="text-muted-foreground mb-12 text-lg font-medium opacity-60 italic">Synthesize your project structure into an organic mental map.</p>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-2xl">
-                {tasks.slice(0, 6).map(task => (
-                    <button
-                        key={task.id}
-                        onClick={() => onFocusTask(task.id)}
-                        className="glass p-4 rounded-2xl border border-white/5 hover:border-primary/30 transition-all text-left group"
-                    >
-                        <div className="font-bold truncate group-hover:text-primary transition-colors">{task.title}</div>
-                        <div className="text-[10px] text-muted-foreground mt-1 uppercase tracking-widest">
-                            {task.links?.length || 0} connections
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full max-w-2xl px-4">
+                {tasks.slice(0, 8).map(task => (
+                    <button key={task.id} onClick={() => onFocusTask(task.id)} className="glass-card p-6 rounded-2xl border border-white/5 hover:border-primary/40 transition-all text-left group">
+                        <div className="font-black text-lg truncate group-hover:text-primary transition-colors tracking-tight italic">{task.title}</div>
+                        <div className="flex items-center gap-2 mt-2">
+                             <div className="text-[9px] text-muted-foreground/60 uppercase font-black tracking-widest">
+                                {task.links?.length || 0} Synapses Detected
+                            </div>
                         </div>
                     </button>
                 ))}
             </div>
             
-            <button 
-                onClick={onCreateTask}
-                className="mt-10 px-6 py-3 bg-primary text-white rounded-xl font-bold hover:scale-105 transition-all flex items-center gap-2 mx-auto"
-            >
-                <Plus size={18} /> Add Anchor Task
+            <button onClick={onCreateTask} className="mt-16 px-8 py-4 bg-primary text-white rounded-2xl font-black hover:scale-105 transition-all flex items-center gap-3 mx-auto shadow-xl shadow-primary/30">
+                <Plus size={20} /> Initialize New Node
             </button>
         </motion.div>
       </div>
@@ -108,165 +220,95 @@ export const TaskDrillView: React.FC<TaskDrillViewProps> = ({
   }
 
   return (
-    <div className="relative flex flex-col h-full w-full max-w-[1400px] mx-auto overflow-hidden">
+    <div className="relative flex flex-col h-full w-full mx-auto overflow-hidden bg-[radial-gradient(circle_at_center,_rgba(255,255,255,0.01)_0%,_transparent_70%)]">
       
-      {/* Neural Header */}
-      <div className="flex items-center justify-between px-10 py-6 shrink-0 border-b border-white/5 bg-background/50 backdrop-blur-md z-20">
-         <div className="flex items-center gap-6">
-            <button 
-                onClick={() => onFocusTask(null)}
-                className="p-2 rounded-xl hover:bg-white/5 text-muted-foreground transition-all"
-            >
-                <ChevronLeft size={20} />
+      {/* Header Overlay */}
+      <div className="absolute top-0 inset-x-0 flex items-center justify-between px-10 py-8 shrink-0 z-50 pointer-events-none">
+         <div className="flex items-center gap-8 pointer-events-auto">
+            <button onClick={() => onFocusTask(null)} className="p-3 rounded-2xl border border-white/5 glass hover:bg-white/10 text-muted-foreground transition-all">
+                <ChevronLeft size={22} />
             </button>
             <div>
-                <h1 className="text-xl font-black tracking-tight">{focalTask.title}</h1>
-                <div className="flex items-center gap-3 mt-1">
-                    <RelationshipPill label={focalTask.status} />
-                    <span className="text-[10px] text-muted-foreground/40 uppercase font-black tracking-tighter">
-                        Focused Task Node
-                    </span>
-                </div>
+                <div className="text-[10px] text-primary/60 uppercase font-black tracking-[0.3em] mb-1">Neural Perspective</div>
+                <h1 className="text-2xl font-black tracking-tighter italic">{focalTask.title}</h1>
             </div>
          </div>
-         <div className="flex items-center gap-2">
-            <button onClick={() => onOpenDetails(focalTask.id)} className="p-2 hover:bg-white/5 rounded-xl text-muted-foreground transition-all">
-                <MoreVertical size={20} />
+         <div className="flex items-center gap-4 pointer-events-auto">
+             <button onClick={() => onOpenDetails(focalTask.id)} className="p-3 glass rounded-2xl border border-white/5 text-muted-foreground transition-all">
+                <Plus size={20} className="text-primary mr-2 inline" />
+                <span className="text-[10px] font-black uppercase tracking-widest">Connect Node</span>
             </button>
          </div>
       </div>
 
-      <div className="flex-1 relative flex overflow-hidden">
-        {/* SVG Plane */}
-        <RelationshipLines connections={connections} />
+      <div ref={containerRef} className="flex-1 relative cursor-move overflow-hidden">
+        {/* Pannable Canvas */}
+        <motion.div
+            drag
+            dragMomentum={false}
+            animate={{ x: canvasOffset.x, y: canvasOffset.y }}
+            onDrag={(_, info) => {
+                setCanvasOffset(prev => ({
+                    x: prev.x + info.delta.x,
+                    y: prev.y + info.delta.y
+                }));
+            }}
+            className="absolute top-0 left-0 w-[4000px] h-[4000px]"
+        >
+            <div className="relative w-full h-full bg-[radial-gradient(#ffffff05_1px,_transparent_1px)] [background-size:40px_40px]">
+                {/* SVG Connections Plane */}
+                <RelationshipLines connections={connectionPaths as any} />
 
-        <div className="flex h-full w-full divide-x divide-white/5 overflow-hidden">
-            
-            {/* LEFT: SOURCES (Inbound) */}
-            <div className="w-1/4 h-full flex flex-col bg-white/[0.01]">
-                <div className="p-6 border-b border-white/5 flex items-center gap-2 text-muted-foreground">
-                    <Share2 size={14} className="rotate-180" />
-                    <span className="text-[11px] font-black uppercase tracking-widest">Linked From</span>
-                </div>
-                <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
-                    {inboundLinks.map(({ task, linkType }) => (
-                        <motion.div 
-                            key={task.id}
-                            initial={{ opacity: 0, x: -10 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            className="glass p-4 rounded-2xl border border-white/5 hover:border-white/10 transition-all cursor-pointer group"
-                            onClick={() => onFocusTask(task.id)}
-                        >
-                            <RelationshipPill label={linkType} size="sm" className="mb-2" />
-                            <div className="text-sm font-bold truncate group-hover:text-primary transition-colors">{task.title}</div>
-                        </motion.div>
+                {/* Task Nodes */}
+                <AnimatePresence>
+                    {/* Neighbor Nodes (Unique List) */}
+                    {[...inboundNeighbors, ...outboundNeighbors].filter((t, i, arr) => arr.findIndex(x => x.id === t.id) === i).map((task) => (
+                        nodePositions[task.id] && task.id !== focusedTaskId && (
+                            <MindMapTaskNode
+                                key={task.id}
+                                task={task}
+                                onFocus={onFocusTask}
+                                onToggleStatus={onToggleStatus}
+                                style={{ 
+                                    left: nodePositions[task.id].x, 
+                                    top: nodePositions[task.id].y 
+                                }}
+                                onDrag={handleNodeDrag}
+                            />
+                        )
                     ))}
-                    {inboundLinks.length === 0 && (
-                        <div className="h-full flex items-center justify-center text-center p-6 text-muted-foreground/20 italic text-sm">
-                            No incoming connections
-                        </div>
+
+                    {/* Focal Node */}
+                    {nodePositions[focusedTaskId] && (
+                        <MindMapTaskNode
+                            task={focalTask!}
+                            isFocus
+                            onFocus={onFocusTask}
+                            onToggleStatus={onToggleStatus}
+                            style={{ 
+                                left: nodePositions[focusedTaskId].x, 
+                                top: nodePositions[focusedTaskId].y 
+                            }}
+                            onDrag={handleNodeDrag}
+                        />
                     )}
-                </div>
+                </AnimatePresence>
             </div>
+        </motion.div>
+      </div>
 
-            {/* CENTER: FOCUS (Active) */}
-            <div className="flex-1 h-full bg-white/[0.02] flex flex-col relative overflow-hidden">
-                <div className="p-10 flex-1 overflow-y-auto custom-scrollbar">
-                    <motion.div 
-                        key={focalTask.id}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="max-w-2xl mx-auto"
-                    >
-                        <div className="mb-8">
-                            <label className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/40 mb-2 block">Description</label>
-                            <div className="text-lg leading-relaxed text-foreground/80 font-medium">
-                                {focalTask.description || "No description provided."}
-                            </div>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-8 py-8 border-y border-white/5">
-                            <div className="space-y-4">
-                                <div>
-                                    <label className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/40 mb-2 block">Assigned To</label>
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-8 h-8 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-500">
-                                            <User size={16} />
-                                        </div>
-                                        <span className="font-bold">{focalTask.assignee?.username || 'Unassigned'}</span>
-                                    </div>
-                                </div>
-                                <div>
-                                    <label className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/40 mb-2 block">Team</label>
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-8 h-8 rounded-full bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-500">
-                                            <Users2 size={16} />
-                                        </div>
-                                        <span className="font-bold">{focalTask.team?.name || 'General Project'}</span>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="flex flex-col justify-end items-end">
-                                <button 
-                                    onClick={() => onToggleStatus(focalTask)}
-                                    className={cn(
-                                        "px-6 py-3 rounded-2xl border font-black transition-all flex items-center gap-3",
-                                        focalTask.status === 'DONE' 
-                                            ? "bg-primary/10 border-primary/20 text-primary" 
-                                            : "bg-white/5 border-white/10 text-foreground hover:scale-105"
-                                    )}
-                                >
-                                    {focalTask.status === 'DONE' ? <CheckCircle2 size={24} /> : <Circle size={24} />}
-                                    {focalTask.status}
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* Story/Transitive Summary (If needed in future) */}
-                    </motion.div>
-                </div>
-            </div>
-
-            {/* RIGHT: TARGETS (Outbound) */}
-            <div className="w-1/4 h-full flex flex-col bg-white/[0.01]">
-                <div className="p-6 border-b border-white/5 flex items-center justify-between text-muted-foreground">
-                    <div className="flex items-center gap-2">
-                        <Share2 size={14} />
-                        <span className="text-[11px] font-black uppercase tracking-widest">Connects To</span>
-                    </div>
-                    <button 
-                        onClick={() => onOpenDetails(focalTask.id)} 
-                        className="p-1 hover:bg-primary/20 rounded-md text-primary transition-all"
-                        title="Add Relationship"
-                    >
-                        <Plus size={16} />
-                    </button>
-                </div>
-                <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
-                    {outboundLinks.map(({ task, linkType, linkId }) => (
-                        <motion.div 
-                            key={linkId}
-                            initial={{ opacity: 0, x: 10 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            className="glass p-4 rounded-2xl border border-white/5 hover:border-white/10 transition-all cursor-pointer group"
-                            onClick={() => onFocusTask(task!.id)}
-                        >
-                            <RelationshipPill label={linkType} size="sm" className="mb-2" />
-                            <div className="flex items-center justify-between">
-                                <div className="text-sm font-bold truncate group-hover:text-primary transition-colors pr-2">{task!.title}</div>
-                                <ArrowRight size={14} className="text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
-                            </div>
-                        </motion.div>
-                    ))}
-                    {outboundLinks.length === 0 && (
-                        <div className="h-full flex items-center justify-center text-center p-6 text-muted-foreground/20 italic text-sm">
-                            No outgoing connections
-                        </div>
-                    )}
-                </div>
-            </div>
-
-        </div>
+      {/* Control Overlay */}
+      <div className="absolute bottom-8 right-10 flex flex-col gap-3 z-50">
+          <div className="glass px-4 py-3 rounded-2xl border border-white/5 flex items-center gap-4 shadow-2xl">
+              <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                  <span className="text-[10px] font-black uppercase tracking-widest opacity-60">Lattice Active</span>
+              </div>
+              <div className="h-4 w-[1px] bg-white/10" />
+              <div className="text-[10px] font-black uppercase tracking-widest opacity-40">
+                  {inboundNeighbors.length + outboundNeighbors.length} Connections Traceable
+              </div>
+          </div>
       </div>
     </div>
   );

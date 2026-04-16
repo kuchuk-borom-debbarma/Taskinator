@@ -31,12 +31,12 @@ export const RelationshipPill: React.FC<RelationshipPillProps> = ({
         backgroundColor: colors.bg,
         borderColor: colors.border,
         color: colors.css,
-        boxShadow: `0 0 10px ${colors.bg}`
+        boxShadow: `0 0 15px ${colors.bg}`
       }}
       className={cn(
-        "px-2.5 py-1 rounded-full border text-[10px] font-black uppercase tracking-widest transition-all duration-300",
-        "hover:scale-105 active:scale-95 whitespace-nowrap",
-        size === 'sm' && "px-1.5 py-0.5 text-[8px]",
+        "px-3 py-1.5 rounded-2xl border text-[9px] font-black uppercase tracking-[0.2em] transition-all duration-500",
+        "hover:scale-110 active:scale-95 whitespace-nowrap italic",
+        size === 'sm' && "px-2 py-1 text-[7px]",
         onClick ? "cursor-pointer" : "cursor-default",
         className
       )}

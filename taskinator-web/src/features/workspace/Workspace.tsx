@@ -98,6 +98,16 @@ export const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
   const projectTasks = (workspaceData?.tasks?.edges ?? []).map((e: any) => e.node);
   const teams = (workspaceData?.teams?.edges ?? []).map((e: any) => e.node);
 
+  // Auto-focus first task on project entry once data is loaded
+  React.useEffect(() => {
+    if (selectedProjectId && projectTasks.length > 0) {
+        const isCurrentFocusValid = projectTasks.some((t: any) => t.id === focusedTaskId);
+        if (!isCurrentFocusValid) {
+            setFocusedTaskId(projectTasks[0].id);
+        }
+    }
+  }, [selectedProjectId, projectTasks, focusedTaskId]);
+
   const { data: automationsData } = useQuery({
     queryKey: ['automations', selectedTaskId],
     queryFn: () => gqlClient.request<any>(GET_AUTOMATIONS, { taskId: selectedTaskId }),
