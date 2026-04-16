@@ -54,13 +54,14 @@ export const TaskGraph: React.FC<TaskGraphProps> = ({ neighbourhood }) => {
         data: { 
           task: n.task, 
           isFocused: false, 
-          direction: n.direction 
+          direction: n.direction,
+          depth: n.depth
         },
         draggable: false,
       }))
     ];
 
-    // 2. Map to React Flow Edges with Color Hashing
+    // 2. Map to React Flow Edges with Color Hashing and Step style
     const edges: Edge[] = neighbourhood.edges.map(edge => {
       const edgeColor = getLinkLabelColor(edge.label);
       
@@ -69,11 +70,11 @@ export const TaskGraph: React.FC<TaskGraphProps> = ({ neighbourhood }) => {
         source: edge.sourceTaskId,
         target: edge.targetTaskId,
         label: edge.label,
-        type: 'smoothstep',
-        labelStyle: { fill: '#ffffff', fontSize: 11, fontWeight: 700 }, // White text on colored bg
-        labelBgStyle: { fill: edgeColor, fillOpacity: 0.9, rx: 6, ry: 6 },
+        type: 'step', // Orthogonal tournament-style links
+        labelStyle: { fill: '#ffffff', fontSize: 11, fontWeight: 700 }, 
+        labelBgStyle: { fill: edgeColor, fillOpacity: 1, rx: 6, ry: 6 },
         labelBgPadding: [6, 3] as [number, number],
-        style: { stroke: edgeColor, strokeWidth: 2.5, opacity: 0.7 },
+        style: { stroke: edgeColor, strokeWidth: 2.5 },
         animated: true,
       };
     });
@@ -81,7 +82,7 @@ export const TaskGraph: React.FC<TaskGraphProps> = ({ neighbourhood }) => {
     return { rawNodes: nodes, rawEdges: edges };
   }, [neighbourhood]);
 
-  // 3. Apply Force Layout
+  // 3. Apply Deterministic Tournament Layout
   const { nodes: rfNodes, edges: rfEdges } = useTaskGraphLayout(rawNodes, rawEdges, CENTER);
 
   return (

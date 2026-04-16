@@ -75,43 +75,80 @@ export class DummyTaskAPI implements TaskAPI {
     if (!focusedTask) throw new Error('Task not found');
 
     const nodes: any[] = [];
-    const internalLinks: TaskLink[] = [];
-
-    // Simple BFS for dummy neighbourhood
-    const queue = [{ id: taskId, depth: 0 }];
-    const visited = new Set([taskId]);
-
-    while (queue.length > 0) {
-      const { id, depth } = queue.shift()!;
-      if (depth >= maxDepth) continue;
-
-      const children = this.links
-        .filter((l) => l.sourceTaskId === id)
-        .map((l) => ({ id: l.targetTaskId, direction: 'outgoing' as const }));
-      
-      const parents = this.links
-        .filter((l) => l.targetTaskId === id)
-        .map((l) => ({ id: l.sourceTaskId, direction: 'incoming' as const }));
-
-      [...children, ...parents].forEach(({ id: targetId, direction }) => {
-        if (!visited.has(targetId)) {
-          visited.add(targetId);
-          const task = this.tasks.find((t) => t.id === targetId);
-          if (task) {
-            nodes.push({ task, depth: depth + 1, direction });
-            queue.push({ id: targetId, depth: depth + 1 });
+    
+    // 1. Find all ancestors (Parents, Grandparents, etc.)
+    const ancestors = new Map<string, { task: ProjectTask; depth: number }>();
+    let currentLevel = [taskId];
+    for (let d = 1; d <= maxDepth; d++) {
+      const parents: string[] = [];
+      this.links
+        .filter(l => currentLevel.includes(l.targetTaskId))
+        .forEach(l => {
+          if (!ancestors.has(l.sourceTaskId) && l.sourceTaskId !== taskId) {
+            const task = this.tasks.find(t => t.id === l.sourceTaskId);
+            if (task) {
+              ancestors.set(l.sourceTaskId, { task, depth: d });
+              parents.push(l.sourceTaskId);
+            }
           }
-        }
-      });
+        });
+      if (parents.length === 0) break;
+      currentLevel = parents;
     }
 
-    // Edge hydration
-    const allIds = [taskId, ...nodes.map((n) => n.task.id)];
-    this.links.forEach((l) => {
-      if (allIds.includes(l.sourceTaskId) && allIds.includes(l.targetTaskId)) {
-        internalLinks.push(l);
-      }
+    // 2. Lateral Discovery: Find siblings (children of ancestors)
+    const siblings = new Map<string, { task: ProjectTask; depth: number }>();
+    ancestors.forEach((val, parentId) => {
+      this.links
+        .filter(l => l.sourceTaskId === parentId)
+        .forEach(l => {
+          // If child is NOT focus and NOT ancestor/descendant discovered yet
+          if (l.targetTaskId !== taskId && !ancestors.has(l.targetTaskId)) {
+            const task = this.tasks.find(t => t.id === l.targetTaskId);
+            if (task) {
+              // Position sibling in the column right of parent (Parent depth D -> Child depth D-1)
+              siblings.set(l.targetTaskId, { task, depth: Math.max(0, val.depth - 1) });
+            }
+          }
+        });
     });
+
+    // 3. Find all descendants (Children, Grandchildren, etc.)
+    const descendants = new Map<string, { task: ProjectTask; depth: number }>();
+    currentLevel = [taskId];
+    for (let d = 1; d <= maxDepth; d++) {
+      const children: string[] = [];
+      this.links
+        .filter(l => currentLevel.includes(l.sourceTaskId))
+        .forEach(l => {
+          if (!descendants.has(l.targetTaskId) && l.targetTaskId !== taskId && !siblings.has(l.targetTaskId)) {
+            const task = this.tasks.find(t => t.id === l.targetTaskId);
+            if (task) {
+              descendants.set(l.targetTaskId, { task, depth: d });
+              children.push(l.targetTaskId);
+            }
+          }
+        });
+      if (children.length === 0) break;
+      currentLevel = children;
+    }
+
+    // 4. Flatten into NeighbourhoodNodes
+    ancestors.forEach(val => {
+      nodes.push({ task: val.task, depth: val.depth, direction: 'incoming' });
+    });
+    siblings.forEach(val => {
+      nodes.push({ task: val.task, depth: val.depth, direction: 'incoming' });
+    });
+    descendants.forEach(val => {
+      nodes.push({ task: val.task, depth: val.depth, direction: 'outgoing' });
+    });
+
+    // 5. Edge hydration
+    const allIds = [taskId, ...nodes.map((n) => n.task.id)];
+    const internalLinks = this.links.filter((l) => 
+      allIds.includes(l.sourceTaskId) && allIds.includes(l.targetTaskId)
+    );
 
     return {
       focusedTask,
