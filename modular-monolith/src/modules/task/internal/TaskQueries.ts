@@ -9,6 +9,8 @@ import { sql } from 'kysely';
 import { db } from '../../../database';
 import { getTimeString } from '../../../utils/utils.ts';
 
+const MAX_TASK_GRAPH_DEPTH = 100;
+
 export const insertTask = async (
     data: CreateTaskParam,
 ): Promise<ProjectTask> => {
@@ -650,7 +652,7 @@ export const rebuildProjectPathsQuery = async (data: {
             FROM task_link tl
             JOIN paths p ON tl.source_task_id = p.terminal_task_id
             WHERE tl.fk_project_id = ${data.projectId}::uuid
-              AND p.depth < 10
+              AND p.depth < ${MAX_TASK_GRAPH_DEPTH}
               AND NOT (tl.target_task_id = ANY(p.path_task_ids))
         )
         INSERT INTO task_link_materialized (
@@ -763,7 +765,7 @@ export const getTaskNetworkQuery = async (data: {
     depth?: number;
     limit?: number;
 }): Promise<{ incoming: TaskLinkMaterialized[]; outgoing: TaskLinkMaterialized[] }> => {
-    const depth = Math.max(1, Math.min(data.depth ?? 3, 10));
+    const depth = Math.max(1, Math.min(data.depth ?? 3, MAX_TASK_GRAPH_DEPTH));
     const limit = Math.max(1, Math.min(data.limit ?? 20, 100));
 
     const authCheck = await sql`

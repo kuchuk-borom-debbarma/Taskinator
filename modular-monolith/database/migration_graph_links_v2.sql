@@ -27,7 +27,7 @@ CREATE TABLE task_link_materialized (
     depth INTEGER NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_task_path_project FOREIGN KEY (fk_project_id) REFERENCES project(id) ON DELETE CASCADE,
-    CONSTRAINT chk_task_path_depth CHECK (depth > 0 AND depth <= 10),
+    CONSTRAINT chk_task_path_depth CHECK (depth > 0 AND depth <= 100),
     CONSTRAINT chk_task_path_lengths CHECK (
         array_length(path_task_ids, 1) = depth + 1
         AND array_length(path_link_ids, 1) = depth
