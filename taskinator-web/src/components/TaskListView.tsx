@@ -9,35 +9,40 @@ import { cn } from '../utils/cn';
 
 interface TaskListViewProps {
   projectId: string;
-  onFocusTask: (taskId: string) => void;
   onOpenDetails: (taskId: string) => void;
 }
-
 export const TaskListView: React.FC<TaskListViewProps> = ({
   projectId,
-  onFocusTask,
   onOpenDetails
 }) => {
   const qc = useQueryClient();
   const PAGE_SIZE = 15;
-  const STORAGE_KEY = `taskinator_pos_${projectId}`;
 
   // Pagination State
-  const [cursor, setCursor] = useState<string | null>(() => localStorage.getItem(STORAGE_KEY));
+  const [cursor, setCursor] = useState<string | null>(null);
   const [direction, setDirection] = useState<'FORWARD' | 'BACKWARD'>('FORWARD');
+
+  // Reset pagination when project changes
+  useEffect(() => {
+    setCursor(null);
+    setDirection('FORWARD');
+  }, [projectId]);
 
   const { data, isLoading, error, isPlaceholderData } = useQuery({
     queryKey: ['tasks', projectId, cursor, direction],
     queryFn: () => gqlClient.request<any>(GET_TASKS, { 
         projectId, 
+        parentId: null, // Explicitly fetch root tasks
         first: direction === 'FORWARD' ? PAGE_SIZE : undefined,
         after: direction === 'FORWARD' ? (cursor || undefined) : undefined,
         last: direction === 'BACKWARD' ? PAGE_SIZE : undefined,
         before: direction === 'BACKWARD' ? (cursor || undefined) : undefined
     }),
     placeholderData: (prev) => prev,
-    staleTime: 5000
+    staleTime: 5000,
+    enabled: !!projectId,
   });
+
 
   const connection = data?.tasks || { edges: [], pageInfo: { hasNextPage: false, hasPreviousPage: false, startCursor: null, endCursor: null } };
   const items: Task[] = connection.edges.map((e: any) => e.node);

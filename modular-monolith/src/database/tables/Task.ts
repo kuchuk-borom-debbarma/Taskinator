@@ -12,11 +12,9 @@ export interface ProjectTaskTable {
     fk_project_id: string;
     fk_team_id: string | null;
     fk_member_id: string | null;
-    fk_parent_task_id: string | null;
     title: string;
     description: string;
     status: string;
-    materialized_path: string;
     last_event_id: string | null;
     version: Generated<number>;
     created_by: string;
@@ -46,9 +44,10 @@ export interface AutomationsTable {
 export interface TaskLinkTable {
     id: Generated<string>;
     fk_project_id: string;
-    from_task_id: string;
-    to_task_id: string;
-    link_type: string;
+    source_task_id: string;
+    target_task_id: string;
+    label: string;
+    created_by: string;
     created_at: ColumnType<Date, string | undefined, never>;
 }
 
@@ -57,10 +56,11 @@ export type TaskLink = Selectable<TaskLinkTable>;
 export interface TaskLinkMaterializedTable {
     id: Generated<string>;
     fk_project_id: string;
-    origin_id: string;
-    terminal_id: string;
+    origin_task_id: string;
+    terminal_task_id: string;
     path_task_ids: string[];
-    path_link_types: string[];
+    path_link_ids: string[];
+    path_link_labels: string[];
     depth: number;
     created_at: ColumnType<Date, string | undefined, never>;
 }

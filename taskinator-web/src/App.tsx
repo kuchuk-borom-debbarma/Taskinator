@@ -1,8 +1,6 @@
-import { useState } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { Auth } from './components/Auth';
-import { Workspace } from './features/workspace/Workspace';
-import type { JWTPayload } from './types';
+import { RouterProvider } from '@tanstack/react-router';
+import { router } from './routes';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -14,41 +12,9 @@ const queryClient = new QueryClient({
 });
 
 function App() {
-  const [user, setUser] = useState<JWTPayload | null>(() => {
-    const token = localStorage.getItem('token');
-    if (!token) return null;
-    try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      return payload;
-    } catch {
-      return null;
-    }
-  });
-
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    setUser(null);
-  };
-
-  const handleLogin = (token: string) => {
-    localStorage.setItem('token', token);
-    try {
-      const payload = JSON.parse(atob(token.split('.')[1]));
-      setUser(payload);
-    } catch {
-      setUser(null);
-    }
-  };
-
   return (
     <QueryClientProvider client={queryClient}>
-      <div className="h-screen w-screen bg-background text-foreground overflow-hidden">
-        {!user ? (
-          <Auth onLogin={handleLogin} />
-        ) : (
-          <Workspace user={user} onLogout={handleLogout} />
-        )}
-      </div>
+      <RouterProvider router={router} />
     </QueryClientProvider>
   );
 }

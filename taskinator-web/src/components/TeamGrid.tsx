@@ -4,6 +4,7 @@ import { Plus, Users2, ChevronLeft, ChevronRight } from 'lucide-react';
 import { gqlClient } from '../graphql/client';
 import { GET_TEAMS } from '../graphql/operations';
 import { cn } from '../utils/cn';
+import { useUIStore } from '../store/ui';
 
 interface Team {
   id: string;
@@ -13,22 +14,21 @@ interface Team {
 
 interface TeamGridProps {
   projectId: string;
-  selectedTeamId: string | null;
-  onSelectTeam: (id: string) => void;
-  onCreateTeam: () => void;
+  selectedTeamId?: string | null;
+  onSelectTeam?: (id: string) => void;
 }
 
 export const TeamGrid: React.FC<TeamGridProps> = ({
   projectId,
   selectedTeamId,
   onSelectTeam,
-  onCreateTeam,
 }) => {
+  const setActiveModal = useUIStore(state => state.setActiveModal);
   const PAGE_SIZE = 9;
   const [cursor, setCursor] = useState<string | null>(null);
   const [direction, setDirection] = useState<'FORWARD' | 'BACKWARD'>('FORWARD');
 
-  const { data, isLoading, error, isPlaceholderData } = useQuery({
+  const { data, isLoading, isPlaceholderData } = useQuery({
     queryKey: ['teams', projectId, cursor, direction],
     queryFn: () => gqlClient.request<any>(GET_TEAMS, { 
         projectId, 
@@ -75,7 +75,7 @@ export const TeamGrid: React.FC<TeamGridProps> = ({
                 <Users2 size={32} className="text-muted-foreground/30 mb-4" />
                 <p className="text-sm font-bold text-muted-foreground">No teams forged yet.</p>
                 <button 
-                    onClick={onCreateTeam}
+                    onClick={() => setActiveModal('CREATE_TEAM')}
                     className="mt-6 flex items-center gap-2 text-[12px] font-bold text-primary hover:text-indigo-400 bg-primary/10 px-4 py-2 rounded-lg transition-all"
                 >
                     <Plus size={14} /> Forge First Team
@@ -89,7 +89,7 @@ export const TeamGrid: React.FC<TeamGridProps> = ({
                 {teams.map((team) => (
                     <button 
                         key={team.id}
-                        onClick={() => onSelectTeam(team.id)}
+                        onClick={() => onSelectTeam?.(team.id)}
                         className={cn(
                             "text-left p-6 rounded-3xl border transition-all duration-300 group hover:-translate-y-1",
                             selectedTeamId === team.id 

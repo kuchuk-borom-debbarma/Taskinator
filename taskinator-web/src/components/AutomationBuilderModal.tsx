@@ -1,12 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Modal } from './Modal';
 import { 
-  Plus, Trash2, Zap, ArrowRight, Settings2, GitCommit, 
-  SearchCode, ChevronDown, Layers, Box, Terminal,
+  Plus, Trash2, Zap, Settings2, GitCommit, 
+  SearchCode, Layers, Terminal,
   Workflow, Hash, AlignLeft, User, Activity, AlertCircle
 } from 'lucide-react';
 import { cn } from '../utils/cn';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 
 // --- Types ---
 

@@ -139,7 +139,7 @@ export const UserSearchDropdown: React.FC<UserSearchDropdownProps> = ({
                 </div>
               ) : results.length > 0 ? (
                 <div className="flex flex-col gap-1">
-                  {results.map((user) => (
+                  {results.map((user: UserSearchResult) => (
                     <button
                       key={user.id}
                       onClick={() => handleSelect(user)}

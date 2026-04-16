@@ -39,13 +39,35 @@ export const taskResolvers = {
         },
     },
     TaskLink: {
+        sourceTaskId: (l: any) => l.sourceTaskId,
+        targetTaskId: (l: any) => l.targetTaskId,
+        label: (l: any) => l.label,
+        fromTaskId: (l: any) => l.sourceTaskId,
+        toTaskId: (l: any) => l.targetTaskId,
+        type: (l: any) => l.label,
+        sourceTask: (l: any, _: any, context: GraphQLContext) =>
+            context.loaders.task.load({
+                projectId: l.projectId,
+                taskId: l.sourceTaskId,
+            }),
+        targetTask: (l: any, _: any, context: GraphQLContext) =>
+            context.loaders.task.load({
+                projectId: l.projectId,
+                taskId: l.targetTaskId,
+            }),
         toTask: (l: any, _: any, context: GraphQLContext) =>
             context.loaders.task.load({
                 projectId: l.projectId,
-                taskId: l.toTaskId,
+                taskId: l.targetTaskId,
             }),
     },
     TaskStory: {
+        originTaskId: (s: any) => s.originTaskId,
+        terminalTaskId: (s: any) => s.terminalTaskId,
+        originId: (s: any) => s.originTaskId,
+        terminalId: (s: any) => s.terminalTaskId,
+        pathLinkLabels: (s: any) => s.pathLinkLabels,
+        pathLinkTypes: (s: any) => s.pathLinkLabels,
         pathTasks: (s: any, _: any, context: GraphQLContext) => {
             return Promise.all(
                 s.pathTaskIds.map((id: string) =>
@@ -57,7 +79,7 @@ export const taskResolvers = {
     Query: {
         tasks: async (
             _: any,
-            { projectId, parentId, first, after, last, before }: any,
+            { projectId, first, after, last, before }: any,
             context: GraphQLContext,
         ) => {
             if (!context.userId) throw new Error('Unauthorized');
@@ -65,7 +87,6 @@ export const taskResolvers = {
                 context.userId,
                 projectId,
                 {
-                    parentId,
                     limit: first || last,
                     after,
                     before,
@@ -84,6 +105,20 @@ export const taskResolvers = {
                     endCursor: nextCursor,
                 },
             };
+        },
+        taskNetwork: async (
+            _: any,
+            { projectId, taskId, depth, limit }: any,
+            context: GraphQLContext,
+        ) => {
+            if (!context.userId) throw new Error('Unauthorized');
+            return taskService.getTaskNetwork({
+                userId: context.userId,
+                projectId,
+                taskId,
+                depth,
+                limit,
+            });
         },
     },
     Mutation: {
@@ -122,9 +157,18 @@ export const taskResolvers = {
         },
         createTaskLink: async (_: any, args: any, context: GraphQLContext) => {
             if (!context.userId) throw new Error('Unauthorized');
+            const sourceTaskId = args.sourceTaskId ?? args.fromTaskId;
+            const targetTaskId = args.targetTaskId ?? args.toTaskId;
+            const label = args.label ?? args.linkType;
+            if (!sourceTaskId || !targetTaskId || !label) {
+                throw new Error('sourceTaskId, targetTaskId, and label are required');
+            }
             return taskService.createLink({
-                ...args,
                 userId: context.userId,
+                projectId: args.projectId,
+                sourceTaskId,
+                targetTaskId,
+                label,
             });
         },
         deleteTaskLink: async (_: any, args: any, context: GraphQLContext) => {

@@ -14,7 +14,7 @@ import {
   CheckCircle2,
   Circle
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { gqlClient } from '../graphql/client';
 import { GET_TASKS, UPDATE_TASKS } from '../graphql/operations';
 import { AutomationBuilderModal } from './AutomationBuilderModal';
@@ -89,7 +89,7 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({
         <section className="space-y-6">
             <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                    <RelationshipPill label={task.status} size="lg" />
+                    <RelationshipPill label={task.status} size="md" />
                     <button 
                          onClick={() => updateMutation.mutate({ status: task.status === 'DONE' ? 'TODO' : 'DONE' })}
                          className={cn(
@@ -124,7 +124,7 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({
             </h4>
             <div className="flex flex-wrap items-center gap-2 p-4 glass rounded-2xl border border-white/5">
                 <span className="text-[10px] font-bold opacity-40">Primary</span>
-                {task.story?.pathTasks?.map((node: any, idx: number) => (
+                {task.story?.[0]?.pathTasks?.map((node: any) => (
                     <React.Fragment key={node.id}>
                         <ChevronRight size={12} className="opacity-20" />
                         <button 

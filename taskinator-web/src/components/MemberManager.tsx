@@ -73,7 +73,7 @@ export const MemberManager: React.FC<MemberManagerProps> = ({
   });
 
   const handleSelect = (user: any) => {
-    const alreadyMember = members.some(m => m.userId === user.id);
+    const alreadyMember = members.some((m: Member) => m.userId === user.id);
     if (!alreadyMember) onAdd(user.id);
   };
 
@@ -87,7 +87,7 @@ export const MemberManager: React.FC<MemberManagerProps> = ({
           <h4 className="text-[13px] font-bold tracking-tight text-foreground/90 uppercase tracking-widest">{title}</h4>
         </div>
         <div className="flex -space-x-2">
-           {members.slice(0, 3).map((m, i) => (
+           {members.slice(0, 3).map((m: Member, i: number) => (
              <div key={m.id} className="w-6 h-6 rounded-full border-2 border-background bg-secondary flex items-center justify-center text-[8px] font-bold" style={{ zIndex: 10 - i }}>
                 {(m.user?.username || 'U').substring(0, 1).toUpperCase()}
              </div>
@@ -123,7 +123,7 @@ export const MemberManager: React.FC<MemberManagerProps> = ({
         </div>
 
         <AnimatePresence mode="popLayout">
-          {members.map((member) => (
+          {members.map((member: Member) => (
             <motion.div
               key={member.id}
               layout

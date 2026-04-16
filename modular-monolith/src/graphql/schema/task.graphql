@@ -21,22 +21,37 @@ type Task {
 
 type TaskLink {
     id: ID!
+    sourceTaskId: ID!
+    targetTaskId: ID!
+    label: String!
+    sourceTask: Task
+    targetTask: Task
     fromTaskId: ID!
     toTaskId: ID!
     toTask: Task
     type: String!
+    createdBy: String!
     createdAt: String!
 }
 
 type TaskStory {
     id: ID!
+    originTaskId: ID!
+    terminalTaskId: ID!
     originId: ID!
     terminalId: ID!
     pathTaskIds: [ID!]!
+    pathLinkIds: [ID!]!
+    pathLinkLabels: [String!]!
     pathLinkTypes: [String!]!
     pathTasks: [Task!]!
     depth: Int!
     createdAt: String!
+}
+
+type TaskNetwork {
+    incoming: [TaskStory!]!
+    outgoing: [TaskStory!]!
 }
 
 type TaskEdge {
@@ -75,7 +90,8 @@ input UpdateTaskInput {
 }
 
 extend type Query {
-    tasks(projectId: ID!, parentId: ID, first: Int, after: String, last: Int, before: String): TaskConnection!
+    tasks(projectId: ID!, first: Int, after: String, last: Int, before: String): TaskConnection!
+    taskNetwork(projectId: ID!, taskId: ID!, depth: Int = 3, limit: Int = 20): TaskNetwork!
 }
 
 extend type Mutation {
@@ -90,9 +106,12 @@ extend type Mutation {
 
     createTaskLink(
         projectId: ID!
-        fromTaskId: ID!
-        toTaskId: ID!
-        linkType: String!
+        sourceTaskId: ID
+        targetTaskId: ID
+        label: String
+        fromTaskId: ID
+        toTaskId: ID
+        linkType: String
     ): ID
     deleteTaskLink(projectId: ID!, linkId: ID!): Boolean
 }

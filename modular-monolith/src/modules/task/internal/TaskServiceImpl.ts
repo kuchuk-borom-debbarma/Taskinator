@@ -18,6 +18,7 @@ import {
     getLinksQuery,
     getLinksByTaskIdsQuery,
     getTasksByIdsQuery,
+    getTaskNetworkQuery,
 } from './TaskQueries';
 import { taskDeleteListener } from './listeners/TaskDeleteListener.ts';
 import { linkPropagationListener } from './listeners/LinkPropagationListener.ts';
@@ -30,7 +31,7 @@ export class TaskServiceImpl implements TaskService {
     async getTasks(
         userId: string,
         projectId: string,
-        params?: { parentId?: string; after?: string; before?: string; limit?: number },
+        params?: { after?: string; before?: string; limit?: number },
     ): Promise<{
         tasks: ProjectTask[];
         nextCursor: string | null;
@@ -101,9 +102,9 @@ export class TaskServiceImpl implements TaskService {
     async createLink(data: {
         userId: string;
         projectId: string;
-        fromTaskId: string;
-        toTaskId: string;
-        linkType: string;
+        sourceTaskId: string;
+        targetTaskId: string;
+        label: string;
     }): Promise<string> {
         return createTaskLinkQuery(data);
     }
@@ -141,5 +142,15 @@ export class TaskServiceImpl implements TaskService {
         taskIds: string[],
     ): Promise<ProjectTask[]> {
         return getTasksByIdsQuery(projectId, taskIds);
+    }
+
+    async getTaskNetwork(data: {
+        userId: string;
+        projectId: string;
+        taskId: string;
+        depth?: number;
+        limit?: number;
+    }) {
+        return getTaskNetworkQuery(data);
     }
 }

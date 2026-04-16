@@ -19,7 +19,7 @@ router.get('/', async (req: any, res: Response) => {
         }
 
         const result = await taskService.getTasks(userId, projectId as string, {
-            cursor: cursor as string,
+            after: cursor as string,
             limit: parseInt(limit as string) || 20,
         });
         res.status(200).json(result);
@@ -38,7 +38,6 @@ router.post('/', async (req: any, res: Response) => {
             description,
             teamId,
             memberId,
-            parentTaskId,
             initialStatus,
         } = req.body;
         const userId = req.userId;
@@ -49,7 +48,6 @@ router.post('/', async (req: any, res: Response) => {
             description,
             teamId,
             memberId,
-            parentTaskId,
             initialStatus,
         });
         res.status(201).json(result);

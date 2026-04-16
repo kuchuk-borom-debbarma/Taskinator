@@ -2,9 +2,11 @@ import React, { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { Plus, Layout, ChevronRight, Zap, Network, Layers, GitBranch, Server, Database, Cpu, Code, Shield } from 'lucide-react';
+import { useNavigate } from '@tanstack/react-router';
 import { gqlClient } from '../../graphql/client';
 import { GET_PROJECTS } from '../../graphql/operations';
 import { useSlidingWindow } from '../../hooks/useSlidingWindow';
+import { useUIStore } from '../../store/ui';
 
 interface Project {
   id: string;
@@ -16,8 +18,6 @@ interface Project {
 interface ProjectDashboardProps {
   userId: string;
   username: string;
-  onSelectProject: (id: string) => void;
-  onCreateProject: () => void;
 }
 
 const ProjectCard: React.FC<{ project: Project; onClick: () => void }> = ({ project, onClick }) => {
@@ -66,9 +66,10 @@ const ProjectCard: React.FC<{ project: Project; onClick: () => void }> = ({ proj
 export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
   userId,
   username,
-  onSelectProject,
-  onCreateProject,
 }) => {
+  const navigate = useNavigate();
+  const setActiveModal = useUIStore(state => state.setActiveModal);
+
   // Initial projects fetch
   const { data, isLoading } = useQuery({
     queryKey: ['projects', userId, 'dashboard-initial'],
@@ -123,7 +124,7 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
         </div>
         
         <button
-          onClick={onCreateProject}
+          onClick={() => setActiveModal('CREATE_PROJECT')}
           className="flex items-center gap-2.5 px-6 py-3 rounded-2xl bg-white text-background text-[13px] font-bold hover:bg-white/90 transition-all shadow-2xl shadow-white/10 active:scale-95 shrink-0"
         >
           <Plus size={18} strokeWidth={2.5} />
@@ -151,7 +152,7 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
            </p>
 
            <button
-              onClick={onCreateProject}
+              onClick={() => setActiveModal('CREATE_PROJECT')}
               className="px-10 py-4 mb-20 rounded-full bg-primary text-white text-[15px] font-black hover:bg-indigo-500 transition-all shadow-[0_10px_40px_rgba(99,102,241,0.3)] hover:-translate-y-1 hover:scale-105 active:scale-95 flex items-center gap-3"
            >
               <Plus size={20} strokeWidth={3} />
@@ -160,11 +161,11 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pb-10">
-          {projects.map((project) => (
+          {projects.map((project: Project) => (
             <ProjectCard
               key={project.id}
               project={project}
-              onClick={() => onSelectProject(project.id)}
+              onClick={() => navigate({ to: '/project/$projectId/tasks', params: { projectId: project.id } })}
             />
           ))}
         </div>
