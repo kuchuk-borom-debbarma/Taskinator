@@ -50,41 +50,9 @@ export const GET_TASKS = `
           memberId
           assignee { id username email }
           createdBy
-          creator { id username email }
           createdAt
           updatedAt
           version
-          links {
-            id
-            sourceTaskId
-            targetTaskId
-            label
-            createdAt
-          }
-          story {
-            id
-            originTaskId
-            terminalTaskId
-            pathTaskIds
-            pathLinkIds
-            pathLinkLabels
-            depth
-            createdAt
-            pathTasks {
-              id
-              title
-              status
-              projectId
-              teamId
-              team { id name projectId }
-              memberId
-              assignee { id username email }
-              createdBy
-              createdAt
-              updatedAt
-              version
-            }
-          }
         }
       }
       pageInfo {

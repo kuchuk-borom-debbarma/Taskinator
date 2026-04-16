@@ -23,8 +23,8 @@ const CONFIG = {
     // Tasks are split into isolated forests. Each forest is a DAG
     // with a controlled shape so materialisation never explodes.
     FOREST_COUNT: 800,              // how many separate sub-graphs
-    FOREST_MAX_DEPTH: 8,            // max levels deep per forest
-    FOREST_MAX_FANOUT: 4,           // max children per node
+    FOREST_MAX_DEPTH: 60,            // max levels deep per forest
+    FOREST_MAX_FANOUT: 50,           // max children per node
     // Remaining tasks (after forest assignment) become orphans (no links)
 
     // % of non-root nodes that also get a "cross-edge" within the same forest

@@ -71,8 +71,8 @@ export interface Task {
   createdAt: string;
   updatedAt?: string | null;
   version: number;
-  links: TaskLink[];
-  story: TaskPath[];
+  links?: TaskLink[];
+  story?: TaskPath[];
 }
 
 export interface TaskConnection {

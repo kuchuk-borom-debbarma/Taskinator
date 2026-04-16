@@ -435,8 +435,22 @@ export const getTasksByIdsQuery = async (
 ): Promise<ProjectTask[]> => {
     if (taskIds.length === 0) return [];
     const result = await sql<ProjectTask>`
-        SELECT * FROM project_task 
-        WHERE fk_project_id = ${projectId}::uuid 
+        SELECT
+            id,
+            fk_project_id AS "projectId",
+            fk_team_id AS "teamId",
+            fk_member_id AS "memberId",
+            title,
+            description,
+            status,
+            version,
+            last_event_id AS "lastEventId",
+            created_by AS "createdBy",
+            updated_by AS "updatedBy",
+            created_at AS "createdAt",
+            updated_at AS "updatedAt"
+        FROM project_task
+        WHERE fk_project_id = ${projectId}::uuid
           AND id = ANY(${taskIds}::uuid[])
     `.execute(db);
     return result.rows;

@@ -42,6 +42,7 @@ export function App() {
     route.page,
     refreshKey,
   );
+  const firstTaskId = tasks[0]?.id ?? null;
 
   useEffect(() => {
     if (!token) return;
@@ -60,7 +61,7 @@ export function App() {
 
   useEffect(() => {
     if (!route.projectId || !token) return;
-    const taskId = route.taskId ?? tasks[0]?.id ?? null;
+    const taskId = route.taskId ?? firstTaskId;
     if (!taskId) return;
     if (!route.taskId) {
       navigate({ ...route, taskId, projectId: route.projectId }, true);
@@ -68,7 +69,7 @@ export function App() {
     }
     void loadFocused(route.projectId, taskId);
     void loadNetwork(route.projectId, taskId);
-  }, [route.projectId, route.taskId, token, tasks]);
+  }, [route.projectId, route.taskId, token, firstTaskId]);
 
   async function loadProjects() {
     if (!token) return;
