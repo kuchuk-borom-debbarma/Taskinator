@@ -59,6 +59,19 @@ export interface TaskConnection {
     prevCursor: string | null;
 }
 
+export interface LinkConnection {
+    links: TaskLink[];
+    nextCursor: string | null;
+    prevCursor: string | null;
+}
+
+export interface GetTaskLinksParam {
+    userId: string;
+    projectId: string;
+    taskId: string;
+    direction: 'incoming' | 'outgoing';
+}
+
 export interface TaskService extends BaseService {
     createTask(data: CreateTaskParam): Promise<ProjectTask>;
     createLink(data: CreateLinkParam): Promise<TaskLink>;
@@ -71,6 +84,11 @@ export interface TaskService extends BaseService {
         projectId: string,
         params: PaginationParams,
     ): Promise<TaskConnection>;
-    
+
     getTasksByIds(userId: string, ids: string[]): Promise<ProjectTask[]>;
+
+    getTaskLinks(
+        params: GetTaskLinksParam,
+        pagination: PaginationParams,
+    ): Promise<LinkConnection>;
 }

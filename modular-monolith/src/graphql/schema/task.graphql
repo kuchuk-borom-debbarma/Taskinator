@@ -1,3 +1,27 @@
+type TaskLink {
+  id: ID!
+  projectId: ID!
+  sourceTaskId: ID!
+  targetTaskId: ID!
+  label: String!
+  createdBy: ID!
+  createdAt: String!
+
+  # Resolved via DataLoader
+  sourceTask: ProjectTask
+  targetTask: ProjectTask
+}
+
+type TaskLinkEdge {
+  node: TaskLink!
+  cursor: String!
+}
+
+type TaskLinkConnection {
+  edges: [TaskLinkEdge!]!
+  pageInfo: PageInfo!
+}
+
 type ProjectTask {
   id: ID!
   projectId: ID!
@@ -16,7 +40,10 @@ type ProjectTask {
   # Resolved fields
   project: Project
   team: Team
-  # creator: User # Handled in resolver
+
+  # Direct incoming/outgoing edges (depth-1 only)
+  incomingLinks(first: Int, after: String, last: Int, before: String): TaskLinkConnection!
+  outgoingLinks(first: Int, after: String, last: Int, before: String): TaskLinkConnection!
 }
 
 type ProjectTaskEdge {
@@ -37,7 +64,7 @@ extend type Query {
     last: Int
     before: String
   ): ProjectTaskConnection!
-  
+
   task(id: ID!): ProjectTask
 }
 

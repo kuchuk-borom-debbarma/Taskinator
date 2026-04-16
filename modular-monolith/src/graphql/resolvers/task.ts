@@ -1,24 +1,72 @@
 import type { GraphQLContext } from '../context.ts';
 import { taskService } from '../../modules/task';
-import type { ProjectTask } from '../../modules/task/TaskService.ts';
+import type { ProjectTask, TaskLink } from '../../modules/task/TaskService.ts';
+
+const buildLinkConnection = (
+    links: TaskLink[],
+    nextCursor: string | null,
+    prevCursor: string | null,
+) => ({
+    edges: links.map((l: TaskLink) => ({
+        node: l,
+        cursor: `${l.createdAt instanceof Date ? l.createdAt.toISOString() : l.createdAt}|${l.id}`,
+    })),
+    pageInfo: {
+        hasNextPage: !!nextCursor,
+        hasPreviousPage: !!prevCursor,
+        startCursor: prevCursor,
+        endCursor: nextCursor,
+    },
+});
 
 export const taskResolvers = {
+    TaskLink: {
+        createdAt: (l: any) =>
+            l.createdAt instanceof Date ? l.createdAt.toISOString() : l.createdAt,
+        // Resolved via DataLoader — avoids N+1 when many links are resolved at once
+        sourceTask: (l: any, _: any, context: GraphQLContext) =>
+            context.loaders.task.load(l.sourceTaskId),
+        targetTask: (l: any, _: any, context: GraphQLContext) =>
+            context.loaders.task.load(l.targetTaskId),
+    },
+
     ProjectTask: {
         createdAt: (t: any) =>
-            t.createdAt instanceof Date
-                ? t.createdAt.toISOString()
-                : t.createdAt,
+            t.createdAt instanceof Date ? t.createdAt.toISOString() : t.createdAt,
         updatedAt: (t: any) =>
-            t.updatedAt instanceof Date
-                ? t.updatedAt.toISOString()
-                : t.updatedAt,
+            t.updatedAt instanceof Date ? t.updatedAt.toISOString() : t.updatedAt,
         project: (t: any, _: any, context: GraphQLContext) =>
             context.loaders.project.load(t.projectId),
         team: (t: any, _: any, context: GraphQLContext) =>
             t.teamId ? context.loaders.team.load(t.teamId) : null,
-        // creator: (t: any, _: any, context: GraphQLContext) =>
-        //     context.loaders.user.load(t.createdBy),
+
+        incomingLinks: async (
+            t: any,
+            { first, after, last, before }: any,
+            context: GraphQLContext,
+        ) => {
+            if (!context.userId) throw new Error('Unauthorized');
+            const { links, nextCursor, prevCursor } = await taskService.getTaskLinks(
+                { userId: context.userId, projectId: t.projectId, taskId: t.id, direction: 'incoming' },
+                { first, after, last, before },
+            );
+            return buildLinkConnection(links, nextCursor, prevCursor);
+        },
+
+        outgoingLinks: async (
+            t: any,
+            { first, after, last, before }: any,
+            context: GraphQLContext,
+        ) => {
+            if (!context.userId) throw new Error('Unauthorized');
+            const { links, nextCursor, prevCursor } = await taskService.getTaskLinks(
+                { userId: context.userId, projectId: t.projectId, taskId: t.id, direction: 'outgoing' },
+                { first, after, last, before },
+            );
+            return buildLinkConnection(links, nextCursor, prevCursor);
+        },
     },
+
     Query: {
         projectTasks: async (
             _: any,
@@ -50,6 +98,7 @@ export const taskResolvers = {
             return context.loaders.task.load(id);
         },
     },
+
     Mutation: {
         createTask: async (
             _: any,

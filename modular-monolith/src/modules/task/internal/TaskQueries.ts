@@ -407,3 +407,88 @@ export const getTasksByIds = async (
 
     return result.rows;
 };
+
+export const getTaskLinksPage = async (
+    userId: string,
+    projectId: string,
+    taskId: string,
+    direction: 'incoming' | 'outgoing',
+    params: PaginationParams,
+): Promise<{ links: TaskLink[]; nextCursor: string | null; prevCursor: string | null }> => {
+    const limit = Math.min(params.first || params.last || 20, 50);
+    const { after, before } = params;
+    const isBackward = !!before;
+    const cursor = before || after;
+
+    let cursorDate: string | null = null;
+    let cursorId: string | null = null;
+
+    if (cursor && cursor.includes('|')) {
+        const parts = cursor.split('|');
+        if (parts.length === 2) {
+            cursorDate = parts[0]!;
+            cursorId = parts[1]!;
+        }
+    }
+
+    // incoming: links pointing TO this task (target_task_id = taskId)
+    // outgoing: links pointing FROM this task (source_task_id = taskId)
+    const filterCol = direction === 'incoming' ? 'target_task_id' : 'source_task_id';
+
+    const result = await sql<TaskLink>`
+        WITH auth_check AS (
+            SELECT 1 FROM project WHERE id = ${projectId}::uuid AND fk_user_id = ${userId}::text
+            UNION ALL
+            SELECT 1 FROM project_member WHERE fk_project_id = ${projectId}::uuid AND fk_user_id = ${userId}::text
+            LIMIT 1
+        )
+        SELECT
+            id,
+            fk_project_id AS "projectId",
+            source_task_id AS "sourceTaskId",
+            target_task_id AS "targetTaskId",
+            label,
+            created_by AS "createdBy",
+            created_at AS "createdAt"
+        FROM task_link
+        WHERE fk_project_id = ${projectId}::uuid
+          AND ${sql.raw(filterCol)} = ${taskId}::uuid
+          AND EXISTS (SELECT 1 FROM auth_check)
+          AND (
+            ${cursorDate}::timestamptz IS NULL
+            OR (
+                CASE
+                  WHEN ${isBackward} THEN (created_at > ${cursorDate}::timestamptz OR (created_at = ${cursorDate}::timestamptz AND id > ${cursorId}::uuid))
+                  ELSE (created_at < ${cursorDate}::timestamptz OR (created_at = ${cursorDate}::timestamptz AND id < ${cursorId}::uuid))
+                END
+            )
+          )
+        ORDER BY created_at ${sql.raw(isBackward ? 'ASC' : 'DESC')}, id ${sql.raw(isBackward ? 'ASC' : 'DESC')}
+        LIMIT ${limit + 1}
+    `.execute(db);
+
+    let rows = result.rows;
+    const hasMore = rows.length > limit;
+    if (hasMore) rows = rows.slice(0, limit);
+    if (isBackward) rows.reverse();
+
+    let nextCursor: string | null = null;
+    let prevCursor: string | null = null;
+
+    if (rows.length > 0) {
+        const first = rows[0]!;
+        const last = rows[rows.length - 1]!;
+        const firstDateStr = first.createdAt instanceof Date ? first.createdAt.toISOString() : first.createdAt;
+        const lastDateStr = last.createdAt instanceof Date ? last.createdAt.toISOString() : last.createdAt;
+
+        if (isBackward) {
+            nextCursor = hasMore ? `${firstDateStr}|${first.id}` : null;
+            prevCursor = `${lastDateStr}|${last.id}`;
+        } else {
+            nextCursor = hasMore ? `${lastDateStr}|${last.id}` : null;
+            prevCursor = after ? `${firstDateStr}|${first.id}` : null;
+        }
+    }
+
+    return { links: rows, nextCursor, prevCursor };
+};
