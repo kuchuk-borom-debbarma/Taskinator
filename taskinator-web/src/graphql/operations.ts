@@ -76,6 +76,7 @@ export const GET_TASKS = gql`
           links {
             id
             type
+            fromTaskId
             toTaskId
             toTask {
               id
@@ -130,6 +131,7 @@ export const GET_WORKSPACE_DATA = gql`
           links {
             id
             type
+            fromTaskId
             toTaskId
             toTask {
               id

@@ -10,7 +10,7 @@ import {
   Link
 } from 'lucide-react';
 import { ProjectSidebar } from '../../components/ProjectSidebar';
-import { TaskDrillView } from '../../components/TaskDrillView';
+import { NeuralLattice } from '../../components/NeuralLattice';
 import { StatusPicker } from '../../components/StatusPicker';
 import { Drawer } from '../../components/Drawer';
 import { MemberManager } from '../../components/MemberManager';
@@ -370,9 +370,8 @@ export const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
 
           <div className="flex-1 min-h-0 overflow-hidden relative">
              {activeTab === 'tasks' && (
-               <TaskDrillView 
+               <NeuralLattice 
                  tasks={projectTasks}
-                 focusedTaskId={focusedTaskId}
                  onFocusTask={setFocusedTaskId}
                  onOpenDetails={setSelectedTaskId}
                  onToggleStatus={(task) => updateTaskMutation.mutate({ id: task.id, version: task.version, status: task.status === 'DONE' ? 'TODO' : 'DONE' })}
