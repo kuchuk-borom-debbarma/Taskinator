@@ -24,6 +24,9 @@ export class DummyTaskAPI implements TaskAPI {
     { id: 'r18', projectId: 'p2', title: 'Social Media Campaign', description: 'Build hype for grand opening.', status: 'TODO', version: 1, createdAt: '2026-04-07T10:00:00Z', updatedAt: '2026-04-07T10:00:00Z' },
     { id: 'r19', projectId: 'p2', title: 'Soft Opening', description: 'Invitation-only test runs.', status: 'TODO', version: 1, createdAt: '2026-04-10T10:00:00Z', updatedAt: '2026-04-10T10:00:00Z' },
     { id: 'r20', projectId: 'p2', title: 'Grand Opening', description: 'Official public opening ceremony.', status: 'TODO', version: 1, createdAt: '2026-04-15T10:00:00Z', updatedAt: '2026-04-15T10:00:00Z' },
+    { id: 'r21', projectId: 'p2', title: 'Marketing Analysis', description: 'Review initial launch metrics.', status: 'TODO', version: 1, createdAt: '2026-04-20T10:00:00Z', updatedAt: '2026-04-20T10:00:00Z' },
+    { id: 'r22', projectId: 'p2', title: 'Expansion Plan', description: 'Strategies for second location.', status: 'TODO', version: 1, createdAt: '2026-05-01T10:00:00Z', updatedAt: '2026-05-01T10:00:00Z' },
+    { id: 'r23', projectId: 'p2', title: 'Investor Relations', description: 'Quarterly update meeting.', status: 'TODO', version: 1, createdAt: '2026-05-15T10:00:00Z', updatedAt: '2026-05-15T10:00:00Z' },
   ];
 
   private links: TaskLink[] = [
@@ -59,6 +62,10 @@ export class DummyTaskAPI implements TaskAPI {
     { id: 'l19', projectId: 'p2', sourceTaskId: 'r12', targetTaskId: 'r19', label: 'Required for', createdAt: '2026-03-16T00:00:00Z' },
     { id: 'l20', projectId: 'p2', sourceTaskId: 'r19', targetTaskId: 'r20', label: 'Blocks', createdAt: '2026-04-11T00:00:00Z' },
     { id: 'l21', projectId: 'p2', sourceTaskId: 'r7', targetTaskId: 'r20', label: 'Critical for', createdAt: '2026-02-11T00:00:00Z' },
+    { id: 'l22', projectId: 'p2', sourceTaskId: 'r20', targetTaskId: 'r21', label: 'Informs', createdAt: '2026-04-16T00:00:00Z' },
+    { id: 'l23', projectId: 'p2', sourceTaskId: 'r21', targetTaskId: 'r22', label: 'Leads', createdAt: '2026-04-21T00:00:00Z' },
+    { id: 'l24', projectId: 'p2', sourceTaskId: 'r22', targetTaskId: 'r23', label: 'Blocks', createdAt: '2026-05-02T00:00:00Z' },
+    { id: 'l25', projectId: 'p2', sourceTaskId: 'r4', targetTaskId: 'r23', label: 'Requires', createdAt: '2026-01-21T00:00:00Z' },
   ];
 
   async getProjectTasks(projectId: string): Promise<ProjectTask[]> {

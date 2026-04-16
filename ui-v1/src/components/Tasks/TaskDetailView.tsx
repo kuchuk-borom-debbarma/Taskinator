@@ -1,7 +1,7 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useApi } from '../../context/ApiContext';
-import { TaskNexusBridge } from '../Graph/TaskNexusBridge';
+import { TaskDiscoveryTree } from '../Graph/TaskDiscoveryTree';
 import { ChevronLeft, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
 import { Link } from '@tanstack/react-router';
 
@@ -20,7 +20,7 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
 
   const { data: neighbourhood, isLoading: isNeighbourLoading } = useQuery({
     queryKey: ['neighbourhood', taskId],
-    queryFn: () => taskApi.getTaskNeighbourhood(taskId),
+    queryFn: () => taskApi.getTaskNeighbourhood(taskId, 3),
   });
 
   if (isTaskLoading || isNeighbourLoading || !task) {
@@ -107,7 +107,7 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
                 <span className="text-[10px] text-text-dim font-medium px-2 py-0.5 bg-bg-secondary rounded">Link Context</span>
               </div>
               <div className="border border-border-notion rounded-2xl overflow-hidden bg-bg-secondary shadow-sm w-full">
-                {neighbourhood && <TaskNexusBridge neighbourhood={neighbourhood} />}
+                {neighbourhood && <TaskDiscoveryTree neighbourhood={neighbourhood} />}
               </div>
             </section>
           </div>

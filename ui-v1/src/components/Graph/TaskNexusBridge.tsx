@@ -131,15 +131,36 @@ export const TaskNexusBridge: React.FC<TaskNexusBridgeProps> = ({ neighbourhood 
           const path = `M ${startX} ${startY} C ${cp1} ${startY}, ${cp2} ${endY}, ${endX} ${endY}`;
 
           return (
-            <g key={edge.id} className="transition-all duration-300" style={{ opacity: isDimmed ? 0.05 : 0.6 }}>
+            <g key={edge.id} className="transition-all duration-300" style={{ opacity: isDimmed ? 0.05 : 1 }}>
               <path 
                 d={path} 
                 fill="none" 
                 stroke={color} 
                 strokeWidth={isDimmed ? 1 : 2.5}
+                strokeOpacity={isDimmed ? 0.2 : 0.6}
                 className="transition-all"
               />
-              {/* Optional: Add label badges on the curves later if needed */}
+              
+              {/* Relationship Label Badge */}
+              <foreignObject
+                x={(startX + endX) / 2 - 40}
+                y={(startY + endY) / 2 - 10}
+                width="80"
+                height="20"
+                className="overflow-visible pointer-events-none"
+              >
+                <div 
+                  className="flex items-center justify-center h-full transition-opacity duration-300"
+                  style={{ opacity: isDimmed ? 0 : 1 }}
+                >
+                  <div 
+                    className="px-1.5 py-0.5 rounded shadow-sm border border-white/20 text-[9px] font-bold text-white whitespace-nowrap"
+                    style={{ backgroundColor: color }}
+                  >
+                    {edge.label}
+                  </div>
+                </div>
+              </foreignObject>
             </g>
           );
         })}
