@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useApi } from '../../context/ApiContext';
-import { TaskDiscoveryTree } from '../Graph/TaskDiscoveryTree';
-import { ChevronLeft, Info, Calendar, History, Hash, Terminal } from 'lucide-react';
+import { TaskRadialNexus } from '../Graph/TaskRadialNexus';
+import { NexusModal } from '../Graph/NexusModal';
+import { ChevronLeft, Info, Calendar, History, Hash, Terminal, Orbit } from 'lucide-react';
 
 interface TaskDetailViewProps {
   taskId: string;
@@ -11,6 +12,7 @@ interface TaskDetailViewProps {
 
 export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose }) => {
   const { taskApi } = useApi();
+  const [isNexusOpen, setIsNexusOpen] = useState(false);
 
   const { data: task, isLoading: isTaskLoading } = useQuery({
     queryKey: ['task', taskId],
@@ -111,6 +113,15 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
               <button className="w-full py-4 px-6 rounded-2xl bg-text-notion text-white text-[13px] font-black uppercase tracking-widest hover:bg-focus-blue transition-all duration-300 shadow-lg active:scale-95">
                 Execute Mission
               </button>
+              
+              <button 
+                onClick={() => setIsNexusOpen(true)}
+                className="w-full py-4 px-6 rounded-2xl bg-white border border-focus-blue text-focus-blue text-[13px] font-black uppercase tracking-widest hover:bg-focus-blue/5 transition-all duration-300 shadow-sm active:scale-95 flex items-center justify-center gap-3 group"
+              >
+                <Orbit size={16} className="group-hover:rotate-180 transition-transform duration-700" />
+                Manifest Neural Nexus
+              </button>
+
               <button className="w-full py-4 px-6 rounded-2xl border border-border-notion text-text-dim text-[13px] font-black uppercase tracking-widest hover:bg-bg-secondary hover:text-text-notion transition-all duration-300 active:scale-95">
                 Archived Context
               </button>
@@ -119,35 +130,14 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
         </div>
       </div>
 
-      {/* Strategic Discovery Section (Neural Orchard) */}
-      <section className="w-full py-24 bg-bg-secondary/30 border-y border-border-notion/60 mt-12 relative overflow-hidden">
-        <div className="absolute top-0 left-0 w-full h-full pointer-events-none opacity-[0.03] grayscale">
-          <div className="absolute inset-0 bg-[radial-gradient(#2563eb_1px,transparent_1px)] [background-size:40px_40px]" />
-        </div>
-
-        <div className="max-w-6xl mx-auto px-8 mb-12 relative z-10">
-          <div className="flex items-end justify-between">
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center gap-3">
-                <h3 className="text-[18px] font-black text-text-notion uppercase tracking-tighter">
-                  Neural Orchard
-                </h3>
-                <div className="h-px w-12 bg-focus-blue/40" />
-                <span className="text-[11px] font-black text-focus-blue uppercase tracking-widest animate-pulse">Live Lineage</span>
-              </div>
-              <p className="text-[13px] text-text-dim font-semibold tracking-tight max-w-md opacity-80 leading-relaxed">
-                Strategic orchestration of dependencies across all project depths. Unearth ancestors and successors in batch-based sequence.
-              </p>
-            </div>
-          </div>
-        </div>
-        
-        <div className="w-full overflow-x-auto pb-4 custom-scrollbar relative z-10">
-          <div className="min-w-fit flex justify-center">
-            <TaskDiscoveryTree taskId={taskId} />
-          </div>
-        </div>
-      </section>
+      {/* Nexus Modal Overlay */}
+      <NexusModal 
+        isOpen={isNexusOpen} 
+        onClose={() => setIsNexusOpen(false)} 
+        title={`${task.title} Lineage`}
+      >
+        <TaskRadialNexus taskId={taskId} />
+      </NexusModal>
 
       <footer className="w-full max-w-6xl px-8 py-20 flex justify-between items-center opacity-30">
         <div className="text-[11px] font-bold uppercase tracking-widest text-text-dim">Taskinator Orchestrator • 2.0</div>

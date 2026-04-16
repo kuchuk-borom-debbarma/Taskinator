@@ -47,4 +47,13 @@
   .text-glow {
     text-shadow: 0 0 10px rgba(35, 131, 226, 0.2);
   }
+
+  @keyframes spin-slow {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  .animate-spin-slow {
+    animation: spin-slow 12s linear infinite;
+  }
 }
