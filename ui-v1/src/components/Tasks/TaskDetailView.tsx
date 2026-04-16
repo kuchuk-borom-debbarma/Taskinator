@@ -1,7 +1,7 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useApi } from '../../context/ApiContext';
-import { NeuralLattice } from '../Graph/NeuralLattice';
+import { TaskGraph } from '../Graph/TaskGraph';
 import { ChevronLeft, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
 import { Link } from '@tanstack/react-router';
 
@@ -64,10 +64,10 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-12 items-start">
           <div className="flex flex-col gap-12 min-w-0">
             
-            {/* Dependency Bilateral View */}
+            {/* Direct Links Table */}
             <section className="flex flex-col gap-4">
               <h3 className="text-[11px] font-bold text-text-dim uppercase tracking-widest">
-                Direct Dependencies
+                Direct Links
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Incoming (Left) */}
@@ -98,16 +98,16 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
               </div>
             </section>
 
-            {/* Neural Lattice Section */}
+            {/* Task Link Graph Section */}
             <section className="flex flex-col gap-4 w-full overflow-hidden">
               <div className="flex justify-between items-center">
                 <h3 className="text-[11px] font-bold text-text-dim uppercase tracking-widest">
-                  Neural Lattice
+                  Task Link Graph
                 </h3>
-                <span className="text-[10px] text-text-dim font-medium px-2 py-0.5 bg-bg-secondary rounded">Perspective Discovery</span>
+                <span className="text-[10px] text-text-dim font-medium px-2 py-0.5 bg-bg-secondary rounded">Link Context</span>
               </div>
               <div className="border border-border-notion rounded-2xl overflow-hidden bg-bg-secondary shadow-sm w-full">
-                {neighbourhood && <NeuralLattice neighbourhood={neighbourhood} />}
+                {neighbourhood && <TaskGraph neighbourhood={neighbourhood} />}
               </div>
             </section>
           </div>

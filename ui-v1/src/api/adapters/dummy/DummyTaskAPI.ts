@@ -36,7 +36,7 @@ export class DummyTaskAPI implements TaskAPI {
     {
       id: 't4',
       projectId: 'p1',
-      title: 'Neural Lattice Logic',
+      title: 'Graph Discovery Logic',
       description: 'Implement radial discovery query.',
       status: 'TODO',
       version: 1,
@@ -46,8 +46,8 @@ export class DummyTaskAPI implements TaskAPI {
     {
       id: 't5',
       projectId: 'p1',
-      title: 'Frontend Lattice UI',
-      description: 'Build the interactive SVG graph.',
+      title: 'Interactive Graph Canvas',
+      description: 'Build the interactive dependency graph.',
       status: 'TODO',
       version: 1,
       createdAt: new Date().toISOString(),

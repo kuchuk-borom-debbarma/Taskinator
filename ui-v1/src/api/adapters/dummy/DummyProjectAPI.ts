@@ -12,8 +12,8 @@ export class DummyProjectAPI implements ProjectAPI {
     },
     {
       id: 'p2',
-      name: 'Neural Lattice UI',
-      description: 'The mind-map interface implementation.',
+      name: 'Dependency Discovery Service',
+      description: 'The graph-based task relationship implementation.',
       createdAt: new Date().toISOString(),
       version: 1,
     },
