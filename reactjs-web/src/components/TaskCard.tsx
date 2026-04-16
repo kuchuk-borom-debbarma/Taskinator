@@ -1,52 +1,39 @@
-import { ArrowRight, GitBranch, Link2, UserRound, UsersRound } from 'lucide-react';
+import { GitBranch, Link2, UserRound, UsersRound } from 'lucide-react';
 import type { Task } from '../types';
 
-interface TaskCardProps {
+export function TaskCard({
+  task,
+  active,
+  onOpen,
+}: {
   task: Task;
   active?: boolean;
-  muted?: boolean;
-  linkCount?: number;
-  storyCount?: number;
-  onOpen: (task: Task) => void;
-}
-
-export function TaskCard({ task, active, muted, linkCount = 0, storyCount = 0, onOpen }: TaskCardProps) {
+  onOpen: (taskId: string) => void;
+}) {
   return (
-    <button
-      className={`task-card ${active ? 'active' : ''} ${muted ? 'muted' : ''}`}
-      type="button"
-      onClick={() => onOpen(task)}
-    >
+    <button className={active ? 'task-card active' : 'task-card'} type="button" onClick={() => onOpen(task.id)}>
       <div className="task-card-top">
-        <span className={`status ${task.status.toLowerCase().replace('-', '')}`}>{task.status}</span>
-        <span>{task.updatedAt}</span>
+        <span className={`status ${task.status.toLowerCase()}`}>{task.status}</span>
+        <span>{timeLabel(task.updatedAt ?? task.createdAt)}</span>
       </div>
       <strong>{task.title}</strong>
-      <p>{task.summary}</p>
+      <p>{task.description || 'No description yet.'}</p>
       <div className="task-card-people">
-        <span>
-          <UsersRound size={14} />
-          {task.teamName}
-        </span>
-        <span>
-          <UserRound size={14} />
-          {task.memberName}
-        </span>
+        <span><UsersRound size={14} />{task.team?.name ?? 'Unassigned team'}</span>
+        <span><UserRound size={14} />{task.assignee?.username ?? 'Open owner'}</span>
       </div>
       <div className="task-meta">
-        <span>
-          <Link2 size={14} />
-          {linkCount} direct
-        </span>
-        <span>
-          <GitBranch size={14} />
-          {storyCount} paths
-        </span>
-        <ArrowRight size={15} />
-      </div>
-      <div className="progress-track">
-        <span style={{ width: `${task.progress}%` }} />
+        <span><Link2 size={14} />{task.links?.length ?? 0} links</span>
+        <span><GitBranch size={14} />{task.story?.length ?? 0} paths</span>
       </div>
     </button>
   );
+}
+
+function timeLabel(value?: string | null) {
+  if (!value) return 'now';
+  const date = new Date(value);
+  if (Number.isNaN(date.valueOf())) return value;
+  const diff = Math.max(1, Math.floor((Date.now() - date.valueOf()) / 3600000));
+  return `${diff}h ago`;
 }

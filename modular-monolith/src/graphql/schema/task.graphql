@@ -90,6 +90,7 @@ input UpdateTaskInput {
 }
 
 extend type Query {
+    task(projectId: ID!, id: ID!): Task
     tasks(projectId: ID!, first: Int, after: String, last: Int, before: String): TaskConnection!
     taskNetwork(projectId: ID!, taskId: ID!, depth: Int = 3, limit: Int = 20): TaskNetwork!
 }

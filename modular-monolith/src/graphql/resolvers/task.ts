@@ -106,6 +106,10 @@ export const taskResolvers = {
                 },
             };
         },
+        task: async (_: any, { projectId, id }: any, context: GraphQLContext) => {
+            if (!context.userId) throw new Error('Unauthorized');
+            return context.loaders.task.load({ projectId, taskId: id });
+        },
         taskNetwork: async (
             _: any,
             { projectId, taskId, depth, limit }: any,

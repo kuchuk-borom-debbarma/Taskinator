@@ -13,16 +13,9 @@ export function useRouteState() {
 
   const navigate = useCallback((next: RouteState, replace = false) => {
     const url = buildRoute(next);
-    if (replace) {
-      window.history.replaceState(null, '', url);
-    } else {
-      window.history.pushState(null, '', url);
-    }
+    if (replace) window.history.replaceState(null, '', url);
+    else window.history.pushState(null, '', url);
     setRoute(next);
-  }, []);
-
-  useEffect(() => {
-    navigate(route, true);
   }, []);
 
   return { route, navigate };

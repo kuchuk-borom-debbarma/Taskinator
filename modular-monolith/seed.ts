@@ -115,16 +115,16 @@ const LINK_TYPES = ['Blocks', 'Relates', 'Duplicates'] as const;
 //  🛠️  Helpers
 // ============================================================
 function pick<T>(arr: readonly T[]): T {
-    return arr[Math.floor(Math.random() * arr.length)];
+    return arr[Math.floor(Math.random() * arr.length)]!;
 }
 
 function pickWeighted<T>(arr: readonly T[], weights: number[]): T {
     let r = Math.random(), c = 0;
     for (let i = 0; i < arr.length; i++) {
-        c += weights[i];
-        if (r < c) return arr[i];
+        c += weights[i]!;
+        if (r < c) return arr[i]!;
     }
-    return arr[arr.length - 1];
+    return arr[arr.length - 1]!;
 }
 
 function randomInt(min: number, max: number) {
@@ -185,7 +185,7 @@ function buildForestLinks(forestTaskIds: string[]): ForestLink[] {
 
     // Build subsequent layers
     while (remaining.length > 0 && layers.length <= CONFIG.FOREST_MAX_DEPTH) {
-        const parentLayer = layers[layers.length - 1];
+        const parentLayer = layers[layers.length - 1]!;
         const layerNodes: string[] = [];
 
         for (const parent of parentLayer) {
@@ -206,7 +206,7 @@ function buildForestLinks(forestTaskIds: string[]): ForestLink[] {
     // become extra leaves off random already-linked nodes
     const allLinked = layers.flat();
     for (const orphan of remaining) {
-        const parent = allLinked[randomInt(0, allLinked.length - 1)];
+        const parent = allLinked[randomInt(0, allLinked.length - 1)]!;
         links.push({ from: parent, to: orphan, type: pick(LINK_TYPES) });
         allLinked.push(orphan);
     }
@@ -222,7 +222,7 @@ function buildForestLinks(forestTaskIds: string[]): ForestLink[] {
         const key = `${forestTaskIds[fi]}-${forestTaskIds[ti]}`;
         if (linkedSet.has(key)) continue;
         linkedSet.add(key);
-        links.push({ from: forestTaskIds[fi], to: forestTaskIds[ti], type: pick(LINK_TYPES) });
+        links.push({ from: forestTaskIds[fi]!, to: forestTaskIds[ti]!, type: pick(LINK_TYPES) });
     }
 
     return links;
@@ -330,6 +330,7 @@ async function seed() {
         // ----------------------------------------------------------
         console.log(`\n👥 Assigning ~${CONFIG.MEMBERS_PER_TEAM} members per team...`);
         const teamMemberRows: string[][] = [];
+        const teamMembersById = new Map<string, string[]>();
 
         for (const teamId of teamIds) {
             // Fisher-Yates partial shuffle (much faster than .sort(() => random))
@@ -337,8 +338,9 @@ async function seed() {
             const count = Math.min(CONFIG.MEMBERS_PER_TEAM, pool.length);
             for (let i = 0; i < count; i++) {
                 const j = i + Math.floor(Math.random() * (pool.length - i));
-                [pool[i], pool[j]] = [pool[j], pool[i]];
+                [pool[i], pool[j]] = [pool[j]!, pool[i]!];
             }
+            teamMembersById.set(teamId, pool.slice(0, count));
             for (let i = 0; i < count; i++) {
                 teamMemberRows.push([
                     `'${mainProjectId}'::uuid`,
@@ -367,7 +369,8 @@ async function seed() {
             const title = esc(generateTaskTitle());
             const status = pickWeighted(TASK_STATUSES, STATUS_WEIGHTS);
             const teamId = pick(teamIds);
-            const memberId = pick(userIds);
+            const memberPool = teamMembersById.get(teamId) ?? userIds;
+            const memberId = pick(memberPool);
             taskIds.push(id);
             taskRows.push([
                 `'${id}'::uuid`,
@@ -422,11 +425,14 @@ async function seed() {
         for (const forest of forests) {
             const links = buildForestLinks(forest);
             for (const link of links) {
+                const linkId = uuidv4();
                 allLinkRows.push([
+                    `'${linkId}'::uuid`,
                     `'${mainProjectId}'::uuid`,
                     `'${link.from}'::uuid`,
                     `'${link.to}'::uuid`,
                     `'${link.type}'`,
+                    `'${adminId}'`,
                 ]);
             }
             totalLinks += links.length;
@@ -434,7 +440,7 @@ async function seed() {
 
         await bulkInsert(
             'task_link',
-            ['fk_project_id', 'from_task_id', 'to_task_id', 'link_type'],
+            ['id', 'fk_project_id', 'source_task_id', 'target_task_id', 'label', 'created_by'],
             allLinkRows,
         );
         console.log(`   ✓ ${totalLinks.toLocaleString()} links across ${CONFIG.FOREST_COUNT} forests (${elapsed(t0)})`);
@@ -451,47 +457,51 @@ async function seed() {
         let materialized = 0;
 
         for (let f = 0; f < forests.length; f++) {
-            const forest = forests[f];
+            const forest = forests[f]!;
             if (forest.length < 2) { materialized++; continue; }
 
             const idList = forest.map(id => `'${id}'::uuid`).join(',');
 
             await sql.raw(`
         INSERT INTO task_link_materialized
-          (fk_project_id, origin_id, terminal_id, path_task_ids, path_link_types, depth)
-        WITH RECURSIVE paths(origin_id, terminal_id, path_task_ids, path_link_types, depth) AS (
+          (fk_project_id, origin_task_id, terminal_task_id, path_task_ids, path_link_ids, path_link_labels, depth)
+        WITH RECURSIVE paths(origin_task_id, terminal_task_id, path_task_ids, path_link_ids, path_link_labels, depth) AS (
           SELECT
-            from_task_id,
-            to_task_id,
-            ARRAY[from_task_id, to_task_id]::uuid[],
-            ARRAY[link_type]::text[],
+            source_task_id,
+            target_task_id,
+            ARRAY[source_task_id, target_task_id]::uuid[],
+            ARRAY[id]::uuid[],
+            ARRAY[label]::text[],
             1
           FROM task_link
           WHERE fk_project_id = '${mainProjectId}'::uuid
-            AND from_task_id IN (${idList})
-            AND to_task_id   IN (${idList})
+            AND source_task_id IN (${idList})
+            AND target_task_id IN (${idList})
 
           UNION ALL
 
           SELECT
-            tl.from_task_id,
-            p.terminal_id,
-            tl.from_task_id || p.path_task_ids,
-            tl.link_type    || p.path_link_types,
+            p.origin_task_id,
+            tl.target_task_id,
+            p.path_task_ids || tl.target_task_id,
+            p.path_link_ids || tl.id,
+            p.path_link_labels || tl.label,
             p.depth + 1
           FROM task_link tl
-          JOIN paths p ON tl.to_task_id = p.origin_id
+          JOIN paths p ON tl.source_task_id = p.terminal_task_id
           WHERE tl.fk_project_id = '${mainProjectId}'::uuid
-            AND tl.from_task_id IN (${idList})
+            AND tl.source_task_id IN (${idList})
+            AND tl.target_task_id IN (${idList})
             AND p.depth < ${CONFIG.MATERIALIZATION_DEPTH_CAP}
-            AND NOT (tl.from_task_id = ANY(p.path_task_ids))
+            AND NOT (tl.target_task_id = ANY(p.path_task_ids))
         )
         SELECT
           '${mainProjectId}'::uuid,
-          origin_id,
-          terminal_id,
+          origin_task_id,
+          terminal_task_id,
           path_task_ids,
-          path_link_types,
+          path_link_ids,
+          path_link_labels,
           depth
         FROM paths
         ON CONFLICT DO NOTHING
