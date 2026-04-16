@@ -50,6 +50,63 @@ CREATE TABLE project_team_member (
     UNIQUE(fk_team_id, fk_user_id)
 );
 
+-- Task (Node) Table
+CREATE TABLE project_task (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    fk_project_id UUID NOT NULL,
+    fk_team_id UUID,
+    fk_member_id TEXT,
+    title TEXT NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    status TEXT NOT NULL DEFAULT 'TODO',
+    last_event_id UUID,
+    version INTEGER NOT NULL DEFAULT 1,
+    created_by TEXT NOT NULL,
+    updated_by TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_task_project FOREIGN KEY (fk_project_id) REFERENCES project(id) ON DELETE CASCADE
+);
+
+-- Task Link (Direct Edge) Table
+CREATE TABLE task_link (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    fk_project_id UUID NOT NULL,
+    source_task_id UUID NOT NULL,
+    target_task_id UUID NOT NULL,
+    label TEXT NOT NULL,
+    created_by TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_task_link_project FOREIGN KEY (fk_project_id) REFERENCES project(id) ON DELETE CASCADE,
+    CONSTRAINT fk_task_link_source FOREIGN KEY (source_task_id) REFERENCES project_task(id) ON DELETE CASCADE,
+    CONSTRAINT fk_task_link_target FOREIGN KEY (target_task_id) REFERENCES project_task(id) ON DELETE CASCADE,
+    CONSTRAINT chk_task_link_not_self CHECK (source_task_id <> target_task_id),
+    CONSTRAINT chk_task_link_label_valid CHECK (length(trim(label)) BETWEEN 1 AND 50)
+);
+
+-- Task Reachability (Transitive Index) Table
+CREATE TABLE task_reachability (
+    fk_project_id UUID NOT NULL,
+    ancestor_task_id UUID NOT NULL,
+    descendant_task_id UUID NOT NULL,
+    min_depth INTEGER NOT NULL,
+    path_count INTEGER NOT NULL DEFAULT 1,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (fk_project_id, ancestor_task_id, descendant_task_id),
+    CONSTRAINT fk_reach_project FOREIGN KEY (fk_project_id) REFERENCES project(id) ON DELETE CASCADE,
+    CONSTRAINT fk_reach_anc FOREIGN KEY (ancestor_task_id) REFERENCES project_task(id) ON DELETE CASCADE,
+    CONSTRAINT fk_reach_desc FOREIGN KEY (descendant_task_id) REFERENCES project_task(id) ON DELETE CASCADE
+);
+
+-- Performance Indexes for Task Graph
+CREATE INDEX idx_project_task_project ON project_task(fk_project_id);
+CREATE INDEX idx_task_link_source ON task_link(fk_project_id, source_task_id);
+CREATE INDEX idx_task_link_target ON task_link(fk_project_id, target_task_id);
+CREATE INDEX idx_task_link_pair ON task_link(fk_project_id, source_task_id, target_task_id);
+CREATE INDEX idx_reach_desc ON task_reachability(fk_project_id, descendant_task_id, min_depth);
+CREATE INDEX idx_reach_anc ON task_reachability(fk_project_id, ancestor_task_id, min_depth);
+
+
 
 -- Idempotency Table
 CREATE TABLE processed_event (
