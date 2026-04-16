@@ -3,17 +3,21 @@
 @theme {
   --font-sans: "Inter", system-ui, -apple-system, sans-serif;
   
-  --color-incoming: #9f7aea;
-  --color-outgoing: #4fd1c5;
-  --color-done: #48bb78;
-  --color-todo: #a0aec0;
+  --color-incoming: #8b5cf6;
+  --color-outgoing: #06b6d4;
+  --color-done: #10b981;
+  --color-todo: #94a3b8;
   
   --color-bg-notion: #ffffff;
-  --color-bg-secondary: #f7f6f3;
-  --color-text-notion: #37352f;
-  --color-text-dim: #9b9a97;
-  --color-border-notion: #e9e9e8;
-  --color-focus-blue: #2383e2;
+  --color-bg-secondary: #f8fafc;
+  --color-text-notion: #1e293b;
+  --color-text-dim: #64748b;
+  --color-border-notion: #e2e8f0;
+  --color-focus-blue: #2563eb;
+
+  --shadow-notion: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-premium: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-glass: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
 }
 
 @layer base {
@@ -30,8 +34,17 @@
   .glass {
     background-color: rgba(255, 255, 255, 0.7);
     backdrop-filter: blur(12px);
-    border-width: 1px;
-    border-color: rgba(255, 255, 255, 0.4);
-    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    box-shadow: var(--shadow-glass);
+  }
+  
+  .glass-dark {
+    background-color: rgba(30, 41, 59, 0.03);
+    backdrop-filter: blur(8px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .text-glow {
+    text-shadow: 0 0 10px rgba(35, 131, 226, 0.2);
   }
 }
