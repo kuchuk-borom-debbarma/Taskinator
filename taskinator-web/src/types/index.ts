@@ -71,6 +71,7 @@ export interface TaskLink {
 export interface TaskStory {
     pathTaskIds: string[];
     pathLinkTypes: string[];
+    pathTasks: { id: string; title: string }[];
 }
 
 export interface Task {

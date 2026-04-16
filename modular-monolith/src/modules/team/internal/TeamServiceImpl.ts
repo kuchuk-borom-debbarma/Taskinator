@@ -25,8 +25,8 @@ export class TeamServiceImpl implements TeamService {
     async getTeams(
         userId: string,
         projectId: string,
-        params?: { cursor?: string; limit?: number },
-    ): Promise<{ teams: Team[]; nextCursor: string | null }> {
+        params?: { first?: number; after?: string; last?: number; before?: string },
+    ): Promise<{ teams: Team[]; nextCursor: string | null; prevCursor: string | null }> {
         return getTeams(userId, projectId, params);
     }
 
@@ -38,8 +38,8 @@ export class TeamServiceImpl implements TeamService {
         userId: string,
         projectId: string,
         teamId: string,
-        params?: { cursor?: string; limit?: number },
-    ): Promise<{ members: TeamMember[]; nextCursor: string | null }> {
+        params?: { first?: number; after?: string; last?: number; before?: string },
+    ): Promise<{ members: TeamMember[]; nextCursor: string | null; prevCursor: string | null }> {
         return getTeamMembers(userId, projectId, teamId, params);
     }
 
@@ -48,9 +48,11 @@ export class TeamServiceImpl implements TeamService {
         projectId: string;
         teamId: string;
         search?: string;
-        cursor?: string;
-        limit?: number;
-    }): Promise<{ users: UserResult[]; nextCursor: string | null }> {
+        first?: number;
+        after?: string;
+        last?: number;
+        before?: string;
+    }): Promise<{ users: UserResult[]; nextCursor: string | null; prevCursor: string | null }> {
         return searchTeamUsers(params);
     }
 

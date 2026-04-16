@@ -27,70 +27,69 @@ export const teamResolvers = {
     Query: {
         teams: async (
             _: any,
-            { projectId, first, after }: any,
+            { projectId, first, after, last, before }: any,
             context: GraphQLContext,
         ) => {
             if (!context.userId) throw new Error('Unauthorized');
-            const { teams, nextCursor } = await teamService.getTeams(
+            const { teams, nextCursor, prevCursor } = await teamService.getTeams(
                 context.userId,
                 projectId,
-                {
-                    limit: first,
-                    cursor: after,
-                },
+                { first, after, last, before },
             );
             return {
                 edges: teams.map((t) => ({ node: t, cursor: t.id })),
                 pageInfo: {
                     hasNextPage: !!nextCursor,
+                    hasPreviousPage: !!prevCursor,
+                    startCursor: prevCursor,
                     endCursor: nextCursor,
-                    hasPreviousPage: false,
                 },
             };
         },
         teamMembers: async (
             _: any,
-            { projectId, teamId, first, after }: any,
+            { projectId, teamId, first, after, last, before }: any,
             context: GraphQLContext,
         ) => {
             if (!context.userId) throw new Error('Unauthorized');
-            const { members, nextCursor } = await teamService.getTeamMembers(
+            const { members, nextCursor, prevCursor } = await teamService.getTeamMembers(
                 context.userId,
                 projectId,
                 teamId,
-                {
-                    limit: first,
-                    cursor: after,
-                },
+                { first, after, last, before },
             );
             return {
                 edges: members.map((m) => ({ node: m, cursor: m.id })),
                 pageInfo: {
                     hasNextPage: !!nextCursor,
+                    hasPreviousPage: !!prevCursor,
+                    startCursor: prevCursor,
                     endCursor: nextCursor,
-                    hasPreviousPage: false,
                 },
             };
         },
         searchTeamUsers: async (
             _: any,
-            { projectId, teamId, search, first, after }: any,
+            { projectId, teamId, search, first, after, last, before }: any,
             context: GraphQLContext,
         ) => {
-            const { users, nextCursor } = await teamService.searchTeamUsers({
+            const { users, nextCursor, prevCursor } = await teamService.searchTeamUsers({
                 actorId: context.userId!,
                 projectId,
                 teamId,
                 search,
-                cursor: after,
-                limit: first,
+                first,
+                after,
+                last,
+                before,
             });
             return {
                 edges: users.map((u) => ({ node: u, cursor: u.id })),
                 pageInfo: {
                     hasNextPage: !!nextCursor,
+                    hasPreviousPage: !!prevCursor,
+                    startCursor: prevCursor,
                     endCursor: nextCursor,
-                    hasPreviousPage: false,
                 },
             };
         },

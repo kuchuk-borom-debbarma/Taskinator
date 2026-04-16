@@ -1,8 +1,11 @@
-import React from 'react';
+import React, { useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Trash2, Users, UserPlus } from 'lucide-react';
 import { UserSearchDropdown } from './UserSearchDropdown';
-import type { UserSearchResult } from '../api/client';
 import { motion, AnimatePresence } from 'framer-motion';
+import { gqlClient } from '../graphql/client';
+import { GET_PROJECT_MEMBERS, GET_TEAM_MEMBERS } from '../graphql/operations';
+import { useSlidingWindow } from '../hooks/useSlidingWindow';
 
 interface Member {
   id: string;
@@ -11,30 +14,72 @@ interface Member {
 }
 
 interface MemberManagerProps {
-  members: Member[];
+  projectId: string;
+  teamId?: string; // If provided, manage team members. Otherwise, project members.
   onAdd: (userId: string) => void;
   onRemove: (memberId: string) => void;
   title?: string;
   placeholder?: string;
-  projectId?: string;
 }
 
 export const MemberManager: React.FC<MemberManagerProps> = ({
-  members,
+  projectId,
+  teamId,
   onAdd,
   onRemove,
   title = 'Members',
   placeholder = 'Add people to this workspace...',
-  projectId,
 }) => {
-  const handleSelect = (user: UserSearchResult) => {
+  const isTeam = !!teamId;
+  const queryKey = isTeam 
+    ? ['team-members', projectId, teamId] 
+    : ['project-members', projectId];
+
+  // Initial fetch
+  const { data, isLoading } = useQuery({
+    queryKey: [...queryKey, 'initial'],
+    queryFn: () => gqlClient.request<any>(
+      isTeam ? GET_TEAM_MEMBERS : GET_PROJECT_MEMBERS, 
+      { projectId, teamId, first: 10 }
+    ),
+    enabled: !!projectId && (!isTeam || !!teamId),
+  });
+
+  const connection = useMemo(() => {
+    const res = isTeam ? data?.teamMembers : data?.projectMembers;
+    return res || { edges: [], pageInfo: { hasNextPage: false, hasPreviousPage: false, startCursor: null, endCursor: null } };
+  }, [data, isTeam]);
+
+  const fetchMore = async (params: any) => {
+    const res = await gqlClient.request<any>(
+      isTeam ? GET_TEAM_MEMBERS : GET_PROJECT_MEMBERS, 
+      { projectId, teamId, ...params }
+    );
+    return isTeam ? res.teamMembers : res.projectMembers;
+  };
+
+  const {
+    items: members,
+    containerRef,
+    topSentinelRef,
+    bottomSentinelRef,
+    isLoadingNext,
+    isLoadingPrev
+  } = useSlidingWindow<Member>({
+    initialData: connection,
+    fetchMore,
+    pageSize: 10,
+    maxWindowSize: 30
+  });
+
+  const handleSelect = (user: any) => {
     const alreadyMember = members.some(m => m.userId === user.id);
     if (!alreadyMember) onAdd(user.id);
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between px-1">
+    <div className="space-y-6 flex flex-col h-full overflow-hidden">
+      <div className="flex items-center justify-between px-1 shrink-0">
         <div className="flex items-center gap-2.5">
           <div className="p-1.5 bg-primary/10 rounded-lg text-primary">
             <Users size={14} />
@@ -47,27 +92,36 @@ export const MemberManager: React.FC<MemberManagerProps> = ({
                 {(m.user?.username || 'U').substring(0, 1).toUpperCase()}
              </div>
            ))}
-           {members.length > 3 && (
+           {connection.pageInfo.hasNextPage && (
              <div className="w-6 h-6 rounded-full border-2 border-background bg-muted flex items-center justify-center text-[7px] font-bold text-muted-foreground z-0">
-               +{members.length - 3}
+               +
              </div>
            )}
         </div>
       </div>
 
-      <div className="relative group/search">
+      <div className="relative group/search shrink-0">
         <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground/40 group-focus-within:text-primary transition-colors">
           <UserPlus size={14} />
         </div>
         <UserSearchDropdown
           onSelect={handleSelect}
           placeholder={placeholder}
-          projectContext={projectId ? { projectId } : undefined}
+          projectContext={{ projectId }}
+          teamContext={teamId ? { projectId, teamId } : undefined}
           className="pl-9 bg-white/[0.03] border-white/5 focus:bg-white/[0.05] focus:border-primary/20 rounded-xl py-2.5 text-xs transition-all"
         />
       </div>
 
-      <div className="space-y-2 max-h-[350px] overflow-y-auto px-1 pr-2 custom-scrollbar">
+      <div 
+        ref={containerRef}
+        className="flex-1 space-y-2 overflow-y-auto px-1 pr-2 custom-scrollbar relative"
+      >
+        {/* Top Sentinel */}
+        <div ref={topSentinelRef} className="h-4 flex items-center justify-center">
+            {isLoadingPrev && <div className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />}
+        </div>
+
         <AnimatePresence mode="popLayout">
           {members.map((member) => (
             <motion.div
@@ -101,7 +155,12 @@ export const MemberManager: React.FC<MemberManagerProps> = ({
           ))}
         </AnimatePresence>
 
-        {members.length === 0 && (
+        {/* Bottom Sentinel */}
+        <div ref={bottomSentinelRef} className="h-10 flex items-center justify-center">
+            {isLoadingNext && <div className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />}
+        </div>
+
+        {members.length === 0 && !isLoading && (
           <div className="flex flex-col items-center justify-center py-12 border border-dashed border-white/5 rounded-3xl bg-white/[0.01]">
              <div className="p-3 bg-white/5 rounded-full mb-3">
                <Users size={20} className="text-muted-foreground/30" />

@@ -27,8 +27,8 @@ import eventBus, { KAFKA_EVENTS } from '../../../utils/EventBus.ts';
 export class ProjectServiceImpl implements ProjectService {
     async getProjects(
         userId: string,
-        params?: { cursor?: string; limit?: number },
-    ): Promise<{ projects: Project[]; nextCursor: string | null }> {
+        params?: { first?: number; after?: string; last?: number; before?: string },
+    ): Promise<{ projects: Project[]; nextCursor: string | null; prevCursor: string | null }> {
         console.log(`[Project Service] Getting projects for userId: ${userId}`);
         return getProjects(userId, params);
     }
@@ -43,8 +43,8 @@ export class ProjectServiceImpl implements ProjectService {
     async getProjectMembers(
         userId: string,
         projectId: string,
-        params?: { cursor?: string; limit?: number },
-    ): Promise<{ members: ProjectMember[]; nextCursor: string | null }> {
+        params?: { first?: number; after?: string; last?: number; before?: string },
+    ): Promise<{ members: ProjectMember[]; nextCursor: string | null; prevCursor: string | null }> {
         return getProjectMembers(userId, projectId, params);
     }
 
@@ -121,11 +121,14 @@ export class ProjectServiceImpl implements ProjectService {
         actorId: string;
         projectId: string;
         search?: string;
-        cursor?: string;
-        limit?: number;
+        first?: number;
+        after?: string;
+        last?: number;
+        before?: string;
     }): Promise<{
         users: { id: string; username: string; email: string }[];
         nextCursor: string | null;
+        prevCursor: string | null;
     }> {
         return searchProjectMembers(params);
     }

@@ -45,10 +45,19 @@ export const taskResolvers = {
                 taskId: l.toTaskId,
             }),
     },
+    TaskStory: {
+        pathTasks: (s: any, _: any, context: GraphQLContext) => {
+            return Promise.all(
+                s.pathTaskIds.map((id: string) =>
+                    context.loaders.task.load({ projectId: s.projectId, taskId: id })
+                )
+            );
+        },
+    },
     Query: {
         tasks: async (
             _: any,
-            { projectId, first, after, last, before }: any,
+            { projectId, parentId, first, after, last, before }: any,
             context: GraphQLContext,
         ) => {
             if (!context.userId) throw new Error('Unauthorized');
@@ -56,6 +65,7 @@ export const taskResolvers = {
                 context.userId,
                 projectId,
                 {
+                    parentId,
                     limit: first || last,
                     after,
                     before,
@@ -63,33 +73,10 @@ export const taskResolvers = {
             );
 
             return {
-                edges: tasks.map((t) => ({ node: t, cursor: t.id })),
-                pageInfo: {
-                    hasNextPage: !!nextCursor,
-                    hasPreviousPage: !!prevCursor,
-                    startCursor: prevCursor,
-                    endCursor: nextCursor,
-                },
-            };
-        },
-        rootTasks: async (
-            _: any,
-            { projectId, first, after, last, before }: any,
-            context: GraphQLContext,
-        ) => {
-            if (!context.userId) throw new Error('Unauthorized');
-            const { tasks, nextCursor, prevCursor } = await taskService.getRootTasks(
-                context.userId,
-                projectId,
-                {
-                    limit: first || last,
-                    after,
-                    before,
-                },
-            );
-
-            return {
-                edges: tasks.map((t) => ({ node: t, cursor: t.id })),
+                edges: tasks.map((t) => ({
+                    node: t,
+                    cursor: `${t.createdAt instanceof Date ? t.createdAt.toISOString() : t.createdAt}|${t.id}`,
+                })),
                 pageInfo: {
                     hasNextPage: !!nextCursor,
                     hasPreviousPage: !!prevCursor,

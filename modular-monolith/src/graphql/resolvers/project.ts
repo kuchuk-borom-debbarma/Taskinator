@@ -27,27 +27,25 @@ export const projectResolvers = {
     Query: {
         projects: async (
             _: any,
-            { first, after }: any,
+            { first, after, last, before }: any,
             context: GraphQLContext,
         ) => {
             if (!context.userId) throw new Error('Unauthorized');
-            const { projects, nextCursor } = await projectService.getProjects(
+            const { projects, nextCursor, prevCursor } = await projectService.getProjects(
                 context.userId,
-                {
-                    limit: first,
-                    cursor: after,
-                },
+                { first, after, last, before },
             );
 
             return {
                 edges: projects.map((p) => ({
                     node: p,
-                    cursor: `${p.createdAt}|${p.id}`,
+                    cursor: `${p.createdAt instanceof Date ? p.createdAt.toISOString() : p.createdAt}|${p.id}`,
                 })),
                 pageInfo: {
                     hasNextPage: !!nextCursor,
+                    hasPreviousPage: !!prevCursor,
+                    startCursor: prevCursor,
                     endCursor: nextCursor,
-                    hasPreviousPage: false,
                 },
             };
         },
@@ -57,25 +55,23 @@ export const projectResolvers = {
         },
         projectMembers: async (
             _: any,
-            { projectId, first, after }: any,
+            { projectId, first, after, last, before }: any,
             context: GraphQLContext,
         ) => {
             if (!context.userId) throw new Error('Unauthorized');
-            const { members, nextCursor } =
+            const { members, nextCursor, prevCursor } =
                 await projectService.getProjectMembers(
                     context.userId,
                     projectId,
-                    {
-                        limit: first,
-                        cursor: after,
-                    },
+                    { first, after, last, before },
                 );
             return {
                 edges: members.map((m) => ({ node: m, cursor: m.id })),
                 pageInfo: {
                     hasNextPage: !!nextCursor,
+                    hasPreviousPage: !!prevCursor,
+                    startCursor: prevCursor,
                     endCursor: nextCursor,
-                    hasPreviousPage: false,
                 },
             };
         },

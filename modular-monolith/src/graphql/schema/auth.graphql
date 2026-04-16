@@ -20,6 +20,8 @@ extend type Query {
         search: String
         first: Int
         after: String
+        last: Int
+        before: String
     ): UserSearchResultConnection!
     searchTeamUsers(
         projectId: ID!
@@ -27,5 +29,7 @@ extend type Query {
         search: String
         first: Int
         after: String
+        last: Int
+        before: String
     ): UserSearchResultConnection!
 }

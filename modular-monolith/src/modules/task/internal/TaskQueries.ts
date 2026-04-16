@@ -2,6 +2,8 @@ import type {
     CreateTaskParam,
     DeleteTasksParam,
     ProjectTask,
+    TaskLink,
+    TaskLinkMaterialized,
 } from '../TaskService.ts';
 import { sql } from 'kysely';
 import { db } from '../../../database';
@@ -86,11 +88,6 @@ export const insertTask = async (
     return result.rows[0]!;
 };
 
-export interface DeleteTasksParam {
-    userId: string;
-    projectId: string;
-    taskIds: string[];
-}
 
 export const deleteTasks = async (
     data: DeleteTasksParam,
@@ -333,111 +330,10 @@ export const unassignMemberFromTeamTasks = async (
 export const getTasks = async (
     userId: string,
     projectId: string,
-    params: { after?: string; before?: string; limit?: number } = {},
+    params: { parentId?: string; after?: string; before?: string; limit?: number } = {},
 ): Promise<{ tasks: ProjectTask[]; nextCursor: string | null; prevCursor: string | null }> => {
     const limit = Math.min(params.limit ?? 20, 50);
-    const { after, before } = params;
-    const isBackward = !!before;
-    const cursor = before || after;
-
-    let cursorDate: string | null = null;
-    let cursorId: string | null = null;
-
-    if (cursor && cursor.includes('|')) {
-        const parts = cursor.split('|');
-        if (parts.length === 2) {
-            cursorDate = parts[0]!;
-            cursorId = parts[1]!;
-        }
-    }
-
-    const result = await sql<ProjectTask>`
-        WITH auth_check AS (
-            SELECT 1 FROM project WHERE id = ${projectId}::uuid AND fk_user_id = ${userId}::text
-            UNION ALL
-            SELECT 1 FROM project_member WHERE fk_project_id = ${projectId}::uuid AND fk_user_id = ${userId}::text
-            LIMIT 1
-        )
-        SELECT 
-            id,
-            fk_project_id AS "projectId",
-            fk_team_id AS "teamId",
-            fk_member_id AS "memberId",
-            title,
-            description,
-            status,
-            version,
-            last_event_id AS "lastEventId",
-            created_by AS "createdBy",
-            updated_by AS "updatedBy",
-            created_at AS "createdAt",
-            updated_at AS "updatedAt"
-        FROM project_task
-        WHERE fk_project_id = ${projectId}::uuid
-          AND EXISTS (SELECT 1 FROM auth_check)
-          AND (
-              ${cursorDate}::timestamptz IS NULL
-              OR (
-                  CASE 
-                    WHEN ${isBackward} THEN (created_at > ${cursorDate}::timestamptz OR (created_at = ${cursorDate}::timestamptz AND id > ${cursorId}::uuid))
-                    ELSE (created_at < ${cursorDate}::timestamptz OR (created_at = ${cursorDate}::timestamptz AND id < ${cursorId}::uuid))
-                  END
-              )
-          )
-        ORDER BY 
-            created_at ${sql.raw(isBackward ? 'ASC' : 'DESC')}, 
-            id ${sql.raw(isBackward ? 'ASC' : 'DESC')}
-        LIMIT ${limit + 1}
-    `.execute(db);
-
-    let rows = result.rows;
-    const hasMore = rows.length > limit;
-    if (hasMore) {
-        rows = rows.slice(0, limit);
-    }
-    if (isBackward) {
-        rows.reverse();
-    }
-
-    const tasks = rows;
-    
-    // Logic for next/prev cursors based on direction and availability
-    let nextCursor: string | null = null;
-    let prevCursor: string | null = null;
-
-    if (tasks.length > 0) {
-        const first = tasks[0]!;
-        const last = tasks[tasks.length - 1]!;
-        
-        const firstDateStr = first.createdAt instanceof Date ? first.createdAt.toISOString() : first.createdAt;
-        const lastDateStr = last.createdAt instanceof Date ? last.createdAt.toISOString() : last.createdAt;
-
-        if (isBackward) {
-            // We were going up. If we had more, there is a "previous" (older) page even further up?
-            // Wait, "before" means "newer than".
-            // DESC order: [NEWEST, ..., OLDEST]
-            // after -> older
-            // before -> newer
-            nextCursor = hasMore ? `${firstDateStr}|${first.id}` : null; // More "newer" items exist
-            prevCursor = `${lastDateStr}|${last.id}`; // Always can go older from the bottom
-        } else {
-            // Normal forward (older) navigation
-            nextCursor = hasMore ? `${lastDateStr}|${last.id}` : null;
-            // If after was set, we can definitely go back to where we came from
-            prevCursor = after ? `${firstDateStr}|${first.id}` : null;
-        }
-    }
-
-    return { tasks, nextCursor, prevCursor };
-};
-
-export const getRootTasks = async (
-    userId: string,
-    projectId: string,
-    params: { after?: string; before?: string; limit?: number } = {},
-): Promise<{ tasks: ProjectTask[]; nextCursor: string | null; prevCursor: string | null }> => {
-    const limit = Math.min(params.limit ?? 20, 50);
-    const { after, before } = params;
+    const { after, before, parentId } = params;
     const isBackward = !!before;
     const cursor = before || after;
 
@@ -474,13 +370,10 @@ export const getRootTasks = async (
             t.created_at AS "createdAt",
             t.updated_at AS "updatedAt"
         FROM project_task t
+        ${parentId ? sql`JOIN task_link l ON t.id = l.to_task_id` : sql``}
         WHERE t.fk_project_id = ${projectId}::uuid
+          ${parentId ? sql`AND l.from_task_id = ${parentId}::uuid` : sql``}
           AND EXISTS (SELECT 1 FROM auth_check)
-          AND NOT EXISTS (
-              SELECT 1 FROM task_link 
-              WHERE to_task_id = t.id 
-                AND fk_project_id = t.fk_project_id
-          )
           AND (
               ${cursorDate}::timestamptz IS NULL
               OR (
@@ -507,6 +400,7 @@ export const getRootTasks = async (
 
     const tasks = rows;
     
+    // Logic for next/prev cursors based on direction and availability
     let nextCursor: string | null = null;
     let prevCursor: string | null = null;
 
@@ -518,16 +412,23 @@ export const getRootTasks = async (
         const lastDateStr = last.createdAt instanceof Date ? last.createdAt.toISOString() : last.createdAt;
 
         if (isBackward) {
-            nextCursor = hasMore ? `${firstDateStr}|${first.id}` : null;
-            prevCursor = `${lastDateStr}|${last.id}`;
+            // We were fetching newer items (going up)
+            // If we have more, then there are even newer items above us
+            prevCursor = hasMore ? `${firstDateStr}|${first.id}` : null;
+            // nextCursor (going down) is always available since we have the bottom of the current set
+            nextCursor = `${lastDateStr}|${last.id}`;
         } else {
+            // Normal forward navigation (going down)
+            // If we have more, then there are older items below us
             nextCursor = hasMore ? `${lastDateStr}|${last.id}` : null;
+            // If we are offset from top (after was provided), we can definitely go back up
             prevCursor = after ? `${firstDateStr}|${first.id}` : null;
         }
     }
 
     return { tasks, nextCursor, prevCursor };
 };
+
 export const getTasksByIdsQuery = async (
     projectId: string,
     taskIds: string[],

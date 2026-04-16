@@ -13,21 +13,24 @@ export const authResolvers = {
         },
         searchUsers: async (
             _: any,
-            { search, first, after }: any,
+            { search, first, after, last, before }: any,
             context: GraphQLContext,
         ) => {
-            const { users, nextCursor } = await authService.searchUsers({
+            const { users, nextCursor, prevCursor } = await authService.searchUsers({
                 search,
-                cursor: after,
-                limit: first,
+                first,
+                after,
+                last,
+                before,
                 actorId: context.userId,
             });
             return {
                 edges: users.map((u) => ({ node: u, cursor: u.id })),
                 pageInfo: {
                     hasNextPage: !!nextCursor,
+                    hasPreviousPage: !!prevCursor,
+                    startCursor: prevCursor,
                     endCursor: nextCursor,
-                    hasPreviousPage: false,
                 },
             };
         },

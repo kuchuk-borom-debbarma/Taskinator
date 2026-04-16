@@ -77,22 +77,13 @@ export interface TaskService extends BaseService {
     getTasks(
         userId: string,
         projectId: string,
-        params?: { after?: string; before?: string; limit?: number },
+        params?: { parentId?: string; after?: string; before?: string; limit?: number },
     ): Promise<{
         tasks: ProjectTask[];
         nextCursor: string | null;
         prevCursor: string | null;
     }>;
 
-    getRootTasks(
-        userId: string,
-        projectId: string,
-        params?: { after?: string; before?: string; limit?: number },
-    ): Promise<{
-        tasks: ProjectTask[];
-        nextCursor: string | null;
-        prevCursor: string | null;
-    }>;
 
     createLink(data: {
         userId: string;
