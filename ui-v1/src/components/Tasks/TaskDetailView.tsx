@@ -1,7 +1,7 @@
 import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useApi } from '../../context/ApiContext';
-import { TaskGraph } from '../Graph/TaskGraph';
+import { TaskNexusBridge } from '../Graph/TaskNexusBridge';
 import { ChevronLeft, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
 import { Link } from '@tanstack/react-router';
 
@@ -107,7 +107,7 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
                 <span className="text-[10px] text-text-dim font-medium px-2 py-0.5 bg-bg-secondary rounded">Link Context</span>
               </div>
               <div className="border border-border-notion rounded-2xl overflow-hidden bg-bg-secondary shadow-sm w-full">
-                {neighbourhood && <TaskGraph neighbourhood={neighbourhood} />}
+                {neighbourhood && <TaskNexusBridge neighbourhood={neighbourhood} />}
               </div>
             </section>
           </div>

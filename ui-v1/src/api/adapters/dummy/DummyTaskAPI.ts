@@ -122,7 +122,7 @@ export class DummyTaskAPI implements TaskAPI {
       this.links
         .filter(l => currentLevel.includes(l.sourceTaskId))
         .forEach(l => {
-          if (!descendants.has(l.targetTaskId) && l.targetTaskId !== taskId && !siblings.has(l.targetTaskId)) {
+          if (!descendants.has(l.targetTaskId) && l.targetTaskId !== taskId) {
             const task = this.tasks.find(t => t.id === l.targetTaskId);
             if (task) {
               descendants.set(l.targetTaskId, { task, depth: d });
@@ -134,12 +134,15 @@ export class DummyTaskAPI implements TaskAPI {
       currentLevel = children;
     }
 
-    // 4. Flatten into NeighbourhoodNodes
+    // 4. Flatten into NeighbourhoodNodes with Descendant Priority
+    // If a node is both a sibling and a descendant, it is OUTGOING
     ancestors.forEach(val => {
       nodes.push({ task: val.task, depth: val.depth, direction: 'incoming' });
     });
     siblings.forEach(val => {
-      nodes.push({ task: val.task, depth: val.depth, direction: 'incoming' });
+      if (!descendants.has(val.task.id)) {
+        nodes.push({ task: val.task, depth: val.depth, direction: 'incoming' });
+      }
     });
     descendants.forEach(val => {
       nodes.push({ task: val.task, depth: val.depth, direction: 'outgoing' });
