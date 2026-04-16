@@ -46,6 +46,14 @@ export interface CreateLinkParam {
     label: string;
 }
 
+export interface UpdateTaskParam {
+    userId: string;
+    taskId: string;
+    title?: string;
+    description?: string;
+    status?: TaskStatus;
+}
+
 export interface PaginationParams {
     first?: number;
     after?: string;
@@ -75,6 +83,7 @@ export interface GetTaskLinksParam {
 export interface TaskService extends BaseService {
     createTask(data: CreateTaskParam): Promise<ProjectTask>;
     createLink(data: CreateLinkParam): Promise<TaskLink>;
+    updateTask(data: UpdateTaskParam): Promise<ProjectTask>;
     deleteTask(userId: string, taskId: string): Promise<void>;
     deleteLink(userId: string, linkId: string): Promise<void>;
 

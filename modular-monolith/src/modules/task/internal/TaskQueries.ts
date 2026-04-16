@@ -3,6 +3,7 @@ import { sql } from 'kysely';
 import type {
     CreateLinkParam,
     CreateTaskParam,
+    UpdateTaskParam,
     GetNeighbourhoodParam,
     NeighbourRecord,
     PaginationParams,
@@ -641,4 +642,61 @@ export const getNeighbourhood = async (
         nextCursor,
         prevCursor,
     };
+};
+
+export const updateTaskQuery = async (data: UpdateTaskParam): Promise<ProjectTask> => {
+    const result = await sql<ProjectTask>`
+        WITH auth_check AS (
+            SELECT p.id FROM project_task t
+            JOIN project p ON t.fk_project_id = p.id
+            LEFT JOIN project_member pm ON pm.fk_project_id = p.id
+            WHERE t.id = ${data.taskId}::uuid AND (p.fk_user_id = ${data.userId} OR pm.fk_user_id = ${data.userId})
+            LIMIT 1
+        ),
+        updated_task AS (
+            UPDATE project_task
+            SET 
+                title = COALESCE(${data.title}, title),
+                description = COALESCE(${data.description}, description),
+                status = COALESCE(${data.status}, status),
+                updated_by = ${data.userId},
+                updated_at = NOW(),
+                version = version + 1
+            WHERE id = ${data.taskId}::uuid
+              AND EXISTS (SELECT 1 FROM auth_check)
+            RETURNING *
+        ),
+        inserted_outbox AS (
+            INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
+            SELECT 'project.task.updated',
+                   id::text,
+                   jsonb_build_object(
+                       'taskId', id,
+                       'projectId', fk_project_id,
+                       'userId', updated_by,
+                       'title', title,
+                       'status', status
+                   )
+            FROM updated_task
+        )
+        SELECT 
+            id,
+            fk_project_id AS "projectId",
+            fk_team_id AS "teamId",
+            fk_member_id AS "memberId",
+            title,
+            description,
+            status,
+            version,
+            last_event_id AS "lastEventId",
+            created_by AS "createdBy",
+            updated_by AS "updatedBy",
+            created_at AS "createdAt",
+            updated_at AS "updatedAt"
+        FROM updated_task
+    `.execute(db);
+
+    const task = result.rows[0];
+    if (!task) throw new Error('Unauthorized or failed to update task');
+    return task;
 };

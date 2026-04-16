@@ -118,5 +118,21 @@ extend type Mutation {
     status: String
   ): ProjectTask!
 
+  updateTask(
+    taskId: ID!
+    title: String
+    description: String
+    status: String
+  ): ProjectTask!
+
   deleteTask(taskId: ID!): ID!
+
+  createTaskLink(
+    projectId: ID!
+    sourceTaskId: ID!
+    targetTaskId: ID!
+    label: String!
+  ): TaskLink!
+
+  deleteTaskLink(linkId: ID!): ID!
 }

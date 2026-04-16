@@ -10,6 +10,7 @@ import type {
     TaskLink,
     TaskNeighbourhoodResult,
     TaskService,
+    UpdateTaskParam,
 } from '../TaskService.ts';
 import {
     deleteLinkQuery,
@@ -20,6 +21,7 @@ import {
     getTasksPage,
     insertLink,
     insertTask,
+    updateTaskQuery,
 } from './TaskQueries.ts';
 
 export class TaskServiceImpl implements TaskService {
@@ -29,6 +31,10 @@ export class TaskServiceImpl implements TaskService {
 
     async createLink(data: CreateLinkParam): Promise<TaskLink> {
         return await insertLink(data);
+    }
+
+    async updateTask(data: UpdateTaskParam): Promise<ProjectTask> {
+        return await updateTaskQuery(data);
     }
 
     async deleteTask(userId: string, taskId: string): Promise<void> {

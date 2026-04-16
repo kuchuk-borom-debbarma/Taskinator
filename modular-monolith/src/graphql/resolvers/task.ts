@@ -156,10 +156,43 @@ export const taskResolvers = {
                 status,
             });
         },
+        updateTask: async (
+            _: any,
+            { taskId, title, description, status }: any,
+            context: GraphQLContext,
+        ) => {
+            if (!context.userId) throw new Error('Unauthorized');
+            return taskService.updateTask({
+                userId: context.userId,
+                taskId,
+                title,
+                description,
+                status,
+            });
+        },
         deleteTask: async (_: any, { taskId }: any, context: GraphQLContext) => {
             if (!context.userId) throw new Error('Unauthorized');
             await taskService.deleteTask(context.userId, taskId);
             return taskId;
+        },
+        createTaskLink: async (
+            _: any,
+            { projectId, sourceTaskId, targetTaskId, label }: any,
+            context: GraphQLContext,
+        ) => {
+            if (!context.userId) throw new Error('Unauthorized');
+            return taskService.createLink({
+                userId: context.userId,
+                projectId,
+                sourceTaskId,
+                targetTaskId,
+                label,
+            });
+        },
+        deleteTaskLink: async (_: any, { linkId }: any, context: GraphQLContext) => {
+            if (!context.userId) throw new Error('Unauthorized');
+            await taskService.deleteLink(context.userId, linkId);
+            return linkId;
         },
     },
 };
