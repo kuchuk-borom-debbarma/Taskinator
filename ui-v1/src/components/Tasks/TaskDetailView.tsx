@@ -98,18 +98,6 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
               </div>
             </section>
 
-            {/* Task Link Graph Section */}
-            <section className="flex flex-col gap-4 w-full overflow-hidden">
-              <div className="flex justify-between items-center">
-                <h3 className="text-[11px] font-bold text-text-dim uppercase tracking-widest">
-                  Task Link Graph
-                </h3>
-                <span className="text-[10px] text-text-dim font-medium px-2 py-0.5 bg-bg-secondary rounded">Link Context</span>
-              </div>
-              <div className="border border-border-notion rounded-2xl overflow-hidden bg-bg-secondary shadow-sm w-full">
-                {neighbourhood && <TaskDiscoveryTree neighbourhood={neighbourhood} />}
-              </div>
-            </section>
           </div>
 
           <aside className="flex flex-col gap-10 lg:sticky lg:top-10">
@@ -134,6 +122,28 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
             </section>
           </aside>
         </div>
+      </div>
+
+      {/* Strategic Lineage Section (Neural Orchard) - FULL WIDTH */}
+      <section className="w-full py-16 bg-white/40 border-y border-border-notion/50 mt-8">
+        <div className="max-w-6xl mx-auto px-6 mb-10">
+          <div className="flex flex-col gap-1">
+            <h3 className="text-[14px] font-extrabold text-text-notion uppercase tracking-widest">
+              Strategic Lineage
+            </h3>
+            <p className="text-[11px] text-text-dim font-medium">Deep dependency discovery across project depths</p>
+          </div>
+        </div>
+        
+        <div className="w-full overflow-x-auto pb-4 custom-scrollbar">
+          <div className="min-w-fit">
+            {neighbourhood && <TaskDiscoveryTree neighbourhood={neighbourhood} />}
+          </div>
+        </div>
+      </section>
+
+      <div className="w-full max-w-6xl px-6 py-10">
+        {/* Optional footer space */}
       </div>
     </div>
   );
