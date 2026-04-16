@@ -163,7 +163,6 @@ export const insertLink = async (data: CreateLinkParam): Promise<TaskLink> => {
 };
 
 export const deleteTaskQuery = async (userId: string, taskId: string): Promise<void> => {
-    // Basic delete for now. Transitive closure cleanup is non-trivial.
     await sql`
         WITH auth_check AS (
             SELECT p.id FROM project_task t
@@ -172,13 +171,33 @@ export const deleteTaskQuery = async (userId: string, taskId: string): Promise<v
             WHERE t.id = ${taskId}::uuid AND (p.fk_user_id = ${userId} OR pm.fk_user_id = ${userId})
             LIMIT 1
         ),
+        links_being_pruned AS (
+            SELECT id, fk_project_id, source_task_id, target_task_id 
+            FROM task_link 
+            WHERE (source_task_id = ${taskId}::uuid OR target_task_id = ${taskId}::uuid)
+              AND EXISTS (SELECT 1 FROM auth_check)
+        ),
         deleted_task AS (
             DELETE FROM project_task
             WHERE id = ${taskId}::uuid
               AND EXISTS (SELECT 1 FROM auth_check)
             RETURNING *
         ),
-        inserted_outbox AS (
+        -- Emit link deletion events first to trigger reachability cleanup
+        inserted_link_outbox AS (
+            INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
+            SELECT 'project.task_link.deleted',
+                   id::text,
+                   jsonb_build_object(
+                       'linkId', id,
+                       'projectId', fk_project_id,
+                       'sourceTaskId', source_task_id,
+                       'targetTaskId', target_task_id,
+                       'userId', ${userId}
+                   )
+            FROM links_being_pruned
+        ),
+        inserted_task_outbox AS (
             INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
             SELECT 'project.task.deleted',
                    id::text,
@@ -215,10 +234,55 @@ export const deleteLinkQuery = async (userId: string, linkId: string): Promise<v
                    jsonb_build_object(
                        'linkId', id,
                        'projectId', fk_project_id,
+                       'sourceTaskId', source_task_id,
+                       'targetTaskId', target_task_id,
                        'userId', ${userId}
                    )
             FROM deleted_link
         )
         SELECT 1 FROM deleted_link
     `.execute(db);
+};
+
+export const decrementLinkReachability = async (params: {
+    projectId: string;
+    sourceTaskId: string;
+    targetTaskId: string;
+}): Promise<void> => {
+    await db.transaction().execute(async (trx) => {
+        // 1. Decrement path counts for all affected transitive pairs
+        await sql`
+            WITH ancestors AS (
+                SELECT ancestor_task_id as id, path_count FROM task_reachability 
+                WHERE descendant_task_id = ${params.sourceTaskId}::uuid 
+                  AND fk_project_id = ${params.projectId}::uuid
+                UNION ALL
+                SELECT ${params.sourceTaskId}::uuid as id, 1 as path_count
+            ),
+            descendants AS (
+                SELECT descendant_task_id as id, path_count FROM task_reachability 
+                WHERE ancestor_task_id = ${params.targetTaskId}::uuid 
+                  AND fk_project_id = ${params.projectId}::uuid
+                UNION ALL
+                SELECT ${params.targetTaskId}::uuid as id, 1 as path_count
+            ),
+            to_decrement AS (
+                SELECT a.id as anc, d.id as desc, (a.path_count * d.path_count) as amount
+                FROM ancestors a, descendants d
+            )
+            UPDATE task_reachability tr
+            SET path_count = tr.path_count - td.amount
+            FROM to_decrement td
+            WHERE tr.fk_project_id = ${params.projectId}::uuid
+              AND tr.ancestor_task_id = td.anc
+              AND tr.descendant_task_id = td.desc
+        `.execute(trx);
+
+        // 2. Remove rows where path_count is zero or negative (partition key as safety)
+        await sql`
+            DELETE FROM task_reachability 
+            WHERE path_count <= 0 
+              AND fk_project_id = ${params.projectId}::uuid
+        `.execute(trx);
+    });
 };

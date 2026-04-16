@@ -3,6 +3,7 @@ export const KAFKA_TOPICS = {
     PROJECT_MEMBER: 'project-member-events',
     PROJECT_TEAM: 'project-team-events',
     PROJECT_TEAM_MEMBER: 'project-team-member-events',
+    PROJECT_TASK: 'project-task-events',
     AUTH: 'auth-events',
     NOTIFICATION: 'notification-events',
     AUTOMATION: 'automation-events',
@@ -27,6 +28,14 @@ export const KAFKA_EVENTS = {
         ADDED: 'project.team.member.added',
         DELETED: 'project.team.member.deleted',
     },
+    PROJECT_TASK: {
+        CREATED: 'project.task.created',
+        DELETED: 'project.task.deleted',
+    },
+    PROJECT_TASK_LINK: {
+        CREATED: 'project.task_link.created',
+        DELETED: 'project.task_link.deleted',
+    },
     AUTH: {
         SIGNUP_STARTED: 'auth.signup.started',
         USER_CREATED: 'auth.user.created',
@@ -50,6 +59,10 @@ export const EVENT_TO_TOPIC: Record<string, string> = {
     'project.team.deleted': KAFKA_TOPICS.PROJECT_TEAM,
     'project.team.member.added': KAFKA_TOPICS.PROJECT_TEAM_MEMBER,
     'project.team.member.deleted': KAFKA_TOPICS.PROJECT_TEAM_MEMBER,
+    'project.task.created': KAFKA_TOPICS.PROJECT_TASK,
+    'project.task.deleted': KAFKA_TOPICS.PROJECT_TASK,
+    'project.task_link.created': KAFKA_TOPICS.PROJECT_TASK,
+    'project.task_link.deleted': KAFKA_TOPICS.PROJECT_TASK,
     'auth.signup.started': KAFKA_TOPICS.AUTH,
     'auth.user.created': KAFKA_TOPICS.AUTH,
     'notification.requested': KAFKA_TOPICS.NOTIFICATION,
