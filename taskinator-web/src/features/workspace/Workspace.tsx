@@ -6,7 +6,8 @@ import {
   Trash2, 
   Users2, 
   AlertTriangle,
-  Zap
+  Zap,
+  Link
 } from 'lucide-react';
 import { ProjectSidebar } from '../../components/ProjectSidebar';
 import { TaskDrillView } from '../../components/TaskDrillView';
@@ -20,13 +21,16 @@ import { UserSearchDropdown } from '../../components/UserSearchDropdown';
 import { WorkspaceLayout } from '../../layouts/WorkspaceLayout';
 import { ProjectDashboard } from './ProjectDashboard';
 import { AutomationBuilderModal, type AutomationRule } from '../../components/AutomationBuilderModal';
+import { RelationshipCreator } from '../../components/RelationshipCreator';
+import { RelationshipPill } from '../../components/RelationshipPill';
 import { useRealtime } from '../../hooks/useRealtime.ts';
 import type { JWTPayload } from '../../types';
 import { gqlClient } from '../../graphql/client';
 import {
   GET_PROJECTS, GET_WORKSPACE_DATA, GET_PROJECT_MEMBERS, GET_TEAM_MEMBERS, GET_UNREAD_NOTIFICATIONS_COUNT, GET_AUTOMATIONS,
   CREATE_PROJECT, UPDATE_PROJECT, DELETE_PROJECTS, CREATE_TEAM, DELETE_TEAMS, ADD_PROJECT_MEMBERS, REMOVE_PROJECT_MEMBERS, ADD_TEAM_MEMBERS, REMOVE_TEAM_MEMBERS,
-  CREATE_TASK, UPDATE_TASKS, DELETE_TASKS, ADD_AUTOMATION, DELETE_AUTOMATION, UPDATE_AUTOMATION
+  CREATE_TASK, UPDATE_TASKS, DELETE_TASKS, ADD_AUTOMATION, DELETE_AUTOMATION, UPDATE_AUTOMATION,
+  CREATE_TASK_LINK, DELETE_TASK_LINK
 } from '../../graphql/operations';
 import { cn } from '../../utils/cn';
 
@@ -57,9 +61,9 @@ export const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
   const [isCreateTaskOpen, setIsCreateTaskOpen] = useState(false);
   const [taskTitle, setTaskTitle] = useState('');
   const [taskDescription, setTaskDescription] = useState('');
-  const [parentTaskIdForNew, setParentTaskIdForNew] = useState<string>();
 
   const [isAutomationModalOpen, setIsAutomationModalOpen] = useState(false);
+  const [isLinkingOpen, setIsLinkingOpen] = useState(false);
   const [editAutomationId, setEditAutomationId] = useState<string | null>(null);
   const [editAutomationRule, setEditAutomationRule] = useState<AutomationRule>();
 
@@ -151,13 +155,27 @@ export const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
   });
 
   const createTaskMutation = useMutation({
-    mutationFn: (data: { title: string; description?: string; parentTaskId?: string }) =>
+    mutationFn: (data: { title: string; description?: string }) =>
       gqlClient.request<any>(CREATE_TASK, {
         projectId: selectedProjectId!,
         title: data.title,
         description: data.description || '',
-        parentTaskId: data.parentTaskId,
       }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['workspace', selectedProjectId, userId] }),
+  });
+
+  const createTaskLinkMutation = useMutation({
+    mutationFn: (data: { fromTaskId: string; toTaskId: string; linkType: string }) =>
+      gqlClient.request<any>(CREATE_TASK_LINK, {
+        projectId: selectedProjectId!,
+        ...data
+      }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['workspace', selectedProjectId, userId] }),
+  });
+
+  const deleteTaskLinkMutation = useMutation({
+    mutationFn: (data: { projectId: string; linkId: string }) =>
+      gqlClient.request<any>(DELETE_TASK_LINK, data),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['workspace', selectedProjectId, userId] }),
   });
 
@@ -321,7 +339,6 @@ export const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
               <button
                 onClick={() => {
                   setTaskTitle('');
-                  setParentTaskIdForNew(focusedTaskId || undefined);
                   setIsCreateTaskOpen(true);
                 }}
                 className="bg-primary hover:bg-indigo-500 text-white text-[13px] font-black px-8 py-3 rounded-full transition-all shadow-[0_10px_40px_rgb(99,102,241,0.3)] hover:-translate-y-1 active:scale-95 flex items-center gap-3"
@@ -349,9 +366,8 @@ export const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
                  onFocusTask={setFocusedTaskId}
                  onOpenDetails={setSelectedTaskId}
                  onToggleStatus={(task) => updateTaskMutation.mutate({ id: task.id, version: task.version, status: task.status === 'DONE' ? 'TODO' : 'DONE' })}
-                 onCreateSubtask={(pid) => {
+                 onCreateTask={() => {
                    setTaskTitle('');
-                   setParentTaskIdForNew(pid);
                    setIsCreateTaskOpen(true);
                  }}
                />
@@ -581,6 +597,67 @@ export const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
                  </div>
               </div>
 
+              {/* Relationship Management Section */}
+              <div className="space-y-4">
+                  <div className="flex items-center justify-between pl-1">
+                      <h4 className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
+                        <Link size={12} className="text-primary" />
+                        Neural Connections
+                      </h4>
+                      <button 
+                        onClick={() => setIsLinkingOpen(!isLinkingOpen)}
+                        className="text-[10px] font-black uppercase text-primary hover:text-indigo-400 transition-all"
+                      >
+                        {isLinkingOpen ? '[ Close ]' : '[ + Forge Link ]'}
+                      </button>
+                  </div>
+
+                  {isLinkingOpen && (
+                      <RelationshipCreator 
+                        tasks={projectTasks}
+                        currentTaskId={selectedTask.id}
+                        onCancel={() => setIsLinkingOpen(false)}
+                        onLink={(toId: string, label: string) => {
+                            createTaskLinkMutation.mutate({ fromTaskId: selectedTask.id, toTaskId: toId, linkType: label });
+                            setIsLinkingOpen(false);
+                        }}
+                      />
+                  )}
+
+                  <div className="space-y-2">
+                      {selectedTask.links?.map((link: any) => (
+                          <div key={link.id} className="glass p-3 rounded-xl flex items-center justify-between border-white/[0.02] group">
+                               <div className="flex items-center gap-3 flex-1 min-w-0">
+                                    <RelationshipPill label={link.type} size="sm" />
+                                    <span className="text-xs font-bold truncate text-foreground/80">{link.toTask?.title}</span>
+                               </div>
+                               <button 
+                                 onClick={() => {
+                                    setConfirmModal({
+                                        isOpen: true,
+                                        title: 'Sever Connection',
+                                        message: `Are you sure you want to delete the '${link.type}' link to '${link.toTask?.title}'?`,
+                                        variant: 'danger',
+                                        onConfirm: () => {
+                                            deleteTaskLinkMutation.mutate({ projectId: selectedProjectId!, linkId: link.id });
+                                            setConfirmModal(prev => ({ ...prev, isOpen: false }));
+                                        }
+                                    });
+                                 }}
+                                 className="opacity-0 group-hover:opacity-100 p-1 text-muted-foreground hover:text-red-500 transition-all"
+                               >
+                                    <Trash2 size={14} />
+                               </button>
+                          </div>
+                      ))}
+                      {(!selectedTask.links || selectedTask.links.length === 0) && !isLinkingOpen && (
+                          <div className="text-xs text-muted-foreground/30 italic p-2 text-center border-2 border-dashed border-white/5 rounded-2xl">
+                             Standalone task. No outgoing links.
+                          </div>
+                      )}
+                  </div>
+              </div>
+
               <div className="space-y-4">
                  <h4 className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2 pl-1">
                     <Zap size={12} className="text-amber-500" />
@@ -706,7 +783,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
           <button 
             disabled={!taskTitle.trim()}
             onClick={() => {
-              createTaskMutation.mutate({ title: taskTitle, description: taskDescription, parentTaskId: parentTaskIdForNew });
+              createTaskMutation.mutate({ title: taskTitle, description: taskDescription });
               setIsCreateTaskOpen(false);
             }}
             className="px-6 py-2.5 bg-primary text-white rounded-xl text-[12px] font-bold active:scale-95 transition-transform"

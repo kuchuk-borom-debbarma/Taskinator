@@ -76,7 +76,7 @@ const dispatchAction = async (
     );
 
     if (taskIds.length === 0) {
-        // Target resolved to nothing (e.g. @parent on a root task) — skip silently
+        // Target resolved to nothing — skip silently
         return;
     }
 

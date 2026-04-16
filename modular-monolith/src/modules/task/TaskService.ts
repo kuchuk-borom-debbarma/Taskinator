@@ -5,11 +5,9 @@ export type ProjectTask = {
     projectId: string;
     teamId: string | null;
     memberId: string | null;
-    parentTaskId: string | null;
     title: string;
     description: string;
     status: string;
-    materializedPath: string;
     version: number;
     lastEventId: string | null;
     createdBy: string;
@@ -23,7 +21,7 @@ export type TaskLink = {
     projectId: string;
     fromTaskId: string;
     toTaskId: string;
-    linkType: string;
+    type: string;
     createdAt: Date;
 };
 
@@ -45,7 +43,6 @@ export interface CreateTaskParam {
     description: string;
     teamId?: string;
     memberId?: string;
-    parentTaskId?: string;
     initialStatus: string;
 }
 
@@ -67,7 +64,6 @@ export interface UpdateTasksParam {
         status?: string;
         teamId?: string;
         memberId?: string;
-        parentTaskId?: string;
     }[];
 }
 

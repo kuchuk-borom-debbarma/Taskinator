@@ -56,11 +56,9 @@ CREATE TABLE project_task (
     fk_project_id UUID NOT NULL,
     fk_team_id UUID,
     fk_member_id TEXT, -- References user_id who is assigned
-    fk_parent_task_id UUID,
     title TEXT NOT NULL,
     description TEXT NOT NULL DEFAULT '',
     status TEXT NOT NULL DEFAULT 'TODO',
-    materialized_path TEXT NOT NULL DEFAULT '',
     last_event_id UUID,
     version INTEGER NOT NULL DEFAULT 1,
     created_by TEXT NOT NULL,
@@ -80,7 +78,6 @@ CREATE TABLE processed_event (
 -- Indexes for performance (10k RPS optimization)
 CREATE INDEX idx_project_user ON project(fk_user_id);
 CREATE INDEX idx_project_member_user ON project_member(fk_user_id);
-CREATE INDEX idx_project_task_path ON project_task(materialized_path);
 CREATE INDEX idx_project_task_project ON project_task(fk_project_id);
 
 

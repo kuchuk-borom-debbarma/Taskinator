@@ -9,8 +9,6 @@ type Task {
     team: Team
     memberId: ID
     assignee: User
-    parentTaskId: ID
-    materializedPath: String!
     createdBy: String!
     creator: User
     createdAt: String!
@@ -25,7 +23,8 @@ type TaskLink {
     id: ID!
     fromTaskId: ID!
     toTaskId: ID!
-    linkType: String!
+    toTask: Task
+    type: String!
     createdAt: String!
 }
 
@@ -72,7 +71,6 @@ input UpdateTaskInput {
     description: String
     teamId: ID
     memberId: ID
-    parentTaskId: ID
 }
 
 extend type Query {
@@ -85,7 +83,6 @@ extend type Mutation {
         title: String!
         description: String!
         teamId: ID
-        parentTaskId: ID
     ): Task
     updateTasks(projectId: ID!, tasks: [UpdateTaskInput!]!): [ID]
     deleteTasks(projectId: ID!, taskIds: [ID!]!): [ID]

@@ -15,57 +15,27 @@ export const automationResolvers = {
                 : t.updatedAt,
     },
     Query: {
-        automations: async (_: any, args: any, context: GraphQLContext) => {
-            const { automations, nextCursor } =
-                await automationService.getAutomationsByFilter({
-                    ...args,
-                    limit: args.first,
-                    cursor: args.after,
-                });
+        automations: async () => {
             return {
-                edges: automations.map((t) => ({ node: t, cursor: t.id })),
+                edges: [],
                 pageInfo: {
-                    hasNextPage: !!nextCursor,
-                    endCursor: nextCursor,
+                    hasNextPage: false,
+                    endCursor: null,
                     hasPreviousPage: false,
                 },
             };
         },
     },
     Mutation: {
-        addAutomation: async (_: any, args: any, context: GraphQLContext) => {
-            if (!context.userId) throw new Error('Unauthorized');
-            const automation = await automationService.addAutomation({
-                ...args,
-                userId: context.userId,
-                rules: JSON.parse(args.rules),
-            });
-            return { ...automation, rules: JSON.stringify(automation.rules) };
+        addAutomation: async () => {
+            return null;
         },
-        updateAutomation: async (
-            _: any,
-            args: any,
-            context: GraphQLContext,
-        ) => {
-            if (!context.userId) throw new Error('Unauthorized');
-            const automation = await automationService.updateAutomation({
-                ...args,
-                userId: context.userId,
-                rules: args.rules ? JSON.parse(args.rules) : undefined,
-            });
-            return { ...automation, rules: JSON.stringify(automation.rules) };
+        updateAutomation: async () => {
+            return null;
         },
-        deleteAutomation: async (
-            _: any,
-            { automationId }: any,
-            context: GraphQLContext,
-        ) => {
-            if (!context.userId) throw new Error('Unauthorized');
-            await automationService.deleteAutomation({
-                userId: context.userId,
-                automationId,
-            });
+        deleteAutomation: async () => {
             return true;
         },
     },
 };
+

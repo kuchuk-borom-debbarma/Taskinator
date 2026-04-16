@@ -79,7 +79,6 @@ export const taskApi = {
         title: string; 
         description: string; 
         initialStatus: string;
-        parentTaskId?: string;
         teamId?: string;
         memberId?: string;
     }) => 

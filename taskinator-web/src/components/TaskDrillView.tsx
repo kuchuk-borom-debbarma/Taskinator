@@ -1,17 +1,22 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { CheckCircle2, Circle, ChevronRight, Folder, MoreVertical, Plus, Zap, Users2, User, Copy } from 'lucide-react';
+import { 
+  CheckCircle2, 
+  Circle, 
+  ChevronRight, 
+  ChevronLeft,
+  MoreVertical, 
+  Plus, 
+  Share2,
+  Users2, 
+  User, 
+  Target,
+  ArrowRight
+} from 'lucide-react';
 import { cn } from '../utils/cn';
-
-interface Task {
-  id: string;
-  title: string;
-  status: string;
-  parentTaskId?: string | null;
-  version: number;
-  team?: { id: string; name: string } | null;
-  assignee?: { id: string; username: string } | null;
-}
+import { RelationshipPill } from './RelationshipPill';
+import { RelationshipLines } from './RelationshipLines';
+import type { Task } from '../types';
 
 interface TaskDrillViewProps {
   tasks: Task[];
@@ -19,7 +24,7 @@ interface TaskDrillViewProps {
   onFocusTask: (taskId: string | null) => void;
   onOpenDetails: (taskId: string) => void;
   onToggleStatus: (task: Task) => void;
-  onCreateSubtask: (parentTaskId?: string) => void;
+  onCreateTask: () => void;
 }
 
 export const TaskDrillView: React.FC<TaskDrillViewProps> = ({
@@ -28,189 +33,240 @@ export const TaskDrillView: React.FC<TaskDrillViewProps> = ({
   onFocusTask,
   onOpenDetails,
   onToggleStatus,
-  onCreateSubtask
+  onCreateTask
 }) => {
-  // Build breadcrumbs
-  const breadcrumbs = useMemo(() => {
-    const crumbs: Task[] = [];
-    let currentId = focusedTaskId;
-    while (currentId) {
-      const task = tasks.find(t => t.id === currentId);
-      if (task) {
-        crumbs.unshift(task);
-        currentId = task.parentTaskId || null;
-      } else {
-        break;
-      }
-    }
-    return crumbs;
+  // 1. Resolve Focal Task
+  const focalTask = useMemo(() => 
+    tasks.find(t => t.id === focusedTaskId) || null
+  , [tasks, focusedTaskId]);
+
+  // 2. Resolve Inbound Links (Who links TO focalTask?)
+  const inboundLinks = useMemo(() => {
+    if (!focusedTaskId) return [];
+    return tasks.filter(t => 
+      t.links?.some(l => l.toTaskId === focusedTaskId)
+    ).map(t => ({
+        task: t,
+        linkType: t.links!.find(l => l.toTaskId === focusedTaskId)!.type
+    }));
   }, [tasks, focusedTaskId]);
 
-  // Find visible tasks (children of focused task, or roots if none focused)
-  const visibleTasks = useMemo(() => {
-    return tasks.filter(t => (t.parentTaskId || null) === focusedTaskId);
-  }, [tasks, focusedTaskId]);
+  // 3. Resolve Outbound Links (Who does focalTask link TO?)
+  const outboundLinks = useMemo(() => {
+    if (!focalTask || !focalTask.links) return [];
+    return focalTask.links.map(link => ({
+        task: tasks.find(t => t.id === link.toTaskId),
+        linkType: link.type,
+        linkId: link.id
+    })).filter(l => !!l.task);
+  }, [tasks, focalTask]);
 
-  // Check which children have subtasks for the sub-folder icon
-  const hasChildren = (taskId: string) => {
-    return tasks.some(t => t.parentTaskId === taskId);
-  };
+  // 4. Coordinates for SVG lines (Simplified for now - can be enhanced with refs)
+  const connections = useMemo(() => {
+    // This is a placeholder for dynamic coordinate calculation
+    return [];
+  }, [inboundLinks, outboundLinks]);
+
+  if (!focusedTaskId || !focalTask) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full max-w-5xl mx-auto px-10">
+        <motion.div 
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="text-center"
+        >
+            <div className="w-20 h-20 rounded-3xl bg-primary/10 flex items-center justify-center mx-auto mb-6 text-primary">
+                <Target size={40} />
+            </div>
+            <h2 className="text-3xl font-black mb-2">Project Neural Map</h2>
+            <p className="text-muted-foreground mb-8">Select a task to anchor your focus and explore its network.</p>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full max-w-2xl">
+                {tasks.slice(0, 6).map(task => (
+                    <button
+                        key={task.id}
+                        onClick={() => onFocusTask(task.id)}
+                        className="glass p-4 rounded-2xl border border-white/5 hover:border-primary/30 transition-all text-left group"
+                    >
+                        <div className="font-bold truncate group-hover:text-primary transition-colors">{task.title}</div>
+                        <div className="text-[10px] text-muted-foreground mt-1 uppercase tracking-widest">
+                            {task.links?.length || 0} connections
+                        </div>
+                    </button>
+                ))}
+            </div>
+            
+            <button 
+                onClick={onCreateTask}
+                className="mt-10 px-6 py-3 bg-primary text-white rounded-xl font-bold hover:scale-105 transition-all flex items-center gap-2 mx-auto"
+            >
+                <Plus size={18} /> Add Anchor Task
+            </button>
+        </motion.div>
+      </div>
+    );
+  }
 
   return (
-    <div className="flex flex-col h-full z-10 w-full max-w-5xl mx-auto px-10">
-      {/* Breadcrumbs Navigation */}
-      <div className="flex flex-wrap items-center gap-2 mb-6 text-[13px] font-bold text-muted-foreground/60 w-full">
-        <button 
-          onClick={() => onFocusTask(null)}
-          className={cn(
-            "hover:text-primary transition-colors",
-            !focusedTaskId && "text-primary"
-          )}
-        >
-          Root Tasks
-        </button>
-        {breadcrumbs.map(crumb => (
-          <React.Fragment key={crumb.id}>
-            <ChevronRight size={14} className="opacity-50" />
+    <div className="relative flex flex-col h-full w-full max-w-[1400px] mx-auto overflow-hidden">
+      
+      {/* Neural Header */}
+      <div className="flex items-center justify-between px-10 py-6 shrink-0 border-b border-white/5 bg-background/50 backdrop-blur-md z-20">
+         <div className="flex items-center gap-6">
             <button 
-              onClick={() => onFocusTask(crumb.id)}
-              className={cn(
-                "hover:text-primary transition-colors max-w-[200px] truncate",
-                focusedTaskId === crumb.id && "text-primary"
-              )}
+                onClick={() => onFocusTask(null)}
+                className="p-2 rounded-xl hover:bg-white/5 text-muted-foreground transition-all"
             >
-              {crumb.title}
+                <ChevronLeft size={20} />
             </button>
-          </React.Fragment>
-        ))}
-      </div>
-
-      <div className="flex items-center justify-between mb-8 w-full">
-         <div>
-            <h3 className="text-2xl font-black">{breadcrumbs.length > 0 ? breadcrumbs[breadcrumbs.length - 1].title : 'All Root Tasks'}</h3>
-            <p className="text-sm text-muted-foreground mt-1">{visibleTasks.length} sub-tasks enclosed</p>
+            <div>
+                <h1 className="text-xl font-black tracking-tight">{focalTask.title}</h1>
+                <div className="flex items-center gap-3 mt-1">
+                    <RelationshipPill label={focalTask.status} />
+                    <span className="text-[10px] text-muted-foreground/40 uppercase font-black tracking-tighter">
+                        Focused Task Node
+                    </span>
+                </div>
+            </div>
+         </div>
+         <div className="flex items-center gap-2">
+            <button onClick={() => onOpenDetails(focalTask.id)} className="p-2 hover:bg-white/5 rounded-xl text-muted-foreground transition-all">
+                <MoreVertical size={20} />
+            </button>
          </div>
       </div>
 
-      {/* Task List */}
-      <div className="flex-1 overflow-y-auto space-y-2 pb-20 custom-scrollbar pr-4 w-full">
-        <AnimatePresence mode="popLayout">
-          {visibleTasks.map(task => (
-            <motion.div
-              layout
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              key={task.id}
-              className={cn(
-                "group flex items-center justify-between p-4 rounded-2xl border transition-all duration-300 w-full",
-                task.status === 'DONE' 
-                  ? "bg-white/[0.01] border-transparent opacity-60" 
-                  : "glass hover:border-white/10 border-white/5"
-              )}
-            >
-               <div className="flex items-center gap-4 flex-1 w-0 min-w-0">
-                  <button 
-                    onClick={() => onToggleStatus(task)}
-                    className="p-1 hover:scale-110 transition-transform shrink-0"
-                  >
-                    {task.status === 'DONE' ? <CheckCircle2 size={24} className="text-primary" /> : <Circle size={24} className="text-muted-foreground/40" />}
-                  </button>
+      <div className="flex-1 relative flex overflow-hidden">
+        {/* SVG Plane */}
+        <RelationshipLines connections={connections} />
 
-                  <div className="flex flex-col flex-1 w-0 min-w-0" onClick={() => onOpenDetails(task.id)}>
-                     <div className="flex items-center gap-2">
-                       <span className={cn(
-                         "text-sm font-bold truncate transition-colors cursor-pointer text-left",
-                         task.status === 'DONE' ? "line-through text-muted-foreground/60" : "text-foreground hover:text-primary"
-                       )}>
-                          {task.title}
-                       </span>
-                       <button 
-                         onClick={(e) => {
-                           e.stopPropagation();
-                           navigator.clipboard.writeText(task.id);
-                         }}
-                         className="opacity-0 group-hover:opacity-100 p-1 hover:bg-white/10 rounded transition-all text-muted-foreground hover:text-white"
-                         title="Copy Task ID"
-                       >
-                         <Copy size={12} />
-                       </button>
-                     </div>
-                     
-                     <div className="flex items-center gap-2 mt-2 flex-wrap">
-                        {/* Status Badge */}
-                        <div className={cn("px-2 py-0.5 rounded-[6px] text-[10px] font-black uppercase tracking-widest border",
-                           task.status === 'DONE' ? "bg-primary/10 text-primary border-primary/20" :
-                           task.status === 'BLOCKED' ? "bg-red-500/10 text-red-500 border-red-500/20" :
-                           task.status === 'IN_PROGRESS' ? "bg-amber-500/10 text-amber-500 border-amber-500/20" :
-                           "bg-white/5 text-muted-foreground border-white/10"
-                        )}>
-                           {task.status === 'IN_PROGRESS' ? 'In Progress' : task.status}
+        <div className="flex h-full w-full divide-x divide-white/5 overflow-hidden">
+            
+            {/* LEFT: SOURCES (Inbound) */}
+            <div className="w-1/4 h-full flex flex-col bg-white/[0.01]">
+                <div className="p-6 border-b border-white/5 flex items-center gap-2 text-muted-foreground">
+                    <Share2 size={14} className="rotate-180" />
+                    <span className="text-[11px] font-black uppercase tracking-widest">Linked From</span>
+                </div>
+                <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
+                    {inboundLinks.map(({ task, linkType }) => (
+                        <motion.div 
+                            key={task.id}
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            className="glass p-4 rounded-2xl border border-white/5 hover:border-white/10 transition-all cursor-pointer group"
+                            onClick={() => onFocusTask(task.id)}
+                        >
+                            <RelationshipPill label={linkType} size="sm" className="mb-2" />
+                            <div className="text-sm font-bold truncate group-hover:text-primary transition-colors">{task.title}</div>
+                        </motion.div>
+                    ))}
+                    {inboundLinks.length === 0 && (
+                        <div className="h-full flex items-center justify-center text-center p-6 text-muted-foreground/20 italic text-sm">
+                            No incoming connections
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* CENTER: FOCUS (Active) */}
+            <div className="flex-1 h-full bg-white/[0.02] flex flex-col relative overflow-hidden">
+                <div className="p-10 flex-1 overflow-y-auto custom-scrollbar">
+                    <motion.div 
+                        key={focalTask.id}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="max-w-2xl mx-auto"
+                    >
+                        <div className="mb-8">
+                            <label className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/40 mb-2 block">Description</label>
+                            <div className="text-lg leading-relaxed text-foreground/80 font-medium">
+                                {focalTask.description || "No description provided."}
+                            </div>
                         </div>
 
-                        {/* Team Badge */}
-                        {task.team && (
-                          <div className="px-2 py-0.5 rounded-[6px] bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-[10px] font-bold flex items-center gap-1">
-                             <Users2 size={10} /> <span className="truncate max-w-[100px]">{task.team.name}</span>
-                          </div>
-                        )}
+                        <div className="grid grid-cols-2 gap-8 py-8 border-y border-white/5">
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/40 mb-2 block">Assigned To</label>
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 rounded-full bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-500">
+                                            <User size={16} />
+                                        </div>
+                                        <span className="font-bold">{focalTask.assignee?.username || 'Unassigned'}</span>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="text-[10px] uppercase font-black tracking-widest text-muted-foreground/40 mb-2 block">Team</label>
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-8 h-8 rounded-full bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-500">
+                                            <Users2 size={16} />
+                                        </div>
+                                        <span className="font-bold">{focalTask.team?.name || 'General Project'}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="flex flex-col justify-end items-end">
+                                <button 
+                                    onClick={() => onToggleStatus(focalTask)}
+                                    className={cn(
+                                        "px-6 py-3 rounded-2xl border font-black transition-all flex items-center gap-3",
+                                        focalTask.status === 'DONE' 
+                                            ? "bg-primary/10 border-primary/20 text-primary" 
+                                            : "bg-white/5 border-white/10 text-foreground hover:scale-105"
+                                    )}
+                                >
+                                    {focalTask.status === 'DONE' ? <CheckCircle2 size={24} /> : <Circle size={24} />}
+                                    {focalTask.status}
+                                </button>
+                            </div>
+                        </div>
 
-                        {/* Assignee Badge */}
-                        {task.assignee && (
-                          <div className="px-2 py-0.5 rounded-[6px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-bold flex items-center gap-1">
-                             <User size={10} /> <span className="truncate max-w-[80px]">{task.assignee.username}</span>
-                          </div>
-                        )}
+                        {/* Story/Transitive Summary (If needed in future) */}
+                    </motion.div>
+                </div>
+            </div>
 
-
-                     </div>
-                  </div>
-               </div>
-
-               <div className="flex items-center gap-2 pl-4 shrink-0">
-                  {hasChildren(task.id) && (
+            {/* RIGHT: TARGETS (Outbound) */}
+            <div className="w-1/4 h-full flex flex-col bg-white/[0.01]">
+                <div className="p-6 border-b border-white/5 flex items-center justify-between text-muted-foreground">
+                    <div className="flex items-center gap-2">
+                        <Share2 size={14} />
+                        <span className="text-[11px] font-black uppercase tracking-widest">Connects To</span>
+                    </div>
                     <button 
-                      onClick={(e) => { e.stopPropagation(); onFocusTask(task.id); }}
-                      className="px-3 py-1.5 rounded-lg bg-primary/5 text-primary text-[11px] font-bold flex items-center gap-1.5 hover:bg-primary hover:text-white transition-all mr-2"
+                        onClick={() => onOpenDetails(focalTask.id)} 
+                        className="p-1 hover:bg-primary/20 rounded-md text-primary transition-all"
+                        title="Add Relationship"
                     >
-                      <Folder size={12} />
-                      Sub-tasks
+                        <Plus size={16} />
                     </button>
-                  )}
-                  
-                  <button 
-                    onClick={(e) => { e.stopPropagation(); onFocusTask(task.id); }}
-                    className="p-2 text-muted-foreground hover:text-white hover:bg-white/5 rounded-lg transition-colors"
-                    title="Drill down"
-                  >
-                     <ChevronRight size={16} />
-                  </button>
+                </div>
+                <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
+                    {outboundLinks.map(({ task, linkType, linkId }) => (
+                        <motion.div 
+                            key={linkId}
+                            initial={{ opacity: 0, x: 10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            className="glass p-4 rounded-2xl border border-white/5 hover:border-white/10 transition-all cursor-pointer group"
+                            onClick={() => onFocusTask(task!.id)}
+                        >
+                            <RelationshipPill label={linkType} size="sm" className="mb-2" />
+                            <div className="flex items-center justify-between">
+                                <div className="text-sm font-bold truncate group-hover:text-primary transition-colors pr-2">{task!.title}</div>
+                                <ArrowRight size={14} className="text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+                            </div>
+                        </motion.div>
+                    ))}
+                    {outboundLinks.length === 0 && (
+                        <div className="h-full flex items-center justify-center text-center p-6 text-muted-foreground/20 italic text-sm">
+                            No outgoing connections
+                        </div>
+                    )}
+                </div>
+            </div>
 
-                  <button 
-                    onClick={(e) => { e.stopPropagation(); onOpenDetails(task.id); }}
-                    className="p-2 text-muted-foreground hover:text-white hover:bg-white/5 rounded-lg transition-colors"
-                  >
-                     <MoreVertical size={16} />
-                  </button>
-               </div>
-            </motion.div>
-          ))}
-        </AnimatePresence>
-
-        {visibleTasks.length === 0 && (
-          <div className="py-16 flex flex-col items-center justify-center border-2 border-dashed border-white/5 rounded-3xl w-full">
-             <div className="w-16 h-16 rounded-2xl bg-white/5 flex items-center justify-center mb-4">
-                <CheckCircle2 size={24} className="text-muted-foreground/30" />
-             </div>
-             <p className="text-sm font-bold text-muted-foreground">No tasks enclosed.</p>
-             <button 
-               onClick={() => onCreateSubtask(focusedTaskId || undefined)}
-               className="mt-6 flex items-center gap-2 text-[12px] font-bold text-primary hover:text-indigo-400 bg-primary/10 px-4 py-2 rounded-lg transition-all"
-             >
-                <Plus size={14} /> Add new task here
-             </button>
-          </div>
-        )}
+        </div>
       </div>
     </div>
   );

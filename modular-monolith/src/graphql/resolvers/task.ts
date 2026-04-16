@@ -38,6 +38,13 @@ export const taskResolvers = {
             return result.story;
         },
     },
+    TaskLink: {
+        toTask: (l: any, _: any, context: GraphQLContext) =>
+            context.loaders.task.load({
+                projectId: l.projectId,
+                taskId: l.toTaskId,
+            }),
+    },
     Query: {
         tasks: async (
             _: any,
@@ -67,8 +74,9 @@ export const taskResolvers = {
     Mutation: {
         createTask: async (_: any, args: any, context: GraphQLContext) => {
             if (!context.userId) throw new Error('Unauthorized');
+            const { parentTaskId, ...data } = args; // Purge legacy field if it somehow slips through
             return taskService.createTask({
-                ...args,
+                ...data,
                 userId: context.userId,
                 initialStatus: 'TODO',
             });

@@ -65,8 +65,6 @@ export const GET_TASKS = gql`
             id
             username
           }
-          parentTaskId
-          materializedPath
           version
           createdBy
           creator {
@@ -75,6 +73,20 @@ export const GET_TASKS = gql`
           }
           createdAt
           updatedAt
+          links {
+            id
+            type
+            toTaskId
+            toTask {
+              id
+              title
+              status
+            }
+          }
+          story {
+            pathTaskIds
+            pathLinkTypes
+          }
 
         }
         cursor
@@ -107,8 +119,6 @@ export const GET_WORKSPACE_DATA = gql`
             id
             username
           }
-          parentTaskId
-          materializedPath
           version
           createdBy
           creator {
@@ -117,6 +127,20 @@ export const GET_WORKSPACE_DATA = gql`
           }
           createdAt
           updatedAt
+          links {
+            id
+            type
+            toTaskId
+            toTask {
+              id
+              title
+              status
+            }
+          }
+          story {
+            pathTaskIds
+            pathLinkTypes
+          }
 
         }
         cursor
@@ -205,11 +229,23 @@ export const UPDATE_PROJECT = gql`
 `;
 
 export const CREATE_TASK = gql`
-  mutation CreateTask($projectId: ID!, $title: String!, $description: String!, $teamId: ID, $parentTaskId: ID) {
-    createTask(projectId: $projectId, title: $title, description: $description, teamId: $teamId, parentTaskId: $parentTaskId) {
+  mutation CreateTask($projectId: ID!, $title: String!, $description: String!, $teamId: ID) {
+    createTask(projectId: $projectId, title: $title, description: $description, teamId: $teamId) {
       id
       title
     }
+  }
+`;
+
+export const CREATE_TASK_LINK = gql`
+  mutation CreateTaskLink($projectId: ID!, $fromTaskId: ID!, $toTaskId: ID!, $linkType: String!) {
+    createTaskLink(projectId: $projectId, fromTaskId: $fromTaskId, toTaskId: $toTaskId, linkType: $linkType)
+  }
+`;
+
+export const DELETE_TASK_LINK = gql`
+  mutation DeleteTaskLink($projectId: ID!, $linkId: ID!) {
+    deleteTaskLink(projectId: $projectId, linkId: $linkId)
   }
 `;
 

@@ -11,13 +11,7 @@ export const insertTask = async (
     data: CreateTaskParam,
 ): Promise<ProjectTask> => {
     const result = await sql<ProjectTask>`
-        WITH parent_info AS (
-            SELECT materialized_path, id
-            FROM project_task
-            WHERE id = ${data.parentTaskId ?? null}::uuid
-              AND fk_project_id = ${data.projectId}::uuid
-        ),
-        auth_check AS (
+        WITH auth_check AS (
             SELECT 1 FROM project WHERE id = ${data.projectId}::uuid AND fk_user_id = ${data.userId}
             UNION ALL
             SELECT 1 FROM project_member WHERE fk_project_id = ${data.projectId}::uuid AND fk_user_id = ${data.userId}
@@ -27,29 +21,18 @@ export const insertTask = async (
             INSERT INTO project_task (fk_project_id,
                                       fk_team_id,
                                       fk_member_id,
-                                      fk_parent_task_id,
                                       title,
                                       description,
                                       status,
-                                      materialized_path,
                                       created_by,
                                       updated_by,
                                       created_at)
             SELECT ${data.projectId}::uuid,
                    ${data.teamId ?? null}::uuid,
                    ${data.memberId ?? null},
-                   ${data.parentTaskId ?? null}::uuid,
                    ${data.title ?? null},
                    ${data.description ?? null},
                    ${data.initialStatus ?? null},
-                   CASE
-                       WHEN ${data.parentTaskId ?? null}::text IS NOT NULL THEN
-                           (SELECT CASE
-                                       WHEN materialized_path = '' THEN id::text
-                                       ELSE materialized_path || '/' || id::text
-                                   END FROM parent_info)
-                       ELSE ''
-                   END,
                    ${data.userId},
                    ${data.userId},
                    ${getTimeString()}
@@ -64,8 +47,6 @@ export const insertTask = async (
               ))
               -- Rule: If team is provided, member must belong to that team
               AND (${data.memberId ?? null}::text IS NULL OR ${data.teamId ?? null}::text IS NULL OR EXISTS (SELECT 1 FROM project_team_member WHERE fk_user_id = ${data.memberId} AND fk_team_id = ${data.teamId}::uuid AND fk_project_id = ${data.projectId}::uuid))
-              -- Rule: Parent task must belong to the project
-              AND (${data.parentTaskId ?? null}::text IS NULL OR EXISTS (SELECT 1 FROM parent_info))
             RETURNING *
         ),
         inserted_outbox AS (
@@ -85,11 +66,9 @@ export const insertTask = async (
             fk_project_id AS "projectId",
             fk_team_id AS "teamId",
             fk_member_id AS "memberId",
-            fk_parent_task_id AS "parentTaskId",
             title,
             description,
             status,
-            materialized_path AS "materializedPath",
             version,
             last_event_id AS "lastEventId",
             created_by AS "createdBy",
@@ -107,110 +86,6 @@ export const insertTask = async (
     return result.rows[0]!;
 };
 
-export const deleteTasks = async (
-    data: DeleteTasksParam,
-): Promise<ProjectTask[]> => {
-    const result = await sql<ProjectTask>`
-        WITH deleted_tasks AS (
-            DELETE FROM project_task
-            WHERE fk_project_id = ${data.projectId}::uuid
-              AND id = ANY (${data.taskIds}::uuid[])
-              AND (
-                EXISTS (SELECT 1 FROM project WHERE id = ${data.projectId}::uuid AND fk_user_id = ${data.userId})
-                OR EXISTS (SELECT 1 FROM project_member WHERE fk_project_id = ${data.projectId}::uuid AND fk_user_id = ${data.userId})
-                )
-            RETURNING *
-        ),
-        inserted_outbox AS (
-            INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
-            SELECT 'project.task.parent.deleted',
-                   id::text,
-                   jsonb_build_object(
-                        'id', id,
-                        'projectId', fk_project_id,
-                        'teamId', fk_team_id,
-                        'memberId', fk_member_id,
-                        'parentTaskId', fk_parent_task_id,
-                        'title', title,
-                        'description', description,
-                        'status', status,
-                        'materializedPath', materialized_path,
-                        'version', version,
-                        'lastEventId', last_event_id,
-                        'createdBy', created_by,
-                        'updatedBy', updated_by,
-                        'createdAt', created_at,
-                        'updatedAt', updated_at
-                   )
-            FROM deleted_tasks
-        )
-        SELECT
-            id,
-            fk_project_id AS "projectId",
-            fk_team_id AS "teamId",
-            fk_member_id AS "memberId",
-            fk_parent_task_id AS "parentTaskId",
-            title,
-            description,
-            status,
-            materialized_path AS "materializedPath",
-            version,
-            last_event_id AS "lastEventId",
-            created_by AS "createdBy",
-            updated_by AS "updatedBy",
-            created_at AS "createdAt",
-            updated_at AS "updatedAt"
-        FROM deleted_tasks
-    `.execute(db);
-
-    if (result.rows.length !== data.taskIds.length) {
-        throw new Error('Unauthorized or some tasks not found');
-    }
-
-    return result.rows;
-};
-
-export const deleteChildrenTasksBatch = async (
-    projectId: string,
-    parentPath: string,
-    limit: number,
-): Promise<{ deletedIds: string[]; hasMore: boolean }> => {
-    // Select children first using the path
-    const childrenQuery = await sql<{ id: string }>`
-        SELECT id, materialized_path
-        FROM project_task
-        WHERE fk_project_id = ${projectId}::uuid
-          AND (materialized_path = ${parentPath} OR materialized_path LIKE ${parentPath + '/%'})
-        LIMIT ${limit + 1}
-    `.execute(db);
-
-    console.log(
-        `[TaskQueries] deleteChildrenTasksBatch: projectId=${projectId}, parentPath=${parentPath}, foundRows=`,
-        childrenQuery.rows,
-    );
-
-    if (childrenQuery.rows.length === 0) {
-        return { deletedIds: [], hasMore: false };
-    }
-
-    const hasMore = childrenQuery.rows.length > limit;
-    const targetIds = childrenQuery.rows.slice(0, limit).map((r) => r.id);
-
-    // Delete the targeted batch
-    const result = await sql<{ id: string }>`
-        DELETE
-        FROM project_task
-        WHERE fk_project_id = ${projectId}::uuid
-          AND id = ANY (${targetIds}::uuid[])
-        RETURNING id
-    `.execute(db);
-
-    return {
-        deletedIds: result.rows.map((r) => r.id),
-        hasMore,
-    };
-};
-
 export interface UpdateTaskParam {
     userId: string;
     projectId: string;
@@ -222,7 +97,6 @@ export interface UpdateTaskParam {
     description?: string;
     teamId?: string;
     memberId?: string;
-    parentTaskId?: string;
 }
 
 export const updateTask = async (
@@ -233,7 +107,6 @@ export const updateTask = async (
         WITH current_task AS (
             -- Snapshot state BEFORE update for the Logic Lane
             SELECT 
-                materialized_path, 
                 version, 
                 fk_team_id,
                 status,
@@ -245,25 +118,11 @@ export const updateTask = async (
             FROM project_task
             WHERE id = ${data.taskId}::uuid AND fk_project_id = ${data.projectId}::uuid
         ),
-        parent_info AS (
-            SELECT materialized_path, id
-            FROM project_task
-            WHERE id = ${data.parentTaskId ?? null}::uuid AND fk_project_id = ${data.projectId}::uuid
-        ),
         auth_check AS (
             SELECT 1 FROM project WHERE id = ${data.projectId}::uuid AND fk_user_id = ${data.userId}
             UNION ALL
             SELECT 1 FROM project_member WHERE fk_project_id = ${data.projectId}::uuid AND fk_user_id = ${data.userId}
             LIMIT 1
-        ),
-        path_calculation AS (
-            SELECT 
-                CASE 
-                    WHEN ${data.parentTaskId === undefined} THEN (SELECT materialized_path FROM current_task)
-                    WHEN ${data.parentTaskId === null} THEN ''
-                    ELSE (SELECT CASE WHEN materialized_path = '' THEN id::text ELSE materialized_path || '/' || id::text END FROM parent_info)
-                END as new_path,
-                (SELECT materialized_path FROM current_task) as old_path
         ),
         updated_task AS (
             UPDATE project_task
@@ -276,8 +135,6 @@ export const updateTask = async (
                                   WHEN ${data.memberId !== undefined} THEN ${data.memberId ?? null} 
                                   ELSE fk_member_id 
                                END,
-                fk_parent_task_id = CASE WHEN ${data.parentTaskId !== undefined} THEN ${data.parentTaskId ?? null}::uuid ELSE fk_parent_task_id END,
-                materialized_path = (SELECT new_path FROM path_calculation),
                 last_event_id = ${data.lastEventId ?? null}::uuid,
                 version = version + 1,
                 updated_by = ${data.userId ?? null},
@@ -301,31 +158,10 @@ export const updateTask = async (
                     AND fk_project_id = ${data.projectId}::uuid 
                     AND fk_team_id = COALESCE(${data.teamId ?? undefined}::uuid, (SELECT fk_team_id FROM current_task))
               ))
-              AND (${data.parentTaskId === undefined} OR ${data.parentTaskId === null} OR EXISTS (SELECT 1 FROM parent_info))
-            RETURNING 
-                id, 
-                status, 
-                title, 
-                description, 
-                fk_team_id AS "teamId", 
-                fk_member_id AS "memberId", 
-                version, 
-                updated_at AS "updatedAt", 
-                fk_project_id AS "projectId"
+            RETURNING id
         ),
         metadata AS (
             SELECT gen_random_uuid() AS correlation_id
-        ),
-        updated_descendants AS (
-            UPDATE project_task
-            SET materialized_path = (SELECT new_path FROM path_calculation) ||
-                                    CASE WHEN (SELECT new_path FROM path_calculation) = '' THEN '' ELSE '/' END ||
-                                    ${data.taskId}::text ||
-                                    SUBSTR(materialized_path, LENGTH((SELECT old_path FROM path_calculation) || CASE WHEN (SELECT old_path FROM path_calculation) = '' THEN '' ELSE '/' END || ${data.taskId}::text) + 1)
-            WHERE ${data.parentTaskId !== undefined}
-              AND EXISTS (SELECT 1 FROM updated_task)
-              AND materialized_path LIKE (SELECT old_path FROM path_calculation) || CASE WHEN (SELECT old_path FROM path_calculation) = '' THEN '' ELSE '/' END || ${data.taskId}::text || '/%'
-            RETURNING id
         ),
         display_outbox AS (
             -- Display Lane: keeps UI fresh
@@ -460,11 +296,9 @@ export const getTasks = async (
             fk_project_id AS "projectId",
             fk_team_id AS "teamId",
             fk_member_id AS "memberId",
-            fk_parent_task_id AS "parentTaskId",
             title,
             description,
             status,
-            materialized_path AS "materializedPath",
             version,
             last_event_id AS "lastEventId",
             created_by AS "createdBy",
@@ -632,7 +466,7 @@ export const getLinksQuery = async (data: {
                 fk_project_id AS "projectId", 
                 from_task_id AS "fromTaskId", 
                 to_task_id AS "toTaskId", 
-                link_type AS "linkType", 
+                link_type AS "type", 
                 created_at AS "createdAt"
             FROM task_link
             WHERE fk_project_id = ${data.projectId}::uuid
@@ -751,7 +585,7 @@ export const getLinksByTaskIdsQuery = async (
                 fk_project_id AS "projectId", 
                 from_task_id AS "fromTaskId", 
                 to_task_id AS "toTaskId", 
-                link_type AS "linkType", 
+                link_type AS "type", 
                 created_at AS "createdAt"
             FROM task_link
             WHERE fk_project_id = ${projectId}::uuid

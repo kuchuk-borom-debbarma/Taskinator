@@ -1,3 +1,13 @@
+export type TaskTriggerType = 'WEBHOOK' | 'EMAIL' | 'LOG';
+
+export interface TaskTrigger {
+    id: string;
+    taskId: string;
+    name: string;
+    triggerType: TaskTriggerType;
+    triggerData: any;
+}
+
 export interface Project {
     id: string;
     userId: string;
@@ -46,16 +56,31 @@ export interface TeamMember {
     user?: { id: string; username: string; email: string };
 }
 
+export interface TaskLink {
+    id: string;
+    type: string;
+    fromTaskId: string;
+    toTaskId: string;
+    toTask?: {
+        id: string;
+        title: string;
+        status: string;
+    };
+}
+
+export interface TaskStory {
+    pathTaskIds: string[];
+    pathLinkTypes: string[];
+}
+
 export interface Task {
     id: string;
     projectId: string;
     teamId: string | null;
     memberId: string | null;
-    parentTaskId: string | null;
     title: string;
     description: string;
     status: string;
-    materializedPath: string;
     version: number;
     lastEventId: string | null;
     createdBy: string;
@@ -65,6 +90,8 @@ export interface Task {
     creator?: { id: string; username: string };
     assignee?: { id: string; username: string };
     team?: { id: string; name: string };
+    links?: TaskLink[];
+    story?: TaskStory[];
 }
 
 export interface StartSignUpParam {
