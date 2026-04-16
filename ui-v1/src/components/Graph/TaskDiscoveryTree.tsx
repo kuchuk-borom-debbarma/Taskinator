@@ -213,9 +213,32 @@ export const TaskDiscoveryTree: React.FC<TaskDiscoveryTreeProps> = ({ taskId }) 
         <defs>
           <linearGradient id="pathGradient" x1="0%" y1="0%" x2="100%" y2="0%">
             <stop offset="0%" stopColor="var(--color-focus-blue)" stopOpacity="0.1" />
-            <stop offset="50%" stopColor="var(--color-focus-blue)" stopOpacity="0.3" />
+            <stop offset="50%" stopColor="var(--color-focus-blue)" stopOpacity="0.4" />
             <stop offset="100%" stopColor="var(--color-focus-blue)" stopOpacity="0.1" />
           </linearGradient>
+          
+          {/* Directional Marker */}
+          <marker 
+            id="arrowhead" 
+            markerWidth="10" 
+            markerHeight="7" 
+            refX="9" 
+            refY="3.5" 
+            orient="auto"
+          >
+            <polygon points="0 0, 10 3.5, 0 7" fill="var(--color-focus-blue)" opacity="0.5" />
+          </marker>
+
+          <marker 
+            id="arrowhead-active" 
+            markerWidth="10" 
+            markerHeight="7" 
+            refX="9" 
+            refY="3.5" 
+            orient="auto"
+          >
+            <polygon points="0 0, 10 3.5, 0 7" fill="var(--color-focus-blue)" />
+          </marker>
         </defs>
         {orchard.allEdges.map(edge => {
           const sourceVisible = orchard.keys.includes(orchard.keys.find(k => orchard.levels[k].some(g => g.tasks.some(t => t.id === edge.sourceTaskId))) || '');
@@ -235,16 +258,30 @@ export const TaskDiscoveryTree: React.FC<TaskDiscoveryTreeProps> = ({ taskId }) 
           const endX = targetRect.x;
           const endY = targetRect.y + targetRect.height / 2;
 
+          const pathD = `M ${startX} ${startY} C ${startX + 80} ${startY}, ${endX - 80} ${endY}, ${endX} ${endY}`;
+
           return (
-            <path 
-              key={edge.id}
-              d={`M ${startX} ${startY} C ${startX + 80} ${startY}, ${endX - 80} ${endY}, ${endX} ${endY}`} 
-              fill="none" 
-              stroke={isHighlight ? 'var(--color-focus-blue)' : 'url(#pathGradient)'} 
-              strokeWidth={isHighlight ? 3 : 2}
-              strokeOpacity={isDimmed ? 0.02 : isHighlight ? 0.8 : 0.4}
-              className="transition-all duration-700"
-            />
+            <React.Fragment key={edge.id}>
+              {/* Background Glow Path */}
+              <path 
+                d={pathD}
+                fill="none"
+                stroke="var(--color-focus-blue)"
+                strokeWidth={isHighlight ? 6 : 4}
+                strokeOpacity={isDimmed ? 0.01 : isHighlight ? 0.15 : 0.05}
+                className="transition-all duration-700"
+              />
+              {/* Core Connection Path */}
+              <path 
+                d={pathD}
+                fill="none" 
+                stroke={isHighlight ? 'var(--color-focus-blue)' : 'url(#pathGradient)'} 
+                strokeWidth={isHighlight ? 2.5 : 1.5}
+                strokeOpacity={isDimmed ? 0.02 : isHighlight ? 1 : 0.6}
+                markerEnd={isHighlight ? "url(#arrowhead-active)" : "url(#arrowhead)"}
+                className="transition-all duration-700"
+              />
+            </React.Fragment>
           );
         })}
       </svg>
