@@ -7,6 +7,8 @@ import { authService } from '../modules/auth';
 import type { UserResult } from '../modules/auth/AuthService';
 import { automationService } from '../modules/automation';
 import type { AutomationRule } from '../modules/automation/AutomationService';
+import { taskService } from '../modules/task';
+import type { ProjectTask } from '../modules/task/TaskService';
 
 export const createLoaders = (userId: string) => {
     return {
@@ -47,5 +49,10 @@ export const createLoaders = (userId: string) => {
                 return teamIds.map((id) => map.get(id) || []);
             },
         ),
+        task: new DataLoader<string, ProjectTask | null>(async (ids) => {
+            const tasks = await taskService.getTasksByIds(userId, ids as string[]);
+            const map = new Map(tasks.map((t: ProjectTask) => [t.id, t]));
+            return ids.map((id) => map.get(id) || null);
+        }),
     };
 };

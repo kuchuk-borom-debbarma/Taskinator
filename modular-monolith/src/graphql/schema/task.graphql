@@ -1,0 +1,55 @@
+type ProjectTask {
+  id: ID!
+  projectId: ID!
+  teamId: ID
+  memberId: ID
+  title: String!
+  description: String!
+  status: String!
+  version: Int!
+  lastEventId: ID
+  createdBy: ID!
+  updatedBy: ID!
+  createdAt: String!
+  updatedAt: String!
+
+  # Resolved fields
+  project: Project
+  team: Team
+  # creator: User # Handled in resolver
+}
+
+type ProjectTaskEdge {
+  node: ProjectTask!
+  cursor: String!
+}
+
+type ProjectTaskConnection {
+  edges: [ProjectTaskEdge!]!
+  pageInfo: PageInfo!
+}
+
+extend type Query {
+  projectTasks(
+    projectId: ID!
+    first: Int
+    after: String
+    last: Int
+    before: String
+  ): ProjectTaskConnection!
+  
+  task(id: ID!): ProjectTask
+}
+
+extend type Mutation {
+  createTask(
+    projectId: ID!
+    teamId: ID
+    memberId: ID
+    title: String!
+    description: String
+    status: String
+  ): ProjectTask!
+
+  deleteTask(taskId: ID!): ID!
+}

@@ -1,13 +1,17 @@
 import type {
     CreateLinkParam,
     CreateTaskParam,
+    PaginationParams,
     ProjectTask,
+    TaskConnection,
     TaskLink,
     TaskService,
 } from '../TaskService.ts';
 import {
     deleteLinkQuery,
     deleteTaskQuery,
+    getTasksByIds as getTasksByIdsQuery,
+    getTasksPage,
     insertLink,
     insertTask,
 } from './TaskQueries.ts';
@@ -27,6 +31,18 @@ export class TaskServiceImpl implements TaskService {
 
     async deleteLink(userId: string, linkId: string): Promise<void> {
         await deleteLinkQuery(userId, linkId);
+    }
+
+    async getTasks(
+        userId: string,
+        projectId: string,
+        params: PaginationParams,
+    ): Promise<TaskConnection> {
+        return await getTasksPage(userId, projectId, params);
+    }
+
+    async getTasksByIds(userId: string, ids: string[]): Promise<ProjectTask[]> {
+        return await getTasksByIdsQuery(userId, ids);
     }
 
     async init(): Promise<void> {

@@ -46,9 +46,31 @@ export interface CreateLinkParam {
     label: string;
 }
 
+export interface PaginationParams {
+    first?: number;
+    after?: string;
+    last?: number;
+    before?: string;
+}
+
+export interface TaskConnection {
+    tasks: ProjectTask[];
+    nextCursor: string | null;
+    prevCursor: string | null;
+}
+
 export interface TaskService extends BaseService {
     createTask(data: CreateTaskParam): Promise<ProjectTask>;
     createLink(data: CreateLinkParam): Promise<TaskLink>;
     deleteTask(userId: string, taskId: string): Promise<void>;
     deleteLink(userId: string, linkId: string): Promise<void>;
+
+    // Read Operations
+    getTasks(
+        userId: string,
+        projectId: string,
+        params: PaginationParams,
+    ): Promise<TaskConnection>;
+    
+    getTasksByIds(userId: string, ids: string[]): Promise<ProjectTask[]>;
 }
