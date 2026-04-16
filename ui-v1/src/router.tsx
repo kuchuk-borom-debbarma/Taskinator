@@ -8,11 +8,11 @@ import {
 } from '@tanstack/react-router';
 import { Sidebar } from './components/Layout/Sidebar';
 import { TaskListView } from './components/Tasks/TaskListView';
-import { TaskDetailPerspective } from './components/Tasks/TaskDetailPerspective';
+import { TaskDetailView } from './components/Tasks/TaskDetailView';
 import { useQuery } from '@tanstack/react-query';
 import { useApi } from './context/ApiContext';
 
-// Root Route
+// Root Route - Contains the Global Sidebar
 const rootRoute = createRootRoute({
   component: () => (
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
@@ -31,42 +31,43 @@ const indexRoute = createRoute({
   component: () => <div style={{ padding: '40px' }}>Select a project from the sidebar to begin.</div>,
 });
 
-// Project Route
-const projectRoute = createRoute({
+// Project Layout Route (Handles $projectId context)
+const projectLayoutRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: 'projects/$projectId',
-  component: ProjectContainer,
 });
 
-// Task Detail (Nested within Project)
+// Project List (Index of Project Layout)
+const projectListRoute = createRoute({
+  getParentRoute: () => projectLayoutRoute,
+  path: '/',
+  component: ProjectTasksIndex,
+});
+
+// Task Detail Page (Sibling to List within Project Layout)
 const taskDetailRoute = createRoute({
-  getParentRoute: () => projectRoute,
+  getParentRoute: () => projectLayoutRoute,
   path: 'tasks/$taskId',
-  component: TaskDetailContainer,
+  component: TaskDetailPage,
 });
 
-function ProjectContainer() {
-  const { projectId } = useParams({ from: projectRoute.id });
+function ProjectTasksIndex() {
+  const { projectId } = useParams({ from: projectListRoute.id });
   const { taskApi } = useApi();
   const { data: tasks } = useQuery({
     queryKey: ['tasks', projectId],
     queryFn: () => taskApi.getProjectTasks(projectId),
   });
 
-  return (
-    <>
-      <TaskListView tasks={tasks || []} />
-      <Outlet />
-    </>
-  );
+  return <TaskListView tasks={tasks || []} />;
 }
 
-function TaskDetailContainer() {
+function TaskDetailPage() {
   const { taskId } = useParams({ from: taskDetailRoute.id });
   const navigate = useNavigate();
 
   return (
-    <TaskDetailPerspective 
+    <TaskDetailView 
       taskId={taskId} 
       onClose={() => navigate({ to: '..' })} 
     />
@@ -75,7 +76,10 @@ function TaskDetailContainer() {
 
 export const routeTree = rootRoute.addChildren([
   indexRoute,
-  projectRoute.addChildren([taskDetailRoute]),
+  projectLayoutRoute.addChildren([
+    projectListRoute,
+    taskDetailRoute,
+  ]),
 ]);
 
 export const router = createRouter({ routeTree });
