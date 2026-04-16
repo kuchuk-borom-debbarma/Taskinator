@@ -19,17 +19,27 @@ const nodeTypes = {
   taskNode: TaskNode,
 };
 
-export const TaskGraph: React.FC<TaskGraphProps> = ({ neighbourhood }) => {
-  const center = { x: 500, y: 400 };
+const CENTER = { x: 500, y: 400 };
 
+// Deterministic color generator based on link label
+const getLinkLabelColor = (label: string = '') => {
+  let hash = 0;
+  for (let i = 0; i < label.length; i++) {
+    hash = label.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  // Use HSL for consistent vibrance and legible text
+  const h = Math.abs(hash) % 360;
+  return `hsl(${h}, 65%, 45%)`;
+};
+
+export const TaskGraph: React.FC<TaskGraphProps> = ({ neighbourhood }) => {
   const { rawNodes, rawEdges } = useMemo(() => {
-    // 1. Initial Map to React Flow Nodes (without final positions)
+    // 1. Initial Map to React Flow Nodes
     const nodes: Node[] = [
-      // Central Focused Node
       {
         id: neighbourhood.focusedTask.id,
         type: 'taskNode',
-        position: center,
+        position: CENTER,
         data: { 
           task: neighbourhood.focusedTask, 
           isFocused: true, 
@@ -37,11 +47,10 @@ export const TaskGraph: React.FC<TaskGraphProps> = ({ neighbourhood }) => {
         },
         draggable: false,
       },
-      // Neighbour Nodes (initially at center, force will move them)
       ...neighbourhood.nodes.map(n => ({
         id: n.task.id,
         type: 'taskNode',
-        position: center,
+        position: CENTER,
         data: { 
           task: n.task, 
           isFocused: false, 
@@ -51,25 +60,29 @@ export const TaskGraph: React.FC<TaskGraphProps> = ({ neighbourhood }) => {
       }))
     ];
 
-    // 2. Map to React Flow Edges
-    const edges: Edge[] = neighbourhood.edges.map(edge => ({
-      id: edge.id,
-      source: edge.sourceTaskId,
-      target: edge.targetTaskId,
-      label: edge.label,
-      type: 'smoothstep',
-      labelStyle: { fill: '#37352f', fontSize: 11, fontWeight: 700 },
-      labelBgStyle: { fill: '#f7f6f3', fillOpacity: 1, rx: 6, ry: 6 },
-      labelBgPadding: [6, 3] as [number, number],
-      style: { stroke: 'rgba(55, 53, 47, 0.45)', strokeWidth: 2.5 },
-      animated: true,
-    }));
+    // 2. Map to React Flow Edges with Color Hashing
+    const edges: Edge[] = neighbourhood.edges.map(edge => {
+      const edgeColor = getLinkLabelColor(edge.label);
+      
+      return {
+        id: edge.id,
+        source: edge.sourceTaskId,
+        target: edge.targetTaskId,
+        label: edge.label,
+        type: 'smoothstep',
+        labelStyle: { fill: '#ffffff', fontSize: 11, fontWeight: 700 }, // White text on colored bg
+        labelBgStyle: { fill: edgeColor, fillOpacity: 0.9, rx: 6, ry: 6 },
+        labelBgPadding: [6, 3] as [number, number],
+        style: { stroke: edgeColor, strokeWidth: 2.5, opacity: 0.7 },
+        animated: true,
+      };
+    });
 
     return { rawNodes: nodes, rawEdges: edges };
-  }, [neighbourhood, center]);
+  }, [neighbourhood]);
 
   // 3. Apply Force Layout
-  const { nodes: rfNodes, edges: rfEdges } = useTaskGraphLayout(rawNodes, rawEdges, center);
+  const { nodes: rfNodes, edges: rfEdges } = useTaskGraphLayout(rawNodes, rawEdges, CENTER);
 
   return (
     <div className="w-full aspect-[5/4] sm:aspect-[16/9] bg-bg-secondary relative">
