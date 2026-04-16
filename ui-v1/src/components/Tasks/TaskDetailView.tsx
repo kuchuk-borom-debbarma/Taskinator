@@ -20,7 +20,7 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
 
   const { data: neighbourhood, isLoading: isNeighbourLoading } = useQuery({
     queryKey: ['neighbourhood', taskId],
-    queryFn: () => taskApi.getTaskNeighbourhood(taskId, 3),
+    queryFn: () => taskApi.getTaskNeighbourhood(taskId, 50), // Hydrate deep context for infinite expansion
   });
 
   if (isTaskLoading || isNeighbourLoading || !task) {
