@@ -397,6 +397,76 @@ export const getTasks = async (
 
     return { tasks, nextCursor };
 };
+
+export const getRootTasks = async (
+    userId: string,
+    projectId: string,
+    params: { cursor?: string; limit?: number } = {},
+): Promise<{ tasks: ProjectTask[]; nextCursor: string | null }> => {
+    const limit = Math.min(params.limit ?? 20, 50);
+    const cursor = params.cursor;
+
+    let cursorDate: string | null = null;
+    let cursorId: string | null = null;
+
+    if (cursor && cursor.includes('|')) {
+        const parts = cursor.split('|');
+        if (parts.length === 2) {
+            cursorDate = parts[0]!;
+            cursorId = parts[1]!;
+        }
+    }
+
+    const result = await sql<ProjectTask>`
+        WITH auth_check AS (
+            SELECT 1 FROM project WHERE id = ${projectId}::uuid AND fk_user_id = ${userId}::text
+            UNION ALL
+            SELECT 1 FROM project_member WHERE fk_project_id = ${projectId}::uuid AND fk_user_id = ${userId}::text
+            LIMIT 1
+        )
+        SELECT 
+            t.id,
+            t.fk_project_id AS "projectId",
+            t.fk_team_id AS "teamId",
+            t.fk_member_id AS "memberId",
+            t.title,
+            t.description,
+            t.status,
+            t.version,
+            t.last_event_id AS "lastEventId",
+            t.created_by AS "createdBy",
+            t.updated_by AS "updatedBy",
+            t.created_at AS "createdAt",
+            t.updated_at AS "updatedAt"
+        FROM project_task t
+        WHERE t.fk_project_id = ${projectId}::uuid
+          AND EXISTS (SELECT 1 FROM auth_check)
+          AND NOT EXISTS (
+              SELECT 1 FROM task_link 
+              WHERE to_task_id = t.id 
+                AND fk_project_id = t.fk_project_id
+          )
+          AND (
+              ${cursorDate}::timestamptz IS NULL
+              OR t.created_at < ${cursorDate}::timestamptz
+              OR (t.created_at = ${cursorDate}::timestamptz AND t.id < ${cursorId}::uuid)
+          )
+        ORDER BY t.created_at DESC, t.id DESC
+        LIMIT ${limit + 1}
+    `.execute(db);
+
+    const hasMore = result.rows.length > limit;
+    const tasks = hasMore ? result.rows.slice(0, limit) : result.rows;
+
+    let nextCursor: string | null = null;
+    if (hasMore && tasks.length > 0) {
+        const last = tasks[tasks.length - 1]!;
+        const dateStr = last.createdAt instanceof Date ? last.createdAt.toISOString() : last.createdAt;
+        nextCursor = `${dateStr}|${last.id}`;
+    }
+
+    return { tasks, nextCursor };
+};
 export const getTasksByIdsQuery = async (
     projectId: string,
     taskIds: string[],

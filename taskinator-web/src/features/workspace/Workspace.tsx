@@ -92,21 +92,21 @@ export const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
 
   const { data: workspaceData } = useQuery({
     queryKey: ['workspace', selectedProjectId, userId],
-    queryFn: () => gqlClient.request<any>(GET_WORKSPACE_DATA, { projectId: selectedProjectId, first: 200 }),
+    queryFn: () => gqlClient.request<any>(GET_WORKSPACE_DATA, { projectId: selectedProjectId, first: 50 }),
     enabled: !!selectedProjectId,
   });
   const projectTasks = (workspaceData?.tasks?.edges ?? []).map((e: any) => e.node);
+  const rootTasks = (workspaceData?.rootTasks?.edges ?? []).map((e: any) => e.node);
   const teams = (workspaceData?.teams?.edges ?? []).map((e: any) => e.node);
 
-  // Auto-focus first task on project entry once data is loaded
+  // Auto-focus first root task on project entry
   React.useEffect(() => {
-    if (selectedProjectId && projectTasks.length > 0) {
-        const isCurrentFocusValid = projectTasks.some((t: any) => t.id === focusedTaskId);
-        if (!isCurrentFocusValid) {
-            setFocusedTaskId(projectTasks[0].id);
+    if (selectedProjectId && rootTasks.length > 0) {
+        if (!focusedTaskId || !projectTasks.some((t: any) => t.id === focusedTaskId)) {
+            setFocusedTaskId(rootTasks[0].id);
         }
     }
-  }, [selectedProjectId, projectTasks, focusedTaskId]);
+  }, [selectedProjectId, rootTasks, projectTasks, focusedTaskId]);
 
   const { data: automationsData } = useQuery({
     queryKey: ['automations', selectedTaskId],
@@ -372,6 +372,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
              {activeTab === 'tasks' && (
                <TaskFlow 
                  tasks={projectTasks}
+                 rootTasks={rootTasks}
                  onFocusTask={setFocusedTaskId}
                  onOpenDetails={setSelectedTaskId}
                  onToggleStatus={(task) => updateTaskMutation.mutate({ id: task.id, version: task.version, status: task.status === 'DONE' ? 'TODO' : 'DONE' })}

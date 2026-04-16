@@ -11,6 +11,7 @@ import eventBus, { KAFKA_EVENTS } from '../../../utils/EventBus.ts';
 import {
     deleteTasks,
     getTasks,
+    getRootTasks,
     insertTask,
     updateTask,
     createTaskLinkQuery,
@@ -33,6 +34,14 @@ export class TaskServiceImpl implements TaskService {
         params?: { cursor?: string; limit?: number },
     ): Promise<{ tasks: ProjectTask[]; nextCursor: string | null }> {
         return getTasks(userId, projectId, params);
+    }
+
+    async getRootTasks(
+        userId: string,
+        projectId: string,
+        params?: { cursor?: string; limit?: number },
+    ): Promise<{ tasks: ProjectTask[]; nextCursor: string | null }> {
+        return getRootTasks(userId, projectId, params);
     }
 
     async init(): Promise<void> {

@@ -70,6 +70,30 @@ export const taskResolvers = {
                 },
             };
         },
+        rootTasks: async (
+            _: any,
+            { projectId, first, after }: any,
+            context: GraphQLContext,
+        ) => {
+            if (!context.userId) throw new Error('Unauthorized');
+            const { tasks, nextCursor } = await taskService.getRootTasks(
+                context.userId,
+                projectId,
+                {
+                    limit: first,
+                    cursor: after,
+                },
+            );
+
+            return {
+                edges: tasks.map((t) => ({ node: t, cursor: t.id })),
+                pageInfo: {
+                    hasNextPage: !!nextCursor,
+                    endCursor: nextCursor,
+                    hasPreviousPage: false,
+                },
+            };
+        },
     },
     Mutation: {
         createTask: async (_: any, args: any, context: GraphQLContext) => {

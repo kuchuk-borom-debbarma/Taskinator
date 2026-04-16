@@ -80,6 +80,12 @@ export interface TaskService extends BaseService {
         params?: { cursor?: string; limit?: number },
     ): Promise<{ tasks: ProjectTask[]; nextCursor: string | null }>;
 
+    getRootTasks(
+        userId: string,
+        projectId: string,
+        params?: { cursor?: string; limit?: number },
+    ): Promise<{ tasks: ProjectTask[]; nextCursor: string | null }>;
+
     createLink(data: {
         userId: string;
         projectId: string;

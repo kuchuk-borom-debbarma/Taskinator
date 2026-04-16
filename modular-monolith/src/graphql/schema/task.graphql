@@ -75,6 +75,7 @@ input UpdateTaskInput {
 
 extend type Query {
     tasks(projectId: ID!, first: Int, after: String): TaskConnection!
+    rootTasks(projectId: ID!, first: Int, after: String): TaskConnection!
 }
 
 extend type Mutation {

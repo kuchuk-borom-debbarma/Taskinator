@@ -13,6 +13,7 @@ import type { Task } from '../types';
 
 interface TaskFlowProps {
   tasks: Task[];
+  rootTasks?: Task[];
   onOpenDetails: (taskId: string) => void;
   onToggleStatus: (task: Task) => void;
   onFocusTask: (taskId: string | null) => void;
@@ -20,6 +21,7 @@ interface TaskFlowProps {
 
 export const TaskFlow: React.FC<TaskFlowProps> = ({
   tasks,
+  rootTasks: propRootTasks,
   onOpenDetails,
   onToggleStatus,
   onFocusTask
@@ -30,10 +32,13 @@ export const TaskFlow: React.FC<TaskFlowProps> = ({
 
   // 1. Identify Root Tasks
   const rootTasks = useMemo(() => {
+    if (propRootTasks && propRootTasks.length > 0) return propRootTasks;
+    
+    // Fallback: local discovery if explicit roots aren't provided
     const targetTaskIds = new Set<string>();
     tasks.forEach(t => t.links?.forEach(l => targetTaskIds.add(l.toTaskId)));
     return tasks.filter(t => !targetTaskIds.has(t.id));
-  }, [tasks]);
+  }, [tasks, propRootTasks]);
 
   // 2. Resolve Successors
   const getSuccessors = (taskId: string) => {
@@ -43,7 +48,7 @@ export const TaskFlow: React.FC<TaskFlowProps> = ({
     return task.links
         .filter(link => link.fromTaskId === taskId)
         .map(link => {
-            const target = tasks.find(t => t.id === link.toTaskId);
+            const target = tasks.find(t => t.id === link.toTaskId) || link.toTask;
             return target ? { ...target, linkType: link.type } : null;
         })
         .filter(t => !!t) as (Task & { linkType: string })[];

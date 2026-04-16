@@ -152,6 +152,55 @@ export const GET_WORKSPACE_DATA = gql`
         endCursor
       }
     }
+    rootTasks(projectId: $projectId, first: $first) {
+      edges {
+        node {
+          id
+          title
+          description
+          status
+          projectId
+          teamId
+          team {
+            id
+            name
+          }
+          memberId
+          assignee {
+            id
+            username
+          }
+          version
+          createdBy
+          creator {
+            id
+            username
+          }
+          createdAt
+          updatedAt
+          links {
+            id
+            type
+            fromTaskId
+            toTaskId
+            toTask {
+              id
+              title
+              status
+            }
+          }
+          story {
+            pathTaskIds
+            pathLinkTypes
+          }
+        }
+        cursor
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+    }
     teams(projectId: $projectId, first: $first) {
       edges {
         node {
@@ -518,6 +567,60 @@ export const SEARCH_TEAM_USERS = gql`
           id
           username
           email
+        }
+        cursor
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+    }
+  }
+`;
+
+export const GET_ROOT_TASKS = gql`
+  query GetRootTasks($projectId: ID!, $first: Int, $after: String) {
+    rootTasks(projectId: $projectId, first: $first, after: $after) {
+      edges {
+        node {
+          id
+          title
+          description
+          status
+          projectId
+          teamId
+          team {
+            id
+            name
+          }
+          memberId
+          assignee {
+            id
+            username
+          }
+          version
+          createdBy
+          creator {
+            id
+            username
+          }
+          createdAt
+          updatedAt
+          links {
+            id
+            type
+            fromTaskId
+            toTaskId
+            toTask {
+              id
+              title
+              status
+            }
+          }
+          story {
+            pathTaskIds
+            pathLinkTypes
+          }
         }
         cursor
       }
