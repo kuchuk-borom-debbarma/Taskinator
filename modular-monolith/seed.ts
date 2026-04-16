@@ -9,23 +9,34 @@ const CONFIG = {
     // Users
     TOTAL_USERS: 10_000,
 
-    // Projects
-    TOTAL_EXTRA_PROJECTS: 50,       // lightweight side projects (in addition to the main stress-test one)
+    // Extra lightweight projects (besides the main stress-test one)
+    TOTAL_EXTRA_PROJECTS: 50,
 
-    // Main project
-    TOTAL_TEAMS: 500,               // teams inside the main project
-    MEMBERS_PER_TEAM: 150,          // how many of the user pool to assign per team (sampled randomly)
+    // Main project — teams
+    TOTAL_TEAMS: 500,
+    MEMBERS_PER_TEAM: 150,          // sampled randomly from user pool
 
-    // Tasks
-    TOTAL_TASKS: 200_000,           // tasks inside the main project
-    TASK_LINK_RATIO: 0.75,          // fraction of tasks that get at least one outgoing link → ~150k links
-    MAX_LINKS_PER_TASK: 3,          // max outgoing links per task
+    // Main project — tasks
+    TOTAL_TASKS: 200_000,
 
-    // Graph materialization
-    MATERIALIZATION_DEPTH_CAP: 100, // max recursive depth for task_link_materialized
+    // Forest / DAG shape
+    // Tasks are split into isolated forests. Each forest is a DAG
+    // with a controlled shape so materialisation never explodes.
+    FOREST_COUNT: 800,              // how many separate sub-graphs
+    FOREST_MAX_DEPTH: 8,            // max levels deep per forest
+    FOREST_MAX_FANOUT: 4,           // max children per node
+    // Remaining tasks (after forest assignment) become orphans (no links)
 
-    // Batch sizes (tune down if you hit memory limits)
-    COPY_BATCH_ROWS: 1_000,         // rows flushed per COPY statement
+    // % of non-root nodes that also get a "cross-edge" within the same forest
+    // (makes it a DAG rather than a pure tree — creates junction nodes)
+    INTRA_FOREST_EXTRA_EDGE_RATIO: 0.15,
+
+    // Materialization
+    MATERIALIZATION_DEPTH_CAP: 100,  // per-forest CTE depth cap (safe: forests are small)
+    FORESTS_PER_BATCH: 20,          // forests materialized per round-trip
+
+    // Batch sizes
+    COPY_BATCH_ROWS: 5_000,
 } as const;
 
 // ============================================================
@@ -38,7 +49,7 @@ const FIRST_NAMES = [
     'Aria', 'Luna', 'Chloe', 'Penelope', 'Layla', 'Riley', 'Zoey', 'Nora', 'Lily', 'Eleanor',
     'Rohan', 'Priya', 'Arjun', 'Ananya', 'Vikram', 'Divya', 'Karan', 'Sneha', 'Rahul', 'Pooja',
     'Wei', 'Xiao', 'Ming', 'Jing', 'Lei', 'Fang', 'Yan', 'Qiang', 'Hui', 'Ling',
-    'Tariq', 'Fatima', 'Omar', 'Layla', 'Hassan', 'Nour', 'Zara', 'Yusuf', 'Aisha', 'Khalid',
+    'Tariq', 'Fatima', 'Omar', 'Hassan', 'Nour', 'Zara', 'Yusuf', 'Aisha', 'Khalid', 'Leila',
 ];
 
 const LAST_NAMES = [
@@ -96,7 +107,7 @@ const TASK_NOUNS = [
 ];
 
 const TASK_STATUSES = ['TODO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE', 'BLOCKED'] as const;
-const STATUS_WEIGHTS = [0.30, 0.25, 0.15, 0.20, 0.10]; // must sum to 1
+const STATUS_WEIGHTS = [0.30, 0.25, 0.15, 0.20, 0.10];
 
 const LINK_TYPES = ['Blocks', 'Relates', 'Duplicates'] as const;
 
@@ -108,55 +119,113 @@ function pick<T>(arr: readonly T[]): T {
 }
 
 function pickWeighted<T>(arr: readonly T[], weights: number[]): T {
-    const r = Math.random();
-    let cumulative = 0;
+    let r = Math.random(), c = 0;
     for (let i = 0; i < arr.length; i++) {
-        cumulative += weights[i];
-        if (r < cumulative) return arr[i];
+        c += weights[i];
+        if (r < c) return arr[i];
     }
     return arr[arr.length - 1];
 }
 
-function randomInt(min: number, max: number): number {
+function randomInt(min: number, max: number) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-function generateUsername(first: string, last: string, suffix: number): string {
+function esc(s: string) { return s.replace(/'/g, "''"); }
+function elapsed(t0: number) { return `${((Date.now() - t0) / 1000).toFixed(1)}s`; }
+
+function generateUsername(first: string, last: string, suffix: number) {
     return `${first.toLowerCase()}.${last.toLowerCase()}${suffix}`;
 }
 
-function generateEmail(username: string): string {
+function generateEmail(uname: string) {
     const domains = ['taskinator.io', 'devhive.co', 'workstream.dev', 'nexusapp.io', 'oriontech.com'];
-    return `${username}@${pick(domains)}`;
+    return `${uname}@${pick(domains)}`;
 }
 
-function generateTaskTitle(): string {
-    return `${pick(TASK_VERBS)} ${pick(TASK_NOUNS)}`;
-}
-
-function generateTeamName(index: number): string {
-    return `${pick(TEAM_PREFIXES)} ${pick(TEAM_SUFFIXES)} — Unit ${index}`;
-}
+function generateTaskTitle() { return `${pick(TASK_VERBS)} ${pick(TASK_NOUNS)}`; }
+function generateTeamName(i: number) { return `${pick(TEAM_PREFIXES)} ${pick(TEAM_SUFFIXES)} — Unit ${i}`; }
 
 // ============================================================
-//  ⚡  Bulk COPY helper
-//  Streams rows as tab-separated text via a raw COPY statement.
-//  Much faster than batched INSERTs.
+//  ⚡  Bulk INSERT helper (batched)
 // ============================================================
-async function bulkCopy(
-    table: string,
-    columns: string[],
-    rows: string[][], // each inner array = one row, values already escaped
-) {
-    if (rows.length === 0) return;
-    const colList = columns.join(', ');
+async function bulkInsert(table: string, columns: string[], rows: string[][]) {
+    if (!rows.length) return;
+    const cols = columns.join(', ');
     for (let offset = 0; offset < rows.length; offset += CONFIG.COPY_BATCH_ROWS) {
         const chunk = rows.slice(offset, offset + CONFIG.COPY_BATCH_ROWS);
-        const values = chunk
-            .map(row => `(${row.join(', ')})`)
-            .join(',\n');
-        await sql.raw(`INSERT INTO ${table} (${colList}) VALUES ${values}`).execute(db);
+        const values = chunk.map(r => `(${r.join(', ')})`).join(',\n');
+        await sql.raw(`INSERT INTO ${table} (${cols}) VALUES ${values}`).execute(db);
     }
+}
+
+// ============================================================
+//  🌳  Forest / DAG builder
+//
+//  Splits tasks into FOREST_COUNT isolated sub-graphs.
+//  Within each forest:
+//    Layer 0  → roots  (no parents, 1–4 outgoing links)
+//    Layer 1+ → mid-nodes (parents + children)
+//    Last layer → leaves (parents, no outgoing links)
+//    Extra intra-forest edges → junction nodes (multiple parents)
+//  No edges ever cross forest boundaries → path explosion impossible.
+// ============================================================
+interface ForestLink { from: string; to: string; type: string }
+
+function buildForestLinks(forestTaskIds: string[]): ForestLink[] {
+    const links: ForestLink[] = [];
+    const n = forestTaskIds.length;
+    if (n < 2) return links;
+
+    const remaining = [...forestTaskIds];
+
+    // Layer 0: roots
+    const rootCount = Math.min(randomInt(1, 3), remaining.length);
+    const layers: string[][] = [remaining.splice(0, rootCount)];
+
+    // Build subsequent layers
+    while (remaining.length > 0 && layers.length <= CONFIG.FOREST_MAX_DEPTH) {
+        const parentLayer = layers[layers.length - 1];
+        const layerNodes: string[] = [];
+
+        for (const parent of parentLayer) {
+            if (remaining.length === 0) break;
+            const childCount = Math.min(randomInt(1, CONFIG.FOREST_MAX_FANOUT), remaining.length);
+            for (let c = 0; c < childCount; c++) {
+                const child = remaining.shift()!;
+                layerNodes.push(child);
+                links.push({ from: parent, to: child, type: pick(LINK_TYPES) });
+            }
+        }
+
+        if (layerNodes.length === 0) break;
+        layers.push(layerNodes);
+    }
+
+    // Overflow: any tasks that didn't fit in the depth budget
+    // become extra leaves off random already-linked nodes
+    const allLinked = layers.flat();
+    for (const orphan of remaining) {
+        const parent = allLinked[randomInt(0, allLinked.length - 1)];
+        links.push({ from: parent, to: orphan, type: pick(LINK_TYPES) });
+        allLinked.push(orphan);
+    }
+
+    // Extra intra-forest edges → junction nodes (multiple parents, DAG not just tree)
+    // Only forward edges (lower index → higher index) to guarantee no cycles
+    const linkedSet = new Set(links.map(l => `${l.from}-${l.to}`));
+    const extraCount = Math.floor(n * CONFIG.INTRA_FOREST_EXTRA_EDGE_RATIO);
+
+    for (let e = 0; e < extraCount; e++) {
+        const fi = randomInt(0, forestTaskIds.length - 2);
+        const ti = randomInt(fi + 1, forestTaskIds.length - 1);
+        const key = `${forestTaskIds[fi]}-${forestTaskIds[ti]}`;
+        if (linkedSet.has(key)) continue;
+        linkedSet.add(key);
+        links.push({ from: forestTaskIds[fi], to: forestTaskIds[ti], type: pick(LINK_TYPES) });
+    }
+
+    return links;
 }
 
 // ============================================================
@@ -164,25 +233,18 @@ async function bulkCopy(
 // ============================================================
 async function seed() {
     const t0 = Date.now();
-    console.log('🚀 Starting Configurable Hyper-Scale Seeding...');
+    console.log('🚀 Starting Hyper-Scale Forest Seeding...');
     console.log('📋 Config:', JSON.stringify(CONFIG, null, 2));
 
     try {
         // ----------------------------------------------------------
-        // 1. Truncate
+        // 1. Truncate (correct FK order per schema)
         // ----------------------------------------------------------
         console.log('\n🧹 Truncating old data...');
-        for (const table of [
-            'task_link_materialized',
-            'task_link',
-            'project_task',
-            'project_member',
-            'project_team',
-            'project',
-            'users',
-        ]) {
-            await sql.raw(`TRUNCATE TABLE ${table} CASCADE`).execute(db);
-        }
+        for (const t of [
+            'task_link_materialized', 'task_link', 'project_task',
+            'project_team_member', 'project_member', 'project_team', 'project', 'users',
+        ]) await sql.raw(`TRUNCATE TABLE ${t} CASCADE`).execute(db);
         console.log(`   ✓ Done (${elapsed(t0)})`);
 
         // ----------------------------------------------------------
@@ -192,7 +254,6 @@ async function seed() {
         const passwordHash = await Bun.password.hash('password');
         const adminId = uuidv4();
 
-        // Admin first
         await sql`
       INSERT INTO users (id, email, username, password_hash)
       VALUES (${adminId}::uuid, 'admin@taskinator.io', 'admin', ${passwordHash})
@@ -203,20 +264,19 @@ async function seed() {
 
         for (let i = 1; i < CONFIG.TOTAL_USERS; i++) {
             const id = uuidv4();
-            userIds.push(id);
             const first = pick(FIRST_NAMES);
             const last = pick(LAST_NAMES);
             const uname = generateUsername(first, last, i);
-            const email = generateEmail(uname);
+            userIds.push(id);
             userRows.push([
                 `'${id}'::uuid`,
-                `'${email}'`,
-                `'${uname}'`,
+                `'${esc(generateEmail(uname))}'`,
+                `'${esc(uname)}'`,
                 `'${passwordHash}'`,
             ]);
         }
 
-        await bulkCopy('users', ['id', 'email', 'username', 'password_hash'], userRows);
+        await bulkInsert('users', ['id', 'email', 'username', 'password_hash'], userRows);
         console.log(`   ✓ ${userIds.length.toLocaleString()} users (${elapsed(t0)})`);
 
         // ----------------------------------------------------------
@@ -235,15 +295,16 @@ async function seed() {
     `.execute(db);
 
         // All users → project members
-        const memberRows: string[][] = userIds.map(uid => [
-            `'${mainProjectId}'::uuid`,
-            `'${uid}'::uuid`,
-        ]);
-        await bulkCopy('project_member', ['fk_project_id', 'fk_user_id'], memberRows);
-        console.log(`   ✓ ${userIds.length.toLocaleString()} members added (${elapsed(t0)})`);
+        // fk_user_id is TEXT in schema (not UUID)
+        await bulkInsert(
+            'project_member',
+            ['fk_project_id', 'fk_user_id'],
+            userIds.map(uid => [`'${mainProjectId}'::uuid`, `'${uid}'`]),
+        );
+        console.log(`   ✓ ${userIds.length.toLocaleString()} members (${elapsed(t0)})`);
 
         // ----------------------------------------------------------
-        // 4. Teams for main project
+        // 4. Teams
         // ----------------------------------------------------------
         console.log(`\n🛡 Creating ${CONFIG.TOTAL_TEAMS.toLocaleString()} teams...`);
         const teamIds: string[] = [];
@@ -252,48 +313,50 @@ async function seed() {
         for (let i = 1; i <= CONFIG.TOTAL_TEAMS; i++) {
             const id = uuidv4();
             teamIds.push(id);
-            const name = generateTeamName(i).replace(/'/g, "''");
+            // Schema column order: id, name, fk_project_id, fk_user_id
             teamRows.push([
                 `'${id}'::uuid`,
+                `'${esc(generateTeamName(i))}'`,
                 `'${mainProjectId}'::uuid`,
-                `'${name}'`,
-                `'${adminId}'::uuid`,
+                `'${adminId}'`,           // fk_user_id is TEXT
             ]);
         }
-        await bulkCopy('project_team', ['id', 'fk_project_id', 'name', 'fk_user_id'], teamRows);
+
+        await bulkInsert('project_team', ['id', 'name', 'fk_project_id', 'fk_user_id'], teamRows);
         console.log(`   ✓ ${teamIds.length.toLocaleString()} teams (${elapsed(t0)})`);
 
         // ----------------------------------------------------------
-        // 4b. Team members (project_team_member if exists, else skip)
+        // 5. Team members
         // ----------------------------------------------------------
-        // Assign MEMBERS_PER_TEAM random users to each team
-        // Adjust table name to match your actual schema
-        try {
-            console.log(`\n👥 Assigning ~${CONFIG.MEMBERS_PER_TEAM} members per team...`);
-            const teamMemberRows: string[][] = [];
-            for (const teamId of teamIds) {
-                const shuffled = [...userIds].sort(() => Math.random() - 0.5);
-                const assigned = shuffled.slice(0, CONFIG.MEMBERS_PER_TEAM);
-                for (const uid of assigned) {
-                    teamMemberRows.push([
-                        `'${mainProjectId}'::uuid`,
-                        `'${teamId}'::uuid`,
-                        `'${uid}'::uuid`
-                    ]);
-                }
+        console.log(`\n👥 Assigning ~${CONFIG.MEMBERS_PER_TEAM} members per team...`);
+        const teamMemberRows: string[][] = [];
+
+        for (const teamId of teamIds) {
+            // Fisher-Yates partial shuffle (much faster than .sort(() => random))
+            const pool = [...userIds];
+            const count = Math.min(CONFIG.MEMBERS_PER_TEAM, pool.length);
+            for (let i = 0; i < count; i++) {
+                const j = i + Math.floor(Math.random() * (pool.length - i));
+                [pool[i], pool[j]] = [pool[j], pool[i]];
             }
-            await bulkCopy(
-                'project_team_member',
-                ['fk_project_id', 'fk_team_id', 'fk_user_id'],
-                teamMemberRows
-            );
-            console.log(`   ✓ ${teamMemberRows.length.toLocaleString()} team-member rows (${elapsed(t0)})`);
-        } catch (err: any) {
-            console.log(`   ⚠️  Team assignment failed: ${err.message || 'Unknown error'}`);
+            for (let i = 0; i < count; i++) {
+                teamMemberRows.push([
+                    `'${mainProjectId}'::uuid`,
+                    `'${teamId}'::uuid`,
+                    `'${pool[i]}'`,         // fk_user_id is TEXT
+                ]);
+            }
         }
 
+        await bulkInsert(
+            'project_team_member',
+            ['fk_project_id', 'fk_team_id', 'fk_user_id'],
+            teamMemberRows,
+        );
+        console.log(`   ✓ ${teamMemberRows.length.toLocaleString()} team-member rows (${elapsed(t0)})`);
+
         // ----------------------------------------------------------
-        // 5. Tasks for main project
+        // 6. Tasks
         // ----------------------------------------------------------
         console.log(`\n📋 Creating ${CONFIG.TOTAL_TASKS.toLocaleString()} tasks...`);
         const taskIds: string[] = [];
@@ -301,105 +364,154 @@ async function seed() {
 
         for (let i = 0; i < CONFIG.TOTAL_TASKS; i++) {
             const id = uuidv4();
-            taskIds.push(id);
-            const title = generateTaskTitle().replace(/'/g, "''");
-            const desc = `Auto-generated stress task #${i + 1} for load testing.`;
+            const title = esc(generateTaskTitle());
             const status = pickWeighted(TASK_STATUSES, STATUS_WEIGHTS);
             const teamId = pick(teamIds);
             const memberId = pick(userIds);
-
+            taskIds.push(id);
             taskRows.push([
                 `'${id}'::uuid`,
                 `'${mainProjectId}'::uuid`,
-                `'${title}'`,
-                `'${desc}'`,
-                `'${status}'`,
                 `'${teamId}'::uuid`,
-                `'${memberId}'::uuid`,
-                `'${adminId}'::uuid`,
-                `'${adminId}'::uuid`,
+                `'${memberId}'`,           // fk_member_id is TEXT
+                `'${title}'`,
+                `'Auto-generated stress task #${i + 1}.'`,
+                `'${status}'`,
+                `'${adminId}'`,            // created_by is TEXT
+                `'${adminId}'`,            // updated_by is TEXT
             ]);
         }
 
-        await bulkCopy(
+        await bulkInsert(
             'project_task',
-            ['id', 'fk_project_id', 'title', 'description', 'status',
-                'fk_team_id', 'fk_member_id', 'created_by', 'updated_by'],
+            ['id', 'fk_project_id', 'fk_team_id', 'fk_member_id',
+                'title', 'description', 'status', 'created_by', 'updated_by'],
             taskRows,
         );
         console.log(`   ✓ ${taskIds.length.toLocaleString()} tasks (${elapsed(t0)})`);
 
         // ----------------------------------------------------------
-        // 6. Task links
+        // 7. Forest-based DAG links
+        //
+        //  Split tasks into FOREST_COUNT buckets.
+        //  Each bucket = one isolated DAG (zero cross-forest edges).
+        //
+        //  Node roles across all forests (approximate):
+        //    ~10% roots       — no incoming links, 1–4 outgoing
+        //    ~40% mid-nodes   — has parents AND children
+        //    ~10% junctions   — multiple parents AND multiple children
+        //    ~30% leaves      — has parents, no outgoing links
+        //    ~10% orphans     — zero links (forests that were size 1)
         // ----------------------------------------------------------
-        console.log('\n🔗 Generating task links...');
-        const linkRows: string[][] = [];
-        const linkedSet = new Set<string>(); // avoid duplicate from→to pairs
+        console.log(`\n🔗 Building ${CONFIG.FOREST_COUNT} isolated DAG forests...`);
 
-        for (let i = 0; i < taskIds.length; i++) {
-            if (Math.random() > CONFIG.TASK_LINK_RATIO) continue;
-            const numLinks = randomInt(1, CONFIG.MAX_LINKS_PER_TASK);
-            for (let l = 0; l < numLinks; l++) {
-                const toIdx = randomInt(0, taskIds.length - 1);
-                if (toIdx === i) continue;
-                const key = `${i}-${toIdx}`;
-                if (linkedSet.has(key)) continue;
-                linkedSet.add(key);
-                linkRows.push([
+        // Shuffle so forests contain a random mix of task IDs (not sequential)
+        const shuffled = [...taskIds].sort(() => Math.random() - 0.5);
+        const forestSize = Math.floor(shuffled.length / CONFIG.FOREST_COUNT);
+        const forests: string[][] = [];
+
+        for (let f = 0; f < CONFIG.FOREST_COUNT; f++) {
+            const start = f * forestSize;
+            const end = f === CONFIG.FOREST_COUNT - 1 ? shuffled.length : start + forestSize;
+            forests.push(shuffled.slice(start, end));
+        }
+
+        const allLinkRows: string[][] = [];
+        let totalLinks = 0;
+
+        for (const forest of forests) {
+            const links = buildForestLinks(forest);
+            for (const link of links) {
+                allLinkRows.push([
                     `'${mainProjectId}'::uuid`,
-                    `'${taskIds[i]}'::uuid`,
-                    `'${taskIds[toIdx]}'::uuid`,
-                    `'${pick(LINK_TYPES)}'`,
+                    `'${link.from}'::uuid`,
+                    `'${link.to}'::uuid`,
+                    `'${link.type}'`,
                 ]);
+            }
+            totalLinks += links.length;
+        }
+
+        await bulkInsert(
+            'task_link',
+            ['fk_project_id', 'from_task_id', 'to_task_id', 'link_type'],
+            allLinkRows,
+        );
+        console.log(`   ✓ ${totalLinks.toLocaleString()} links across ${CONFIG.FOREST_COUNT} forests (${elapsed(t0)})`);
+
+        // ----------------------------------------------------------
+        // 8. Materialized paths — per-forest batched CTE
+        //
+        //  One small recursive CTE per forest.
+        //  Each forest has at most a few hundred tasks so the path
+        //  count stays tiny and predictable. No more OOM / infinite runs.
+        // ----------------------------------------------------------
+        console.log(`\n🥧 Materializing paths (per-forest, depth cap ${CONFIG.MATERIALIZATION_DEPTH_CAP})...`);
+
+        let materialized = 0;
+
+        for (let f = 0; f < forests.length; f++) {
+            const forest = forests[f];
+            if (forest.length < 2) { materialized++; continue; }
+
+            const idList = forest.map(id => `'${id}'::uuid`).join(',');
+
+            await sql.raw(`
+        INSERT INTO task_link_materialized
+          (fk_project_id, origin_id, terminal_id, path_task_ids, path_link_types, depth)
+        WITH RECURSIVE paths(origin_id, terminal_id, path_task_ids, path_link_types, depth) AS (
+          SELECT
+            from_task_id,
+            to_task_id,
+            ARRAY[from_task_id, to_task_id]::uuid[],
+            ARRAY[link_type]::text[],
+            1
+          FROM task_link
+          WHERE fk_project_id = '${mainProjectId}'::uuid
+            AND from_task_id IN (${idList})
+            AND to_task_id   IN (${idList})
+
+          UNION ALL
+
+          SELECT
+            tl.from_task_id,
+            p.terminal_id,
+            tl.from_task_id || p.path_task_ids,
+            tl.link_type    || p.path_link_types,
+            p.depth + 1
+          FROM task_link tl
+          JOIN paths p ON tl.to_task_id = p.origin_id
+          WHERE tl.fk_project_id = '${mainProjectId}'::uuid
+            AND tl.from_task_id IN (${idList})
+            AND p.depth < ${CONFIG.MATERIALIZATION_DEPTH_CAP}
+            AND NOT (tl.from_task_id = ANY(p.path_task_ids))
+        )
+        SELECT
+          '${mainProjectId}'::uuid,
+          origin_id,
+          terminal_id,
+          path_task_ids,
+          path_link_types,
+          depth
+        FROM paths
+        ON CONFLICT DO NOTHING
+      `).execute(db);
+
+            materialized++;
+
+            // Progress every 50 forests
+            if (materialized % 50 === 0 || materialized === forests.length) {
+                const pct = Math.round((materialized / forests.length) * 100);
+                process.stdout.write(
+                    `\r   ↻ ${materialized}/${forests.length} forests (${pct}%) — ${elapsed(t0)}   `
+                );
             }
         }
 
-        await bulkCopy(
-            'task_link',
-            ['fk_project_id', 'from_task_id', 'to_task_id', 'link_type'],
-            linkRows,
-        );
-        console.log(`   ✓ ${linkRows.length.toLocaleString()} links (${elapsed(t0)})`);
+        console.log(`\n   ✓ All ${materialized} forests materialized (${elapsed(t0)})`);
 
         // ----------------------------------------------------------
-        // 7. Materialized paths (depth-capped recursive CTE)
-        // ----------------------------------------------------------
-        console.log(`\n🥧 Baking materialized paths (depth cap: ${CONFIG.MATERIALIZATION_DEPTH_CAP})...`);
-        await sql.raw(`
-      INSERT INTO task_link_materialized
-        (fk_project_id, origin_id, terminal_id, path_task_ids, path_link_types, depth)
-      WITH RECURSIVE paths(origin_id, terminal_id, path_task_ids, path_link_types, depth) AS (
-        SELECT
-          from_task_id,
-          to_task_id,
-          ARRAY[from_task_id, to_task_id]::uuid[],
-          ARRAY[link_type]::text[],
-          1
-        FROM task_link
-        WHERE fk_project_id = '${mainProjectId}'::uuid
-
-        UNION ALL
-
-        SELECT
-          tl.from_task_id,
-          p.terminal_id,
-          tl.from_task_id || p.path_task_ids,
-          tl.link_type || p.path_link_types,
-          p.depth + 1
-        FROM task_link tl
-        JOIN paths p ON tl.to_task_id = p.origin_id
-        WHERE p.depth < ${CONFIG.MATERIALIZATION_DEPTH_CAP}
-          AND tl.fk_project_id = '${mainProjectId}'::uuid
-          AND NOT (tl.from_task_id = ANY(p.path_task_ids))  -- cycle guard
-      )
-      SELECT '${mainProjectId}'::uuid, origin_id, terminal_id, path_task_ids, path_link_types, depth
-      FROM paths
-      ON CONFLICT DO NOTHING
-    `).execute(db);
-        console.log(`   ✓ Materialization done (${elapsed(t0)})`);
-
-        // ----------------------------------------------------------
-        // 8. Extra lightweight projects
+        // 9. Extra lightweight projects
         // ----------------------------------------------------------
         console.log(`\n📁 Creating ${CONFIG.TOTAL_EXTRA_PROJECTS} extra projects...`);
         const extraProjectRows: string[][] = [];
@@ -409,41 +521,47 @@ async function seed() {
 
         for (let p = 0; p < CONFIG.TOTAL_EXTRA_PROJECTS; p++) {
             const pid = uuidv4();
-            const pname = (PROJECT_NAMES[p] ?? `Project ${p + 1}`).replace(/'/g, "''");
+            const pname = esc(PROJECT_NAMES[p] ?? `Project ${p + 1}`);
             const owner = pick(userIds);
 
-            extraProjectRows.push([`'${pid}'::uuid`, `'${pname}'`, `'Lightweight project ${p + 1}.'`, `'${owner}'::uuid`]);
+            extraProjectRows.push([
+                `'${pid}'::uuid`, `'${pname}'`, `'Lightweight project ${p + 1}.'`, `'${owner}'`,
+            ]);
 
             // 20 random members
-            const members = [...userIds].sort(() => Math.random() - 0.5).slice(0, 20);
-            for (const uid of members) {
-                extraMemberRows.push([`'${pid}'::uuid`, `'${uid}'::uuid`]);
-            }
+            const pool = [...userIds].sort(() => Math.random() - 0.5).slice(0, 20);
+            for (const uid of pool) extraMemberRows.push([`'${pid}'::uuid`, `'${uid}'`]);
 
             // 5 teams
             for (let t = 0; t < 5; t++) {
                 const tid = uuidv4();
-                const tname = generateTeamName(t + 1).replace(/'/g, "''");
-                extraTeamRows.push([`'${tid}'::uuid`, `'${pid}'::uuid`, `'${tname}'`, `'${owner}'::uuid`]);
+                const tname = esc(generateTeamName(t + 1));
+                extraTeamRows.push([`'${tid}'::uuid`, `'${tname}'`, `'${pid}'::uuid`, `'${owner}'`]);
             }
 
-            // 50 tasks
+            // 50 tasks (no links — keeps extra projects fast)
             for (let k = 0; k < 50; k++) {
                 const tkid = uuidv4();
-                const title = generateTaskTitle().replace(/'/g, "''");
+                const title = esc(generateTaskTitle());
                 const status = pickWeighted(TASK_STATUSES, STATUS_WEIGHTS);
                 extraTaskRows.push([
-                    `'${tkid}'::uuid`, `'${pid}'::uuid`, `'${title}'`,
-                    `'Lightweight task.'`, `'${status}'`,
-                    `'${adminId}'::uuid`, `'${adminId}'::uuid`,
+                    `'${tkid}'::uuid`,
+                    `'${pid}'::uuid`,
+                    `NULL`,              // fk_team_id nullable
+                    `'${owner}'`,        // fk_member_id TEXT
+                    `'${title}'`,
+                    `'Lightweight task.'`,
+                    `'${status}'`,
+                    `'${owner}'`,
+                    `'${owner}'`,
                 ]);
             }
         }
 
-        await bulkCopy('project', ['id', 'name', 'description', 'fk_user_id'], extraProjectRows);
-        await bulkCopy('project_member', ['fk_project_id', 'fk_user_id'], extraMemberRows);
-        await bulkCopy('project_team', ['id', 'fk_project_id', 'name', 'fk_user_id'], extraTeamRows);
-        await bulkCopy('project_task', ['id', 'fk_project_id', 'title', 'description', 'status', 'created_by', 'updated_by'], extraTaskRows);
+        await bulkInsert('project', ['id', 'name', 'description', 'fk_user_id'], extraProjectRows);
+        await bulkInsert('project_member', ['fk_project_id', 'fk_user_id'], extraMemberRows);
+        await bulkInsert('project_team', ['id', 'name', 'fk_project_id', 'fk_user_id'], extraTeamRows);
+        await bulkInsert('project_task', ['id', 'fk_project_id', 'fk_team_id', 'fk_member_id', 'title', 'description', 'status', 'created_by', 'updated_by'], extraTaskRows);
 
         console.log(`   ✓ Extra projects done (${elapsed(t0)})`);
 
@@ -453,20 +571,19 @@ async function seed() {
         const totalSecs = ((Date.now() - t0) / 1000).toFixed(1);
         console.log(`\n✅ Seeding complete in ${totalSecs}s`);
         console.log('📊 Summary:');
-        console.log(`   Users    : ${CONFIG.TOTAL_USERS.toLocaleString()}`);
-        console.log(`   Projects : ${1 + CONFIG.TOTAL_EXTRA_PROJECTS}`);
-        console.log(`   Teams    : ${CONFIG.TOTAL_TEAMS.toLocaleString()} (main) + ${CONFIG.TOTAL_EXTRA_PROJECTS * 5} (extra)`);
-        console.log(`   Tasks    : ${CONFIG.TOTAL_TASKS.toLocaleString()} (main) + ${CONFIG.TOTAL_EXTRA_PROJECTS * 50} (extra)`);
-        console.log(`   Links    : ~${linkRows.length.toLocaleString()}`);
+        console.log(`   Users            : ${CONFIG.TOTAL_USERS.toLocaleString()}`);
+        console.log(`   Projects         : ${1 + CONFIG.TOTAL_EXTRA_PROJECTS}`);
+        console.log(`   Teams (main)     : ${CONFIG.TOTAL_TEAMS.toLocaleString()}`);
+        console.log(`   Team members     : ${teamMemberRows.length.toLocaleString()}`);
+        console.log(`   Tasks (main)     : ${CONFIG.TOTAL_TASKS.toLocaleString()}`);
+        console.log(`   Task links       : ${totalLinks.toLocaleString()}`);
+        console.log(`   Forests          : ${CONFIG.FOREST_COUNT}`);
+        console.log(`   Avg tasks/forest : ~${Math.round(CONFIG.TOTAL_TASKS / CONFIG.FOREST_COUNT)}`);
         process.exit(0);
     } catch (err) {
         console.error('\n❌ Seeding failed:', err);
         process.exit(1);
     }
-}
-
-function elapsed(t0: number): string {
-    return `${((Date.now() - t0) / 1000).toFixed(1)}s`;
 }
 
 seed();
