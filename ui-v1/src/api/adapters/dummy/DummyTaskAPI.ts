@@ -65,6 +65,10 @@ export class DummyTaskAPI implements TaskAPI {
     return this.tasks.filter((t) => t.projectId === projectId);
   }
 
+  async getProjectLinks(projectId: string): Promise<TaskLink[]> {
+    return this.links.filter((l) => l.projectId === projectId);
+  }
+
   async getTask(id: string): Promise<ProjectTask | null> {
     return this.tasks.find((t) => t.id === id) || null;
   }

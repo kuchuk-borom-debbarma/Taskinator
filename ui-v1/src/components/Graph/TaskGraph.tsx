@@ -10,6 +10,7 @@ import type { TaskNeighbourhood } from '../../api/types';
 import { useTaskGraphLayout } from '../../hooks/useTaskGraphLayout';
 import { TaskNode } from './TaskNode';
 import type { Node, Edge } from '@xyflow/react';
+import { getLinkLabelColor } from '../../utils/color';
 
 interface TaskGraphProps {
   neighbourhood: TaskNeighbourhood;
@@ -20,17 +21,6 @@ const nodeTypes = {
 };
 
 const CENTER = { x: 500, y: 400 };
-
-// Deterministic color generator based on link label
-const getLinkLabelColor = (label: string = '') => {
-  let hash = 0;
-  for (let i = 0; i < label.length; i++) {
-    hash = label.charCodeAt(i) + ((hash << 5) - hash);
-  }
-  // Use HSL for consistent vibrance and legible text
-  const h = Math.abs(hash) % 360;
-  return `hsl(${h}, 65%, 45%)`;
-};
 
 export const TaskGraph: React.FC<TaskGraphProps> = ({ neighbourhood }) => {
   const { rawNodes, rawEdges } = useMemo(() => {

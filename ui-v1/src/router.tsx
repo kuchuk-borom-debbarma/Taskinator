@@ -54,12 +54,18 @@ const taskDetailRoute = createRoute({
 function ProjectTasksIndex() {
   const { projectId } = useParams({ from: projectListRoute.id });
   const { taskApi } = useApi();
+  
   const { data: tasks } = useQuery({
     queryKey: ['tasks', projectId],
     queryFn: () => taskApi.getProjectTasks(projectId),
   });
 
-  return <TaskListView tasks={tasks || []} />;
+  const { data: links } = useQuery({
+    queryKey: ['links', projectId],
+    queryFn: () => taskApi.getProjectLinks(projectId),
+  });
+
+  return <TaskListView tasks={tasks || []} links={links || []} />;
 }
 
 function TaskDetailPage() {
