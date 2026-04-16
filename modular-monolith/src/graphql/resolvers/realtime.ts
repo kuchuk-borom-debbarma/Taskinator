@@ -4,7 +4,7 @@ import { logger } from '../../logger';
 import { redisPublisher, INSTANCE_ID } from '../../redis/index.ts';
 
 /**
- * realtimeResolvers handles the unified event stream for Task and Notification events.
+ * realtimeResolvers handles the unified event stream for Notification events.
  * It merges multiple pubsub subscriptions into a single channel for the client.
  */
 export const realtimeResolvers = {
@@ -39,18 +39,12 @@ export const realtimeResolvers = {
                 }
 
                 return (async function* () {
-                    const taskCreatedIter = pubsub.subscribe('task_created');
-                    const taskUpdatedIter = pubsub.subscribe('task_updated');
-                    const taskDeletedIter = pubsub.subscribe('task_deleted');
                     const notifCreatedIter = pubsub.subscribe(
                         'notification_created',
                     );
 
                     // Helper to map and check next values
                     const iters = [
-                        { iter: taskCreatedIter, type: 'task_created' },
-                        { iter: taskUpdatedIter, type: 'task_updated' },
-                        { iter: taskDeletedIter, type: 'task_deleted' },
                         {
                             iter: notifCreatedIter,
                             type: 'notification_created',
@@ -82,28 +76,6 @@ export const realtimeResolvers = {
                                             event.createdAt instanceof Date
                                                 ? event.createdAt.toISOString()
                                                 : event.createdAt,
-                                    };
-                                }
-                            } else if (
-                                projectId &&
-                                event.projectId === projectId
-                            ) {
-                                // Task events
-                                if (type === 'task_created') {
-                                    yieldValue = {
-                                        __typename: 'TaskCreated',
-                                        task: event,
-                                    };
-                                } else if (type === 'task_updated') {
-                                    yieldValue = {
-                                        __typename: 'TaskUpdated',
-                                        task: event,
-                                    };
-                                } else if (type === 'task_deleted') {
-                                    yieldValue = {
-                                        __typename: 'TaskDeleted',
-                                        id: event.id,
-                                        projectId: event.projectId,
                                     };
                                 }
                             }

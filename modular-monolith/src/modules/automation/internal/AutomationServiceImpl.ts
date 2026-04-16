@@ -8,7 +8,6 @@ import {
     getAutomationsQuery,
     insertAutomation,
     updateAutomationQuery,
-    getAutomationsByTaskIdsQuery,
     getAutomationsByProjectIdsQuery,
     getAutomationsByTeamIdsQuery,
 } from './AutomationQueries.ts';
@@ -21,7 +20,6 @@ export class AutomationServiceImpl implements AutomationService {
         projectId: string;
         name: string;
         targetScope: AutomationScope;
-        taskId?: string;
         teamId?: string;
         rules: any;
         isActive?: boolean;
@@ -34,7 +32,6 @@ export class AutomationServiceImpl implements AutomationService {
         automationId: string;
         name?: string;
         targetScope?: AutomationScope;
-        taskId?: string | null;
         teamId?: string | null;
         rules?: any;
         isActive?: boolean;
@@ -45,19 +42,12 @@ export class AutomationServiceImpl implements AutomationService {
     async getAutomationsByFilter(data: {
         projectId?: string;
         actorId?: string;
-        taskId?: string | null;
         teamId?: string | null;
         targetScope?: AutomationScope;
         cursor?: string;
         limit?: number;
     }): Promise<{ automations: AutomationRule[]; nextCursor: string | null }> {
         return getAutomationsQuery(data);
-    }
-
-    async getAutomationsByTaskIds(
-        taskIds: string[],
-    ): Promise<Map<string, AutomationRule[]>> {
-        return getAutomationsByTaskIdsQuery(taskIds);
     }
 
     async getAutomationsByProjectIds(

@@ -31,15 +31,13 @@ export interface RuleGroup {
 }
 
 export type TargetDirection =
-    | '@self' // Apply to the entity that triggered the event
-    | 'SPECIFIC_TASKS'; // Apply to explicit UUIDs provided in `targetIds`
+    | '@self'; // Apply to the entity that triggered the event
 
-export type ActionType = 'UPDATE_TASK'; // Start simple. Only mutate Task state.
+export type ActionType = 'NOTIFY_USER';
 
 export interface Action {
     type: ActionType;
     target: TargetDirection;
-    targetIds?: string[]; // Array of taskIds when target is 'SPECIFIC_TASKS'
     params: Record<string, any>; // The delta update payload, e.g. { status: "DONE" }
     shouldPropagate?: boolean; // Default: true. (If false, prevents dead-loops by muting triggers)
 }
@@ -57,7 +55,6 @@ export type AutomationPayload = Rule[];
  * depth increments on each cascade hop — capped at MAX_CASCADE_DEPTH.
  */
 export interface DispatchContext {
-    triggerTaskId: string;
     projectId: string;
     correlationId: string;
     depth: number;

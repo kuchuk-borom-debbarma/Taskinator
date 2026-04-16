@@ -2,7 +2,6 @@ import express from 'express';
 import cors from 'cors';
 import projectRoutes from '../modules/project/project.routes';
 import teamRoutes from '../modules/team/team.routes';
-import taskRoutes from '../modules/task/task.routes';
 import authRoutes from '../modules/auth/auth.routes.ts';
 import notificationRoutes from '../modules/internal-notification/internal-notification.routes.ts';
 import { yoga } from '../graphql';
@@ -37,7 +36,6 @@ export const startRestServer = (
         // Domain Routes
         app.use('/projects', projectRoutes);
         app.use('/teams', teamRoutes);
-        app.use('/tasks', taskRoutes);
         app.use('/auth', authRoutes);
         app.use('/notifications', notificationRoutes);
         app.use('/graphql', (req, res) => yoga(req, res));

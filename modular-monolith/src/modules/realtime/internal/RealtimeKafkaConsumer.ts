@@ -37,39 +37,6 @@ export class RealtimeRouterConsumer {
         );
 
         await eventBus.subscribe(this.groupId, {
-            // 1. Task Updates: Route to active members of the project
-            [KAFKA_EVENTS.PROJECT_TASK.CREATED]: async (data: any) => {
-                await this.routeEvent(
-                    `route:project:${data.projectId}`,
-                    'task_created',
-                    {
-                        id: data.id,
-                        projectId: data.projectId,
-                        title: data.title,
-                    },
-                );
-            },
-            [KAFKA_EVENTS.PROJECT_TASK.UPDATED]: async (data: any) => {
-                await this.routeEvent(
-                    `route:project:${data.projectId}`,
-                    'task_updated',
-                    {
-                        id: data.id,
-                        projectId: data.projectId,
-                        version: data.version,
-                    },
-                );
-            },
-            [KAFKA_EVENTS.PROJECT_TASK.DELETED]: async (data: any) => {
-                await this.routeEvent(
-                    `route:project:${data.projectId}`,
-                    'task_deleted',
-                    {
-                        id: data.id,
-                        projectId: data.projectId,
-                    },
-                );
-            },
 
             // 2. Notifications: Route directly to the targeted user
             [KAFKA_EVENTS.NOTIFICATION.CREATED]: async (data: any) => {

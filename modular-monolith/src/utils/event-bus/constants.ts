@@ -3,12 +3,9 @@ export const KAFKA_TOPICS = {
     PROJECT_MEMBER: 'project-member-events',
     PROJECT_TEAM: 'project-team-events',
     PROJECT_TEAM_MEMBER: 'project-team-member-events',
-    PROJECT_TASK: 'project-task-events',
-    PROJECT_TASK_TRIGGER: 'project-task-trigger-events',
     AUTH: 'auth-events',
     NOTIFICATION: 'notification-events',
     AUTOMATION: 'automation-events',
-    PROJECT_RELATIONSHIP: 'project-relationship-events',
 } as const;
 
 // Event type constants — values match exactly what the outbox SQL writes,
@@ -30,17 +27,6 @@ export const KAFKA_EVENTS = {
         ADDED: 'project.team.member.added',
         DELETED: 'project.team.member.deleted',
     },
-    PROJECT_TASK: {
-        CREATED: 'project.task.created',
-        UPDATED: 'project.task.updated',
-        DELETED: 'project.task.deleted',
-        PARENT_DELETED: 'project.task.parent.deleted',
-        CHILDREN_DELETED: 'project.task.children.deleted',
-    },
-    PROJECT_TASK_TRIGGER: {
-        TRIGGER: 'project.task.trigger',
-        DELETED: 'project.task.trigger.deleted',
-    },
     AUTH: {
         SIGNUP_STARTED: 'auth.signup.started',
         USER_CREATED: 'auth.user.created',
@@ -50,12 +36,7 @@ export const KAFKA_EVENTS = {
         CREATED: 'notification.created',
     },
     AUTOMATION: {
-        TRIGGER: 'automation.trigger.task',
-    },
-    TASK_LINK: {
-        CREATED: 'task.link.created',
-        DELETED: 'task.link.deleted',
-        PROPAGATE: 'task.link.propagate',
+        TRIGGER: 'automation.trigger',
     },
 } as const;
 
@@ -69,19 +50,9 @@ export const EVENT_TO_TOPIC: Record<string, string> = {
     'project.team.deleted': KAFKA_TOPICS.PROJECT_TEAM,
     'project.team.member.added': KAFKA_TOPICS.PROJECT_TEAM_MEMBER,
     'project.team.member.deleted': KAFKA_TOPICS.PROJECT_TEAM_MEMBER,
-    'project.task.created': KAFKA_TOPICS.PROJECT_TASK,
-    'project.task.updated': KAFKA_TOPICS.PROJECT_TASK,
-    'project.task.deleted': KAFKA_TOPICS.PROJECT_TASK,
-    'project.task.parent.deleted': KAFKA_TOPICS.PROJECT_TASK,
-    'project.task.children.deleted': KAFKA_TOPICS.PROJECT_TASK,
-    'project.task.trigger': KAFKA_TOPICS.PROJECT_TASK_TRIGGER,
-    'project.task.trigger.deleted': KAFKA_TOPICS.PROJECT_TASK_TRIGGER,
     'auth.signup.started': KAFKA_TOPICS.AUTH,
     'auth.user.created': KAFKA_TOPICS.AUTH,
     'notification.requested': KAFKA_TOPICS.NOTIFICATION,
     'notification.created': KAFKA_TOPICS.NOTIFICATION,
-    'automation.trigger.task': KAFKA_TOPICS.AUTOMATION,
-    'task.link.created': KAFKA_TOPICS.PROJECT_RELATIONSHIP,
-    'task.link.deleted': KAFKA_TOPICS.PROJECT_RELATIONSHIP,
-    'task.link.propagate': KAFKA_TOPICS.PROJECT_RELATIONSHIP,
+    'automation.trigger': KAFKA_TOPICS.AUTOMATION,
 };

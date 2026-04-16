@@ -358,17 +358,23 @@ export const searchTeamUsers = async (params: {
     projectId: string;
     teamId: string;
     search?: string;
-    cursor?: string;
-    limit?: number;
+    /** Cursor for pagination (uuid) */
+    after?: string;
+    first?: number;
+    last?: number;
+    before?: string;
 }): Promise<{
     users: { id: string; username: string; email: string }[];
     nextCursor: string | null;
+    prevCursor: string | null;
 }> => {
     const search = params.search?.trim() ?? '';
-    const cursor = params.cursor;
-    const limit = Math.min(params.limit ?? 20, 50);
+    const { after, before } = params;
+    const isBackward = !!before;
+    const cursor = before || after;
+    const limit = Math.min(params.first || params.last || 20, 50);
 
-    const cursorVal = params.cursor || null;
+    const cursorVal = cursor || null;
 
     const rows = await sql<{ id: string; username: string; email: string }>`
         WITH auth_check AS (
@@ -385,22 +391,49 @@ export const searchTeamUsers = async (params: {
           AND EXISTS (SELECT 1 FROM auth_check)
           AND (
               ${search} = ''
-              OR u.username = ${search}
+              OR u.username ILIKE '%' || ${search} || '%'
               OR u.id::text = ${search}
           )
           AND (
               ${cursorVal}::uuid IS NULL
-              OR u.id > ${cursorVal}::uuid
+              OR (
+                  CASE 
+                    WHEN ${isBackward} THEN u.id < ${cursorVal}::uuid
+                    ELSE u.id > ${cursorVal}::uuid
+                  END
+              )
           )
-        ORDER BY u.id
+        ORDER BY u.id ${sql.raw(isBackward ? 'DESC' : 'ASC')}
         LIMIT ${limit + 1}
     `.execute(db);
 
-    const hasMore = rows.rows.length > limit;
-    const users = hasMore ? rows.rows.slice(0, limit) : rows.rows;
-    const nextCursor = hasMore ? users[users.length - 1]!.id : null;
+    let resultRows = rows.rows;
+    const hasMore = resultRows.length > limit;
+    if (hasMore) {
+        resultRows = resultRows.slice(0, limit);
+    }
+    if (isBackward) {
+        resultRows.reverse();
+    }
 
-    return { users, nextCursor };
+    const users = resultRows;
+    let nextCursor: string | null = null;
+    let prevCursor: string | null = null;
+
+    if (users.length > 0) {
+        const firstUser = users[0]!;
+        const lastUser = users[users.length - 1]!;
+
+        if (isBackward) {
+            nextCursor = hasMore ? firstUser.id : null;
+            prevCursor = lastUser.id;
+        } else {
+            nextCursor = hasMore ? lastUser.id : null;
+            prevCursor = after ? firstUser.id : null;
+        }
+    }
+
+    return { users, nextCursor, prevCursor };
 };
 
 export const getTeamsByIds = async (

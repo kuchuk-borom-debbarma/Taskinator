@@ -65,19 +65,19 @@ router.post('/signin', async (req, res) => {
 });
 
 /**
- * GET /auth/users?search=&cursor=&limit=20
+ * GET /auth/users?search=&after=&first=20
  * Exact match on username or user id. Cursor-paginated.
  */
 router.get('/users', requireAuth as any, async (req: any, res: Response) => {
     try {
         const search = req.query.search as string | undefined;
-        const cursor = req.query.cursor as string | undefined;
-        const limit = parseInt(req.query.limit as string) || 20;
+        const after = req.query.after as string | undefined;
+        const first = parseInt(req.query.first as string) || 20;
 
         const result = await authService.searchUsers({
             search,
-            cursor,
-            limit,
+            after,
+            first,
             actorId: req.userId,
         });
         res.status(200).json(result);

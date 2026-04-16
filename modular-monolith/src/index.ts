@@ -1,6 +1,5 @@
 import { projectService } from './modules/project';
 import { teamService } from './modules/team';
-import { taskService } from './modules/task';
 import { authService } from './modules/auth/index.ts';
 import { externalNotificationService } from './modules/external-notification/index.ts';
 import { internalNotificationService } from './modules/internal-notification/index.ts';
@@ -32,7 +31,6 @@ async function bootstrap() {
         await Promise.all([
             projectService.init(),
             teamService.init(),
-            taskService.init(),
             automationService.init(),
             authService.init(),
             externalNotificationService.init(),

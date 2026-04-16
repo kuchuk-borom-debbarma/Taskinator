@@ -1,6 +1,5 @@
 import eventBus, { KAFKA_EVENTS } from '../../../../utils/EventBus.ts';
 import {
-    getAutomationsByTaskIdsQuery,
     getAutomationsByTeamIdsQuery,
     getAutomationsByProjectIdsQuery,
 } from '../AutomationQueries.ts';
@@ -8,7 +7,6 @@ import { dispatchRules } from '../engine/ActionDispatcher.ts';
 import type { DispatchContext } from '../engine/DSL.ts';
 
 interface TriggerPayload {
-    taskId: string;
     projectId: string;
     correlationId: string;
     depth: number;
@@ -66,21 +64,19 @@ export class AutomationListener {
     }
 
     private async processBatch(events: TriggerPayload[]) {
-        const taskIds = Array.from(new Set(events.map((e) => e.taskId)));
         const projectIds = Array.from(new Set(events.map((e) => e.projectId)));
         const teamIds = Array.from(
             new Set(events.map((e) => e.newState.teamId).filter(Boolean)),
         );
 
         // 1. Bulk Fetch all potentially relevant rules in exactly 3 DB queries
-        const [taskMap, teamMap, projectMap] = await Promise.all([
-            getAutomationsByTaskIdsQuery(taskIds),
+        const [teamMap, projectMap] = await Promise.all([
             getAutomationsByTeamIdsQuery(teamIds),
             getAutomationsByProjectIdsQuery(projectIds),
         ]);
 
         console.log(
-            `[Automation Module] Processing batch of ${events.length} events. Fetched rules for ${taskIds.length} tasks.`,
+            `[Automation Module] Processing batch of ${events.length} events.`,
         );
 
         // 2. Process events with a concurrency limit of 10
@@ -92,7 +88,6 @@ export class AutomationListener {
 
             const chunkPromises = chunk.map(async (event) => {
                 const {
-                    taskId,
                     projectId,
                     newState,
                     correlationId,
@@ -102,7 +97,6 @@ export class AutomationListener {
                 const teamId = newState.teamId;
 
                 const rules = [
-                    ...(taskMap.get(taskId) || []),
                     ...(teamId ? teamMap.get(teamId) || [] : []),
                     ...(projectMap.get(projectId) || []),
                 ];
@@ -118,7 +112,6 @@ export class AutomationListener {
                 }));
 
                 const context: DispatchContext = {
-                    triggerTaskId: taskId,
                     projectId,
                     correlationId,
                     depth,

@@ -1,13 +1,10 @@
 union RealtimeEvent =
-    | TaskCreated
-    | TaskUpdated
-    | TaskDeleted
     | InternalNotification
 
 extend type Subscription {
     """
     A unified real-time stream for all events relevant to the authenticated user.
-    Automatically filters task events by projectId and notifications by userId.
+    Automatically filters notifications by userId.
     """
     realtimeStream(projectId: String): RealtimeEvent!
 }

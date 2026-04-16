@@ -4,7 +4,6 @@ type AutomationRule {
     actorId: String!
     name: String!
     targetScope: String!
-    taskId: ID
     teamId: ID
     rules: String!
     isActive: Boolean!
@@ -26,7 +25,6 @@ extend type Query {
     automations(
         projectId: ID
         actorId: ID
-        taskId: ID
         teamId: ID
         targetScope: String
         first: Int
@@ -39,7 +37,6 @@ extend type Mutation {
         projectId: ID!
         name: String!
         targetScope: String!
-        taskId: ID
         teamId: ID
         rules: String!
         isActive: Boolean
@@ -48,7 +45,6 @@ extend type Mutation {
         automationId: ID!
         name: String
         targetScope: String
-        taskId: ID
         teamId: ID
         rules: String
         isActive: Boolean

@@ -4,7 +4,6 @@ import type {
     Project,
     ProjectMember,
 } from '../../modules/project/ProjectService.ts';
-import type { ProjectTask } from '../../modules/task/TaskService.ts';
 import type { Team, TeamMember } from '../../modules/team/TeamService.ts';
 
 /**
@@ -97,44 +96,6 @@ export async function addProjectMember(
     return result.rows[0]!;
 }
 
-export async function createTask(
-    projectId: string,
-    userId: string,
-    overrides?: {
-        title?: string;
-        status?: string;
-    },
-): Promise<ProjectTask> {
-    const result = await sql<ProjectTask>`
-        INSERT INTO project_task (
-            fk_project_id, title, description, status,
-            created_by, updated_by
-        )
-        VALUES (
-            ${projectId}::uuid,
-            ${overrides?.title ?? 'Test Task'},
-            '',
-            ${overrides?.status ?? 'TODO'},
-            ${userId},
-            ${userId}
-        )
-        RETURNING
-            id,
-            fk_project_id AS "projectId",
-            fk_team_id AS "teamId",
-            fk_member_id AS "memberId",
-            title,
-            description,
-            status,
-            version,
-            last_event_id AS "lastEventId",
-            created_by AS "createdBy",
-            updated_by AS "updatedBy",
-            created_at AS "createdAt",
-            updated_at AS "updatedAt"
-    `.execute(db);
-    return result.rows[0]!;
-}
 
 /**
  * Creates a team directly via INSERT (no auth check, no outbox).

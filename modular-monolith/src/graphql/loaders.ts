@@ -3,8 +3,6 @@ import { projectService } from '../modules/project';
 import type { Project } from '../modules/project/ProjectService';
 import { teamService } from '../modules/team';
 import type { Team } from '../modules/team/TeamService';
-import { taskService } from '../modules/task';
-import type { ProjectTask } from '../modules/task/TaskService';
 import { authService } from '../modules/auth';
 import type { UserResult } from '../modules/auth/AuthService';
 import { automationService } from '../modules/automation';
@@ -33,14 +31,6 @@ export const createLoaders = (userId: string) => {
             const map = new Map(users.map((u) => [u.id, u]));
             return ids.map((id) => map.get(id) || null);
         }),
-        taskAutomations: new DataLoader<string, AutomationRule[]>(
-            async (taskIds) => {
-                const map = await automationService.getAutomationsByTaskIds(
-                    taskIds as string[],
-                );
-                return taskIds.map((id) => map.get(id) || []);
-            },
-        ),
         projectAutomations: new DataLoader<string, AutomationRule[]>(
             async (projectIds) => {
                 const map = await automationService.getAutomationsByProjectIds(
@@ -56,65 +46,6 @@ export const createLoaders = (userId: string) => {
                 );
                 return teamIds.map((id) => map.get(id) || []);
             },
-        ),
-        task: new DataLoader<{ projectId: string; taskId: string }, ProjectTask | null, string>(
-            async (keys) => {
-                const projectGroups = new Map<string, string[]>();
-                keys.forEach((k) => {
-                    const taskIds = projectGroups.get(k.projectId) || [];
-                    taskIds.push(k.taskId);
-                    projectGroups.set(k.projectId, taskIds);
-                });
-
-                const resultMap = new Map<string, ProjectTask>();
-                for (const [projectId, taskIds] of projectGroups.entries()) {
-                    const tasks = await taskService.getTasksByIds(
-                        projectId,
-                        taskIds,
-                    );
-                    tasks.forEach((t) => resultMap.set(`${projectId}|${t.id}`, t));
-                }
-
-                return keys.map((k) => resultMap.get(`${k.projectId}|${k.taskId}`) || null);
-            },
-            { cacheKeyFn: (key) => `${key.projectId}|${key.taskId}` },
-        ),
-        taskLinks: new DataLoader<
-            { projectId: string; taskId: string },
-            { direct: any[]; story: any[] },
-            string
-        >(
-            async (keys) => {
-                const projectGroups = new Map<string, string[]>();
-                keys.forEach((k) => {
-                    const taskIds = projectGroups.get(k.projectId) || [];
-                    taskIds.push(k.taskId);
-                    projectGroups.set(k.projectId, taskIds);
-                });
-
-                const resultMap = new Map<
-                    string,
-                    { direct: any[]; story: any[] }
-                >();
-                for (const [projectId, taskIds] of projectGroups.entries()) {
-                    const linksMap = await taskService.getLinksByTaskIds(
-                        projectId,
-                        taskIds,
-                    );
-                    linksMap.forEach((val, tid) =>
-                        resultMap.set(`${projectId}|${tid}`, val),
-                    );
-                }
-
-                return keys.map(
-                    (k) =>
-                        resultMap.get(`${k.projectId}|${k.taskId}`) || {
-                            direct: [],
-                            story: [],
-                        },
-                );
-            },
-            { cacheKeyFn: (key) => `${key.projectId}|${key.taskId}` },
         ),
     };
 };

@@ -50,22 +50,6 @@ CREATE TABLE project_team_member (
     UNIQUE(fk_team_id, fk_user_id)
 );
 
--- Project Task Table
-CREATE TABLE project_task (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    fk_project_id UUID NOT NULL,
-    fk_team_id UUID,
-    fk_member_id TEXT, -- References user_id who is assigned
-    title TEXT NOT NULL,
-    description TEXT NOT NULL DEFAULT '',
-    status TEXT NOT NULL DEFAULT 'TODO',
-    last_event_id UUID,
-    version INTEGER NOT NULL DEFAULT 1,
-    created_by TEXT NOT NULL,
-    updated_by TEXT NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
 
 -- Idempotency Table
 CREATE TABLE processed_event (
@@ -78,7 +62,6 @@ CREATE TABLE processed_event (
 -- Indexes for performance (10k RPS optimization)
 CREATE INDEX idx_project_user ON project(fk_user_id);
 CREATE INDEX idx_project_member_user ON project_member(fk_user_id);
-CREATE INDEX idx_project_task_project ON project_task(fk_project_id);
 
 
 -- Users Table
@@ -138,7 +121,6 @@ CREATE TABLE automations (
     fk_project_id UUID NOT NULL,
     actor_id TEXT NOT NULL,
     target_scope TEXT NOT NULL, -- 'TASK', 'PROJECT', 'TEAM'
-    fk_task_id UUID,            -- Specific task this automation is pinned to (optional)
     fk_team_id UUID,            -- Specific team this automation is pinned to (optional)
     rules JSONB NOT NULL, -- Array of { conditions, actions }
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
@@ -147,54 +129,5 @@ CREATE TABLE automations (
 );
 
 CREATE INDEX idx_automations_project ON automations(fk_project_id);
-CREATE INDEX idx_automations_task ON automations(fk_task_id) WHERE fk_task_id IS NOT NULL;
 CREATE INDEX idx_automations_team ON automations(fk_team_id) WHERE fk_team_id IS NOT NULL;
 
--- Task Relationships (Direct Adjacency)
-CREATE TABLE task_link (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    fk_project_id UUID NOT NULL,
-    source_task_id UUID NOT NULL,
-    target_task_id UUID NOT NULL,
-    label TEXT NOT NULL,
-    created_by TEXT NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_task_link_project FOREIGN KEY (fk_project_id) REFERENCES project(id) ON DELETE CASCADE,
-    CONSTRAINT fk_task_link_source FOREIGN KEY (source_task_id) REFERENCES project_task(id) ON DELETE CASCADE,
-    CONSTRAINT fk_task_link_target FOREIGN KEY (target_task_id) REFERENCES project_task(id) ON DELETE CASCADE,
-    CONSTRAINT chk_task_link_not_self CHECK (source_task_id <> target_task_id),
-    CONSTRAINT chk_task_link_label_valid CHECK (length(trim(label)) BETWEEN 1 AND 50)
-);
-
--- Task Relationships Materialized (Path Closure)
--- Stores the transitive reachability and the "Story Chain"
-CREATE TABLE task_link_materialized (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    fk_project_id UUID NOT NULL,
-    origin_task_id UUID NOT NULL,
-    terminal_task_id UUID NOT NULL,
-    path_task_ids UUID[] NOT NULL,
-    path_link_ids UUID[] NOT NULL,
-    path_link_labels TEXT[] NOT NULL,
-    depth INTEGER NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_task_path_project FOREIGN KEY (fk_project_id) REFERENCES project(id) ON DELETE CASCADE,
-    CONSTRAINT chk_task_path_depth CHECK (depth > 0 AND depth <= 100),
-    CONSTRAINT chk_task_path_lengths CHECK (
-        array_length(path_task_ids, 1) = depth + 1
-        AND array_length(path_link_ids, 1) = depth
-        AND array_length(path_link_labels, 1) = depth
-    )
-);
-
-CREATE INDEX idx_task_link_source ON task_link(fk_project_id, source_task_id, created_at DESC);
-CREATE INDEX idx_task_link_target ON task_link(fk_project_id, target_task_id, created_at DESC);
-CREATE INDEX idx_task_link_pair ON task_link(fk_project_id, source_task_id, target_task_id);
-CREATE INDEX idx_task_link_label ON task_link(fk_project_id, lower(trim(label)));
-
-CREATE INDEX idx_task_path_origin_depth ON task_link_materialized(fk_project_id, origin_task_id, depth);
-CREATE INDEX idx_task_path_terminal_depth ON task_link_materialized(fk_project_id, terminal_task_id, depth);
-CREATE INDEX idx_task_path_task_ids ON task_link_materialized USING GIN (path_task_ids);
-CREATE INDEX idx_task_path_link_ids ON task_link_materialized USING GIN (path_link_ids);
-CREATE INDEX idx_task_path_link_labels ON task_link_materialized USING GIN (path_link_labels);
-CREATE UNIQUE INDEX uniq_task_path_exact_links ON task_link_materialized(fk_project_id, path_link_ids);

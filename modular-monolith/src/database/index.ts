@@ -5,12 +5,7 @@ import type {
     ProjectTeamTable,
     ProjectTeamMemberTable,
 } from './tables/ProjectTeam.ts';
-import type {
-    ProjectTaskTable,
-    AutomationsTable,
-    TaskLinkTable,
-    TaskLinkMaterializedTable,
-} from './tables/Task.ts';
+import type { AutomationsTable } from './tables/Automation.ts';
 import type { ProcessedEventTable } from './tables/ProcessedEvent.ts';
 import type { UserTable, PendingUserTable } from './tables/User.ts';
 import type { OutboxEventTable } from './tables/OutboxEvent.ts';
@@ -20,14 +15,11 @@ export interface Database {
     project_member: ProjectMemberTable;
     project_team: ProjectTeamTable;
     project_team_member: ProjectTeamMemberTable;
-    project_task: ProjectTaskTable;
     automations: AutomationsTable;
     processed_event: ProcessedEventTable;
     users: UserTable;
     pending_users: PendingUserTable;
     outbox_events: OutboxEventTable;
-    task_link: TaskLinkTable;
-    task_link_materialized: TaskLinkMaterializedTable;
 }
 
 const dialect = new PostgresDialect({
