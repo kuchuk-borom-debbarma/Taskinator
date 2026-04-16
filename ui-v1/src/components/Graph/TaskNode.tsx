@@ -8,10 +8,12 @@ export type TaskNodeData = {
   task: ProjectTask;
   isFocused: boolean;
   direction: 'incoming' | 'outgoing' | 'both';
+  incomingCount?: number;
+  outgoingCount?: number;
 };
 
 export const TaskNode: React.FC<NodeProps> = memo(({ data }: any) => {
-  const { task, isFocused, direction } = data as TaskNodeData;
+  const { task, isFocused, direction, incomingCount = 0, outgoingCount = 0 } = data as TaskNodeData;
   
   const statusColors: Record<string, string> = {
     TODO: 'bg-todo',
@@ -27,9 +29,33 @@ export const TaskNode: React.FC<NodeProps> = memo(({ data }: any) => {
 
   return (
     <div className="relative group">
-      {/* Handles for edges (invisible) */}
-      <Handle type="target" position={Position.Left} className="opacity-0" />
-      <Handle type="source" position={Position.Right} className="opacity-0" />
+      {/* Dynamic Incoming Handles (Left) */}
+      {Array.from({ length: Math.max(1, incomingCount) }).map((_, i) => (
+        <Handle
+          key={`in-${i}`}
+          type="target"
+          position={Position.Left}
+          id={`in-${i}`}
+          style={{ 
+            top: incomingCount > 0 ? `${((i + 0.5) / incomingCount) * 100}%` : '50%',
+            opacity: 0 
+          }}
+        />
+      ))}
+
+      {/* Dynamic Outgoing Handles (Right) */}
+      {Array.from({ length: Math.max(1, outgoingCount) }).map((_, i) => (
+        <Handle
+          key={`out-${i}`}
+          type="source"
+          position={Position.Right}
+          id={`out-${i}`}
+          style={{ 
+            top: outgoingCount > 0 ? `${((i + 0.5) / outgoingCount) * 100}%` : '50%',
+            opacity: 0 
+          }}
+        />
+      ))}
 
       <Link 
         to="/projects/$projectId/tasks/$taskId" 
@@ -49,13 +75,13 @@ export const TaskNode: React.FC<NodeProps> = memo(({ data }: any) => {
 
         {/* The Label */}
         <div className={`
-          px-2.5 py-1 rounded-lg border border-border-notion bg-white/80 backdrop-blur-sm shadow-sm
-          max-w-[150px] transition-all duration-200
-          ${isFocused ? 'border-focus-blue shadow-md' : 'group-hover:border-text-dim'}
+          px-3 py-1 rounded-lg border border-border-notion bg-white shadow-md
+          max-w-[180px] transition-all duration-200
+          ${isFocused ? 'border-focus-blue ring-2 ring-focus-blue/10' : 'group-hover:border-text-dim'}
         `}>
           <p className={`
-            text-[11px] truncate leading-tight transition-colors
-            ${isFocused ? 'font-bold text-text-notion' : 'font-medium text-text-notion/80 group-hover:text-text-notion'}
+            text-[12px] truncate leading-tight transition-colors
+            ${isFocused ? 'font-extrabold text-text-notion' : 'font-bold text-text-notion/90 group-hover:text-text-notion'}
           `}>
             {task.title}
           </p>

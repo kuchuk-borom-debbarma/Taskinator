@@ -7,8 +7,8 @@ interface GraphNodeData {
   depth?: number;
 }
 
-const COLUMN_WIDTH = 320;
-const NODE_SPACING_Y = 140;
+const COLUMN_WIDTH = 260;
+const NODE_SPACING_Y = 120;
 
 export function useTaskGraphLayout(initialNodes: Node[], initialEdges: Edge[], center: { x: number, y: number }) {
   const nodes = useMemo(() => {
