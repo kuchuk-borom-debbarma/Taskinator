@@ -1,5 +1,5 @@
 import type { TaskAPI } from '../../interfaces/TaskAPI';
-import type { ProjectTask, TaskLink, TaskNeighbourhood } from '../../types';
+import type { ProjectTask, TaskLink, TaskNeighbourhood, TaskStory, TaskStoryNode, NeighbourhoodNode } from '../../types';
 
 export class DummyTaskAPI implements TaskAPI {
   private tasks: ProjectTask[] = [
@@ -80,92 +80,110 @@ export class DummyTaskAPI implements TaskAPI {
     return this.tasks.find((t) => t.id === id) || null;
   }
 
-  async getTaskNeighbourhood(taskId: string, maxDepth: number = 2): Promise<TaskNeighbourhood> {
+  async getTaskNeighbourhood(taskId: string, maxDepth: number = 2, limit: number = 20, after?: string): Promise<TaskNeighbourhood> {
     const focusedTask = this.tasks.find((t) => t.id === taskId);
     if (!focusedTask) throw new Error('Task not found');
 
-    const nodes: any[] = [];
-    
-    // 1. Find all ancestors (Parents, Grandparents, etc.)
-    const ancestors = new Map<string, { task: ProjectTask; depth: number }>();
-    let currentLevel = [taskId];
-    for (let d = 1; d <= maxDepth; d++) {
-      const parents: string[] = [];
+    // 1. Find all Ancstors (Incoming Stories)
+    const incomingStories: TaskStory[] = [];
+    const incomingQueue: { taskId: string; path: TaskStoryNode[]; depth: number }[] = [{ taskId, path: [], depth: 0 }];
+    const visitedIncoming = new Set<string>([taskId]);
+
+    while (incomingQueue.length > 0) {
+      const current = incomingQueue.shift()!;
+      if (current.depth >= maxDepth) continue;
+
       this.links
-        .filter(l => currentLevel.includes(l.targetTaskId))
+        .filter(l => l.targetTaskId === current.taskId)
         .forEach(l => {
-          if (!ancestors.has(l.sourceTaskId) && l.sourceTaskId !== taskId) {
+          if (!visitedIncoming.has(l.sourceTaskId)) {
             const task = this.tasks.find(t => t.id === l.sourceTaskId);
             if (task) {
-              ancestors.set(l.sourceTaskId, { task, depth: d });
-              parents.push(l.sourceTaskId);
+              const newNode: TaskStoryNode = { taskId: current.taskId, title: current.taskId === taskId ? focusedTask.title : this.tasks.find(t => t.id === current.taskId)?.title || '', label: l.label };
+              const story: TaskStory = {
+                id: `in-${l.id}-${current.depth + 1}`,
+                depth: current.depth + 1,
+                direction: 'incoming',
+                path: [...current.path, newNode],
+                finalTask: task
+              };
+              incomingStories.push(story);
+              visitedIncoming.add(l.sourceTaskId);
+              incomingQueue.push({ taskId: l.sourceTaskId, path: story.path, depth: current.depth + 1 });
             }
           }
         });
-      if (parents.length === 0) break;
-      currentLevel = parents;
     }
 
-    // 2. Lateral Discovery: Find siblings (children of ancestors)
-    const siblings = new Map<string, { task: ProjectTask; depth: number }>();
-    ancestors.forEach((val, parentId) => {
-      this.links
-        .filter(l => l.sourceTaskId === parentId)
-        .forEach(l => {
-          if (l.targetTaskId !== taskId && !ancestors.has(l.targetTaskId)) {
-            const task = this.tasks.find(t => t.id === l.targetTaskId);
-            if (task) {
-              siblings.set(l.targetTaskId, { task, depth: Math.max(0, val.depth - 1) });
-            }
-          }
-        });
-    });
+    // 2. Find all Descendants (Outgoing Stories)
+    const outgoingStories: TaskStory[] = [];
+    const outgoingQueue: { taskId: string; path: TaskStoryNode[]; depth: number }[] = [{ taskId, path: [], depth: 0 }];
+    const visitedOutgoing = new Set<string>([taskId]);
 
-    // 3. Find all descendants (Children, Grandchildren, etc.)
-    const descendants = new Map<string, { task: ProjectTask; depth: number }>();
-    currentLevel = [taskId];
-    for (let d = 1; d <= maxDepth; d++) {
-      const children: string[] = [];
+    while (outgoingQueue.length > 0) {
+      const current = outgoingQueue.shift()!;
+      if (current.depth >= maxDepth) continue;
+
       this.links
-        .filter(l => currentLevel.includes(l.sourceTaskId))
+        .filter(l => l.sourceTaskId === current.taskId)
         .forEach(l => {
-          if (!descendants.has(l.targetTaskId) && l.targetTaskId !== taskId) {
+          if (!visitedOutgoing.has(l.targetTaskId)) {
             const task = this.tasks.find(t => t.id === l.targetTaskId);
             if (task) {
-              descendants.set(l.targetTaskId, { task, depth: d });
-              children.push(l.targetTaskId);
+              const newNode: TaskStoryNode = { taskId: current.taskId, title: current.taskId === taskId ? focusedTask.title : this.tasks.find(t => t.id === current.taskId)?.title || '', label: l.label };
+              const story: TaskStory = {
+                id: `out-${l.id}-${current.depth + 1}`,
+                depth: current.depth + 1,
+                direction: 'outgoing',
+                path: [...current.path, newNode],
+                finalTask: task
+              };
+              outgoingStories.push(story);
+              visitedOutgoing.add(l.targetTaskId);
+              outgoingQueue.push({ taskId: l.targetTaskId, path: story.path, depth: current.depth + 1 });
             }
           }
         });
-      if (children.length === 0) break;
-      currentLevel = children;
     }
 
-    // 4. Flatten into NeighbourhoodNodes with Descendant Priority
-    // If a node is both a sibling and a descendant, it is OUTGOING
-    ancestors.forEach(val => {
-      nodes.push({ task: val.task, depth: val.depth, direction: 'incoming' });
-    });
-    siblings.forEach(val => {
-      if (!descendants.has(val.task.id)) {
-        nodes.push({ task: val.task, depth: val.depth, direction: 'incoming' });
-      }
-    });
-    descendants.forEach(val => {
-      nodes.push({ task: val.task, depth: val.depth, direction: 'outgoing' });
-    });
+    // 3. Flatten and Sort (Spatial Priority)
+    let allDiscoveredNodes: NeighbourhoodNode[] = [];
+    incomingStories.forEach(s => allDiscoveredNodes.push({ task: s.finalTask, depth: s.depth, direction: 'incoming' }));
+    outgoingStories.forEach(s => allDiscoveredNodes.push({ task: s.finalTask, depth: s.depth, direction: 'outgoing' }));
 
-    // 5. Edge hydration
-    const allIds = [taskId, ...nodes.map((n) => n.task.id)];
-    const internalLinks = this.links.filter((l) => 
-      allIds.includes(l.sourceTaskId) && allIds.includes(l.targetTaskId)
+    // Sort strictly by depth (Breadth-First)
+    allDiscoveredNodes.sort((a, b) => a.depth - b.depth);
+
+    // 4. Pagination
+    const startIndex = after ? parseInt(after, 10) : 0;
+    const paginatedNodes = allDiscoveredNodes.slice(0, startIndex + limit);
+    const hasNextPage = allDiscoveredNodes.length > startIndex + limit;
+    const endCursor = (startIndex + limit).toString();
+
+    // Only return the batch-specific segments for nodes
+    // Wait, the client needs ALL nodes from the current view to render the matrix.
+    // So if the client passes an 'after', it's asking for MORE.
+    // Actually, in our case, the client will manage the accumulation via useInfiniteQuery.
+    // So the server should return JUST THE BATCH of 10.
+    const batchNodes = allDiscoveredNodes.slice(startIndex, startIndex + limit);
+
+    // 5. Edges
+    // For edges, we return all edges connecting the current batch + the focus task.
+    // The client will accumulate edges.
+    const allIdsInCurrentContext = [taskId, ...paginatedNodes.map(n => n.task.id)];
+    const internalLinks = this.links.filter(l => 
+      allIdsInCurrentContext.includes(l.sourceTaskId) && 
+      allIdsInCurrentContext.includes(l.targetTaskId)
     );
 
     return {
       focusedTask,
-      nodes,
+      nodes: batchNodes,
       edges: internalLinks,
-      hasNextPage: false,
+      incomingStories: incomingStories.filter(s => batchNodes.some(bn => bn.task.id === s.finalTask.id && bn.direction === 'incoming')),
+      outgoingStories: outgoingStories.filter(s => batchNodes.some(bn => bn.task.id === s.finalTask.id && bn.direction === 'outgoing')),
+      hasNextPage,
+      endCursor,
     };
   }
 

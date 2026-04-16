@@ -38,10 +38,26 @@ export interface NeighbourhoodNode {
   direction: NeighbourDirection;
 }
 
+export interface TaskStoryNode {
+  taskId: string;
+  title: string;
+  label: string;
+}
+
+export interface TaskStory {
+  id: string; // Unique path identifier
+  depth: number;
+  direction: 'incoming' | 'outgoing';
+  path: TaskStoryNode[]; // The discovery chain [Focus -> Link A -> Task A]
+  finalTask: ProjectTask;
+}
+
 export interface TaskNeighbourhood {
   focusedTask: ProjectTask;
   nodes: NeighbourhoodNode[];
   edges: TaskLink[];
+  incomingStories: TaskStory[];
+  outgoingStories: TaskStory[];
   hasNextPage: boolean;
   endCursor?: string;
 }
