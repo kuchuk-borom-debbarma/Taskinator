@@ -12,24 +12,16 @@ export const Sidebar: React.FC = () => {
   });
 
   return (
-    <div className="sidebar" style={{
-      width: '240px',
-      height: '100vh',
-      backgroundColor: 'var(--bg-secondary)',
-      borderRight: '1px solid var(--border-subtle)',
-      display: 'flex',
-      flexDirection: 'column',
-      padding: '12px 0',
-    }}>
-      <div style={{ padding: '0 16px 20px', fontWeight: 600, color: 'var(--text-primary)' }}>
+    <aside className="w-60 h-screen bg-bg-secondary border-r border-border-notion flex flex-col py-3 overflow-y-auto shrink-0">
+      <div className="px-4 pb-5 font-semibold text-text-notion">
         Taskinator
       </div>
 
-      <nav style={{ flex: 1 }}>
+      <nav className="flex-1">
         <SidebarItem to="/" icon={<LayoutDashboard size={18} />} label="Dashboard" />
         <SidebarItem to="/projects" icon={<FolderKanban size={18} />} label="All Projects" />
         
-        <div style={{ padding: '24px 16px 8px', fontSize: '11px', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
+        <div className="px-4 pt-6 pb-2 text-[11px] font-semibold text-text-dim uppercase tracking-wider">
           Workspace
         </div>
         
@@ -43,10 +35,10 @@ export const Sidebar: React.FC = () => {
         ))}
       </nav>
 
-      <div style={{ padding: '12px 0', borderTop: '1px solid var(--border-subtle)' }}>
+      <div className="pt-3 border-t border-border-notion mt-auto">
         <SidebarItem to="/" label="Settings" icon={<Settings size={18} />} />
       </div>
-    </div>
+    </aside>
   );
 };
 
@@ -54,18 +46,10 @@ const SidebarItem: React.FC<{ to: string, icon?: React.ReactNode, label: string,
   <Link 
     to={to as any} 
     params={params}
-    style={{
-      padding: '6px 16px',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '10px',
-      fontSize: '14px',
-      color: 'var(--text-primary)',
-      transition: 'background 0.2s',
-    }}
-    activeProps={{ style: { backgroundColor: 'var(--border-subtle)', fontWeight: 500 } }}
+    className="px-4 py-1.5 flex items-center gap-2.5 text-sm text-text-notion hover:bg-black/5 transition-colors duration-200"
+    activeProps={{ className: 'bg-black/10 font-medium' }}
   >
-    {icon}
-    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</span>
+    {icon && <span className="opacity-70">{icon}</span>}
+    <span className="truncate">{label}</span>
   </Link>
 );

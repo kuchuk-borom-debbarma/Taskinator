@@ -15,61 +15,46 @@ export const TaskListView: React.FC<TaskListViewProps> = ({ tasks }) => {
   };
 
   return (
-    <div className="task-list" style={{ padding: '40px 60px' }}>
-      <header style={{ marginBottom: '32px' }}>
-        <h1 style={{ fontSize: '32px', fontWeight: 700, marginBottom: '8px' }}>Tasks</h1>
-        <p style={{ color: 'var(--text-secondary)' }}>Manage your project dependencies and progress.</p>
+    <div className="flex flex-col gap-10 px-6 py-10 md:px-16 w-full max-w-5xl mx-auto">
+      <header>
+        <h1 className="text-4xl font-extrabold tracking-tight text-text-notion mb-2">Tasks</h1>
+        <p className="text-text-dim text-lg">Manage your project dependencies and progress.</p>
       </header>
 
-      <section style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
-        <TaskGroup title="To Do" tasks={groupedTasks.TODO} icon={<Circle size={14} color="var(--accent-todo)" />} />
-        <TaskGroup title="In Progress" tasks={groupedTasks.IN_PROGRESS} icon={<Clock size={14} color="var(--accent-incoming)" />} />
-        <TaskGroup title="Done" tasks={groupedTasks.DONE} icon={<CheckCircle2 size={14} color="var(--accent-done)" />} />
-      </section>
+      <div className="flex flex-col gap-12">
+        <TaskGroup title="To Do" tasks={groupedTasks.TODO} icon={<Circle size={14} className="text-todo" />} />
+        <TaskGroup title="In Progress" tasks={groupedTasks.IN_PROGRESS} icon={<Clock size={14} className="text-incoming" />} />
+        <TaskGroup title="Done" tasks={groupedTasks.DONE} icon={<CheckCircle2 size={14} className="text-done" />} />
+      </div>
     </div>
   );
 };
 
 const TaskGroup: React.FC<{ title: string, tasks: ProjectTask[], icon: React.ReactNode }> = ({ title, tasks, icon }) => (
-  <div className="task-group">
-    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', borderBottom: '1px solid var(--border-subtle)', paddingBottom: '8px' }}>
+  <section className="flex flex-col gap-4">
+    <div className="flex items-center gap-2 pb-2 border-b border-border-notion">
       {icon}
-      <span style={{ fontSize: '12px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{title}</span>
-      <span style={{ color: 'var(--text-secondary)', fontSize: '12px' }}>{tasks.length}</span>
+      <h2 className="text-xs font-bold uppercase tracking-widest text-text-notion">{title}</h2>
+      <span className="text-xs text-text-dim ml-1">{tasks.length}</span>
     </div>
     
-    <div style={{ display: 'flex', flexDirection: 'column' }}>
+    <div className="divide-y divide-border-notion">
       {tasks.length === 0 && (
-        <div style={{ padding: '12px 16px', color: 'var(--text-secondary)', fontSize: '14px', fontStyle: 'italic' }}>No tasks in this group.</div>
+        <div className="py-4 px-2 text-sm text-text-dim italic">No tasks in this group.</div>
       )}
       {tasks.map(task => (
         <Link 
           key={task.id} 
           to="/projects/$projectId/tasks/$taskId"
           params={{ projectId: task.projectId, taskId: task.id }}
-          style={{
-            padding: '10px 16px',
-            borderBottom: '1px solid var(--border-subtle)',
-            fontSize: '14px',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            transition: 'background 0.1s',
-          }}
-          className="task-row"
+          className="group flex items-center justify-between py-3 px-2 text-sm transition-all duration-150 hover:bg-bg-secondary rounded-md"
         >
-          <span style={{ fontWeight: 500 }}>{task.title}</span>
-          <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
+          <span className="font-medium group-hover:text-focus-blue">{task.title}</span>
+          <span className="text-[11px] text-text-dim">
             {new Date(task.updatedAt).toLocaleDateString()}
           </span>
         </Link>
       ))}
     </div>
-
-    <style>{`
-      .task-row:hover {
-        background-color: var(--bg-secondary);
-      }
-    `}</style>
-  </div>
+  </section>
 );
