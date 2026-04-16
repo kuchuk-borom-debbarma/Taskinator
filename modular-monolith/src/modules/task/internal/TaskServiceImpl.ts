@@ -31,16 +31,24 @@ export class TaskServiceImpl implements TaskService {
     async getTasks(
         userId: string,
         projectId: string,
-        params?: { cursor?: string; limit?: number },
-    ): Promise<{ tasks: ProjectTask[]; nextCursor: string | null }> {
+        params?: { after?: string; before?: string; limit?: number },
+    ): Promise<{
+        tasks: ProjectTask[];
+        nextCursor: string | null;
+        prevCursor: string | null;
+    }> {
         return getTasks(userId, projectId, params);
     }
 
     async getRootTasks(
         userId: string,
         projectId: string,
-        params?: { cursor?: string; limit?: number },
-    ): Promise<{ tasks: ProjectTask[]; nextCursor: string | null }> {
+        params?: { after?: string; before?: string; limit?: number },
+    ): Promise<{
+        tasks: ProjectTask[];
+        nextCursor: string | null;
+        prevCursor: string | null;
+    }> {
         return getRootTasks(userId, projectId, params);
     }
 

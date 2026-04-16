@@ -48,16 +48,17 @@ export const taskResolvers = {
     Query: {
         tasks: async (
             _: any,
-            { projectId, first, after }: any,
+            { projectId, first, after, last, before }: any,
             context: GraphQLContext,
         ) => {
             if (!context.userId) throw new Error('Unauthorized');
-            const { tasks, nextCursor } = await taskService.getTasks(
+            const { tasks, nextCursor, prevCursor } = await taskService.getTasks(
                 context.userId,
                 projectId,
                 {
-                    limit: first,
-                    cursor: after,
+                    limit: first || last,
+                    after,
+                    before,
                 },
             );
 
@@ -65,23 +66,25 @@ export const taskResolvers = {
                 edges: tasks.map((t) => ({ node: t, cursor: t.id })),
                 pageInfo: {
                     hasNextPage: !!nextCursor,
+                    hasPreviousPage: !!prevCursor,
+                    startCursor: prevCursor,
                     endCursor: nextCursor,
-                    hasPreviousPage: false,
                 },
             };
         },
         rootTasks: async (
             _: any,
-            { projectId, first, after }: any,
+            { projectId, first, after, last, before }: any,
             context: GraphQLContext,
         ) => {
             if (!context.userId) throw new Error('Unauthorized');
-            const { tasks, nextCursor } = await taskService.getRootTasks(
+            const { tasks, nextCursor, prevCursor } = await taskService.getRootTasks(
                 context.userId,
                 projectId,
                 {
-                    limit: first,
-                    cursor: after,
+                    limit: first || last,
+                    after,
+                    before,
                 },
             );
 
@@ -89,8 +92,9 @@ export const taskResolvers = {
                 edges: tasks.map((t) => ({ node: t, cursor: t.id })),
                 pageInfo: {
                     hasNextPage: !!nextCursor,
+                    hasPreviousPage: !!prevCursor,
+                    startCursor: prevCursor,
                     endCursor: nextCursor,
-                    hasPreviousPage: false,
                 },
             };
         },

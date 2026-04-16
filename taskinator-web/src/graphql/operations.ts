@@ -101,8 +101,8 @@ export const GET_TASKS = gql`
 `;
 
 export const GET_WORKSPACE_DATA = gql`
-  query GetWorkspaceData($projectId: ID!, $first: Int) {
-    tasks(projectId: $projectId, first: $first) {
+  query GetWorkspaceData($projectId: ID!, $first: Int, $after: String, $last: Int, $before: String) {
+    tasks(projectId: $projectId, first: $first, after: $after, last: $last, before: $before) {
       edges {
         node {
           id
@@ -149,10 +149,12 @@ export const GET_WORKSPACE_DATA = gql`
       }
       pageInfo {
         hasNextPage
+        hasPreviousPage
+        startCursor
         endCursor
       }
     }
-    rootTasks(projectId: $projectId, first: $first) {
+    rootTasks(projectId: $projectId, first: $first, after: $after, last: $last, before: $before) {
       edges {
         node {
           id
@@ -198,6 +200,8 @@ export const GET_WORKSPACE_DATA = gql`
       }
       pageInfo {
         hasNextPage
+        hasPreviousPage
+        startCursor
         endCursor
       }
     }
@@ -579,8 +583,8 @@ export const SEARCH_TEAM_USERS = gql`
 `;
 
 export const GET_ROOT_TASKS = gql`
-  query GetRootTasks($projectId: ID!, $first: Int, $after: String) {
-    rootTasks(projectId: $projectId, first: $first, after: $after) {
+  query GetRootTasks($projectId: ID!, $first: Int, $after: String, $last: Int, $before: String) {
+    rootTasks(projectId: $projectId, first: $first, after: $after, last: $last, before: $before) {
       edges {
         node {
           id
@@ -626,6 +630,8 @@ export const GET_ROOT_TASKS = gql`
       }
       pageInfo {
         hasNextPage
+        hasPreviousPage
+        startCursor
         endCursor
       }
     }

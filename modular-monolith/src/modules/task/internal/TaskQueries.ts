@@ -333,10 +333,12 @@ export const unassignMemberFromTeamTasks = async (
 export const getTasks = async (
     userId: string,
     projectId: string,
-    params: { cursor?: string; limit?: number } = {},
-): Promise<{ tasks: ProjectTask[]; nextCursor: string | null }> => {
+    params: { after?: string; before?: string; limit?: number } = {},
+): Promise<{ tasks: ProjectTask[]; nextCursor: string | null; prevCursor: string | null }> => {
     const limit = Math.min(params.limit ?? 20, 50);
-    const cursor = params.cursor; // Expecting format: "ISO_DATE|uuid"
+    const { after, before } = params;
+    const isBackward = !!before;
+    const cursor = before || after;
 
     let cursorDate: string | null = null;
     let cursorId: string | null = null;
@@ -375,36 +377,69 @@ export const getTasks = async (
           AND EXISTS (SELECT 1 FROM auth_check)
           AND (
               ${cursorDate}::timestamptz IS NULL
-              OR created_at < ${cursorDate}::timestamptz
-              OR (created_at = ${cursorDate}::timestamptz AND id < ${cursorId}::uuid)
+              OR (
+                  CASE 
+                    WHEN ${isBackward} THEN (created_at > ${cursorDate}::timestamptz OR (created_at = ${cursorDate}::timestamptz AND id > ${cursorId}::uuid))
+                    ELSE (created_at < ${cursorDate}::timestamptz OR (created_at = ${cursorDate}::timestamptz AND id < ${cursorId}::uuid))
+                  END
+              )
           )
-        ORDER BY created_at DESC, id DESC
+        ORDER BY 
+            created_at ${sql.raw(isBackward ? 'ASC' : 'DESC')}, 
+            id ${sql.raw(isBackward ? 'ASC' : 'DESC')}
         LIMIT ${limit + 1}
     `.execute(db);
 
-    const hasMore = result.rows.length > limit;
-    const tasks = hasMore ? result.rows.slice(0, limit) : result.rows;
-
-    let nextCursor: string | null = null;
-    if (hasMore && tasks.length > 0) {
-        const last = tasks[tasks.length - 1]!;
-        const dateStr =
-            last.createdAt instanceof Date
-                ? last.createdAt.toISOString()
-                : last.createdAt;
-        nextCursor = `${dateStr}|${last.id}`;
+    let rows = result.rows;
+    const hasMore = rows.length > limit;
+    if (hasMore) {
+        rows = rows.slice(0, limit);
+    }
+    if (isBackward) {
+        rows.reverse();
     }
 
-    return { tasks, nextCursor };
+    const tasks = rows;
+    
+    // Logic for next/prev cursors based on direction and availability
+    let nextCursor: string | null = null;
+    let prevCursor: string | null = null;
+
+    if (tasks.length > 0) {
+        const first = tasks[0]!;
+        const last = tasks[tasks.length - 1]!;
+        
+        const firstDateStr = first.createdAt instanceof Date ? first.createdAt.toISOString() : first.createdAt;
+        const lastDateStr = last.createdAt instanceof Date ? last.createdAt.toISOString() : last.createdAt;
+
+        if (isBackward) {
+            // We were going up. If we had more, there is a "previous" (older) page even further up?
+            // Wait, "before" means "newer than".
+            // DESC order: [NEWEST, ..., OLDEST]
+            // after -> older
+            // before -> newer
+            nextCursor = hasMore ? `${firstDateStr}|${first.id}` : null; // More "newer" items exist
+            prevCursor = `${lastDateStr}|${last.id}`; // Always can go older from the bottom
+        } else {
+            // Normal forward (older) navigation
+            nextCursor = hasMore ? `${lastDateStr}|${last.id}` : null;
+            // If after was set, we can definitely go back to where we came from
+            prevCursor = after ? `${firstDateStr}|${first.id}` : null;
+        }
+    }
+
+    return { tasks, nextCursor, prevCursor };
 };
 
 export const getRootTasks = async (
     userId: string,
     projectId: string,
-    params: { cursor?: string; limit?: number } = {},
-): Promise<{ tasks: ProjectTask[]; nextCursor: string | null }> => {
+    params: { after?: string; before?: string; limit?: number } = {},
+): Promise<{ tasks: ProjectTask[]; nextCursor: string | null; prevCursor: string | null }> => {
     const limit = Math.min(params.limit ?? 20, 50);
-    const cursor = params.cursor;
+    const { after, before } = params;
+    const isBackward = !!before;
+    const cursor = before || after;
 
     let cursorDate: string | null = null;
     let cursorId: string | null = null;
@@ -448,24 +483,50 @@ export const getRootTasks = async (
           )
           AND (
               ${cursorDate}::timestamptz IS NULL
-              OR t.created_at < ${cursorDate}::timestamptz
-              OR (t.created_at = ${cursorDate}::timestamptz AND t.id < ${cursorId}::uuid)
+              OR (
+                  CASE 
+                    WHEN ${isBackward} THEN (t.created_at > ${cursorDate}::timestamptz OR (t.created_at = ${cursorDate}::timestamptz AND t.id > ${cursorId}::uuid))
+                    ELSE (t.created_at < ${cursorDate}::timestamptz OR (t.created_at = ${cursorDate}::timestamptz AND t.id < ${cursorId}::uuid))
+                  END
+              )
           )
-        ORDER BY t.created_at DESC, t.id DESC
+        ORDER BY 
+            t.created_at ${sql.raw(isBackward ? 'ASC' : 'DESC')}, 
+            t.id ${sql.raw(isBackward ? 'ASC' : 'DESC')}
         LIMIT ${limit + 1}
     `.execute(db);
 
-    const hasMore = result.rows.length > limit;
-    const tasks = hasMore ? result.rows.slice(0, limit) : result.rows;
-
-    let nextCursor: string | null = null;
-    if (hasMore && tasks.length > 0) {
-        const last = tasks[tasks.length - 1]!;
-        const dateStr = last.createdAt instanceof Date ? last.createdAt.toISOString() : last.createdAt;
-        nextCursor = `${dateStr}|${last.id}`;
+    let rows = result.rows;
+    const hasMore = rows.length > limit;
+    if (hasMore) {
+        rows = rows.slice(0, limit);
+    }
+    if (isBackward) {
+        rows.reverse();
     }
 
-    return { tasks, nextCursor };
+    const tasks = rows;
+    
+    let nextCursor: string | null = null;
+    let prevCursor: string | null = null;
+
+    if (tasks.length > 0) {
+        const first = tasks[0]!;
+        const last = tasks[tasks.length - 1]!;
+        
+        const firstDateStr = first.createdAt instanceof Date ? first.createdAt.toISOString() : first.createdAt;
+        const lastDateStr = last.createdAt instanceof Date ? last.createdAt.toISOString() : last.createdAt;
+
+        if (isBackward) {
+            nextCursor = hasMore ? `${firstDateStr}|${first.id}` : null;
+            prevCursor = `${lastDateStr}|${last.id}`;
+        } else {
+            nextCursor = hasMore ? `${lastDateStr}|${last.id}` : null;
+            prevCursor = after ? `${firstDateStr}|${first.id}` : null;
+        }
+    }
+
+    return { tasks, nextCursor, prevCursor };
 };
 export const getTasksByIdsQuery = async (
     projectId: string,
