@@ -86,6 +86,71 @@ export const insertTask = async (
     return result.rows[0]!;
 };
 
+export interface DeleteTasksParam {
+    userId: string;
+    projectId: string;
+    taskIds: string[];
+}
+
+export const deleteTasks = async (
+    data: DeleteTasksParam,
+): Promise<ProjectTask[]> => {
+    const result = await sql<ProjectTask>`
+        WITH deleted_tasks AS (
+            DELETE FROM project_task
+            WHERE fk_project_id = ${data.projectId}::uuid
+              AND id = ANY (${data.taskIds}::uuid[])
+              AND (
+                EXISTS (SELECT 1 FROM project WHERE id = ${data.projectId}::uuid AND fk_user_id = ${data.userId})
+                OR EXISTS (SELECT 1 FROM project_member WHERE fk_project_id = ${data.projectId}::uuid AND fk_user_id = ${data.userId})
+                )
+            RETURNING *
+        ),
+        inserted_outbox AS (
+            INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
+            SELECT 'project.task.deleted',
+                   id::text,
+                   jsonb_build_object(
+                        'id', id,
+                        'projectId', fk_project_id,
+                        'teamId', fk_team_id,
+                        'memberId', fk_member_id,
+                        'title', title,
+                        'description', description,
+                        'status', status,
+                        'version', version,
+                        'lastEventId', last_event_id,
+                        'createdBy', created_by,
+                        'updatedBy', updated_by,
+                        'createdAt', created_at,
+                        'updatedAt', updated_at
+                   )
+            FROM deleted_tasks
+        )
+        SELECT
+            id,
+            fk_project_id AS "projectId",
+            fk_team_id AS "teamId",
+            fk_member_id AS "memberId",
+            title,
+            description,
+            status,
+            version,
+            last_event_id AS "lastEventId",
+            created_by AS "createdBy",
+            updated_by AS "updatedBy",
+            created_at AS "createdAt",
+            updated_at AS "updatedAt"
+        FROM deleted_tasks
+    `.execute(db);
+
+    if (result.rows.length !== data.taskIds.length) {
+        throw new Error('Unauthorized or some tasks not found');
+    }
+
+    return result.rows;
+};
+
 export interface UpdateTaskParam {
     userId: string;
     projectId: string;

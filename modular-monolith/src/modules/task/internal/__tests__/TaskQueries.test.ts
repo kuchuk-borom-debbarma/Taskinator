@@ -3,12 +3,10 @@
  *
  * Runs against the real PostgreSQL database.
  * Verifies:
- *  1. Real SQL executes correctly (fixed deleteTasks wCTE syntax)
+ *  1. Real SQL executes correctly
  *  2. wCTE outbox_events rows are written atomically alongside mutations
  *  3. Optimistic locking (version check) is enforced on updateTask
  *  4. Auth rules block unauthorized operations
- *  5. Materialized path is computed correctly for hierarchy
- *  6. deleteChildrenTasksBatch correctly handles pagination
  */
 import { afterAll, beforeEach, describe, expect, it } from '@jest/globals';
 import { db } from '../../../../database/index.ts';
@@ -18,13 +16,11 @@ import {
     createProject,
     addProjectMember,
     createTask,
-    createChildTask,
 } from '../../../../__tests__/helpers/factories.ts';
 import {
     insertTask,
     deleteTasks,
     updateTask,
-    deleteChildrenTasksBatch,
     deleteAllProjectTasks,
     unassignMemberFromAllTasks,
     getTasks,
@@ -62,7 +58,6 @@ describe('TaskQueries — Integration (Real DB + wCTE)', () => {
             expect(task.id).toBeDefined();
             expect(task.title).toBe('Root Task');
             expect(task.projectId).toBe(projectId);
-            expect(task.materializedPath).toBe('');
             expect(task.version).toBe(1);
         });
 
@@ -85,57 +80,6 @@ describe('TaskQueries — Integration (Real DB + wCTE)', () => {
             expect(outbox).toHaveLength(1);
             expect((outbox[0]!.payload as any).taskId).toBe(task.id);
             expect((outbox[0]!.payload as any).projectId).toBe(projectId);
-        });
-
-        it('correctly computes materialized path for a child task', async () => {
-            const parent = await insertTask({
-                userId: ownerId,
-                projectId,
-                title: 'Parent',
-                description: '',
-                initialStatus: 'TODO',
-            });
-
-            const child = await insertTask({
-                userId: ownerId,
-                projectId,
-                title: 'Child',
-                description: '',
-                initialStatus: 'TODO',
-                parentTaskId: parent.id,
-            });
-
-            // Child's materializedPath = parent.id (since parent has empty path)
-            expect(child.materializedPath).toBe(parent.id);
-            expect(child.parentTaskId).toBe(parent.id);
-        });
-
-        it('computes materializedPath for a grandchild (2-level nesting)', async () => {
-            const root = await insertTask({
-                userId: ownerId,
-                projectId,
-                title: 'Root',
-                description: '',
-                initialStatus: 'TODO',
-            });
-            const child = await insertTask({
-                userId: ownerId,
-                projectId,
-                title: 'Child',
-                description: '',
-                initialStatus: 'TODO',
-                parentTaskId: root.id,
-            });
-            const grandchild = await insertTask({
-                userId: ownerId,
-                projectId,
-                title: 'Grandchild',
-                description: '',
-                initialStatus: 'TODO',
-                parentTaskId: child.id,
-            });
-
-            expect(grandchild.materializedPath).toBe(`${root.id}/${child.id}`);
         });
 
         it('throws Unauthorized when user is not a project member or owner', async () => {
@@ -290,7 +234,7 @@ describe('TaskQueries — Integration (Real DB + wCTE)', () => {
             const outbox = await db
                 .selectFrom('outbox_events')
                 .selectAll()
-                .where('kafka_topic', '=', 'project.task.parent.deleted')
+                .where('kafka_topic', '=', 'project.task.deleted')
                 .execute();
             expect(outbox).toHaveLength(2);
         });
@@ -317,69 +261,6 @@ describe('TaskQueries — Integration (Real DB + wCTE)', () => {
                     taskIds: [task.id],
                 }),
             ).rejects.toThrow('Unauthorized or some tasks not found');
-        });
-    });
-
-    // ─── deleteChildrenTasksBatch ─────────────────────────────────────────────
-
-    describe('deleteChildrenTasksBatch', () => {
-        it('deletes children of a given parent path and returns hasMore=false when all deleted', async () => {
-            const parent = await createTask(projectId, ownerId, {
-                title: 'Parent',
-            });
-            const child1 = await createChildTask(projectId, ownerId, parent, {
-                title: 'Child 1',
-            });
-            const child2 = await createChildTask(projectId, ownerId, parent, {
-                title: 'Child 2',
-            });
-
-            const parentPath = parent.id; // empty path + id
-            const { deletedIds, hasMore } = await deleteChildrenTasksBatch(
-                projectId,
-                parentPath,
-                100,
-            );
-
-            expect(deletedIds).toHaveLength(2);
-            expect(deletedIds).toContain(child1.id);
-            expect(deletedIds).toContain(child2.id);
-            expect(hasMore).toBe(false);
-        });
-
-        it('returns hasMore=true when more children exist than the batch limit', async () => {
-            const parent = await createTask(projectId, ownerId, {
-                title: 'Parent',
-            });
-            // Create 3 children but only delete 2 at a time
-            for (let i = 0; i < 3; i++) {
-                await createChildTask(projectId, ownerId, parent, {
-                    title: `Child ${i}`,
-                });
-            }
-
-            const parentPath = parent.id;
-            const { deletedIds, hasMore } = await deleteChildrenTasksBatch(
-                projectId,
-                parentPath,
-                2,
-            );
-
-            expect(deletedIds).toHaveLength(2);
-            expect(hasMore).toBe(true);
-        });
-
-        it('returns empty result when there are no children', async () => {
-            const parent = await createTask(projectId, ownerId, {
-                title: 'Leaf',
-            });
-            const { deletedIds, hasMore } = await deleteChildrenTasksBatch(
-                projectId,
-                parent.id,
-                100,
-            );
-            expect(deletedIds).toHaveLength(0);
-            expect(hasMore).toBe(false);
         });
     });
 

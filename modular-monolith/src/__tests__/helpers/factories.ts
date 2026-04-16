@@ -97,32 +97,24 @@ export async function addProjectMember(
     return result.rows[0]!;
 }
 
-/**
- * Creates a task directly via INSERT (no auth check, no outbox).
- * Useful for seeding test data without triggering side effects.
- */
 export async function createTask(
     projectId: string,
     userId: string,
     overrides?: {
         title?: string;
         status?: string;
-        parentTaskId?: string;
-        materializedPath?: string;
     },
 ): Promise<ProjectTask> {
     const result = await sql<ProjectTask>`
         INSERT INTO project_task (
-            fk_project_id, fk_parent_task_id, title, description, status,
-            materialized_path, created_by, updated_by
+            fk_project_id, title, description, status,
+            created_by, updated_by
         )
         VALUES (
             ${projectId}::uuid,
-            ${overrides?.parentTaskId ? sql`${overrides.parentTaskId}::uuid` : null},
             ${overrides?.title ?? 'Test Task'},
             '',
             ${overrides?.status ?? 'TODO'},
-            ${overrides?.materializedPath ?? ''},
             ${userId},
             ${userId}
         )
@@ -131,11 +123,9 @@ export async function createTask(
             fk_project_id AS "projectId",
             fk_team_id AS "teamId",
             fk_member_id AS "memberId",
-            fk_parent_task_id AS "parentTaskId",
             title,
             description,
             status,
-            materialized_path AS "materializedPath",
             version,
             last_event_id AS "lastEventId",
             created_by AS "createdBy",
@@ -144,26 +134,6 @@ export async function createTask(
             updated_at AS "updatedAt"
     `.execute(db);
     return result.rows[0]!;
-}
-
-/**
- * Creates a child task under a parent, computing the materialized path.
- */
-export async function createChildTask(
-    projectId: string,
-    userId: string,
-    parent: ProjectTask,
-    overrides?: { title?: string; status?: string },
-): Promise<ProjectTask> {
-    const parentPath = parent.materializedPath
-        ? `${parent.materializedPath}/${parent.id}`
-        : parent.id;
-
-    return createTask(projectId, userId, {
-        ...overrides,
-        parentTaskId: parent.id,
-        materializedPath: parentPath,
-    });
 }
 
 /**
