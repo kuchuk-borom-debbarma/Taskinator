@@ -17,7 +17,8 @@ import {
     deleteTaskLinkQuery,
     getLinksQuery,
     getLinksByTaskIdsQuery,
-} from './TaskQueries.ts';
+    getTasksByIdsQuery,
+} from './TaskQueries';
 import { taskDeleteListener } from './listeners/TaskDeleteListener.ts';
 import { linkPropagationListener } from './listeners/LinkPropagationListener.ts';
 import { projectDeletedListener } from './listeners/ProjectDeletedListener.ts';
@@ -128,5 +129,12 @@ export class TaskServiceImpl implements TaskService {
         Map<string, { direct: TaskLink[]; story: TaskLinkMaterialized[] }>
     > {
         return getLinksByTaskIdsQuery(projectId, taskIds);
+    }
+
+    async getTasksByIds(
+        projectId: string,
+        taskIds: string[],
+    ): Promise<ProjectTask[]> {
+        return getTasksByIdsQuery(projectId, taskIds);
     }
 }

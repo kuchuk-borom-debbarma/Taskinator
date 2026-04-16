@@ -57,6 +57,28 @@ export const createLoaders = (userId: string) => {
                 return teamIds.map((id) => map.get(id) || []);
             },
         ),
+        task: new DataLoader<{ projectId: string; taskId: string }, ProjectTask | null, string>(
+            async (keys) => {
+                const projectGroups = new Map<string, string[]>();
+                keys.forEach((k) => {
+                    const taskIds = projectGroups.get(k.projectId) || [];
+                    taskIds.push(k.taskId);
+                    projectGroups.set(k.projectId, taskIds);
+                });
+
+                const resultMap = new Map<string, ProjectTask>();
+                for (const [projectId, taskIds] of projectGroups.entries()) {
+                    const tasks = await taskService.getTasksByIds(
+                        projectId,
+                        taskIds,
+                    );
+                    tasks.forEach((t) => resultMap.set(`${projectId}|${t.id}`, t));
+                }
+
+                return keys.map((k) => resultMap.get(`${k.projectId}|${k.taskId}`) || null);
+            },
+            { cacheKeyFn: (key) => `${key.projectId}|${key.taskId}` },
+        ),
         taskLinks: new DataLoader<
             { projectId: string; taskId: string },
             { direct: any[]; story: any[] },

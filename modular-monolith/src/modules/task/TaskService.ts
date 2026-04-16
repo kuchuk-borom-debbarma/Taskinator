@@ -109,4 +109,9 @@ export interface TaskService extends BaseService {
     ): Promise<
         Map<string, { direct: TaskLink[]; story: TaskLinkMaterialized[] }>
     >;
+
+    getTasksByIds(
+        projectId: string,
+        taskIds: string[],
+    ): Promise<ProjectTask[]>;
 }
