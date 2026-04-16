@@ -10,7 +10,7 @@ import {
   Link
 } from 'lucide-react';
 import { ProjectSidebar } from '../../components/ProjectSidebar';
-import { NeuralLattice } from '../../components/NeuralLattice';
+import { TaskFlow } from '../../components/TaskFlow';
 import { StatusPicker } from '../../components/StatusPicker';
 import { Drawer } from '../../components/Drawer';
 import { MemberManager } from '../../components/MemberManager';
@@ -370,15 +370,11 @@ export const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
 
           <div className="flex-1 min-h-0 overflow-hidden relative">
              {activeTab === 'tasks' && (
-               <NeuralLattice 
+               <TaskFlow 
                  tasks={projectTasks}
                  onFocusTask={setFocusedTaskId}
                  onOpenDetails={setSelectedTaskId}
                  onToggleStatus={(task) => updateTaskMutation.mutate({ id: task.id, version: task.version, status: task.status === 'DONE' ? 'TODO' : 'DONE' })}
-                 onCreateTask={() => {
-                   setTaskTitle('');
-                   setIsCreateTaskOpen(true);
-                 }}
                />
              )}
 
@@ -611,7 +607,7 @@ export const Workspace: React.FC<WorkspaceProps> = ({ user, onLogout }) => {
                   <div className="flex items-center justify-between pl-1">
                       <h4 className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest flex items-center gap-2">
                         <Link size={12} className="text-primary" />
-                        Neural Connections
+                        Path Connections
                       </h4>
                       <button 
                         onClick={() => setIsLinkingOpen(!isLinkingOpen)}
