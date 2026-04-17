@@ -506,11 +506,16 @@ export const getNeighbourhood = async (
     const cursor = params.before || params.after;
 
     let cursorDepth: number | null = null;
+    let cursorCreatedAt: string | null = null;
     let cursorId: string | null = null;
 
     if (cursor && cursor.includes('|')) {
         const parts = cursor.split('|');
-        if (parts.length === 2) {
+        if (parts.length === 3) {
+            cursorDepth = parseInt(parts[0]!, 10);
+            cursorCreatedAt = parts[1]!;
+            cursorId = parts[2]!;
+        } else if (parts.length === 2) {
             cursorDepth = parseInt(parts[0]!, 10);
             cursorId = parts[1]!;
         }
@@ -519,7 +524,7 @@ export const getNeighbourhood = async (
     // ── Step 1: Paginate neighbours from task_reachability ──────────────────
     // Union incoming ancestors + outgoing descendants, deduplicate by choosing
     // MIN depth and marking as 'both' if the same task appears on both sides.
-    type ReachRow = { neighbour_id: string; min_depth: number; direction: string };
+    type ReachRow = { neighbour_id: string; min_depth: number; direction: string; created_at: Date };
 
     const reachResult = await sql<ReachRow>`
         WITH auth_check AS (
@@ -551,26 +556,38 @@ export const getNeighbourhood = async (
         ),
         deduped AS (
             SELECT
-                neighbour_id,
-                MIN(min_depth) AS min_depth,
-                CASE WHEN COUNT(DISTINCT direction) > 1 THEN 'both' ELSE MIN(direction) END AS direction
-            FROM neighbourhood
-            GROUP BY neighbour_id
+                n.neighbour_id,
+                MIN(n.min_depth) AS min_depth,
+                CASE WHEN COUNT(DISTINCT n.direction) > 1 THEN 'both' ELSE MIN(n.direction) END AS direction
+            FROM neighbourhood n
+            GROUP BY n.neighbour_id
+        ),
+        hydrated AS (
+            SELECT d.*, t.created_at
+            FROM deduped d
+            JOIN project_task t ON d.neighbour_id = t.id
         )
-        SELECT neighbour_id, min_depth, direction
-        FROM deduped
+        SELECT neighbour_id, min_depth, direction, created_at
+        FROM hydrated
         WHERE (
             ${cursorDepth}::int IS NULL
             OR (
                 CASE
                   WHEN ${isBackward} THEN
-                    (min_depth < ${cursorDepth}::int OR (min_depth = ${cursorDepth}::int AND neighbour_id < ${cursorId}::uuid))
+                    (min_depth < ${cursorDepth}::int 
+                      OR (min_depth = ${cursorDepth}::int AND created_at > ${cursorCreatedAt}::timestamp)
+                      OR (min_depth = ${cursorDepth}::int AND created_at = ${cursorCreatedAt}::timestamp AND neighbour_id < ${cursorId}::uuid))
                   ELSE
-                    (min_depth > ${cursorDepth}::int OR (min_depth = ${cursorDepth}::int AND neighbour_id > ${cursorId}::uuid))
+                    (min_depth > ${cursorDepth}::int 
+                      OR (min_depth = ${cursorDepth}::int AND created_at < ${cursorCreatedAt}::timestamp)
+                      OR (min_depth = ${cursorDepth}::int AND created_at = ${cursorCreatedAt}::timestamp AND neighbour_id > ${cursorId}::uuid))
                 END
             )
         )
-        ORDER BY min_depth ${sql.raw(isBackward ? 'DESC' : 'ASC')}, neighbour_id ${sql.raw(isBackward ? 'DESC' : 'ASC')}
+        ORDER BY 
+            min_depth ${sql.raw(isBackward ? 'DESC' : 'ASC')}, 
+            created_at ${sql.raw(isBackward ? 'ASC' : 'DESC')}, 
+            neighbour_id ${sql.raw(isBackward ? 'DESC' : 'ASC')}
         LIMIT ${limit + 1}
     `.execute(db);
 
@@ -588,11 +605,11 @@ export const getNeighbourhood = async (
         const last = reachRows[reachRows.length - 1]!;
 
         if (isBackward) {
-            nextCursor = hasMore ? `${first.min_depth}|${first.neighbour_id}` : null;
-            prevCursor = `${last.min_depth}|${last.neighbour_id}`;
+            nextCursor = hasMore ? `${first.min_depth}|${first.created_at.toISOString()}|${first.neighbour_id}` : null;
+            prevCursor = `${last.min_depth}|${last.created_at.toISOString()}|${last.neighbour_id}`;
         } else {
-            nextCursor = hasMore ? `${last.min_depth}|${last.neighbour_id}` : null;
-            prevCursor = params.after ? `${first.min_depth}|${first.neighbour_id}` : null;
+            nextCursor = hasMore ? `${last.min_depth}|${last.created_at.toISOString()}|${last.neighbour_id}` : null;
+            prevCursor = params.after ? `${first.min_depth}|${first.created_at.toISOString()}|${first.neighbour_id}` : null;
         }
     }
 

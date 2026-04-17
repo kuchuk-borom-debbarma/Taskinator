@@ -39,36 +39,54 @@ export const TaskMap: React.FC<TaskMapProps> = ({ taskId }) => {
     isError
   } = useInfiniteQuery({
     queryKey: ['neighbourhood-map', taskId],
-    queryFn: ({ pageParam }) => taskApi.getTaskNeighbourhood(taskId, 50, 10, pageParam),
-    initialPageParam: '0',
+    queryFn: ({ pageParam }) => taskApi.getTaskNeighbourhood(taskId, 50, 5, pageParam),
+    initialPageParam: undefined, // Start from the beginning
     getNextPageParam: (lastPage) => lastPage.hasNextPage ? lastPage.endCursor : undefined,
   });
 
-  // 2. Intelligent Graph Ranking
+  // 2. Intelligent Graph Ranking (Depth-Synchronized)
   const mapData = useMemo(() => {
     if (!data) return null;
 
     const focusedTask = data.pages[0].focusedTask;
     const allTasks = new Map<string, ProjectTask>();
     const allEdges = data.pages.flatMap(p => p.edges);
+    const nodeDepths = new Map<string, { depth: number, direction: string }>();
     
-    // Accumulate unique tasks from all pages
+    // Accumulate unique tasks and their depths from all pages
     data.pages.forEach(p => {
-      p.nodes.forEach(n => allTasks.set(n.task.id, n.task));
+      p.nodes.forEach(n => {
+        allTasks.set(n.task.id, n.task);
+        // Track the minimum depth found for this task in the neighbourhood
+        const existing = nodeDepths.get(n.task.id);
+        if (!existing || n.depth < existing.depth) {
+          nodeDepths.set(n.task.id, { depth: n.depth, direction: n.direction });
+        }
+      });
     });
     // Ensure focused task is present
     allTasks.set(focusedTask.id, focusedTask);
 
     const nodesList = Array.from(allTasks.values());
 
-    // ─── Phase-Based Vertical Ranking ───
+    // ─── Phase 1: Rank by Backend Depth ───
     const ranks = new Map<string, number>();
-    ranks.set(taskId, 0); // Focused task is the North Star (Rank 0)
+    ranks.set(taskId, 0);
 
-    // Phase 1: Initial propagation to ensure every node has a rank
+    nodesList.forEach(task => {
+      const dInfo = nodeDepths.get(task.id);
+      if (dInfo) {
+        // Incoming tasks are ranked negatively (above), outgoing positively (below)
+        const rankValue = dInfo.direction === 'incoming' ? -dInfo.depth : dInfo.depth;
+        ranks.set(task.id, rankValue);
+      }
+    });
+
+    // ─── Phase 2: Refine Disconnected Tasks ───
+    // If some nodes are linked but we don't have depth info (shouldn't happen), propagate
     let changed = true;
     let iterations = 0;
-    while (changed && iterations < 50) {
+    while (changed && iterations < 20) {
       changed = false;
       iterations++;
       allEdges.forEach(edge => {
@@ -84,55 +102,24 @@ export const TaskMap: React.FC<TaskMapProps> = ({ taskId }) => {
       });
     }
 
-    // Phase 2: Constraint Relaxation
-    // Ensure that for EVERY link A -> B, rank(B) >= rank(A) + 1
-    changed = true;
-    iterations = 0;
-    while (changed && iterations < 100) {
-      changed = false;
-      iterations++;
-      allEdges.forEach(edge => {
-        const s = ranks.get(edge.sourceTaskId);
-        const t = ranks.get(edge.targetTaskId);
-        if (s !== undefined && t !== undefined) {
-          if (t < s + 1) {
-            ranks.set(edge.targetTaskId, s + 1);
-            changed = true;
-          }
-        }
-      });
-    }
-
-    // Phase 3: Re-centering around the focal task
-    const focusRank = ranks.get(taskId) || 0;
-    nodesList.forEach(n => {
-      const currentRank = ranks.get(n.id) || 0;
-      ranks.set(n.id, currentRank - focusRank);
-    });
-
-    // Default any disconnected nodes (shouldn't happen with proximity discovery)
-    nodesList.forEach(n => {
-      if (!ranks.has(n.id)) ranks.set(n.id, 0);
-    });
-
-    const VERTICAL_SPACING = 240;
+    const VERTICAL_SPACING = 200;
     const HORIZONTAL_SPACING = 300;
 
     // Group by rank for horizontal distribution
     const byRank: Record<number, ProjectTask[]> = {};
     nodesList.forEach(task => {
-      const r = ranks.get(task.id)!;
+      const r = ranks.get(task.id) ?? 0;
       if (!byRank[r]) byRank[r] = [];
       byRank[r].push(task);
     });
 
-    // REFINEMENT: Sort each rank deterministically by ID to ensure consistent horizontal layout
+    // Sort each rank by createdAt DESC (newest center-most or consistent layout)
     Object.keys(byRank).forEach(r => {
-      byRank[Number(r)].sort((a, b) => a.id.localeCompare(b.id));
+      byRank[Number(r)].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     });
 
     const positionedNodes: MapNode[] = nodesList.map(task => {
-      const r = ranks.get(task.id)!;
+      const r = ranks.get(task.id) ?? 0;
       const row = byRank[r];
       const index = row.indexOf(task);
       const x = (index - (row.length - 1) / 2) * HORIZONTAL_SPACING;
@@ -141,7 +128,7 @@ export const TaskMap: React.FC<TaskMapProps> = ({ taskId }) => {
     });
 
     return { nodes: positionedNodes, allEdges, focusedTask };
-  }, [data]);
+  }, [data, taskId]);
 
   // 3. Navigation Listeners
   useEffect(() => {

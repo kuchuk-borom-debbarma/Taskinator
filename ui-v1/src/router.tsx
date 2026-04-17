@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { 
   createRootRoute, 
   createRoute, 
@@ -11,25 +12,108 @@ import { TaskListView } from './components/Tasks/TaskListView';
 import { TaskDetailView } from './components/Tasks/TaskDetailView';
 import { useQuery } from '@tanstack/react-query';
 import { useApi } from './context/ApiContext';
+import { useAuth } from './context/AuthContext';
+import { AuthScreen } from './components/Auth/AuthScreen';
+import { LayoutGrid, ArrowRight } from 'lucide-react';
 
 // Root Route - Contains the Global Sidebar
 const rootRoute = createRootRoute({
-  component: () => (
+  component: RootComponent,
+});
+
+function RootComponent() {
+  const { isAuthenticated, isLoading } = useAuth();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      navigate({ to: '/auth' });
+    }
+  }, [isAuthenticated, isLoading, navigate]);
+
+  if (isLoading) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-bg-notion">
+        <div className="w-8 h-8 border-4 border-focus-blue border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Outlet />; // AuthScreen will handles this
+  }
+
+  return (
     <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
       <Sidebar />
       <main style={{ flex: 1, height: '100vh', overflowY: 'auto', backgroundColor: 'var(--bg-primary)' }}>
         <Outlet />
       </main>
     </div>
-  ),
+  );
+}
+
+// Auth Route
+const authRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/auth',
+  component: () => <AuthScreen />,
 });
 
-// Index Route (Redirect to projects)
+// Index Route (Dashboard)
 const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/',
-  component: () => <div style={{ padding: '40px' }}>Select a project from the sidebar to begin.</div>,
+  component: Dashboard,
 });
+
+function Dashboard() {
+  const { projectApi } = useApi();
+  const navigate = useNavigate();
+  const { data: projects } = useQuery({
+    queryKey: ['projects'],
+    queryFn: () => projectApi.getProjects(),
+  });
+
+  return (
+    <div className="p-10 max-w-5xl mx-auto">
+      <div className="flex items-center gap-3 mb-8">
+        <div className="w-10 h-10 bg-focus-blue rounded-lg flex items-center justify-center text-white shadow-md">
+          <LayoutGrid size={22} />
+        </div>
+        <h1 className="text-3xl font-bold tracking-tight">Project Dashboard</h1>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {projects?.map((p) => (
+          <div 
+            key={p.id}
+            onClick={() => navigate({ to: '/projects/$projectId', params: { projectId: p.id } })}
+            className="group p-6 bg-white border border-border-notion rounded-xl shadow-notion hover:shadow-premium hover:border-focus-blue transition-all cursor-pointer"
+          >
+            <h3 className="text-lg font-bold mb-2 group-hover:text-focus-blue transition-colors">{p.name}</h3>
+            <p className="text-sm text-text-dim line-clamp-2 mb-6">{p.description || 'No description provided.'}</p>
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-text-dim uppercase tracking-wider">
+                v{p.version}
+              </span>
+              <div className="w-8 h-8 rounded-full flex items-center justify-center bg-bg-secondary text-text-dim group-hover:bg-focus-blue group-hover:text-white transition-all">
+                <ArrowRight size={16} />
+              </div>
+            </div>
+          </div>
+        ))}
+
+        <div className="p-6 border-2 border-dashed border-border-notion rounded-xl flex flex-col items-center justify-center gap-2 hover:bg-black/5 hover:border-focus-blue/30 transition-all cursor-pointer opacity-70 group">
+          <div className="w-10 h-10 rounded-full bg-bg-secondary flex items-center justify-center text-text-dim group-hover:bg-focus-blue group-hover:text-white transition-all">
+            <span className="text-xl font-bold">+</span>
+          </div>
+          <p className="text-sm font-medium">New Project</p>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // Project Layout Route (Handles $projectId context)
 const projectLayoutRoute = createRoute({
@@ -81,6 +165,7 @@ function TaskDetailPage() {
 }
 
 export const routeTree = rootRoute.addChildren([
+  authRoute,
   indexRoute,
   projectLayoutRoute.addChildren([
     projectListRoute,

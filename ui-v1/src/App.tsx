@@ -3,6 +3,8 @@ import { router } from './router';
 import { ApiProvider } from './context/ApiContext';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
+import { AuthProvider } from './context/AuthContext';
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -14,9 +16,11 @@ const queryClient = new QueryClient({
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <ApiProvider>
-        <RouterProvider router={router} />
-      </ApiProvider>
+      <AuthProvider>
+        <ApiProvider>
+          <RouterProvider router={router} />
+        </ApiProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }

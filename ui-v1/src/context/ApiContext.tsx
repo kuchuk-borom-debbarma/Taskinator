@@ -2,9 +2,10 @@ import React, { createContext, useContext, useMemo } from 'react';
 import type { ProjectAPI } from '../api/interfaces/ProjectAPI';
 import type { TaskAPI } from '../api/interfaces/TaskAPI';
 import type { TeamAPI } from '../api/interfaces/TeamAPI';
-import { DummyProjectAPI } from '../api/adapters/dummy/DummyProjectAPI';
-import { DummyTeamAPI } from '../api/adapters/dummy/DummyTeamAPI';
+import { GraphQLProjectAPI } from '../api/adapters/graphql/GraphQLProjectAPI';
+import { GraphQLTeamAPI } from '../api/adapters/graphql/GraphQLTeamAPI';
 import { GraphQLTaskAPI } from '../api/adapters/graphql/GraphQLTaskAPI';
+import { useAuth } from './AuthContext';
 
 interface ApiContextType {
   projectApi: ProjectAPI;
@@ -15,11 +16,13 @@ interface ApiContextType {
 const ApiContext = createContext<ApiContextType | null>(null);
 
 export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { token } = useAuth();
+  
   const apis = useMemo(() => ({
-    projectApi: new DummyProjectAPI(),
-    taskApi: new GraphQLTaskAPI(),
-    teamApi: new DummyTeamAPI(),
-  }), []);
+    projectApi: new GraphQLProjectAPI(token),
+    taskApi: new GraphQLTaskAPI(token),
+    teamApi: new GraphQLTeamAPI(token),
+  }), [token]);
 
   return (
     <ApiContext.Provider value={apis}>

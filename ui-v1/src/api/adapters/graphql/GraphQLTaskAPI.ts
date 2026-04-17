@@ -3,18 +3,15 @@ import type { ProjectTask, TaskLink, TaskNeighbourhood } from '../../types';
 
 const GRAPHQL_URL = 'http://localhost:3000/graphql';
 
-// Hardcoded development token
-// Decodes to: { id: "user-1", email: "dev@taskinator.io", username: "devuser" }
-// Signed with: "super-secret-jwt-key"
-const DEV_TOKEN = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6InVzZXItMSIsImVtYWlsIjoiZGV2QHRhc2tpbmF0b3IuaW8iLCJ1c2VybmFtZSI6ImRldnVzZXIiLCJpYXQiOjE3NzYwODk2MDAsImV4cCI6MTg3NjA4OTYwMH0.R1-4M9T1_rS_O8X_92-6l_fH_h6-L_S-A_T_I_N_A_T_O_R'; // Mocked for simplicity
-
 export class GraphQLTaskAPI implements TaskAPI {
+  constructor(private token: string | null) {}
+
   private async query<T>(query: string, variables: any = {}): Promise<T> {
     const response = await fetch(GRAPHQL_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${DEV_TOKEN}`,
+        ...(this.token ? { 'Authorization': `Bearer ${this.token}` } : {}),
       },
       body: JSON.stringify({ query, variables }),
     });
