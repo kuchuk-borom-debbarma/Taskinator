@@ -1,19 +1,26 @@
 import type { ProjectAPI } from '../../interfaces/ProjectAPI';
 import type { Project } from '../../types';
+import { graphql } from '../../../gql';
+import { print } from 'graphql';
+import type { GetProjectsQuery, GetProjectQuery, CreateProjectMutation } from '../../../gql/graphql';
 
 const GRAPHQL_URL = 'http://localhost:3000/graphql';
 
 export class GraphQLProjectAPI implements ProjectAPI {
-  constructor(private token: string | null) {}
+  private token: string | null;
+  constructor(token: string | null) {
+    this.token = token;
+  }
 
-  private async query<T>(query: string, variables: any = {}): Promise<T> {
+  private async query<T>(query: any, variables: any = {}): Promise<T> {
+    const queryStr = typeof query === 'string' ? query : print(query);
     const response = await fetch(GRAPHQL_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         ...(this.token ? { 'Authorization': `Bearer ${this.token}` } : {}),
       },
-      body: JSON.stringify({ query, variables }),
+      body: JSON.stringify({ query: queryStr, variables }),
     });
 
     const result = await response.json();
@@ -25,7 +32,7 @@ export class GraphQLProjectAPI implements ProjectAPI {
   }
 
   async getProjects(first?: number, after?: string): Promise<{ projects: Project[], hasNextPage: boolean, endCursor: string | null }> {
-    const data = await this.query<{ projects: { edges: { node: any }[], pageInfo: { hasNextPage: boolean, endCursor: string | null } } }>(`
+    const data = await this.query<GetProjectsQuery>(graphql(`
       query GetProjects($first: Int, $after: String) {
         projects(first: $first, after: $after) {
           edges {
@@ -43,17 +50,17 @@ export class GraphQLProjectAPI implements ProjectAPI {
           }
         }
       }
-    `, { first, after });
+    `), { first, after });
     
     return {
-      projects: data.projects.edges.map(e => e.node),
+      projects: data.projects.edges.map((e: any) => e.node),
       hasNextPage: data.projects.pageInfo.hasNextPage,
-      endCursor: data.projects.pageInfo.endCursor
+      endCursor: data.projects.pageInfo.endCursor || null
     };
   }
 
   async getProject(id: string): Promise<Project | null> {
-    const data = await this.query<{ project: any }>(`
+    const data = await this.query<GetProjectQuery>(graphql(`
       query GetProject($id: ID!) {
         project(id: $id) {
           id
@@ -63,12 +70,16 @@ export class GraphQLProjectAPI implements ProjectAPI {
           version
         }
       }
-    `, { id });
-    return data.project || null;
+    `), { id });
+    if (!data.project) return null;
+    return {
+      ...data.project,
+      description: data.project.description ?? undefined
+    } as Project;
   }
 
   async createProject(name: string, description?: string): Promise<Project> {
-    const data = await this.query<{ createProject: any }>(`
+    const data = await this.query<CreateProjectMutation>(graphql(`
       mutation CreateProject($name: String!, $description: String) {
         createProject(name: $name, description: $description) {
           id
@@ -78,7 +89,7 @@ export class GraphQLProjectAPI implements ProjectAPI {
           version
         }
       }
-    `, { name, description });
-    return data.createProject;
+    `), { name, description });
+    return data.createProject as Project;
   }
 }

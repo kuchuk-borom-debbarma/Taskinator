@@ -16,7 +16,8 @@ export class DummyTeamAPI implements TeamAPI {
     return this.teams.filter((t) => t.projectId === projectId);
   }
 
-  async getTeamMembers(_projectId: string): Promise<Member[]> {
+  async getTeamMembers(projectId: string, _teamId: string): Promise<Member[]> {
+    console.log(`[Dummy] Fetching members for project ${projectId} and team ${_teamId}`);
     return [...this.members];
   }
 }

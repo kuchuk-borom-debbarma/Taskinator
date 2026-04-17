@@ -19,8 +19,12 @@ export class DummyProjectAPI implements ProjectAPI {
     },
   ];
 
-  async getProjects(): Promise<Project[]> {
-    return [...this.projects];
+  async getProjects(): Promise<{ projects: Project[], hasNextPage: boolean, endCursor: string | null }> {
+    return {
+      projects: [...this.projects],
+      hasNextPage: false,
+      endCursor: null,
+    };
   }
 
   async getProject(id: string): Promise<Project | null> {

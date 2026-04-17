@@ -47,6 +47,7 @@
         "check-types": "bun x tsc --noEmit",
         "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand --testMatch=\"**/*.test.ts\"",
         "start": "bun --preload ./src/instrumentation.ts src/index.ts",
-        "dev": "bun --watch --preload ./src/instrumentation.ts src/index.ts"
+        "dev": "bun --watch --preload ./src/instrumentation.ts src/index.ts",
+        "generate-schema": "bun run src/graphql/generate-schema.ts"
     }
 }

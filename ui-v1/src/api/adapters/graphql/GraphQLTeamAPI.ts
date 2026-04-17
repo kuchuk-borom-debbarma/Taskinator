@@ -1,19 +1,26 @@
 import type { TeamAPI } from '../../interfaces/TeamAPI';
 import type { Team, Member } from '../../types';
+import { graphql } from '../../../gql';
+import { print } from 'graphql';
+import type { GetTeamsQuery, GetTeamMembersQuery } from '../../../gql/graphql';
 
 const GRAPHQL_URL = 'http://localhost:3000/graphql';
 
 export class GraphQLTeamAPI implements TeamAPI {
-  constructor(private token: string | null) {}
+  private token: string | null;
+  constructor(token: string | null) {
+    this.token = token;
+  }
 
-  private async query<T>(query: string, variables: any = {}): Promise<T> {
+  private async query<T>(query: any, variables: any = {}): Promise<T> {
+    const queryStr = typeof query === 'string' ? query : print(query);
     const response = await fetch(GRAPHQL_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         ...(this.token ? { 'Authorization': `Bearer ${this.token}` } : {}),
       },
-      body: JSON.stringify({ query, variables }),
+      body: JSON.stringify({ query: queryStr, variables }),
     });
 
     const result = await response.json();
@@ -24,10 +31,10 @@ export class GraphQLTeamAPI implements TeamAPI {
     return result.data as T;
   }
 
-  async getProjectTeams(projectId: string): Promise<Team[]> {
-    const data = await this.query<{ projectTeams: { edges: { node: any }[] } }>(`
-      query GetProjectTeams($projectId: ID!) {
-        projectTeams(projectId: $projectId) {
+  async getTeams(projectId: string): Promise<Team[]> {
+    const data = await this.query<GetTeamsQuery>(graphql(`
+      query GetTeams($projectId: ID!) {
+        teams(projectId: $projectId) {
           edges {
             node {
               id
@@ -37,14 +44,14 @@ export class GraphQLTeamAPI implements TeamAPI {
           }
         }
       }
-    `, { projectId });
-    return data.projectTeams.edges.map(e => e.node);
+    `), { projectId });
+    return data.teams.edges.map((e: any) => e.node);
   }
 
-  async getTeamMembers(teamId: string): Promise<Member[]> {
-    const data = await this.query<{ teamMembers: { edges: { node: any }[] } }>(`
-      query GetTeamMembers($teamId: ID!) {
-        teamMembers(teamId: $teamId) {
+  async getTeamMembers(projectId: string, teamId: string): Promise<Member[]> {
+    const data = await this.query<GetTeamMembersQuery>(graphql(`
+      query GetTeamMembers($projectId: ID!, $teamId: ID!) {
+        teamMembers(projectId: $projectId, teamId: $teamId) {
           edges {
             node {
               id
@@ -57,11 +64,11 @@ export class GraphQLTeamAPI implements TeamAPI {
           }
         }
       }
-    `, { teamId });
+    `), { projectId, teamId });
     return data.teamMembers.edges.map(e => ({
-      id: e.node.user.id,
-      username: e.node.user.username,
-      email: e.node.user.email,
+      id: e.node.user?.id || '',
+      username: e.node.user?.username || '',
+      email: e.node.user?.email || '',
     }));
   }
 }

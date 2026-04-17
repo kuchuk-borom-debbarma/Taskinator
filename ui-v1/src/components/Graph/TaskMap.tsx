@@ -39,8 +39,8 @@ export const TaskMap: React.FC<TaskMapProps> = ({ taskId }) => {
     isError
   } = useInfiniteQuery({
     queryKey: ['neighbourhood-map', taskId],
-    queryFn: ({ pageParam }) => taskApi.getTaskNeighbourhood(taskId, 5, 5, pageParam),
-    initialPageParam: undefined, // Start from the beginning
+    queryFn: ({ pageParam }) => taskApi.getTaskNeighbourhood(taskId, 5, 5, pageParam as string | undefined),
+    initialPageParam: undefined as string | undefined,
     getNextPageParam: (lastPage) => lastPage.hasNextPage ? lastPage.endCursor : undefined,
   });
 
@@ -306,10 +306,25 @@ export const TaskMap: React.FC<TaskMapProps> = ({ taskId }) => {
                     <div className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider text-white" style={{ backgroundColor: color }}>
                       {node.task.status}
                     </div>
+                    {node.task.team && (
+                      <span className="text-[9px] font-bold text-text-dim uppercase tracking-wider truncate max-w-[100px]">
+                        {node.task.team.name}
+                      </span>
+                    )}
                   </div>
-                  <p className={`leading-snug font-bold text-text-notion group-hover:text-focus-blue transition-colors px-1 ${isFocus ? 'text-[15px]' : 'text-[13px]'}`}>
+                  <p className={`leading-snug font-bold text-text-notion group-hover:text-focus-blue transition-colors px-1 mb-2 ${isFocus ? 'text-[15px]' : 'text-[13px]'}`}>
                     {node.task.title}
                   </p>
+                  {node.task.assignee && (
+                    <div className="flex items-center gap-1.5 px-1 pb-1 opacity-60">
+                      <div className="w-4 h-4 rounded-full bg-bg-secondary flex items-center justify-center text-[10px] text-text-dim border border-border-notion">
+                        {node.task.assignee.username.charAt(0).toUpperCase()}
+                      </div>
+                      <span className="text-[10px] font-medium text-text-dim truncate">
+                        {node.task.assignee.username}
+                      </span>
+                    </div>
+                  )}
                   {isFocus && (
                     <div className="mt-3 pt-3 border-t border-border-notion flex items-center justify-between opacity-30">
                       <span className="text-[10px] font-bold text-text-dim uppercase tracking-wider">Center</span>

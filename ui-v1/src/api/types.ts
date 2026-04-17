@@ -22,6 +22,8 @@ export interface ProjectTask {
   version: number;
   createdAt: string;
   updatedAt: string;
+  team?: Team;
+  assignee?: Member;
 }
 
 export interface TaskLink {

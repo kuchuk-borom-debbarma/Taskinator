@@ -10,11 +10,11 @@ import {
 import { Sidebar } from './components/Layout/Sidebar';
 import { TaskListView } from './components/Tasks/TaskListView';
 import { TaskDetailView } from './components/Tasks/TaskDetailView';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
 import { useApi } from './context/ApiContext';
 import { useAuth } from './context/AuthContext';
 import { AuthScreen } from './components/Auth/AuthScreen';
-import { LayoutGrid, ArrowRight } from 'lucide-react';
+import { LayoutGrid, ArrowRight, Loader2 } from 'lucide-react';
 
 // Root Route - Contains the Global Sidebar
 const rootRoute = createRootRoute({
@@ -80,7 +80,7 @@ function ProjectDashboard() {
     isError
   } = useInfiniteQuery({
     queryKey: ['dashboard-projects'],
-    queryFn: ({ pageParam }) => projectApi.getProjects(5, pageParam),
+    queryFn: ({ pageParam }) => projectApi.getProjects(5, pageParam as string | undefined),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (lastPage) => lastPage.hasNextPage ? lastPage.endCursor : undefined,
   });
