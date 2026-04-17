@@ -9,15 +9,14 @@
   --color-todo: #94a3b8;
   
   --color-bg-notion: #ffffff;
-  --color-bg-secondary: #f8fafc;
-  --color-text-notion: #1e293b;
-  --color-text-dim: #64748b;
-  --color-border-notion: #e2e8f0;
-  --color-focus-blue: #2563eb;
+  --color-bg-secondary: #fbfbfa;
+  --color-text-notion: #37352f;
+  --color-text-dim: #91918e;
+  --color-border-notion: #e9e9e8;
+  --color-focus-blue: #2383e2;
 
   --shadow-notion: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-  --shadow-premium: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-  --shadow-glass: 0 8px 32px 0 rgba(31, 38, 135, 0.07);
+  --shadow-premium: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 
 @layer base {
@@ -32,28 +31,13 @@
 
 @layer utilities {
   .glass {
-    background-color: rgba(255, 255, 255, 0.7);
-    backdrop-filter: blur(12px);
-    border: 1px solid rgba(255, 255, 255, 0.4);
-    box-shadow: var(--shadow-glass);
+    background-color: #ffffff;
+    border: 1px solid var(--color-border-notion);
+    box-shadow: var(--shadow-notion);
   }
   
   .glass-dark {
-    background-color: rgba(30, 41, 59, 0.03);
-    backdrop-filter: blur(8px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-  }
-
-  .text-glow {
-    text-shadow: 0 0 10px rgba(35, 131, 226, 0.2);
-  }
-
-  @keyframes spin-slow {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-  }
-
-  .animate-spin-slow {
-    animation: spin-slow 12s linear infinite;
+    background-color: #fbfbfa;
+    border-bottom: 1px solid var(--color-border-notion);
   }
 }

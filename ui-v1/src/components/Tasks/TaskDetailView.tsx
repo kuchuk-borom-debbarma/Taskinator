@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useApi } from '../../context/ApiContext';
-import { TaskRadialNexus } from '../Graph/TaskRadialNexus';
-import { NexusModal } from '../Graph/NexusModal';
-import { ChevronLeft, Info, Calendar, History, Hash, Terminal, Orbit } from 'lucide-react';
+import { TaskMap } from '../Graph/TaskMap';
+import { TaskMapModal } from '../Graph/TaskMapModal';
+import { ChevronLeft, Info, Calendar, Link as LinkIcon, Hash, Type, Map } from 'lucide-react';
 
 interface TaskDetailViewProps {
   taskId: string;
@@ -12,7 +12,7 @@ interface TaskDetailViewProps {
 
 export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose }) => {
   const { taskApi } = useApi();
-  const [isNexusOpen, setIsNexusOpen] = useState(false);
+  const [isMapOpen, setIsMapOpen] = useState(false);
 
   const { data: task, isLoading: isTaskLoading } = useQuery({
     queryKey: ['task', taskId],
@@ -22,7 +22,7 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
   if (isTaskLoading || !task) {
     return (
       <div className="p-20 text-text-dim text-center animate-pulse font-medium tracking-tight">
-        Synchronising Task Context...
+        Loading task details...
       </div>
     );
   }
@@ -31,130 +31,109 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
 
   return (
     <div className="w-full min-h-screen bg-bg-notion flex flex-col items-center overflow-x-hidden selection:bg-focus-blue/10 selection:text-focus-blue">
-      <div className="w-full max-w-6xl px-8 py-12 flex flex-col gap-10">
+      <div className="w-full max-w-5xl px-8 py-12 flex flex-col gap-10">
         
-        {/* Navigation Breadcrumb */}
-        <nav className="flex items-center gap-2 group">
+        {/* Navigation */}
+        <nav className="flex items-center gap-2">
           <button 
             onClick={onClose} 
-            className="flex items-center gap-1.5 text-text-dim text-[13px] font-semibold py-1.5 px-3 rounded-xl -ml-3 hover:bg-bg-secondary hover:text-text-notion transition-all duration-300 active:scale-95"
+            className="flex items-center gap-1.5 text-text-dim text-[13px] font-semibold py-1 px-2 rounded-md -ml-2 hover:bg-bg-secondary hover:text-text-notion transition-colors"
           >
             <ChevronLeft size={16} />
-            Back to Project
+            Back
           </button>
-          <div className="w-px h-4 bg-border-notion mx-2" />
-          <span className="text-[13px] font-bold text-text-dim uppercase tracking-widest opacity-60">Task Detail</span>
+          <div className="w-px h-3 bg-border-notion mx-1" />
+          <span className="text-[13px] font-medium text-text-dim opacity-60">Task Detail</span>
         </nav>
 
-        {/* Premium Header */}
-        <header className="relative">
-          <div className="flex items-center gap-3 mb-4">
+        {/* Minimal Header */}
+        <header className="flex flex-col gap-4">
+          <div className="flex items-center gap-3">
             <div 
-              className="flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest transition-all duration-500"
-              style={{ backgroundColor: `${statusColor}15`, color: statusColor, boxShadow: `0 0 20px ${statusColor}10` }}
+              className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider text-white"
+              style={{ backgroundColor: statusColor }}
             >
-              <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: statusColor }} />
               {task.status}
             </div>
-            <span className="text-text-dim text-[12px] font-medium tracking-tight opacity-50">
-              {task.id.toUpperCase()}
+            <span className="text-text-dim text-[11px] font-medium tracking-tight opacity-40">
+              #{task.id.slice(0, 8)}
             </span>
           </div>
-          <h1 className="text-5xl font-black tracking-tight text-text-notion leading-[1.1] max-w-4xl drop-shadow-sm">
+          <h1 className="text-[32px] font-bold tracking-tight text-text-notion leading-tight">
             {task.title}
           </h1>
         </header>
 
-        {/* Main Workspace Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-16 items-start">
-          <div className="flex flex-col gap-12 min-w-0">
+        {/* Workspace Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-12 items-start">
+          <div className="flex flex-col gap-10 min-w-0">
             
-            {/* Description Card */}
-            <section className="flex flex-col gap-4">
-              <div className="flex items-center gap-2 text-[11px] font-black text-text-dim uppercase tracking-[0.2em] mb-1">
-                <Info size={14} /> Description
+            {/* Description */}
+            <section className="flex flex-col gap-3">
+              <div className="flex items-center gap-2 text-[11px] font-bold text-text-dim uppercase tracking-wider">
+                <Type size={14} /> Description
               </div>
-              <p className="text-[17px] leading-relaxed text-text-notion font-medium opacity-90 max-w-2xl">
-                {task.description || "No description provided for this mission."}
+              <p className="text-[16px] leading-relaxed text-text-notion opacity-90">
+                {task.description || "No description provided."}
               </p>
             </section>
 
-            {/* Content Canvas Placeholder */}
-            <section className="relative min-h-[320px] p-10 border border-border-notion rounded-[2.5rem] bg-bg-secondary/40 flex flex-col items-center justify-center gap-6 overflow-hidden group">
-              <div className="absolute inset-0 bg-gradient-to-br from-transparent via-focus-blue/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-1000" />
-              <div className="p-5 rounded-full bg-white shadow-premium border border-border-notion relative z-10 transition-transform duration-500 group-hover:scale-110">
-                <Terminal size={32} className="text-focus-blue" />
+            {/* Content Area */}
+            <section className="min-h-[240px] p-8 border border-border-notion rounded-xl bg-bg-secondary/50 flex flex-col items-center justify-center gap-4 text-center">
+              <div className="p-4 rounded-lg bg-white border border-border-notion text-text-dim">
+                <Info size={24} />
               </div>
-              <div className="flex flex-col items-center gap-2 relative z-10 text-center">
-                <span className="text-text-notion font-black text-sm uppercase tracking-widest">Workspace Canvas</span>
-                <span className="text-text-dim text-xs font-semibold max-w-[200px]">Rich context, subtasks and documentation flow here</span>
+              <div className="flex flex-col gap-1">
+                <span className="text-text-notion font-bold text-sm">Editor Workspace</span>
+                <span className="text-text-dim text-xs">Collaboration and rich text content appears here.</span>
               </div>
             </section>
           </div>
 
-          {/* Inspector Sidebar */}
-          <aside className="flex flex-col gap-8 lg:sticky lg:top-12">
-            
-            {/* Context Module */}
-            <div className="p-6 rounded-3xl border border-border-notion bg-white shadow-premium flex flex-col gap-6">
-              <div className="text-[11px] font-black text-text-dim uppercase tracking-[0.2em] flex items-center gap-2">
-                <Terminal size={12} /> System Context
-              </div>
+          {/* Sidebar */}
+          <aside className="flex flex-col gap-6">
+            <div className="p-5 rounded-xl border border-border-notion bg-white shadow-sm flex flex-col gap-5">
+              <div className="text-[10px] font-bold text-text-dim uppercase tracking-wider">Properties</div>
               
-              <div className="flex flex-col gap-5 divide-y divide-border-notion/50">
-                <InspectorRow icon={<Calendar size={14} />} label="Created" value={new Date(task.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })} />
-                <InspectorRow icon={<History size={14} />} label="Last Activity" value="2 hours ago" />
-                <InspectorRow icon={<Hash size={14} />} label="Revision" value={`v${task.version}.0`} />
+              <div className="flex flex-col gap-4 divide-y divide-border-notion">
+                <PropertyRow icon={<Calendar size={13} />} label="Created" value={new Date(task.createdAt).toLocaleDateString()} />
+                <PropertyRow icon={<LinkIcon size={13} />} label="Version" value={`${task.version}.0`} />
+                <PropertyRow icon={<Hash size={13} />} label="Context" value="Production" />
               </div>
             </div>
 
-            {/* Quick Actions Placeholder */}
-            <div className="flex flex-col gap-3">
-              <button className="w-full py-4 px-6 rounded-2xl bg-text-notion text-white text-[13px] font-black uppercase tracking-widest hover:bg-focus-blue transition-all duration-300 shadow-lg active:scale-95">
-                Execute Mission
-              </button>
-              
-              <button 
-                onClick={() => setIsNexusOpen(true)}
-                className="w-full py-4 px-6 rounded-2xl bg-white border border-focus-blue text-focus-blue text-[13px] font-black uppercase tracking-widest hover:bg-focus-blue/5 transition-all duration-300 shadow-sm active:scale-95 flex items-center justify-center gap-3 group"
-              >
-                <Orbit size={16} className="group-hover:rotate-180 transition-transform duration-700" />
-                Manifest Neural Nexus
-              </button>
-
-              <button className="w-full py-4 px-6 rounded-2xl border border-border-notion text-text-dim text-[13px] font-black uppercase tracking-widest hover:bg-bg-secondary hover:text-text-notion transition-all duration-300 active:scale-95">
-                Archived Context
-              </button>
-            </div>
+            <button 
+              onClick={() => setIsMapOpen(true)}
+              className="w-full py-2.5 px-4 rounded-lg bg-white border border-border-notion text-text-notion text-[13px] font-bold hover:bg-bg-secondary transition-all flex items-center justify-center gap-2 shadow-sm active:scale-95"
+            >
+              <Map size={14} className="text-focus-blue" />
+              Open Task Map
+            </button>
           </aside>
         </div>
       </div>
 
-      {/* Nexus Modal Overlay */}
-      <NexusModal 
-        isOpen={isNexusOpen} 
-        onClose={() => setIsNexusOpen(false)} 
-        title={`${task.title} Lineage`}
+      <TaskMapModal 
+        isOpen={isMapOpen} 
+        onClose={() => setIsMapOpen(false)} 
+        title={task.title}
       >
-        <TaskRadialNexus taskId={taskId} />
-      </NexusModal>
+        <TaskMap taskId={taskId} />
+      </TaskMapModal>
 
-      <footer className="w-full max-w-6xl px-8 py-20 flex justify-between items-center opacity-30">
-        <div className="text-[11px] font-bold uppercase tracking-widest text-text-dim">Taskinator Orchestrator • 2.0</div>
-        <div className="text-[10px] font-medium text-text-dim">SECURE_MISSION_LOG_ACTIVE</div>
+      <footer className="w-full max-w-5xl px-8 py-12 flex justify-between items-center opacity-30 mt-auto">
+        <div className="text-[10px] font-bold uppercase tracking-widest text-text-dim">Taskinator • Minimal</div>
       </footer>
     </div>
   );
 };
 
-const InspectorRow: React.FC<{ icon: React.ReactNode, label: string, value: string }> = ({ icon, label, value }) => (
-  <div className="flex justify-between items-center pt-5 first:pt-0 group">
-    <div className="flex items-center gap-3">
-      <div className="text-text-dim opacity-50 group-hover:opacity-100 group-hover:text-focus-blue transition-all duration-300">
-        {icon}
-      </div>
-      <span className="text-text-dim text-[11px] font-bold uppercase tracking-widest">{label}</span>
+const PropertyRow: React.FC<{ icon: React.ReactNode, label: string, value: string }> = ({ icon, label, value }) => (
+  <div className="flex justify-between items-center pt-4 first:pt-0">
+    <div className="flex items-center gap-2 text-text-dim">
+      {icon}
+      <span className="text-[11px] font-medium">{label}</span>
     </div>
-    <span className="font-bold text-text-notion text-[13px] tracking-tight">{value}</span>
+    <span className="font-bold text-text-notion text-[12px]">{value}</span>
   </div>
 );
