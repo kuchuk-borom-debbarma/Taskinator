@@ -60,32 +60,55 @@ export const TaskMap: React.FC<TaskMapProps> = ({ taskId }) => {
     allTasks.set(focusedTask.id, focusedTask);
 
     const nodesList = Array.from(allTasks.values());
-    const ranks = new Map<string, number>();
-    
-    // Initial Seed: Focused task is the North Star (Rank 0)
-    ranks.set(focusedTask.id, 0);
 
-    // Iterative Rank Propagation
-    // We expand ranks outwards from the focus task based on directed link directions
+    // ─── Phase-Based Vertical Ranking ───
+    const ranks = new Map<string, number>();
+    ranks.set(taskId, 0); // Focused task is the North Star (Rank 0)
+
+    // Phase 1: Initial propagation to ensure every node has a rank
     let changed = true;
     let iterations = 0;
-    while (changed && iterations < 100) {
+    while (changed && iterations < 50) {
       changed = false;
       iterations++;
-
       allEdges.forEach(edge => {
-        const sRank = ranks.get(edge.sourceTaskId);
-        const tRank = ranks.get(edge.targetTaskId);
-
-        if (sRank !== undefined && tRank === undefined) {
-          ranks.set(edge.targetTaskId, sRank + 1);
+        const s = ranks.get(edge.sourceTaskId);
+        const t = ranks.get(edge.targetTaskId);
+        if (s !== undefined && t === undefined) {
+          ranks.set(edge.targetTaskId, s + 1);
           changed = true;
-        } else if (tRank !== undefined && sRank === undefined) {
-          ranks.set(edge.sourceTaskId, tRank - 1);
+        } else if (t !== undefined && s === undefined) {
+          ranks.set(edge.sourceTaskId, t - 1);
           changed = true;
         }
       });
     }
+
+    // Phase 2: Constraint Relaxation
+    // Ensure that for EVERY link A -> B, rank(B) >= rank(A) + 1
+    changed = true;
+    iterations = 0;
+    while (changed && iterations < 100) {
+      changed = false;
+      iterations++;
+      allEdges.forEach(edge => {
+        const s = ranks.get(edge.sourceTaskId);
+        const t = ranks.get(edge.targetTaskId);
+        if (s !== undefined && t !== undefined) {
+          if (t < s + 1) {
+            ranks.set(edge.targetTaskId, s + 1);
+            changed = true;
+          }
+        }
+      });
+    }
+
+    // Phase 3: Re-centering around the focal task
+    const focusRank = ranks.get(taskId) || 0;
+    nodesList.forEach(n => {
+      const currentRank = ranks.get(n.id) || 0;
+      ranks.set(n.id, currentRank - focusRank);
+    });
 
     // Default any disconnected nodes (shouldn't happen with proximity discovery)
     nodesList.forEach(n => {
@@ -101,6 +124,11 @@ export const TaskMap: React.FC<TaskMapProps> = ({ taskId }) => {
       const r = ranks.get(task.id)!;
       if (!byRank[r]) byRank[r] = [];
       byRank[r].push(task);
+    });
+
+    // REFINEMENT: Sort each rank deterministically by ID to ensure consistent horizontal layout
+    Object.keys(byRank).forEach(r => {
+      byRank[Number(r)].sort((a, b) => a.id.localeCompare(b.id));
     });
 
     const positionedNodes: MapNode[] = nodesList.map(task => {

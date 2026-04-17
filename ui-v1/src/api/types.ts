@@ -16,6 +16,9 @@ export interface ProjectTask {
   title: string;
   description: string;
   status: TaskStatus;
+  priority: number;
+  createdById: string;
+  dueDate?: string;
   version: number;
   createdAt: string;
   updatedAt: string;

@@ -4,29 +4,29 @@ import type { ProjectTask, TaskLink, TaskNeighbourhood, NeighbourhoodNode } from
 export class DummyTaskAPI implements TaskAPI {
   private tasks: ProjectTask[] = [
     // ─── Restaurant Project ───
-    { id: 'r1', projectId: 'p2', title: 'Concept Development', description: 'Define cuisine, target audience, and brand identity.', status: 'DONE', version: 1, createdAt: '2026-01-01T10:00:00Z', updatedAt: '2026-01-01T10:00:00Z' },
-    { id: 'r2', projectId: 'p2', title: 'Business Plan', description: 'Financial projections and operational strategy.', status: 'DONE', version: 1, createdAt: '2026-01-05T10:00:00Z', updatedAt: '2026-01-05T10:00:00Z' },
-    { id: 'r3', projectId: 'p2', title: 'Secure Financing', description: 'Pitch to investors or obtain bank loan.', status: 'DONE', version: 1, createdAt: '2026-01-15T10:00:00Z', updatedAt: '2026-01-15T10:00:00Z' },
-    { id: 'r4', projectId: 'p2', title: 'Legal Registration', description: 'Register LLC and obtain EIN.', status: 'DONE', version: 1, createdAt: '2026-01-20T10:00:00Z', updatedAt: '2026-01-20T10:00:00Z' },
-    { id: 'r5', projectId: 'p2', title: 'Lease Negotiation', description: 'Find a location and sign the lease.', status: 'DONE', version: 1, createdAt: '2026-02-01T10:00:00Z', updatedAt: '2026-02-01T10:00:00Z' },
-    { id: 'r6', projectId: 'p2', title: 'Health Permits', description: 'Submit plans to health department.', status: 'IN_PROGRESS', version: 1, createdAt: '2026-02-10T10:00:00Z', updatedAt: '2026-02-10T10:00:00Z' },
-    { id: 'r7', projectId: 'p2', title: 'Liquor License', description: 'Apply for state liquor board approval.', status: 'IN_PROGRESS', version: 1, createdAt: '2026-02-10T10:00:00Z', updatedAt: '2026-02-10T10:00:00Z' },
-    { id: 'r8', projectId: 'p2', title: 'Interior Design', description: 'Layout and aesthetic design.', status: 'DONE', version: 1, createdAt: '2026-02-15T10:00:00Z', updatedAt: '2026-02-15T10:00:00Z' },
-    { id: 'r9', projectId: 'p2', title: 'Renovation', description: 'Construction and utility plumbing/electrical.', status: 'IN_PROGRESS', version: 1, createdAt: '2026-03-01T10:00:00Z', updatedAt: '2026-03-01T10:00:00Z' },
-    { id: 'r10', projectId: 'p2', title: 'Hire Head Chef', description: 'Source and vet culinary leader.', status: 'DONE', version: 1, createdAt: '2026-03-05T10:00:00Z', updatedAt: '2026-03-05T10:00:00Z' },
-    { id: 'r11', projectId: 'p2', title: 'Menu Design', description: 'Collaborative menu creation.', status: 'IN_PROGRESS', version: 1, createdAt: '2026-03-10T10:00:00Z', updatedAt: '2026-03-10T10:00:00Z' },
-    { id: 'r12', projectId: 'p2', title: 'Kitchen Equipment', description: 'Ovens, walk-ins, and prep stations.', status: 'TODO', version: 1, createdAt: '2026-03-15T10:00:00Z', updatedAt: '2026-03-15T10:00:00Z' },
-    { id: 'r13', projectId: 'p2', title: 'Furniture Sourcing', description: 'Tables, chairs, and bar fixtures.', status: 'TODO', version: 1, createdAt: '2026-03-20T10:00:00Z', updatedAt: '2026-03-20T10:00:00Z' },
-    { id: 'r14', projectId: 'p2', title: 'Staff Recruitment', description: 'FOH and BOH general staff.', status: 'TODO', version: 1, createdAt: '2026-03-25T10:00:00Z', updatedAt: '2026-03-25T10:00:00Z' },
-    { id: 'r15', projectId: 'p2', title: 'Staff Training', description: 'Service standards and POS training.', status: 'TODO', version: 1, createdAt: '2026-04-01T10:00:00Z', updatedAt: '2026-04-01T10:00:00Z' },
-    { id: 'r16', projectId: 'p2', title: 'Ingredient Sourcing', description: 'Set up accounts with local suppliers.', status: 'TODO', version: 1, createdAt: '2026-04-05T10:00:00Z', updatedAt: '2026-04-05T10:00:00Z' },
-    { id: 'r17', projectId: 'p2', title: 'Website Launch', description: 'Online presence and reservations.', status: 'IN_PROGRESS', version: 1, createdAt: '2026-04-05T10:00:00Z', updatedAt: '2026-04-05T10:00:00Z' },
-    { id: 'r18', projectId: 'p2', title: 'Social Media Campaign', description: 'Build hype for grand opening.', status: 'TODO', version: 1, createdAt: '2026-04-07T10:00:00Z', updatedAt: '2026-04-07T10:00:00Z' },
-    { id: 'r19', projectId: 'p2', title: 'Soft Opening', description: 'Invitation-only test runs.', status: 'TODO', version: 1, createdAt: '2026-04-10T10:00:00Z', updatedAt: '2026-04-10T10:00:00Z' },
-    { id: 'r20', projectId: 'p2', title: 'Grand Opening', description: 'Official public opening ceremony.', status: 'TODO', version: 1, createdAt: '2026-04-15T10:00:00Z', updatedAt: '2026-04-15T10:00:00Z' },
-    { id: 'r21', projectId: 'p2', title: 'Marketing Analysis', description: 'Review initial launch metrics.', status: 'TODO', version: 1, createdAt: '2026-04-20T10:00:00Z', updatedAt: '2026-04-20T10:00:00Z' },
-    { id: 'r22', projectId: 'p2', title: 'Expansion Plan', description: 'Strategies for second location.', status: 'TODO', version: 1, createdAt: '2026-05-01T10:00:00Z', updatedAt: '2026-05-01T10:00:00Z' },
-    { id: 'r23', projectId: 'p2', title: 'Investor Relations', description: 'Quarterly update meeting.', status: 'TODO', version: 1, createdAt: '2026-05-15T10:00:00Z', updatedAt: '2026-05-15T10:00:00Z' },
+    { id: 'r1', projectId: 'p2', title: 'Concept Development', description: 'Define cuisine, target audience, and brand identity.', status: 'DONE', priority: 1, teamId: 't1', memberId: 'm1', createdById: 'm1', dueDate: '2026-01-10T10:00:00Z', version: 1, createdAt: '2026-01-01T10:00:00Z', updatedAt: '2026-01-02T12:00:00Z' },
+    { id: 'r2', projectId: 'p2', title: 'Business Plan', description: 'Financial projections and operational strategy.', status: 'DONE', priority: 2, teamId: 't1', memberId: 'm2', createdById: 'm1', dueDate: '2026-01-15T10:00:00Z', version: 1, createdAt: '2026-01-05T10:00:00Z', updatedAt: '2026-01-06T15:00:00Z' },
+    { id: 'r3', projectId: 'p2', title: 'Secure Financing', description: 'Pitch to investors or obtain bank loan.', status: 'DONE', priority: 1, teamId: 't1', createdById: 'm2', dueDate: '2026-01-30T10:00:00Z', version: 1, createdAt: '2026-01-15T10:00:00Z', updatedAt: '2026-01-16T10:00:00Z' },
+    { id: 'r4', projectId: 'p2', title: 'Legal Registration', description: 'Register LLC and obtain EIN.', status: 'DONE', priority: 3, teamId: 't2', createdById: 'm2', dueDate: '2026-02-10T10:00:00Z', version: 1, createdAt: '2026-01-20T10:00:00Z', updatedAt: '2026-01-21T09:00:00Z' },
+    { id: 'r5', projectId: 'p2', title: 'Lease Negotiation', description: 'Find a location and sign the lease.', status: 'DONE', priority: 2, teamId: 't2', createdById: 'm1', version: 1, createdAt: '2026-02-01T10:00:00Z', updatedAt: '2026-02-02T11:00:00Z' },
+    { id: 'r6', projectId: 'p2', title: 'Health Permits', description: 'Submit plans to health department.', status: 'IN_PROGRESS', priority: 1, teamId: 't2', createdById: 'm3', dueDate: '2026-04-30T10:00:00Z', version: 1, createdAt: '2026-02-10T10:00:00Z', updatedAt: '2026-04-10T10:00:00Z' },
+    { id: 'r7', projectId: 'p2', title: 'Liquor License', description: 'Apply for state liquor board approval.', status: 'IN_PROGRESS', priority: 2, teamId: 't2', createdById: 'm3', dueDate: '2026-05-15T10:00:00Z', version: 1, createdAt: '2026-02-10T10:00:00Z', updatedAt: '2026-04-12T14:00:00Z' },
+    { id: 'r8', projectId: 'p2', title: 'Interior Design', description: 'Layout and aesthetic design.', status: 'DONE', priority: 3, teamId: 't3', createdById: 'm1', version: 1, createdAt: '2026-02-15T10:00:00Z', updatedAt: '2026-03-01T10:00:00Z' },
+    { id: 'r9', projectId: 'p2', title: 'Renovation', description: 'Construction and utility plumbing/electrical.', status: 'IN_PROGRESS', priority: 1, teamId: 't4', createdById: 'm1', dueDate: '2026-05-01T10:00:00Z', version: 1, createdAt: '2026-03-01T10:00:00Z', updatedAt: '2026-04-15T10:00:00Z' },
+    { id: 'r10', projectId: 'p2', title: 'Hire Head Chef', description: 'Source and vet culinary leader.', status: 'DONE', priority: 2, teamId: 't1', createdById: 'm1', version: 1, createdAt: '2026-03-05T10:00:00Z', updatedAt: '2026-03-10T10:00:00Z' },
+    { id: 'r11', projectId: 'p2', title: 'Menu Design', description: 'Collaborative menu creation.', status: 'IN_PROGRESS', priority: 2, teamId: 't1', memberId: 'm3', createdById: 'm1', dueDate: '2026-04-20T10:00:00Z', version: 1, createdAt: '2026-03-10T10:00:00Z', updatedAt: '2026-04-16T10:00:00Z' },
+    { id: 'r12', projectId: 'p2', title: 'Kitchen Equipment', description: 'Ovens, walk-ins, and prep stations.', status: 'TODO', priority: 3, createdById: 'm1', version: 1, createdAt: '2026-03-15T10:00:00Z', updatedAt: '2026-03-15T10:00:00Z' },
+    { id: 'r13', projectId: 'p2', title: 'Furniture Sourcing', description: 'Tables, chairs, and bar fixtures.', status: 'TODO', priority: 4, createdById: 'm1', version: 1, createdAt: '2026-03-20T10:00:00Z', updatedAt: '2026-03-20T10:00:00Z' },
+    { id: 'r14', projectId: 'p2', title: 'Staff Recruitment', description: 'FOH and BOH general staff.', status: 'TODO', priority: 2, createdById: 'm1', version: 1, createdAt: '2026-03-25T10:00:00Z', updatedAt: '2026-03-25T10:00:00Z' },
+    { id: 'r15', projectId: 'p2', title: 'Staff Training', description: 'Service standards and POS training.', status: 'TODO', priority: 3, createdById: 'm1', version: 1, createdAt: '2026-04-01T10:00:00Z', updatedAt: '2026-04-01T10:00:00Z' },
+    { id: 'r16', projectId: 'p2', title: 'Ingredient Sourcing', description: 'Set up accounts with local suppliers.', status: 'TODO', priority: 3, createdById: 'm1', version: 1, createdAt: '2026-04-05T10:00:00Z', updatedAt: '2026-04-05T10:00:00Z' },
+    { id: 'r17', projectId: 'p2', title: 'Website Launch', description: '', status: 'IN_PROGRESS', priority: 2, memberId: 'm1', createdById: 'm1', version: 1, createdAt: '2026-04-05T10:00:00Z', updatedAt: '2026-04-10T10:00:00Z' },
+    { id: 'r18', projectId: 'p2', title: 'Social Media Campaign', description: 'Build hype for grand opening.', status: 'TODO', priority: 3, memberId: 'm1', createdById: 'm1', version: 1, createdAt: '2026-04-07T10:00:00Z', updatedAt: '2026-04-07T10:00:00Z' },
+    { id: 'r19', projectId: 'p2', title: 'Soft Opening', description: 'Invitation-only test runs.', status: 'TODO', priority: 1, createdById: 'm1', version: 1, createdAt: '2026-04-10T10:00:00Z', updatedAt: '2026-04-10T10:00:00Z' },
+    { id: 'r20', projectId: 'p2', title: 'Grand Opening', description: 'Official public opening ceremony.', status: 'TODO', priority: 1, createdById: 'm1', version: 1, createdAt: '2026-04-15T10:00:00Z', updatedAt: '2026-04-15T10:00:00Z' },
+    { id: 'r21', projectId: 'p2', title: 'Marketing Analysis', description: 'Review initial launch metrics.', status: 'TODO', priority: 4, createdById: 'm1', version: 1, createdAt: '2026-04-20T10:00:00Z', updatedAt: '2026-04-20T10:00:00Z' },
+    { id: 'r22', projectId: 'p2', title: 'Expansion Plan', description: 'Strategies for second location.', status: 'TODO', priority: 5, createdById: 'm1', version: 1, createdAt: '2026-05-01T10:00:00Z', updatedAt: '2026-05-01T10:00:00Z' },
+    { id: 'r23', projectId: 'p2', title: 'Investor Relations', description: 'Quarterly update meeting.', status: 'TODO', priority: 2, createdById: 'm1', version: 1, createdAt: '2026-05-15T10:00:00Z', updatedAt: '2026-05-15T10:00:00Z' },
   ];
 
   private links: TaskLink[] = [
@@ -84,9 +84,6 @@ export class DummyTaskAPI implements TaskAPI {
     const focusedTask = this.tasks.find((t) => t.id === taskId);
     if (!focusedTask) throw new Error('Task not found');
 
-    // ─── UNDIRECTED PROXIMITY DISCOVERY ───
-    // We traverse the graph starting from the center, ignoring link direction for discovery.
-    // This allows finding siblings (sharing a parent) and other parallel branches.
     const discoveredNodes = new Map<string, { task: ProjectTask; distance: number }>();
     discoveredNodes.set(taskId, { task: focusedTask, distance: 0 });
 
@@ -95,7 +92,6 @@ export class DummyTaskAPI implements TaskAPI {
       const { id, dist } = queue.shift()!;
       if (dist >= maxDepth) continue;
 
-      // Find all neighbors (Incoming or Outgoing)
       this.links.filter(l => l.sourceTaskId === id || l.targetTaskId === id).forEach(l => {
         const neighborId = l.sourceTaskId === id ? l.targetTaskId : l.sourceTaskId;
         if (!discoveredNodes.has(neighborId)) {
@@ -108,11 +104,8 @@ export class DummyTaskAPI implements TaskAPI {
       });
     }
 
-    // Convert to NeighbourhoodNode[] and sort by proximity
     const allFoundNodes: NeighbourhoodNode[] = Array.from(discoveredNodes.values())
       .map(({ task, distance }) => {
-        // For the UI, we still need a directional hint to position above/below
-        // We calculate this based on the existence of a path (ancestor vs successor)
         return { 
           task, 
           depth: distance, 
@@ -122,14 +115,11 @@ export class DummyTaskAPI implements TaskAPI {
 
     allFoundNodes.sort((a, b) => a.depth - b.depth);
 
-    // ─── PAGINATION ───
     const startIndex = after ? parseInt(after, 10) : 0;
     const batchNodes = allFoundNodes.slice(startIndex, startIndex + limit);
     const hasNextPage = allFoundNodes.length > startIndex + limit;
     const endCursor = (startIndex + limit).toString();
 
-    // ─── EDGE HYDRATION ───
-    // Return all links where both ends have been discovered so far
     const visibleIds = [taskId, ...allFoundNodes.slice(0, startIndex + limit).map(n => n.task.id)];
     const mappedLinks = this.links.filter(l => visibleIds.includes(l.sourceTaskId) && visibleIds.includes(l.targetTaskId));
 
@@ -151,6 +141,8 @@ export class DummyTaskAPI implements TaskAPI {
       title,
       description,
       status: 'TODO',
+      priority: 3,
+      createdById: 'm1', // Default mock creator
       version: 1,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
