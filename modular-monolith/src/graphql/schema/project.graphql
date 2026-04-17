@@ -27,6 +27,7 @@ type ProjectMember {
     projectId: ID!
     userId: String!
     user: User
+    project: Project
     createdAt: String!
     version: Int!
 }

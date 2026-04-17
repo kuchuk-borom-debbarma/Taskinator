@@ -1,28 +1,41 @@
 import type { GraphQLContext } from '../context.ts';
 import { projectService } from '../../modules/project';
+import { resolveProject, resolveUser, buildRef } from './helpers.ts';
 
 export const projectResolvers = {
     Project: {
-        createdAt: (p: any) =>
-            p.createdAt instanceof Date
-                ? p.createdAt.toISOString()
-                : p.createdAt,
-        updatedAt: (p: any) =>
-            p.updatedAt instanceof Date
-                ? p.updatedAt.toISOString()
-                : p.updatedAt,
-        creator: (p: any, _: any, context: GraphQLContext) =>
-            context.loaders.user.load(p.userId),
+        id: (p: any) => p.id,
+        userId: (p: any) => p.userId,
+        name: async (p: any, _: any, context: GraphQLContext) => {
+            const project = await resolveProject(p, context);
+            return project?.name;
+        },
+        description: async (p: any, _: any, context: GraphQLContext) => {
+            const project = await resolveProject(p, context);
+            return project?.description;
+        },
+        createdAt: async (p: any) => {
+            const project = await resolveProject(p, null as any); // Date formatting doesn't need context if hydrated
+            const date = project?.createdAt ?? p.createdAt;
+            return date instanceof Date ? date.toISOString() : date;
+        },
+        updatedAt: async (p: any) => {
+            const project = await resolveProject(p, null as any);
+            const date = project?.updatedAt ?? p.updatedAt;
+            return date instanceof Date ? date.toISOString() : date;
+        },
+        creator: (p: any) => buildRef(p.userId, 'User'),
         automations: (p: any, _: any, context: GraphQLContext) =>
             context.loaders.projectAutomations.load(p.id),
     },
     ProjectMember: {
+        id: (m: any) => m.id,
+        projectId: (m: any) => m.projectId,
+        userId: (m: any) => m.userId,
         createdAt: (m: any) =>
-            m.createdAt instanceof Date
-                ? m.createdAt.toISOString()
-                : m.createdAt,
-        user: (m: any, _: any, context: GraphQLContext) =>
-            context.loaders.user.load(m.userId),
+            m.createdAt instanceof Date ? m.createdAt.toISOString() : m.createdAt,
+        user: (m: any) => buildRef(m.userId, 'User'),
+        project: (m: any) => buildRef(m.projectId, 'Project'),
     },
     Query: {
         projects: async (

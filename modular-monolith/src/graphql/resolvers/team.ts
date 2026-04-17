@@ -1,28 +1,39 @@
 import type { GraphQLContext } from '../context.ts';
 import { teamService } from '../../modules/team';
+import { resolveTeam, buildRef } from './helpers.ts';
 
 export const teamResolvers = {
     Team: {
-        createdAt: (t: any) =>
-            t.createdAt instanceof Date
-                ? t.createdAt.toISOString()
-                : t.createdAt,
-        updatedAt: (t: any) =>
-            t.updatedAt instanceof Date
-                ? t.updatedAt.toISOString()
-                : t.updatedAt,
-        creator: (t: any, _: any, context: GraphQLContext) =>
-            context.loaders.user.load(t.createdBy),
+        id: (t: any) => t.id,
+        projectId: (t: any) => t.projectId,
+        createdBy: (t: any) => t.createdBy,
+        name: async (t: any, _: any, context: GraphQLContext) => {
+            const team = await resolveTeam(t, context);
+            return team?.name;
+        },
+        createdAt: async (t: any) => {
+            const team = await resolveTeam(t, null as any);
+            const date = team?.createdAt ?? t.createdAt;
+            return date instanceof Date ? date.toISOString() : date;
+        },
+        updatedAt: async (t: any) => {
+            const team = await resolveTeam(t, null as any);
+            const date = team?.updatedAt ?? t.updatedAt;
+            return date instanceof Date ? date.toISOString() : date;
+        },
+        creator: (t: any) => buildRef(t.createdBy, 'User'),
+        project: (t: any) => buildRef(t.projectId, 'Project'),
         automations: (t: any, _: any, context: GraphQLContext) =>
             context.loaders.teamAutomations.load(t.id),
     },
     TeamMember: {
+        id: (m: any) => m.id,
+        teamId: (m: any) => m.teamId,
+        userId: (m: any) => m.userId,
         createdAt: (m: any) =>
-            m.createdAt instanceof Date
-                ? m.createdAt.toISOString()
-                : m.createdAt,
-        user: (m: any, _: any, context: GraphQLContext) =>
-            context.loaders.user.load(m.userId),
+            m.createdAt instanceof Date ? m.createdAt.toISOString() : m.createdAt,
+        user: (m: any) => buildRef(m.userId, 'User'),
+        team: (m: any) => buildRef(m.teamId, 'Team'),
     },
     Query: {
         teams: async (

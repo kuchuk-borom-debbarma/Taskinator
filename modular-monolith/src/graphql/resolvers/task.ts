@@ -1,6 +1,7 @@
 import type { GraphQLContext } from '../context.ts';
 import { taskService } from '../../modules/task';
 import type { ProjectTask, TaskLink } from '../../modules/task/TaskService.ts';
+import { resolveTask, buildRef } from './helpers.ts';
 
 const buildLinkConnection = (
     links: TaskLink[],
@@ -21,31 +22,57 @@ const buildLinkConnection = (
 
 export const taskResolvers = {
     TaskLink: {
+        id: (l: any) => l.id,
+        projectId: (l: any) => l.projectId,
+        sourceTaskId: (l: any) => l.sourceTaskId,
+        targetTaskId: (l: any) => l.targetTaskId,
+        label: (l: any) => l.label,
+        createdBy: (l: any) => l.createdBy,
         createdAt: (l: any) =>
             l.createdAt instanceof Date ? l.createdAt.toISOString() : l.createdAt,
-        // Resolved via DataLoader — avoids N+1 when many links are resolved at once
-        sourceTask: (l: any, _: any, context: GraphQLContext) =>
-            context.loaders.task.load(l.sourceTaskId),
-        targetTask: (l: any, _: any, context: GraphQLContext) =>
-            context.loaders.task.load(l.targetTaskId),
+        sourceTask: (l: any) => buildRef(l.sourceTaskId, 'ProjectTask'),
+        targetTask: (l: any) => buildRef(l.targetTaskId, 'ProjectTask'),
     },
 
     NeighbourhoodNode: {
-        task: (n: any, _: any, context: GraphQLContext) =>
-            context.loaders.task.load(n.taskId),
+        task: (n: any) => buildRef(n.taskId, 'ProjectTask'),
     },
 
     ProjectTask: {
-        createdAt: (t: any) =>
-            t.createdAt instanceof Date ? t.createdAt.toISOString() : t.createdAt,
-        updatedAt: (t: any) =>
-            t.updatedAt instanceof Date ? t.updatedAt.toISOString() : t.updatedAt,
+        id: (t: any) => t.id,
+        projectId: (t: any) => t.projectId,
+        teamId: (t: any) => t.teamId,
+        memberId: (t: any) => t.memberId,
+        title: async (t: any, _: any, context: GraphQLContext) => {
+            const task = await resolveTask(t, context);
+            return task?.title;
+        },
+        description: async (t: any, _: any, context: GraphQLContext) => {
+            const task = await resolveTask(t, context);
+            return task?.description;
+        },
+        status: async (t: any, _: any, context: GraphQLContext) => {
+            const task = await resolveTask(t, context);
+            return task?.status;
+        },
+        createdAt: async (t: any) => {
+            const task = await resolveTask(t, null as any);
+            const date = task?.createdAt ?? t.createdAt;
+            return date instanceof Date ? date.toISOString() : date;
+        },
+        updatedAt: async (t: any) => {
+            const task = await resolveTask(t, null as any);
+            const date = task?.updatedAt ?? t.updatedAt;
+            return date instanceof Date ? date.toISOString() : date;
+        },
         priority: () => 3, // Default to Medium
         dueDate: () => null, // Default to no deadline
-        project: (t: any, _: any, context: GraphQLContext) =>
-            context.loaders.project.load(t.projectId),
-        team: (t: any, _: any, context: GraphQLContext) =>
-            t.teamId ? context.loaders.team.load(t.teamId) : null,
+        project: (t: any) => buildRef(t.projectId, 'Project'),
+        team: (t: any) => buildRef(t.teamId, 'Team'),
+        member: (t: any) => buildRef(t.memberId, 'User'),
+        assignee: (t: any) => buildRef(t.memberId, 'User'),
+        creator: (t: any) => buildRef(t.createdBy, 'User'),
+        updater: (t: any) => buildRef(t.updatedBy, 'User'),
 
         incomingLinks: async (
             t: any,

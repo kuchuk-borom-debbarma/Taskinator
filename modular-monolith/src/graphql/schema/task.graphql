@@ -55,23 +55,27 @@ type TaskNeighbourhood {
 type ProjectTask {
   id: ID!
   projectId: ID!
-  teamId: ID
-  memberId: ID
+  teamId: ID # Needs to resolve to team
+  memberId: ID # Needs to resovlve to user
   title: String!
   description: String!
   status: String!
   priority: Int!
   dueDate: String
   version: Int!
-  lastEventId: ID
-  createdBy: ID!
-  updatedBy: ID!
+  lastEventId: ID # 
+  createdBy: ID! # Needs to resolve to user
+  updatedBy: ID! # Needs to resolve to user
   createdAt: String!
   updatedAt: String!
 
   # Resolved fields
   project: Project
   team: Team
+  member: User
+  assignee: User
+  creator: User
+  updater: User
 
   # Direct incoming/outgoing edges (depth-1 only)
   incomingLinks(first: Int, after: String, last: Int, before: String): TaskLinkConnection!

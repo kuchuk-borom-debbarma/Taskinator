@@ -8,6 +8,7 @@ type Team {
     updatedAt: String
     version: Int!
     automations: [AutomationRule!]!
+    project: Project
 }
 
 type TeamMember {
@@ -15,6 +16,7 @@ type TeamMember {
     teamId: ID!
     userId: String!
     user: User
+    team: Team
     createdAt: String!
     version: Int!
 }
