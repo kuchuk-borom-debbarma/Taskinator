@@ -272,7 +272,7 @@ export const decrementLinkReachability = async (params: {
                 SELECT ${params.targetTaskId}::uuid as id, 1 as path_count
             ),
             to_decrement AS (
-                SELECT a.id as anc, d.id as desc, (a.path_count * d.path_count) as amount
+                SELECT a.id as anc, d.id as trg, (a.path_count * d.path_count) as amount
                 FROM ancestors a, descendants d
             )
             UPDATE task_reachability tr
@@ -280,7 +280,7 @@ export const decrementLinkReachability = async (params: {
             FROM to_decrement td
             WHERE tr.fk_project_id = ${params.projectId}::uuid
               AND tr.ancestor_task_id = td.anc
-              AND tr.descendant_task_id = td.desc
+              AND tr.descendant_task_id = td.trg
         `.execute(trx);
 
         // 2. Remove rows where path_count is zero or negative (partition key as safety)

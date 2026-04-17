@@ -40,6 +40,8 @@ export const taskResolvers = {
             t.createdAt instanceof Date ? t.createdAt.toISOString() : t.createdAt,
         updatedAt: (t: any) =>
             t.updatedAt instanceof Date ? t.updatedAt.toISOString() : t.updatedAt,
+        priority: () => 3, // Default to Medium
+        dueDate: () => null, // Default to no deadline
         project: (t: any, _: any, context: GraphQLContext) =>
             context.loaders.project.load(t.projectId),
         team: (t: any, _: any, context: GraphQLContext) =>

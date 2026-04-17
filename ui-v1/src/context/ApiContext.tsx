@@ -3,8 +3,8 @@ import type { ProjectAPI } from '../api/interfaces/ProjectAPI';
 import type { TaskAPI } from '../api/interfaces/TaskAPI';
 import type { TeamAPI } from '../api/interfaces/TeamAPI';
 import { DummyProjectAPI } from '../api/adapters/dummy/DummyProjectAPI';
-import { DummyTaskAPI } from '../api/adapters/dummy/DummyTaskAPI';
 import { DummyTeamAPI } from '../api/adapters/dummy/DummyTeamAPI';
+import { GraphQLTaskAPI } from '../api/adapters/graphql/GraphQLTaskAPI';
 
 interface ApiContextType {
   projectApi: ProjectAPI;
@@ -17,7 +17,7 @@ const ApiContext = createContext<ApiContextType | null>(null);
 export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const apis = useMemo(() => ({
     projectApi: new DummyProjectAPI(),
-    taskApi: new DummyTaskAPI(),
+    taskApi: new GraphQLTaskAPI(),
     teamApi: new DummyTeamAPI(),
   }), []);
 

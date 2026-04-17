@@ -10,7 +10,7 @@ const CONFIG = {
     TOTAL_USERS: 10_000,
 
     // Extra lightweight projects (besides the main stress-test one)
-    TOTAL_EXTRA_PROJECTS: 50,
+    TOTAL_EXTRA_PROJECTS: 5,
 
     // Main project — teams
     TOTAL_TEAMS: 500,
@@ -22,9 +22,9 @@ const CONFIG = {
     // Forest / DAG shape
     // Tasks are split into isolated forests. Each forest is a DAG
     // with a controlled shape so materialisation never explodes.
-    FOREST_COUNT: 800,              // how many separate sub-graphs
-    FOREST_MAX_DEPTH: 60,            // max levels deep per forest
-    FOREST_MAX_FANOUT: 50,           // max children per node
+    FOREST_COUNT: 50,               // how many separate sub-graphs
+    FOREST_MAX_DEPTH: 20,            // max levels deep per forest
+    FOREST_MAX_FANOUT: 5,            // max children per node
     // Remaining tasks (after forest assignment) become orphans (no links)
 
     // % of non-root nodes that also get a "cross-edge" within the same forest
@@ -242,7 +242,7 @@ async function seed() {
         // ----------------------------------------------------------
         console.log('\n🧹 Truncating old data...');
         for (const t of [
-            'task_link_materialized', 'task_link', 'project_task',
+            'task_reachability', 'task_link', 'project_task',
             'project_team_member', 'project_member', 'project_team', 'project', 'users',
         ]) await sql.raw(`TRUNCATE TABLE ${t} CASCADE`).execute(db);
         console.log(`   ✓ Done (${elapsed(t0)})`);
@@ -301,6 +301,46 @@ async function seed() {
             ['fk_project_id', 'fk_user_id'],
             userIds.map(uid => [`'${mainProjectId}'::uuid`, `'${uid}'`]),
         );
+
+        // ----------------------------------------------------------
+        // 3.1. Starter Demo Project (Deterministic)
+        // ----------------------------------------------------------
+        console.log('\n🌟 Creating Starter Demo Project...');
+        const starterProjectId = 'd3b10564-f9c8-43fe-bcad-c78a14b3feb0'; // Deterministic ID
+        const starterTaskIds = {
+            concept: 'c1b10564-f9c8-43fe-bcad-c78a14b3feb0',
+            arch: 'a2b10564-f9c8-43fe-bcad-c78a14b3feb0',
+            api: 'a3b10564-f9c8-43fe-bcad-c78a14b3feb0',
+            ui: 'f4b10564-f9c8-43fe-bcad-c78a14b3feb0',
+            test: 'e5b10564-f9c8-43fe-bcad-c78a14b3feb0'
+        };
+
+        await sql`
+            INSERT INTO project (id, name, description, fk_user_id)
+            VALUES (${starterProjectId}::uuid, 'Product Launch 2026', 'A deterministic showcase of the Taskinator reachability engine.', ${adminId})
+            ON CONFLICT (id) DO NOTHING
+        `.execute(db);
+
+        await sql`INSERT INTO project_member (fk_project_id, fk_user_id) VALUES (${starterProjectId}::uuid, ${adminId}) ON CONFLICT DO NOTHING`.execute(db);
+
+        const starterTaskRows = [
+            [`'${starterTaskIds.concept}'::uuid`, `'${starterProjectId}'::uuid`, `NULL`, `'${adminId}'`, `'Concept Development'`, `'Define the north star vision and core user personas.'`, `'DONE'`, `'${adminId}'`, `'${adminId}'`],
+            [`'${starterTaskIds.arch}'::uuid`, `'${starterProjectId}'::uuid`, `NULL`, `'${adminId}'`, `'Architecture Design'`, `'System design, GraphQL schema and database indexing strategy.'`, `'IN_PROGRESS'`, `'${adminId}'`, `'${adminId}'`],
+            [`'${starterTaskIds.api}'::uuid`, `'${starterProjectId}'::uuid`, `NULL`, `'${adminId}'`, `'API Implementation'`, `'Building the Yoga GraphQL server and Kysely adapters.'`, `'TODO'`, `'${adminId}'`, `'${adminId}'`],
+            [`'${starterTaskIds.ui}'::uuid`, `'${starterProjectId}'::uuid`, `NULL`, `'${adminId}'`, `'Frontend Integration'`, `'Connecting the React app to the live GraphQL stream.'`, `'TODO'`, `'${adminId}'`, `'${adminId}'`],
+            [`'${starterTaskIds.test}'::uuid`, `'${starterProjectId}'::uuid`, `NULL`, `'${adminId}'`, `'E2E Verification'`, `'Final regression tests and performance benchmarking.'`, `'TODO'`, `'${adminId}'`, `'${adminId}'`]
+        ];
+
+        await bulkInsert('project_task', ['id', 'fk_project_id', 'fk_team_id', 'fk_member_id', 'title', 'description', 'status', 'created_by', 'updated_by'], starterTaskRows);
+
+        const starterLinkRows = [
+            [`'${uuidv4()}'::uuid`, `'${starterProjectId}'::uuid`, `'${starterTaskIds.concept}'::uuid`, `'${starterTaskIds.arch}'::uuid`, `'Blocks'`, `'${adminId}'`],
+            [`'${uuidv4()}'::uuid`, `'${starterProjectId}'::uuid`, `'${starterTaskIds.arch}'::uuid`, `'${starterTaskIds.api}'::uuid`, `'Relates'`, `'${adminId}'`],
+            [`'${uuidv4()}'::uuid`, `'${starterProjectId}'::uuid`, `'${starterTaskIds.api}'::uuid`, `'${starterTaskIds.ui}'::uuid`, `'Blocks'`, `'${adminId}'`],
+            [`'${uuidv4()}'::uuid`, `'${starterProjectId}'::uuid`, `'${starterTaskIds.ui}'::uuid`, `'${starterTaskIds.test}'::uuid`, `'Blocks'`, `'${adminId}'`]
+        ];
+
+        await bulkInsert('task_link', ['id', 'fk_project_id', 'source_task_id', 'target_task_id', 'label', 'created_by'], starterLinkRows);
         console.log(`   ✓ ${userIds.length.toLocaleString()} members (${elapsed(t0)})`);
 
         // ----------------------------------------------------------
@@ -446,79 +486,72 @@ async function seed() {
         console.log(`   ✓ ${totalLinks.toLocaleString()} links across ${CONFIG.FOREST_COUNT} forests (${elapsed(t0)})`);
 
         // ----------------------------------------------------------
-        // 8. Materialized paths — per-forest batched CTE
-        //
-        //  One small recursive CTE per forest.
-        //  Each forest has at most a few hundred tasks so the path
-        //  count stays tiny and predictable. No more OOM / infinite runs.
+        // 8. Reachability Index — per-forest batched CTE
         // ----------------------------------------------------------
-        console.log(`\n🥧 Materializing paths (per-forest, depth cap ${CONFIG.MATERIALIZATION_DEPTH_CAP})...`);
+        console.log(`\n🥧 Generating reachability index (per-forest, depth cap ${CONFIG.MATERIALIZATION_DEPTH_CAP})...`);
 
-        let materialized = 0;
+        let reachabilityCreated = 0;
 
         for (let f = 0; f < forests.length; f++) {
             const forest = forests[f]!;
-            if (forest.length < 2) { materialized++; continue; }
+            if (forest.length < 2) { reachabilityCreated++; continue; }
 
             const idList = forest.map(id => `'${id}'::uuid`).join(',');
 
             await sql.raw(`
-        INSERT INTO task_link_materialized
-          (fk_project_id, origin_task_id, terminal_task_id, path_task_ids, path_link_ids, path_link_labels, depth)
-        WITH RECURSIVE paths(origin_task_id, terminal_task_id, path_task_ids, path_link_ids, path_link_labels, depth) AS (
-          SELECT
-            source_task_id,
-            target_task_id,
-            ARRAY[source_task_id, target_task_id]::uuid[],
-            ARRAY[id]::uuid[],
-            ARRAY[label]::text[],
-            1
-          FROM task_link
-          WHERE fk_project_id = '${mainProjectId}'::uuid
-            AND source_task_id IN (${idList})
-            AND target_task_id IN (${idList})
+                INSERT INTO task_reachability
+                    (fk_project_id, ancestor_task_id, descendant_task_id, min_depth, path_count)
+                WITH RECURSIVE paths(anc, trg, depth) AS (
+                    SELECT source_task_id, target_task_id, 1
+                    FROM task_link
+                    WHERE fk_project_id = '${mainProjectId}'::uuid
+                        AND source_task_id IN (${idList})
+                        AND target_task_id IN (${idList})
+                    UNION ALL
+                    SELECT p.anc, tl.target_task_id, p.depth + 1
+                    FROM task_link tl
+                    JOIN paths p ON tl.source_task_id = p.trg
+                    WHERE tl.fk_project_id = '${mainProjectId}'::uuid
+                        AND tl.source_task_id IN (${idList})
+                        AND tl.target_task_id IN (${idList})
+                        AND p.depth < ${CONFIG.MATERIALIZATION_DEPTH_CAP}
+                )
+                SELECT 
+                    '${mainProjectId}'::uuid,
+                    anc,
+                    trg,
+                    MIN(depth),
+                    COUNT(*)
+                FROM paths
+                GROUP BY anc, trg
+                ON CONFLICT (fk_project_id, ancestor_task_id, descendant_task_id) DO NOTHING
+            `).execute(db);
 
-          UNION ALL
-
-          SELECT
-            p.origin_task_id,
-            tl.target_task_id,
-            p.path_task_ids || tl.target_task_id,
-            p.path_link_ids || tl.id,
-            p.path_link_labels || tl.label,
-            p.depth + 1
-          FROM task_link tl
-          JOIN paths p ON tl.source_task_id = p.terminal_task_id
-          WHERE tl.fk_project_id = '${mainProjectId}'::uuid
-            AND tl.source_task_id IN (${idList})
-            AND tl.target_task_id IN (${idList})
-            AND p.depth < ${CONFIG.MATERIALIZATION_DEPTH_CAP}
-            AND NOT (tl.target_task_id = ANY(p.path_task_ids))
-        )
-        SELECT
-          '${mainProjectId}'::uuid,
-          origin_task_id,
-          terminal_task_id,
-          path_task_ids,
-          path_link_ids,
-          path_link_labels,
-          depth
-        FROM paths
-        ON CONFLICT DO NOTHING
-      `).execute(db);
-
-            materialized++;
-
-            // Progress every 50 forests
-            if (materialized % 50 === 0 || materialized === forests.length) {
-                const pct = Math.round((materialized / forests.length) * 100);
-                process.stdout.write(
-                    `\r   ↻ ${materialized}/${forests.length} forests (${pct}%) — ${elapsed(t0)}   `
-                );
+            reachabilityCreated++;
+            if (reachabilityCreated % 50 === 0 || reachabilityCreated === forests.length) {
+                const pct = Math.round((reachabilityCreated / forests.length) * 100);
+                process.stdout.write(`\r   ↻ ${reachabilityCreated}/${forests.length} forests (${pct}%) — ${elapsed(t0)}   `);
             }
         }
+        console.log(`\n   ✓ All ${reachabilityCreated} forests reach-indexed (${elapsed(t0)})`);
 
-        console.log(`\n   ✓ All ${materialized} forests materialized (${elapsed(t0)})`);
+        // ----------------------------------------------------------
+        // 8.1. Materialize Starter Project Reachability
+        // ----------------------------------------------------------
+        console.log(`\n🥧 Generating Starter Project reachability...`);
+        await sql.raw(`
+            INSERT INTO task_reachability (fk_project_id, ancestor_task_id, descendant_task_id, min_depth, path_count)
+            WITH RECURSIVE paths(anc, trg, depth) AS (
+              SELECT source_task_id, target_task_id, 1
+              FROM task_link WHERE fk_project_id = '${starterProjectId}'::uuid
+              UNION ALL
+              SELECT p.anc, tl.target_task_id, p.depth + 1
+              FROM task_link tl JOIN paths p ON tl.source_task_id = p.trg
+              WHERE tl.fk_project_id = '${starterProjectId}'::uuid AND p.depth < 10
+            )
+            SELECT '${starterProjectId}'::uuid, anc, trg, MIN(depth), COUNT(*) FROM paths GROUP BY anc, trg
+            ON CONFLICT (fk_project_id, ancestor_task_id, descendant_task_id) DO NOTHING
+        `).execute(db);
 
         // ----------------------------------------------------------
         // 9. Extra lightweight projects

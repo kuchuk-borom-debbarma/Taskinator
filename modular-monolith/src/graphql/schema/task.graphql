@@ -60,6 +60,8 @@ type ProjectTask {
   title: String!
   description: String!
   status: String!
+  priority: Int!
+  dueDate: String
   version: Int!
   lastEventId: ID
   createdBy: ID!
