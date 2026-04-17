@@ -3,6 +3,7 @@ import { sql } from 'kysely';
 import type {
     CreateLinkParam,
     CreateTaskParam,
+    TaskStatus,
     UpdateTaskParam,
     GetNeighbourhoodParam,
     NeighbourRecord,

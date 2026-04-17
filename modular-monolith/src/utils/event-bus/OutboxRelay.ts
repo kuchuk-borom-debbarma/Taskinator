@@ -138,5 +138,4 @@ export const stopOutboxRelay = () => {
         listenClient.release();
         listenClient = null;
     }
-    console.log('[Outbox Relay] Stopped.');
 };
