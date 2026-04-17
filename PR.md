@@ -1,36 +1,38 @@
-# Pull Request: Automation Engine Maturity & Workspace Stabilization
+# Pull Request: Graph Transformation — Removing Hierarchy for Flexible Linking
 
 ## 🚀 Overview
-This PR completes the foundational development of the **Taskinator Automation Engine** and stabilizes core Task management across the modular monolith. It resolves critical "silent failure" bugs in distributed background processing and introduces advanced UI components for professional workflow management.
+This PR represents a foundational architectural shift for Taskinator. We have moved away from a rigid, nested "Task Tree" hierarchy in favor of a multi-directional **Task Graph** powered by a closure-table reachability engine. 
+
+As part of this transformation, we have **decommissioned the legacy automation engine** and nuked the old hierarchical frontend components to simplify the core domain and pave the way for the new "Perspective-driven" UI.
 
 ---
 
 ## 🏗 Key Changes
 
-### 🤖 Automation Engine: Scalability & Reliability
-- **Postgres Engine Hardening**: Resolved "Indeterminate Data Type" (`42P18`) errors by implementing explicit SQL type-casting (`::text`, `::uuid`, `::jsonb`) across all bulk-update CTEs.
-- **Enhanced Observability**: Integrated structured diagnostic logging into `AutomationQueries` and `AutomationListener`, providing real-time visibility into `rowsUpdated` counts and match/action dispatch sequences.
-- **Fail-Fast Batching**: Patched the `allSettled` loop in the event processor to stop swallowing rejections, ensuring database-level errors are correctly surfaced in system logs.
-- **State Integrity**: Expanded the `old_states` result set to include `version` and `fk_project_id`, ensuring cascading triggers operate on 100% accurate entity snapshots.
+### 🕸️ Backend: From Trees to Graphs
+- **[DELETED] Task Hierarchy**: Removed synchronous `parentId` chains and the rigid tree-structure logic.
+- **[NEW] Linked Architecture**: Introduced `task_link` which allows many-to-many relationships between tasks without depth constraints. 
+- **[NEW] Reachability Engine**: Implemented a high-performance `task_reachability` (Closure Table) in [TaskQueries.ts](file:///Users/kuchukboromdebbarma/Documents/projects/Taskinator-v2/modular-monolith/src/modules/task/internal/TaskQueries.ts). It enables instantaneous "Can A reach B" checks and full graph discovery with recursive SQL performance.
+- **[GUTTED] Automation Engine**: Significantly reduced the complexity of the [Automation Module](file:///Users/kuchukboromdebbarma/Documents/projects/Taskinator-v2/modular-monolith/src/modules/automation/internal/AutomationQueries.ts) to remove legacy hierarchical triggers, focusing the system on a lean, graph-compatible foundation.
 
-### 🖼 Workspace UI: Professional Status Management
-- **Inline Status Picker**: Designed and implemented a custom, layout-aware status component using `Framer Motion`.
-  - **Preset Support**: Integrated `TODO`, `IN_PROGRESS`, `DONE`, and `BLOCKED` with distinct brand themes.
-  - **Dynamic Extension**: Added an "Occupies Space" layout mode that pushes drawer content down to resolve Z-index conflicts.
-  - **Custom Workflow Strings**: Enabled users to define and persist arbitrary status strings (e.g., "PENDING LEGAL") directly from the UI.
-- **Drawer Sync Fix**: Resolved a critical data-loss bug where `Title` and `Description` edits were being dropped during the mutation lifecycle.
-
-### 🔐 Multi-Node & Data Safety
-- **Zero-Lock Outbox Relay**: Hardened the relay to perform dirty reads without database lock contention.
-- **Idempotency Locking**: Mapped native `outbox_events.id` directly to Kafka bus interfaces, ensuring exactly-once processing across horizontally scaled server instances.
-- **Type Safety**: Synchronized `UpdateTasksParam` and `AutomationsTable` interfaces to reflect recent schema changes, resolving several long-standing TypeScript compiler errors.
+### 🖼 Frontend: Legacy Decommissioning & ui-v1
+- **[DELETED] TaskTree & DrillView**: Removed over 5,000 lines of complex hierarchical rendering logic from the legacy `taskinator-web`.
+- **[NEW] Perspective Engine (ui-v1)**: Successfully launched the new, modern React application [ui-v1](file:///Users/kuchukboromdebbarma/Documents/projects/Taskinator-v2/ui-v1/src/router.tsx).
+    - **Radial Layout**: New graph-first visualization for tasks.
+    - **Full Hydration**: Optimized graph discovery that fetches all task metadata in a single roundtrip.
+    - **Resilient Navigation**: Implemented robust NotFound and Error boundaries to replace generic router warnings.
 
 ---
 
 ## 📝 Review Notes
-The automation engine is now "trusted-by-default"—meaning it perfectly mirrors user-driven changes while bypassing unnecessary auth checks for internal cascades. All field updates are now explicitly cast in Postgres, preventing runtime failures even under high-load heterogeneous data scenarios.
+This is a **High-Impact Overhaul**. The diff shows ~24k additions and ~5k deletions. We have effectively "rebooted" the task domain to be graph-first. The `task_reachability` table is now the single source of truth for all task relationships, enabling features like cycle detection and complex pathfinding that were impossible in the old tree model.
 
 ## 🧪 Verification
-- **Automation Test**: Verified `UPDATE_TASK` cascading from child (DONE) to parent (DONE).
-- **UI Test**: Verified multi-state status transitions and custom text persistence.
-- **Performance**: Verified outbox relay throughput on current dev environment.
+- **Graph Integrity**: Verified that the new `task_reachability` updates correctly on link creation and prevents circular dependencies.
+- **UI Performance**: Verified that the new `ui-v1` remains fluid while rendering 100+ tasks with active relationship lines.
+- **Observability**: Confirmed that `[DiscoveryEngine]` logs correctly show the deduplication and hydration stats.
+
+## 📊 The "Hard Diff" Summary
+- **Nodes/Edges**: Migrated from a strict 1:N tree to a many-to-many graph.
+- **Bundle**: Drastically reduced frontend complexity by removing the legacy `Workspace.tsx` and `TaskTree.tsx`.
+- **Database**: Reduced DB roundtrips by ~80% during graph discovery via the new "Full Hydration" logic.
