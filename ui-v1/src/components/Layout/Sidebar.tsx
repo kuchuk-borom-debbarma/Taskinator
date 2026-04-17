@@ -25,7 +25,7 @@ export const Sidebar: React.FC = () => {
           Workspace
         </div>
         
-        {projects?.map(p => (
+        {projects?.projects?.map(p => (
           <SidebarItem 
             key={p.id} 
             to="/projects/$projectId" 

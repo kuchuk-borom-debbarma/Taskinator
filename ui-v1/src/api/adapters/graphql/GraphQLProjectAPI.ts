@@ -24,10 +24,10 @@ export class GraphQLProjectAPI implements ProjectAPI {
     return result.data as T;
   }
 
-  async getProjects(): Promise<Project[]> {
-    const data = await this.query<{ projects: { edges: { node: any }[] } }>(`
-      query GetProjects {
-        projects {
+  async getProjects(first?: number, after?: string): Promise<{ projects: Project[], hasNextPage: boolean, endCursor: string | null }> {
+    const data = await this.query<{ projects: { edges: { node: any }[], pageInfo: { hasNextPage: boolean, endCursor: string | null } } }>(`
+      query GetProjects($first: Int, $after: String) {
+        projects(first: $first, after: $after) {
           edges {
             node {
               id
@@ -37,10 +37,19 @@ export class GraphQLProjectAPI implements ProjectAPI {
               version
             }
           }
+          pageInfo {
+            hasNextPage
+            endCursor
+          }
         }
       }
-    `);
-    return data.projects.edges.map(e => e.node);
+    `, { first, after });
+    
+    return {
+      projects: data.projects.edges.map(e => e.node),
+      hasNextPage: data.projects.pageInfo.hasNextPage,
+      endCursor: data.projects.pageInfo.endCursor
+    };
   }
 
   async getProject(id: string): Promise<Project | null> {

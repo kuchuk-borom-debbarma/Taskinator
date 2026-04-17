@@ -39,7 +39,7 @@ export const TaskMap: React.FC<TaskMapProps> = ({ taskId }) => {
     isError
   } = useInfiniteQuery({
     queryKey: ['neighbourhood-map', taskId],
-    queryFn: ({ pageParam }) => taskApi.getTaskNeighbourhood(taskId, 50, 5, pageParam),
+    queryFn: ({ pageParam }) => taskApi.getTaskNeighbourhood(taskId, 5, 5, pageParam),
     initialPageParam: undefined, // Start from the beginning
     getNextPageParam: (lastPage) => lastPage.hasNextPage ? lastPage.endCursor : undefined,
   });

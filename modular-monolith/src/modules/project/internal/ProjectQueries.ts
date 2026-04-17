@@ -227,7 +227,7 @@ export const getProjects = async (
     userId: string,
     params: { first?: number; after?: string; last?: number; before?: string } = {},
 ): Promise<{ projects: Project[]; nextCursor: string | null; prevCursor: string | null }> => {
-    const limit = Math.min(params.first || params.last || 10, 50);
+    const limit = Math.min(params.first || params.last || 5, 50);
     const { after, before } = params;
     const isBackward = !!before;
     const cursor = before || after;
@@ -345,7 +345,7 @@ export const getProjectMembers = async (
     projectId: string,
     params: { first?: number; after?: string; last?: number; before?: string } = {},
 ): Promise<{ members: ProjectMember[]; nextCursor: string | null; prevCursor: string | null }> => {
-    const limit = Math.min(params.first || params.last || 10, 50);
+    const limit = Math.min(params.first || params.last || 5, 50);
     const { after, before } = params;
     const isBackward = !!before;
     const cursor = before || after;
@@ -438,7 +438,7 @@ export const searchProjectMembers = async (params: {
     const { after, before } = params;
     const isBackward = !!before;
     const cursor = before || after;
-    const limit = Math.min(params.first || params.last || 10, 50);
+    const limit = Math.min(params.first || params.last || 5, 50);
 
     const rows = await sql<{ id: string; username: string; email: string }>`
         WITH auth_check AS (

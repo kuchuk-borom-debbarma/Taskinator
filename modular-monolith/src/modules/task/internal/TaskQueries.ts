@@ -501,7 +501,7 @@ export const getNeighbourhood = async (
     params: GetNeighbourhoodParam,
 ): Promise<TaskNeighbourhoodResult> => {
     const maxDepth = Math.min(params.maxDepth ?? 3, 5);
-    const limit = Math.min(params.first || params.last || 20, 50);
+    const limit = Math.min(params.first || params.last || 5, 50);
     const isBackward = !!params.before;
     const cursor = params.before || params.after;
 
