@@ -1,5 +1,5 @@
 import eventBus, { KAFKA_EVENTS } from '../../../../utils/EventBus.ts';
-    import { decrementLinkReachability } from '../TaskQueries.ts';
+    import { decrementLinkReachability, incrementLinkReachability } from '../TaskQueries.ts';
     import { logger } from '../../../../logger';
 
     export class TaskGraphListener {
@@ -9,6 +9,29 @@ import eventBus, { KAFKA_EVENTS } from '../../../../utils/EventBus.ts';
             logger.info(`[Task Service] Starting TaskGraphListener with group: ${this.groupId}`);
             
             await eventBus.subscribe(this.groupId, {
+                // Handle new link creation by incrementing reachability in the background
+                [KAFKA_EVENTS.PROJECT_TASK_LINK.CREATED]: async (data: any) => {
+                    const { projectId, sourceTaskId, targetTaskId, linkId } = data;
+
+                    logger.debug(
+                        `[Task Service] Hydrating reachability for new link: ${linkId} (${sourceTaskId} -> ${targetTaskId})`
+                    );
+
+                    try {
+                        await incrementLinkReachability({
+                            projectId,
+                            sourceTaskId,
+                            targetTaskId,
+                        });
+                    } catch (error) {
+                        logger.error(
+                            `[Task Service] Failed to hydrate reachability for link ${linkId}:`,
+                            error
+                        );
+                        throw error;
+                    }
+                },
+
                 // Handle link deletion by decrementing transitive reachability
                 [KAFKA_EVENTS.PROJECT_TASK_LINK.DELETED]: async (data: any) => {
                     const { projectId, sourceTaskId, targetTaskId, linkId } = data;

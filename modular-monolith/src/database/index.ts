@@ -28,15 +28,17 @@ export interface Database {
     outbox_events: OutboxEventTable;
 }
 
+export const pool = new Pool({
+    database: 'test',
+    host: 'localhost',
+    user: 'admin',
+    password: 'password',
+    port: 5434,
+    max: 10,
+});
+
 const dialect = new PostgresDialect({
-    pool: new Pool({
-        database: 'test',
-        host: 'localhost',
-        user: 'admin',
-        password: 'password',
-        port: 5434,
-        max: 10,
-    }),
+    pool,
 });
 
 export const db = new Kysely<Database>({
