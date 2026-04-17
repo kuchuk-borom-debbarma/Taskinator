@@ -7,6 +7,7 @@ import { PlusCircle, Loader2, Target, MousePointer2 } from 'lucide-react';
 import type { ProjectTask } from '../../api/types';
 
 interface TaskMapProps {
+  projectId: string;
   taskId: string;
 }
 
@@ -16,12 +17,55 @@ interface MapNode {
   y: number;
   rank: number; // Vertical position level
 }
+interface RelationshipTooltipProps {
+  edgeId: string;
+  mapData: {
+    nodes: MapNode[];
+    allEdges: any[];
+  };
+}
 
-export const TaskMap: React.FC<TaskMapProps> = ({ taskId }) => {
+const RelationshipTooltip: React.FC<RelationshipTooltipProps> = ({ edgeId, mapData }) => {
+  const [pos, setPos] = useState({ x: 0, y: 0 });
+
+  useEffect(() => {
+    const handleGlobalMouseMove = (e: MouseEvent) => {
+      setPos({ x: e.clientX, y: e.clientY });
+    };
+    window.addEventListener('mousemove', handleGlobalMouseMove);
+    return () => window.removeEventListener('mousemove', handleGlobalMouseMove);
+  }, []);
+
+  const edge = mapData.allEdges.find(e => e.id === edgeId);
+  if (!edge) return null;
+  const s = mapData.nodes.find(n => n.task.id === edge.sourceTaskId);
+  const t = mapData.nodes.find(n => n.task.id === edge.targetTaskId);
+  if (!s || !t) return null;
+
+  return (
+    <div 
+      className="fixed z-[100] pointer-events-none flex flex-col gap-1 px-4 py-3 bg-white border border-border-notion rounded-xl shadow-2xl animate-in fade-in zoom-in duration-200"
+      style={{ left: pos.x + 20, top: pos.y - 40 }}
+    >
+      <div className="flex items-center gap-2">
+        <span className="text-[11px] font-bold text-text-notion truncate max-w-[120px]">{s.task.title}</span>
+        <div className="px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider text-white" style={{ backgroundColor: getLinkLabelColor(edge.label) }}>
+          {edge.label}
+        </div>
+        <span className="text-[11px] font-bold text-text-notion truncate max-w-[120px]">{t.task.title}</span>
+      </div>
+      <div className="flex items-center gap-1.5 opacity-40">
+        <div className="w-1.5 h-1.5 rounded-full bg-text-dim" />
+        <span className="text-[9px] font-medium text-text-dim uppercase tracking-tighter">Connecting Thread</span>
+      </div>
+    </div>
+  );
+};
+
+export const TaskMap: React.FC<TaskMapProps> = ({ projectId, taskId }) => {
   const { taskApi } = useApi();
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
   const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null);
-  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   
   // Canvas State: Pan & Zoom
   const [transform, setTransform] = useState({ x: 0, y: 0, scale: 0.8 });
@@ -36,25 +80,33 @@ export const TaskMap: React.FC<TaskMapProps> = ({ taskId }) => {
     hasNextPage,
     isFetchingNextPage,
     isLoading,
+    error,
     isError
   } = useInfiniteQuery({
     queryKey: ['neighbourhood-map', taskId],
-    queryFn: ({ pageParam }) => taskApi.getTaskNeighbourhood(taskId, 5, 5, pageParam as string | undefined),
+    queryFn: ({ pageParam }) => taskApi.getTaskNeighbourhood(projectId, taskId, 5, 5, pageParam as string | undefined),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (lastPage) => lastPage.hasNextPage ? lastPage.endCursor : undefined,
   });
 
   // 2. Intelligent Graph Ranking (Depth-Synchronized)
   const mapData = useMemo(() => {
-    if (!data) return null;
+    if (!data || !data.pages[0]?.focusedTask) return null;
 
+    const startTime = performance.now();
     const focusedTask = data.pages[0].focusedTask;
     const allTasks = new Map<string, ProjectTask>();
-    const allEdges = data.pages.flatMap(p => p.edges);
+    const edgeMap = new Map<string, TaskLink>(); // Use Map for deduplication
     const nodeDepths = new Map<string, { depth: number, direction: string }>();
     
+    let rawNodeCount = 0;
+    let rawEdgeCount = 0;
+
     // Accumulate unique tasks and their depths from all pages
-    data.pages.forEach(p => {
+    data.pages.forEach((p, pageIdx) => {
+      rawNodeCount += p.nodes.length;
+      rawEdgeCount += p.edges.length;
+
       p.nodes.forEach(n => {
         allTasks.set(n.task.id, n.task);
         // Track the minimum depth found for this task in the neighbourhood
@@ -63,11 +115,22 @@ export const TaskMap: React.FC<TaskMapProps> = ({ taskId }) => {
           nodeDepths.set(n.task.id, { depth: n.depth, direction: n.direction });
         }
       });
+
+      p.edges.forEach(e => {
+        edgeMap.set(e.id, e);
+      });
     });
     // Ensure focused task is present
     allTasks.set(focusedTask.id, focusedTask);
 
     const nodesList = Array.from(allTasks.values());
+    const allEdges = Array.from(edgeMap.values());
+
+    console.log(`[DiscoveryEngine] Graph Hydration Stats:
+    - Total Pages: ${data.pages.length}
+    - Raw Nodes/Edges: ${rawNodeCount}/${rawEdgeCount}
+    - Unique Nodes/Edges: ${allTasks.size}/${edgeMap.size}
+    `);
 
     // ─── Phase 1: Rank by Backend Depth ───
     const ranks = new Map<string, number>();
@@ -101,6 +164,9 @@ export const TaskMap: React.FC<TaskMapProps> = ({ taskId }) => {
         }
       });
     }
+
+    const layoutTime = performance.now() - startTime;
+    console.log(`[DiscoveryEngine] Layout computation took ${layoutTime.toFixed(2)}ms`);
 
     const VERTICAL_SPACING = 200;
     const HORIZONTAL_SPACING = 300;
@@ -156,7 +222,6 @@ export const TaskMap: React.FC<TaskMapProps> = ({ taskId }) => {
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
-    setMousePos({ x: e.clientX, y: e.clientY });
     if (!isDragging) return;
     setTransform(prev => ({
       ...prev,
@@ -181,7 +246,24 @@ export const TaskMap: React.FC<TaskMapProps> = ({ taskId }) => {
   }, [hoveredNodeId, mapData]);
 
   if (isLoading) return <div className="p-20 text-center text-text-dim text-[13px] font-medium h-full flex items-center justify-center bg-bg-secondary">Loading Reachability...</div>;
-  if (isError || !mapData) return <div className="p-20 text-center text-red-500 font-medium h-full flex items-center justify-center bg-bg-secondary underline">Discovery Engine Issue.</div>;
+  if (isError || !mapData) {
+    return (
+      <div className="p-20 h-full flex flex-col items-center justify-center bg-bg-secondary gap-4">
+        <div className="text-center text-red-500 font-bold text-sm tracking-tight uppercase opacity-80">
+          Discovery Engine Issue
+        </div>
+        <div className="max-w-xs text-center text-text-dim text-[13px] leading-relaxed">
+          {(error as Error)?.message || 'We couldn\'t load the dependency map for this task. It might be disconnected or missing.'}
+        </div>
+        <button 
+          onClick={recenter}
+          className="mt-2 text-xs font-bold text-focus-blue hover:underline"
+        >
+          Reset View
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div 
@@ -219,7 +301,7 @@ export const TaskMap: React.FC<TaskMapProps> = ({ taskId }) => {
       </div>
 
       <div 
-        className="absolute inset-0 transition-transform duration-100 ease-out"
+        className="absolute inset-0"
         style={{ transform: `translate(calc(50% + ${transform.x}px), calc(50% + ${transform.y}px)) scale(${transform.scale})` }}
       >
         <svg className="absolute inset-0 pointer-events-none overflow-visible w-full h-full">
@@ -339,32 +421,7 @@ export const TaskMap: React.FC<TaskMapProps> = ({ taskId }) => {
 
       {/* Floating Relationship Tooltip */}
       {hoveredEdgeId && mapData && (
-        (() => {
-          const edge = mapData.allEdges.find(e => e.id === hoveredEdgeId);
-          if (!edge) return null;
-          const s = mapData.nodes.find(n => n.task.id === edge.sourceTaskId);
-          const t = mapData.nodes.find(n => n.task.id === edge.targetTaskId);
-          if (!s || !t) return null;
-
-          return (
-            <div 
-              className="fixed z-[100] pointer-events-none flex flex-col gap-1 px-4 py-3 bg-white border border-border-notion rounded-xl shadow-2xl animate-in fade-in zoom-in duration-200"
-              style={{ left: mousePos.x + 20, top: mousePos.y - 40 }}
-            >
-              <div className="flex items-center gap-2">
-                <span className="text-[11px] font-bold text-text-notion truncate max-w-[120px]">{s.task.title}</span>
-                <div className="px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider text-white" style={{ backgroundColor: getLinkLabelColor(edge.label) }}>
-                  {edge.label}
-                </div>
-                <span className="text-[11px] font-bold text-text-notion truncate max-w-[120px]">{t.task.title}</span>
-              </div>
-              <div className="flex items-center gap-1.5 opacity-40">
-                <div className="w-1.5 h-1.5 rounded-full bg-text-dim" />
-                <span className="text-[9px] font-medium text-text-dim uppercase tracking-tighter">Connecting Thread</span>
-              </div>
-            </div>
-          );
-        })()
+        <RelationshipTooltip edgeId={hoveredEdgeId} mapData={mapData} />
       )}
     </div>
   );

@@ -15,10 +15,13 @@ import { useApi } from './context/ApiContext';
 import { useAuth } from './context/AuthContext';
 import { AuthScreen } from './components/Auth/AuthScreen';
 import { LayoutGrid, ArrowRight, Loader2 } from 'lucide-react';
+import { NotFoundComponent, GlobalErrorComponent } from './components/Layout/RouterFeedback';
 
 // Root Route - Contains the Global Sidebar
 const rootRoute = createRootRoute({
   component: RootComponent,
+  notFoundComponent: NotFoundComponent,
+  errorComponent: GlobalErrorComponent,
 });
 
 function RootComponent() {
@@ -223,7 +226,11 @@ export const routeTree = rootRoute.addChildren([
   ]),
 ]);
 
-export const router = createRouter({ routeTree });
+export const router = createRouter({ 
+  routeTree,
+  defaultNotFoundComponent: NotFoundComponent,
+  defaultErrorComponent: GlobalErrorComponent,
+});
 
 declare module '@tanstack/react-router' {
   interface Register {

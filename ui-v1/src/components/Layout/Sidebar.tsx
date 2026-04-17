@@ -19,7 +19,7 @@ export const Sidebar: React.FC = () => {
 
       <nav className="flex-1">
         <SidebarItem to="/" icon={<LayoutDashboard size={18} />} label="Dashboard" />
-        <SidebarItem to="/projects" icon={<FolderKanban size={18} />} label="All Projects" />
+        <SidebarItem to="/" icon={<FolderKanban size={18} />} label="All Projects" />
         
         <div className="px-4 pt-6 pb-2 text-[11px] font-semibold text-text-dim uppercase tracking-wider">
           Workspace

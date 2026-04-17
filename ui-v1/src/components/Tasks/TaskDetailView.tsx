@@ -196,7 +196,7 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
           onClose={() => setIsMapOpen(false)} 
           title={task.title}
         >
-          <TaskMap taskId={taskId} />
+          <TaskMap projectId={task.projectId} taskId={taskId} />
         </TaskMapModal>
 
         <footer className="w-full flex justify-between items-center opacity-30 mt-20">

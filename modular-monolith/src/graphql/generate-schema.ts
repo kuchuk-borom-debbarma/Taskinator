@@ -24,4 +24,6 @@ async function generateSchema() {
     }
 }
 
-generateSchema();
+generateSchema().then(() => {
+    process.exit(0);
+});

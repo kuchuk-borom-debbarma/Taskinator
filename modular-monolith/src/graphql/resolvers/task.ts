@@ -35,44 +35,110 @@ export const taskResolvers = {
     },
 
     NeighbourhoodNode: {
-        task: (n: any) => buildRef(n.taskId, 'ProjectTask'),
+        task: (n: any) => ({ ...buildRef(n.taskId, 'ProjectTask'), ...n.task }),
     },
 
     ProjectTask: {
         id: (t: any) => t.id,
-        projectId: (t: any) => t.projectId,
-        teamId: (t: any) => t.teamId,
-        memberId: (t: any) => t.memberId,
+        projectId: async (t: any, _: any, context: GraphQLContext) => {
+            if (t.projectId) return t.projectId;
+            const task = await resolveTask(t, context);
+            return task?.projectId;
+        },
+        teamId: async (t: any, _: any, context: GraphQLContext) => {
+            if (t.teamId !== undefined) return t.teamId;
+            const task = await resolveTask(t, context);
+            return task?.teamId;
+        },
+        memberId: async (t: any, _: any, context: GraphQLContext) => {
+            if (t.memberId !== undefined) return t.memberId;
+            const task = await resolveTask(t, context);
+            return task?.memberId;
+        },
         title: async (t: any, _: any, context: GraphQLContext) => {
+            if (t.title) return t.title;
             const task = await resolveTask(t, context);
             return task?.title;
         },
         description: async (t: any, _: any, context: GraphQLContext) => {
+            if (t.description !== undefined) return t.description;
             const task = await resolveTask(t, context);
             return task?.description;
         },
         status: async (t: any, _: any, context: GraphQLContext) => {
+            if (t.status) return t.status;
             const task = await resolveTask(t, context);
             return task?.status;
         },
-        createdAt: async (t: any) => {
-            const task = await resolveTask(t, null as any);
-            const date = task?.createdAt ?? t.createdAt;
-            return date instanceof Date ? date.toISOString() : date;
+        version: async (t: any, _: any, context: GraphQLContext) => {
+            if (t.version !== undefined) return t.version;
+            const task = await resolveTask(t, context);
+            return task?.version;
         },
-        updatedAt: async (t: any) => {
-            const task = await resolveTask(t, null as any);
-            const date = task?.updatedAt ?? t.updatedAt;
-            return date instanceof Date ? date.toISOString() : date;
+        createdAt: async (t: any, _: any, context: GraphQLContext) => {
+            const date = t.createdAt;
+            if (date) return date instanceof Date ? date.toISOString() : date;
+            const task = await resolveTask(t, context);
+            const taskDate = task?.createdAt;
+            return taskDate instanceof Date ? taskDate.toISOString() : taskDate;
+        },
+        updatedAt: async (t: any, _: any, context: GraphQLContext) => {
+            const date = t.updatedAt;
+            if (date) return date instanceof Date ? date.toISOString() : date;
+            const task = await resolveTask(t, context);
+            const taskDate = task?.updatedAt;
+            return taskDate instanceof Date ? taskDate.toISOString() : taskDate;
         },
         priority: () => 3, // Default to Medium
         dueDate: () => null, // Default to no deadline
-        project: (t: any) => buildRef(t.projectId, 'Project'),
-        team: (t: any) => buildRef(t.teamId, 'Team'),
-        member: (t: any) => buildRef(t.memberId, 'User'),
-        assignee: (t: any) => buildRef(t.memberId, 'User'),
-        creator: (t: any) => buildRef(t.createdBy, 'User'),
-        updater: (t: any) => buildRef(t.updatedBy, 'User'),
+        project: async (t: any, _: any, context: GraphQLContext) => {
+            let projectId = t.projectId;
+            if (!projectId) {
+                const task = await resolveTask(t, context);
+                projectId = task?.projectId;
+            }
+            return buildRef(projectId, 'Project');
+        },
+        team: async (t: any, _: any, context: GraphQLContext) => {
+            let teamId = t.teamId;
+            if (teamId === undefined) {
+                const task = await resolveTask(t, context);
+                teamId = task?.teamId;
+            }
+            return buildRef(teamId, 'Team');
+        },
+        member: async (t: any, _: any, context: GraphQLContext) => {
+            let memberId = t.memberId;
+            if (memberId === undefined) {
+                const task = await resolveTask(t, context);
+                memberId = task?.memberId;
+            }
+            return buildRef(memberId, 'User');
+        },
+        assignee: async (t: any, _: any, context: GraphQLContext) => {
+            let memberId = t.memberId;
+            if (memberId === undefined) {
+                const task = await resolveTask(t, context);
+                memberId = task?.memberId;
+            }
+            return buildRef(memberId, 'User');
+        },
+        creator: async (t: any, _: any, context: GraphQLContext) => {
+            let createdBy = t.createdBy;
+            if (!createdBy) {
+                const task = await resolveTask(t, context);
+                createdBy = task?.createdBy;
+            }
+            return buildRef(createdBy, 'User');
+        },
+        updater: async (t: any, _: any, context: GraphQLContext) => {
+            let updatedBy = t.updatedBy;
+            if (!updatedBy) {
+                const task = await resolveTask(t, context);
+                updatedBy = task?.updatedBy;
+            }
+            return buildRef(updatedBy, 'User');
+        },
 
         incomingLinks: async (
             t: any,

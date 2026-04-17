@@ -113,6 +113,7 @@ export interface NeighbourRecord {
     taskId: string;
     depth: number;
     direction: NeighbourDirection;
+    task?: ProjectTask;
 }
 
 export interface TaskNeighbourhoodResult {

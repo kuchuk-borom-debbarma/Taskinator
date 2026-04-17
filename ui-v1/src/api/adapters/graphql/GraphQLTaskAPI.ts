@@ -15,12 +15,27 @@ const GRAPHQL_URL = 'http://localhost:3000/graphql';
 
 export class GraphQLTaskAPI implements TaskAPI {
   private token: string | null;
+  private static queryCache = new Map<any, string>();
+
   constructor(token: string | null) {
     this.token = token;
   }
 
   private async query<T>(query: any, variables: any = {}): Promise<T> {
-    const queryStr = typeof query === 'string' ? query : print(query);
+    let queryStr: string;
+    
+    if (typeof query === 'string') {
+      queryStr = query;
+    } else {
+      // Use cache for DocumentNode to avoid redundant print() overhead
+      if (GraphQLTaskAPI.queryCache.has(query)) {
+        queryStr = GraphQLTaskAPI.queryCache.get(query)!;
+      } else {
+        queryStr = print(query);
+        GraphQLTaskAPI.queryCache.set(query, queryStr);
+      }
+    }
+
     const response = await fetch(GRAPHQL_URL, {
       method: 'POST',
       headers: {
@@ -32,7 +47,7 @@ export class GraphQLTaskAPI implements TaskAPI {
 
     const result = await response.json();
     if (result.errors) {
-      console.error('GraphQL Errors:', result.errors);
+      console.error('GraphQL Errors:', JSON.stringify(result.errors, null, 2));
       throw new Error(result.errors[0].message);
     }
     return result.data as T;
@@ -82,13 +97,10 @@ export class GraphQLTaskAPI implements TaskAPI {
     return data.task ? this.mapTask(data.task) : null;
   }
 
-  async getTaskNeighbourhood(taskId: string, maxDepth = 2, _limit = 50, after?: string): Promise<TaskNeighbourhood> {
-    const task = await this.getTask(taskId);
-    if (!task) throw new Error("Task not found");
-
+  async getTaskNeighbourhood(projectId: string, taskId: string, maxDepth?: number, limit?: number, after?: string): Promise<TaskNeighbourhood> {
     const data = await this.query<GetNeighbourhoodQuery>(graphql(`
-      query GetNeighbourhood($projectId: ID!, $taskId: ID!, $maxDepth: Int, $after: String) {
-        taskNeighbourhood(projectId: $projectId, taskId: $taskId, maxDepth: $maxDepth, after: $after) {
+      query GetNeighbourhood($projectId: ID!, $taskId: ID!, $maxDepth: Int, $first: Int, $after: String) {
+        taskNeighbourhood(projectId: $projectId, taskId: $taskId, maxDepth: $maxDepth, first: $first, after: $after) {
           focusedTask {
             id projectId teamId memberId title description status priority dueDate version createdAt updatedAt createdBy
             team { id name }
@@ -112,20 +124,24 @@ export class GraphQLTaskAPI implements TaskAPI {
           }
         }
       }
-    `), { projectId: task.projectId, taskId, maxDepth, after });
+    `), { projectId, taskId, maxDepth, first: limit, after });
 
     const n = data.taskNeighbourhood;
+    if (!n) {
+      throw new Error("Task Neighbourhood not found or unauthorized");
+    }
+
     return {
       focusedTask: this.mapTask(n.focusedTask),
-      nodes: n.nodes.map((node: any) => ({
+      nodes: (n.nodes || []).map((node: any) => ({
         ...node,
         task: this.mapTask(node.task)
       })),
-      edges: n.edges,
+      edges: n.edges || [],
       incomingStories: [],
       outgoingStories: [],
-      hasNextPage: n.pageInfo.hasNextPage,
-      endCursor: n.pageInfo.endCursor || undefined
+      hasNextPage: n.pageInfo?.hasNextPage || false,
+      endCursor: n.pageInfo?.endCursor || undefined
     };
   }
 

@@ -524,7 +524,26 @@ export const getNeighbourhood = async (
     // ── Step 1: Paginate neighbours from task_reachability ──────────────────
     // Union incoming ancestors + outgoing descendants, deduplicate by choosing
     // MIN depth and marking as 'both' if the same task appears on both sides.
-    type ReachRow = { neighbour_id: string; min_depth: number; direction: string; created_at: Date };
+    type ReachRow = { 
+        neighbour_id: string; 
+        min_depth: number; 
+        direction: string; 
+        
+        // Hydrated fields from project_task
+        id: string;
+        projectId: string;
+        teamId: string | null;
+        memberId: string | null;
+        title: string;
+        description: string;
+        status: TaskStatus;
+        version: number;
+        lastEventId: string | null;
+        createdBy: string;
+        updatedBy: string;
+        createdAt: Date;
+        updatedAt: Date;
+    };
 
     const reachResult = await sql<ReachRow>`
         WITH auth_check AS (
@@ -563,11 +582,25 @@ export const getNeighbourhood = async (
             GROUP BY n.neighbour_id
         ),
         hydrated AS (
-            SELECT d.*, t.created_at
+            SELECT 
+                d.*,
+                t.id,
+                t.fk_project_id AS "projectId",
+                t.fk_team_id AS "teamId",
+                t.fk_member_id AS "memberId",
+                t.title,
+                t.description,
+                t.status,
+                t.version,
+                t.last_event_id AS "lastEventId",
+                t.created_by AS "createdBy",
+                t.updated_by AS "updatedBy",
+                t.created_at AS "createdAt",
+                t.updated_at AS "updatedAt"
             FROM deduped d
             JOIN project_task t ON d.neighbour_id = t.id
         )
-        SELECT neighbour_id, min_depth, direction, created_at
+        SELECT *
         FROM hydrated
         WHERE (
             ${cursorDepth}::int IS NULL
@@ -575,18 +608,18 @@ export const getNeighbourhood = async (
                 CASE
                   WHEN ${isBackward} THEN
                     (min_depth < ${cursorDepth}::int 
-                      OR (min_depth = ${cursorDepth}::int AND created_at > ${cursorCreatedAt}::timestamp)
-                      OR (min_depth = ${cursorDepth}::int AND created_at = ${cursorCreatedAt}::timestamp AND neighbour_id < ${cursorId}::uuid))
+                      OR (min_depth = ${cursorDepth}::int AND "createdAt" > ${cursorCreatedAt}::timestamp)
+                      OR (min_depth = ${cursorDepth}::int AND "createdAt" = ${cursorCreatedAt}::timestamp AND neighbour_id < ${cursorId}::uuid))
                   ELSE
                     (min_depth > ${cursorDepth}::int 
-                      OR (min_depth = ${cursorDepth}::int AND created_at < ${cursorCreatedAt}::timestamp)
-                      OR (min_depth = ${cursorDepth}::int AND created_at = ${cursorCreatedAt}::timestamp AND neighbour_id > ${cursorId}::uuid))
+                      OR (min_depth = ${cursorDepth}::int AND "createdAt" < ${cursorCreatedAt}::timestamp)
+                      OR (min_depth = ${cursorDepth}::int AND "createdAt" = ${cursorCreatedAt}::timestamp AND neighbour_id > ${cursorId}::uuid))
                 END
             )
         )
         ORDER BY 
             min_depth ${sql.raw(isBackward ? 'DESC' : 'ASC')}, 
-            created_at ${sql.raw(isBackward ? 'ASC' : 'DESC')}, 
+            "createdAt" ${sql.raw(isBackward ? 'ASC' : 'DESC')}, 
             neighbour_id ${sql.raw(isBackward ? 'DESC' : 'ASC')}
         LIMIT ${limit + 1}
     `.execute(db);
@@ -605,11 +638,11 @@ export const getNeighbourhood = async (
         const last = reachRows[reachRows.length - 1]!;
 
         if (isBackward) {
-            nextCursor = hasMore ? `${first.min_depth}|${first.created_at.toISOString()}|${first.neighbour_id}` : null;
-            prevCursor = `${last.min_depth}|${last.created_at.toISOString()}|${last.neighbour_id}`;
+            nextCursor = hasMore ? `${first.min_depth}|${first.createdAt.toISOString()}|${first.neighbour_id}` : null;
+            prevCursor = `${last.min_depth}|${last.createdAt.toISOString()}|${last.neighbour_id}`;
         } else {
-            nextCursor = hasMore ? `${last.min_depth}|${last.created_at.toISOString()}|${last.neighbour_id}` : null;
-            prevCursor = params.after ? `${first.min_depth}|${first.created_at.toISOString()}|${first.neighbour_id}` : null;
+            nextCursor = hasMore ? `${last.min_depth}|${last.createdAt.toISOString()}|${last.neighbour_id}` : null;
+            prevCursor = params.after ? `${first.min_depth}|${first.createdAt.toISOString()}|${first.neighbour_id}` : null;
         }
     }
 
@@ -617,6 +650,21 @@ export const getNeighbourhood = async (
         taskId: r.neighbour_id,
         depth: r.min_depth,
         direction: r.direction as NeighbourRecord['direction'],
+        task: {
+            id: r.id,
+            projectId: r.projectId,
+            teamId: r.teamId,
+            memberId: r.memberId,
+            title: r.title,
+            description: r.description,
+            status: r.status,
+            version: r.version,
+            lastEventId: r.lastEventId,
+            createdBy: r.createdBy,
+            updatedBy: r.updatedBy,
+            createdAt: r.createdAt,
+            updatedAt: r.updatedAt
+        }
     }));
 
     if (neighbours.length === 0) {

@@ -8,12 +8,26 @@ const GRAPHQL_URL = 'http://localhost:3000/graphql';
 
 export class GraphQLProjectAPI implements ProjectAPI {
   private token: string | null;
+  private static queryCache = new Map<any, string>();
+
   constructor(token: string | null) {
     this.token = token;
   }
 
   private async query<T>(query: any, variables: any = {}): Promise<T> {
-    const queryStr = typeof query === 'string' ? query : print(query);
+    let queryStr: string;
+    
+    if (typeof query === 'string') {
+      queryStr = query;
+    } else {
+      if (GraphQLProjectAPI.queryCache.has(query)) {
+        queryStr = GraphQLProjectAPI.queryCache.get(query)!;
+      } else {
+        queryStr = print(query);
+        GraphQLProjectAPI.queryCache.set(query, queryStr);
+      }
+    }
+
     const response = await fetch(GRAPHQL_URL, {
       method: 'POST',
       headers: {
@@ -25,7 +39,7 @@ export class GraphQLProjectAPI implements ProjectAPI {
 
     const result = await response.json();
     if (result.errors) {
-      console.error('GraphQL Project API Error:', result.errors);
+      console.error('GraphQL Errors:', JSON.stringify(result.errors, null, 2));
       throw new Error(result.errors[0].message);
     }
     return result.data as T;

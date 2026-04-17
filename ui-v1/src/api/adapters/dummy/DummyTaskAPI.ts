@@ -80,7 +80,7 @@ export class DummyTaskAPI implements TaskAPI {
     return this.tasks.find((t) => t.id === id) || null;
   }
 
-  async getTaskNeighbourhood(taskId: string, maxDepth: number = 2, limit: number = 20, after?: string): Promise<TaskNeighbourhood> {
+  async getTaskNeighbourhood(projectId: string, taskId: string, maxDepth: number = 2, limit: number = 50, after?: string): Promise<TaskNeighbourhood> {
     const focusedTask = this.tasks.find((t) => t.id === taskId);
     if (!focusedTask) throw new Error('Task not found');
 
