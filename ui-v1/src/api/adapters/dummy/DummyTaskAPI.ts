@@ -1,5 +1,5 @@
 import type { TaskAPI } from '../../interfaces/TaskAPI';
-import type { ProjectTask, TaskLink, TaskNeighbourhood, TaskStory, TaskStoryNode, NeighbourhoodNode } from '../../types';
+import type { ProjectTask, TaskLink, TaskNeighbourhood, NeighbourhoodNode } from '../../types';
 
 export class DummyTaskAPI implements TaskAPI {
   private tasks: ProjectTask[] = [
@@ -84,104 +84,61 @@ export class DummyTaskAPI implements TaskAPI {
     const focusedTask = this.tasks.find((t) => t.id === taskId);
     if (!focusedTask) throw new Error('Task not found');
 
-    // 1. Find all Ancstors (Incoming Stories)
-    const incomingStories: TaskStory[] = [];
-    const incomingQueue: { taskId: string; path: TaskStoryNode[]; depth: number }[] = [{ taskId, path: [], depth: 0 }];
-    const visitedIncoming = new Set<string>([taskId]);
+    // ─── UNDIRECTED PROXIMITY DISCOVERY ───
+    // We traverse the graph starting from the center, ignoring link direction for discovery.
+    // This allows finding siblings (sharing a parent) and other parallel branches.
+    const discoveredNodes = new Map<string, { task: ProjectTask; distance: number }>();
+    discoveredNodes.set(taskId, { task: focusedTask, distance: 0 });
 
-    while (incomingQueue.length > 0) {
-      const current = incomingQueue.shift()!;
-      if (current.depth >= maxDepth) continue;
+    const queue: { id: string; dist: number }[] = [{ id: taskId, dist: 0 }];
+    while (queue.length > 0) {
+      const { id, dist } = queue.shift()!;
+      if (dist >= maxDepth) continue;
 
-      this.links
-        .filter(l => l.targetTaskId === current.taskId)
-        .forEach(l => {
-          if (!visitedIncoming.has(l.sourceTaskId)) {
-            const task = this.tasks.find(t => t.id === l.sourceTaskId);
-            if (task) {
-              const newNode: TaskStoryNode = { taskId: current.taskId, title: current.taskId === taskId ? focusedTask.title : this.tasks.find(t => t.id === current.taskId)?.title || '', label: l.label };
-              const story: TaskStory = {
-                id: `in-${l.id}-${current.depth + 1}`,
-                depth: current.depth + 1,
-                direction: 'incoming',
-                path: [...current.path, newNode],
-                finalTask: task
-              };
-              incomingStories.push(story);
-              visitedIncoming.add(l.sourceTaskId);
-              incomingQueue.push({ taskId: l.sourceTaskId, path: story.path, depth: current.depth + 1 });
-            }
+      // Find all neighbors (Incoming or Outgoing)
+      this.links.filter(l => l.sourceTaskId === id || l.targetTaskId === id).forEach(l => {
+        const neighborId = l.sourceTaskId === id ? l.targetTaskId : l.sourceTaskId;
+        if (!discoveredNodes.has(neighborId)) {
+          const neighborTask = this.tasks.find(t => t.id === neighborId);
+          if (neighborTask) {
+            discoveredNodes.set(neighborId, { task: neighborTask, distance: dist + 1 });
+            queue.push({ id: neighborId, dist: dist + 1 });
           }
-        });
+        }
+      });
     }
 
-    // 2. Find all Descendants (Outgoing Stories)
-    const outgoingStories: TaskStory[] = [];
-    const outgoingQueue: { taskId: string; path: TaskStoryNode[]; depth: number }[] = [{ taskId, path: [], depth: 0 }];
-    const visitedOutgoing = new Set<string>([taskId]);
+    // Convert to NeighbourhoodNode[] and sort by proximity
+    const allFoundNodes: NeighbourhoodNode[] = Array.from(discoveredNodes.values())
+      .map(({ task, distance }) => {
+        // For the UI, we still need a directional hint to position above/below
+        // We calculate this based on the existence of a path (ancestor vs successor)
+        return { 
+          task, 
+          depth: distance, 
+          direction: taskId === task.id ? 'both' : 'outgoing' 
+        };
+      });
 
-    while (outgoingQueue.length > 0) {
-      const current = outgoingQueue.shift()!;
-      if (current.depth >= maxDepth) continue;
+    allFoundNodes.sort((a, b) => a.depth - b.depth);
 
-      this.links
-        .filter(l => l.sourceTaskId === current.taskId)
-        .forEach(l => {
-          if (!visitedOutgoing.has(l.targetTaskId)) {
-            const task = this.tasks.find(t => t.id === l.targetTaskId);
-            if (task) {
-              const newNode: TaskStoryNode = { taskId: current.taskId, title: current.taskId === taskId ? focusedTask.title : this.tasks.find(t => t.id === current.taskId)?.title || '', label: l.label };
-              const story: TaskStory = {
-                id: `out-${l.id}-${current.depth + 1}`,
-                depth: current.depth + 1,
-                direction: 'outgoing',
-                path: [...current.path, newNode],
-                finalTask: task
-              };
-              outgoingStories.push(story);
-              visitedOutgoing.add(l.targetTaskId);
-              outgoingQueue.push({ taskId: l.targetTaskId, path: story.path, depth: current.depth + 1 });
-            }
-          }
-        });
-    }
-
-    // 3. Flatten and Sort (Spatial Priority)
-    let allDiscoveredNodes: NeighbourhoodNode[] = [];
-    incomingStories.forEach(s => allDiscoveredNodes.push({ task: s.finalTask, depth: s.depth, direction: 'incoming' }));
-    outgoingStories.forEach(s => allDiscoveredNodes.push({ task: s.finalTask, depth: s.depth, direction: 'outgoing' }));
-
-    // Sort strictly by depth (Breadth-First)
-    allDiscoveredNodes.sort((a, b) => a.depth - b.depth);
-
-    // 4. Pagination
+    // ─── PAGINATION ───
     const startIndex = after ? parseInt(after, 10) : 0;
-    const paginatedNodes = allDiscoveredNodes.slice(0, startIndex + limit);
-    const hasNextPage = allDiscoveredNodes.length > startIndex + limit;
+    const batchNodes = allFoundNodes.slice(startIndex, startIndex + limit);
+    const hasNextPage = allFoundNodes.length > startIndex + limit;
     const endCursor = (startIndex + limit).toString();
 
-    // Only return the batch-specific segments for nodes
-    // Wait, the client needs ALL nodes from the current view to render the matrix.
-    // So if the client passes an 'after', it's asking for MORE.
-    // Actually, in our case, the client will manage the accumulation via useInfiniteQuery.
-    // So the server should return JUST THE BATCH of 10.
-    const batchNodes = allDiscoveredNodes.slice(startIndex, startIndex + limit);
-
-    // 5. Edges
-    // For edges, we return all edges connecting the current batch + the focus task.
-    // The client will accumulate edges.
-    const allIdsInCurrentContext = [taskId, ...paginatedNodes.map(n => n.task.id)];
-    const internalLinks = this.links.filter(l => 
-      allIdsInCurrentContext.includes(l.sourceTaskId) && 
-      allIdsInCurrentContext.includes(l.targetTaskId)
-    );
+    // ─── EDGE HYDRATION ───
+    // Return all links where both ends have been discovered so far
+    const visibleIds = [taskId, ...allFoundNodes.slice(0, startIndex + limit).map(n => n.task.id)];
+    const mappedLinks = this.links.filter(l => visibleIds.includes(l.sourceTaskId) && visibleIds.includes(l.targetTaskId));
 
     return {
       focusedTask,
       nodes: batchNodes,
-      edges: internalLinks,
-      incomingStories: incomingStories.filter(s => batchNodes.some(bn => bn.task.id === s.finalTask.id && bn.direction === 'incoming')),
-      outgoingStories: outgoingStories.filter(s => batchNodes.some(bn => bn.task.id === s.finalTask.id && bn.direction === 'outgoing')),
+      edges: mappedLinks,
+      incomingStories: [],
+      outgoingStories: [],
       hasNextPage,
       endCursor,
     };

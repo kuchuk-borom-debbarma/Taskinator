@@ -62,13 +62,6 @@ export const TaskMapModal: React.FC<TaskMapModalProps> = ({ isOpen, onClose, chi
         <div className="flex-1 min-h-0 relative bg-bg-secondary">
           {children}
         </div>
-
-        {/* Footer Hint */}
-        <div className="absolute bottom-6 left-1/2 -translate-x-1/2 px-4 py-1.5 bg-white border border-border-notion rounded-full z-40 pointer-events-none shadow-sm">
-           <span className="text-[9px] font-bold uppercase tracking-wider text-text-dim">
-            Esc to close
-           </span>
-        </div>
       </div>
     </div>,
     document.body
