@@ -5,11 +5,10 @@ import {
   createRouter, 
   Outlet, 
   useNavigate,
-  useParams
+  useParams,
+  lazyRouteComponent
 } from '@tanstack/react-router';
 import { Sidebar } from './components/Layout/Sidebar';
-import { TaskListView } from './components/Tasks/TaskListView';
-import { TaskDetailView } from './components/Tasks/TaskDetailView';
 import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
 import { useApi } from './context/ApiContext';
 import { useAuth } from './context/AuthContext';
@@ -178,44 +177,17 @@ const projectLayoutRoute = createRoute({
 const projectListRoute = createRoute({
   getParentRoute: () => projectLayoutRoute,
   path: '/',
-  component: ProjectTasksIndex,
+  component: lazyRouteComponent(() => import('./ProjectTasksIndex.lazy.tsx')),
 });
 
 // Task Detail Page (Sibling to List within Project Layout)
 const taskDetailRoute = createRoute({
   getParentRoute: () => projectLayoutRoute,
   path: 'tasks/$taskId',
-  component: TaskDetailPage,
+  component: lazyRouteComponent(() => import('./TaskDetailPage.lazy.tsx')),
 });
 
-function ProjectTasksIndex() {
-  const { projectId } = useParams({ from: projectListRoute.id });
-  const { taskApi } = useApi();
-  
-  const { data: tasks } = useQuery({
-    queryKey: ['tasks', projectId],
-    queryFn: () => taskApi.getProjectTasks(projectId),
-  });
-
-  const { data: links } = useQuery({
-    queryKey: ['links', projectId],
-    queryFn: () => taskApi.getProjectLinks(projectId),
-  });
-
-  return <TaskListView tasks={tasks || []} links={links || []} />;
-}
-
-function TaskDetailPage() {
-  const { taskId } = useParams({ from: taskDetailRoute.id });
-  const navigate = useNavigate();
-
-  return (
-    <TaskDetailView 
-      taskId={taskId} 
-      onClose={() => navigate({ to: '..' })} 
-    />
-  );
-}
+// These components are now moved to lazy files
 
 export const routeTree = rootRoute.addChildren([
   authRoute,

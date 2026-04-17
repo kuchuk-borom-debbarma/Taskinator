@@ -11,11 +11,16 @@ interface TaskMapProps {
   taskId: string;
 }
 
-interface MapNode {
-  task: ProjectTask;
+import type { MapNode } from './layoutWorker';
+
+interface TaskMapProps {
+  projectId: string;
+  taskId: string;
+}
+
+interface Coordinate {
   x: number;
   y: number;
-  rank: number; // Vertical position level
 }
 interface RelationshipTooltipProps {
   edgeId: string;
@@ -73,6 +78,12 @@ export const TaskMap: React.FC<TaskMapProps> = ({ projectId, taskId }) => {
   const dragStart = useRef({ x: 0, y: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
 
+  // Layout & Pinning State
+  const [isComputing, setIsComputing] = useState(false);
+  const [mapData, setMapData] = useState<{ nodes: MapNode[], allEdges: any[] } | null>(null);
+  const [coordinateCache, setCoordinateCache] = useState<Record<string, Coordinate>>({});
+  const workerRef = useRef<Worker | null>(null);
+
   // 1. Dependency Engine (Depth-Favored Proximity)
   const {
     data,
@@ -89,112 +100,63 @@ export const TaskMap: React.FC<TaskMapProps> = ({ projectId, taskId }) => {
     getNextPageParam: (lastPage) => lastPage.hasNextPage ? lastPage.endCursor : undefined,
   });
 
-  // 2. Intelligent Graph Ranking (Depth-Synchronized)
-  const mapData = useMemo(() => {
-    if (!data || !data.pages[0]?.focusedTask) return null;
+  // 2. Web Worker Layout Bridge
+  useEffect(() => {
+    if (!data || !data.pages[0]?.focusedTask) return;
 
-    const startTime = performance.now();
-    const focusedTask = data.pages[0].focusedTask;
-    const allTasks = new Map<string, ProjectTask>();
-    const edgeMap = new Map<string, TaskLink>(); // Use Map for deduplication
-    const nodeDepths = new Map<string, { depth: number, direction: string }>();
-    
-    let rawNodeCount = 0;
-    let rawEdgeCount = 0;
+    if (!workerRef.current) {
+        workerRef.current = new Worker(new URL('./layoutWorker.ts', import.meta.url), { type: 'module' });
+        
+        workerRef.current.onmessage = (e) => {
+            const { nodes, allEdges } = e.data;
+            
+            // Apply Pinning Logic: Merge new positions with existing cache
+            setCoordinateCache(prev => {
+                const nextCache = { ...prev };
+                const finalNodes = nodes.map((node: MapNode) => {
+                    if (nextCache[node.task.id]) {
+                        // Use pinned coordinates
+                        return { ...node, ...nextCache[node.task.id] };
+                    } else {
+                        // "Bake" the new coordinate into cache
+                        nextCache[node.task.id] = { x: node.x, y: node.y };
+                        return node;
+                    }
+                });
 
-    // Accumulate unique tasks and their depths from all pages
-    data.pages.forEach((p, pageIdx) => {
-      rawNodeCount += p.nodes.length;
-      rawEdgeCount += p.edges.length;
-
-      p.nodes.forEach(n => {
-        allTasks.set(n.task.id, n.task);
-        // Track the minimum depth found for this task in the neighbourhood
-        const existing = nodeDepths.get(n.task.id);
-        if (!existing || n.depth < existing.depth) {
-          nodeDepths.set(n.task.id, { depth: n.depth, direction: n.direction });
-        }
-      });
-
-      p.edges.forEach(e => {
-        edgeMap.set(e.id, e);
-      });
-    });
-    // Ensure focused task is present
-    allTasks.set(focusedTask.id, focusedTask);
-
-    const nodesList = Array.from(allTasks.values());
-    const allEdges = Array.from(edgeMap.values());
-
-    console.log(`[DiscoveryEngine] Graph Hydration Stats:
-    - Total Pages: ${data.pages.length}
-    - Raw Nodes/Edges: ${rawNodeCount}/${rawEdgeCount}
-    - Unique Nodes/Edges: ${allTasks.size}/${edgeMap.size}
-    `);
-
-    // ─── Phase 1: Rank by Backend Depth ───
-    const ranks = new Map<string, number>();
-    ranks.set(taskId, 0);
-
-    nodesList.forEach(task => {
-      const dInfo = nodeDepths.get(task.id);
-      if (dInfo) {
-        // Incoming tasks are ranked negatively (above), outgoing positively (below)
-        const rankValue = dInfo.direction === 'incoming' ? -dInfo.depth : dInfo.depth;
-        ranks.set(task.id, rankValue);
-      }
-    });
-
-    // ─── Phase 2: Refine Disconnected Tasks ───
-    // If some nodes are linked but we don't have depth info (shouldn't happen), propagate
-    let changed = true;
-    let iterations = 0;
-    while (changed && iterations < 20) {
-      changed = false;
-      iterations++;
-      allEdges.forEach(edge => {
-        const s = ranks.get(edge.sourceTaskId);
-        const t = ranks.get(edge.targetTaskId);
-        if (s !== undefined && t === undefined) {
-          ranks.set(edge.targetTaskId, s + 1);
-          changed = true;
-        } else if (t !== undefined && s === undefined) {
-          ranks.set(edge.sourceTaskId, t - 1);
-          changed = true;
-        }
-      });
+                setMapData({ nodes: finalNodes, allEdges });
+                setIsComputing(false);
+                return nextCache;
+            });
+        };
     }
 
-    const layoutTime = performance.now() - startTime;
-    console.log(`[DiscoveryEngine] Layout computation took ${layoutTime.toFixed(2)}ms`);
-
-    const VERTICAL_SPACING = 200;
-    const HORIZONTAL_SPACING = 300;
-
-    // Group by rank for horizontal distribution
-    const byRank: Record<number, ProjectTask[]> = {};
-    nodesList.forEach(task => {
-      const r = ranks.get(task.id) ?? 0;
-      if (!byRank[r]) byRank[r] = [];
-      byRank[r].push(task);
+    setIsComputing(true);
+    workerRef.current.postMessage({
+        pages: data.pages,
+        taskId,
+        horizontalSpacing: 300,
+        verticalSpacing: 200
     });
 
-    // Sort each rank by createdAt DESC (newest center-most or consistent layout)
-    Object.keys(byRank).forEach(r => {
-      byRank[Number(r)].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    });
-
-    const positionedNodes: MapNode[] = nodesList.map(task => {
-      const r = ranks.get(task.id) ?? 0;
-      const row = byRank[r];
-      const index = row.indexOf(task);
-      const x = (index - (row.length - 1) / 2) * HORIZONTAL_SPACING;
-      const y = r * VERTICAL_SPACING;
-      return { task, x, y, rank: r };
-    });
-
-    return { nodes: positionedNodes, allEdges, focusedTask };
+    return () => {
+        // We don't terminate immediately to allow reuse, but we could if needed.
+    };
   }, [data, taskId]);
+
+  const resetPins = () => {
+    setCoordinateCache({});
+    // Trigger re-computation
+    if (workerRef.current && data) {
+        setIsComputing(true);
+        workerRef.current.postMessage({
+            pages: data.pages,
+            taskId,
+            horizontalSpacing: 300,
+            verticalSpacing: 200
+        });
+    }
+  };
 
   // 3. Navigation Listeners
   useEffect(() => {
@@ -281,6 +243,14 @@ export const TaskMap: React.FC<TaskMapProps> = ({ projectId, taskId }) => {
           title="Center Context"
         >
           <Target size={18} className="text-focus-blue" />
+        </button>
+        <button 
+          onClick={resetPins}
+          className="pointer-events-auto p-2 bg-white border border-border-notion rounded-lg shadow-sm hover:border-text-dim transition-all active:scale-95 text-text-notion flex items-center gap-2"
+          title="Reset Layout Pins"
+        >
+          <Loader2 size={16} className={`${isComputing ? 'animate-spin' : ''} text-text-dim`} />
+          <span className="text-[10px] font-bold uppercase tracking-wider text-text-dim">Reset Pins</span>
         </button>
       </div>
 
