@@ -98,35 +98,6 @@ export const insertLink = async (data: CreateLinkParam): Promise<TaskLink> => {
               AND NOT EXISTS (SELECT 1 FROM cycle_check)
             RETURNING *
         ),
-        updated_reachability AS (
-            INSERT INTO task_reachability (fk_project_id, ancestor_task_id, descendant_task_id, min_depth, path_count)
-            -- 1. The link itself
-            SELECT fk_project_id, source_task_id, target_task_id, 1, 1
-            FROM inserted_link
-            UNION ALL
-            -- 2. Ancestors of source to target
-            SELECT fk_project_id, ancestor_task_id, ${data.targetTaskId}::uuid, min_depth + 1, path_count
-            FROM task_reachability
-            WHERE descendant_task_id = ${data.sourceTaskId}::uuid 
-              AND fk_project_id = ${data.projectId}::uuid
-            UNION ALL
-            -- 3. Source to descendants of target
-            SELECT fk_project_id, ${data.sourceTaskId}::uuid, descendant_task_id, min_depth + 1, path_count
-            FROM task_reachability
-            WHERE ancestor_task_id = ${data.targetTaskId}::uuid 
-              AND fk_project_id = ${data.projectId}::uuid
-            UNION ALL
-            -- 4. Ancestors of source to descendants of target
-            SELECT rA.fk_project_id, rA.ancestor_task_id, rB.descendant_task_id, rA.min_depth + rB.min_depth + 1, rA.path_count * rB.path_count
-            FROM task_reachability rA, task_reachability rB
-            WHERE rA.descendant_task_id = ${data.sourceTaskId}::uuid 
-              AND rB.ancestor_task_id = ${data.targetTaskId}::uuid
-              AND rA.fk_project_id = ${data.projectId}::uuid 
-              AND rB.fk_project_id = ${data.projectId}::uuid
-            ON CONFLICT (fk_project_id, ancestor_task_id, descendant_task_id) DO UPDATE SET
-                min_depth = LEAST(task_reachability.min_depth, EXCLUDED.min_depth),
-                path_count = task_reachability.path_count + EXCLUDED.path_count
-        ),
         inserted_outbox AS (
             INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
             SELECT 'project.task_link.created',
@@ -154,17 +125,61 @@ export const insertLink = async (data: CreateLinkParam): Promise<TaskLink> => {
 
     const link = result.rows[0];
     if (!link) {
-        // Distinguish between cycle and unauthorized
         const isCycle = await sql`
              SELECT 1 FROM task_reachability 
              WHERE fk_project_id = ${data.projectId}::uuid 
                AND ancestor_task_id = ${data.targetTaskId}::uuid 
                AND descendant_task_id = ${data.sourceTaskId}::uuid
+             LIMIT 1
         `.execute(db);
-        if (isCycle.rows.length > 0) throw new Error('Cycle detected');
+
+        if (isCycle.rows.length > 0) {
+            throw new Error('Circular dependency detected');
+        }
         throw new Error('Unauthorized or failed to create link');
     }
     return link;
+};
+
+/**
+ * High-Performance Background Reachability Update
+ * This logic is O(N^2) in the worst case for path counts.
+ * It is called by the TaskGraphListener to keep the graph hydrated
+ * without blocking the user response.
+ */
+export const incrementLinkReachability = async (params: {
+    projectId: string;
+    sourceTaskId: string;
+    targetTaskId: string;
+}): Promise<void> => {
+    await sql`
+        INSERT INTO task_reachability (fk_project_id, ancestor_task_id, descendant_task_id, min_depth, path_count)
+        -- 1. The link itself
+        SELECT ${params.projectId}::uuid, ${params.sourceTaskId}::uuid, ${params.targetTaskId}::uuid, 1, 1
+        UNION ALL
+        -- 2. Ancestors of source to target
+        SELECT fk_project_id, ancestor_task_id, ${params.targetTaskId}::uuid, min_depth + 1, path_count
+        FROM task_reachability
+        WHERE descendant_task_id = ${params.sourceTaskId}::uuid 
+          AND fk_project_id = ${params.projectId}::uuid
+        UNION ALL
+        -- 3. Source to descendants of target
+        SELECT fk_project_id, ${params.sourceTaskId}::uuid, descendant_task_id, min_depth + 1, path_count
+        FROM task_reachability
+        WHERE ancestor_task_id = ${params.targetTaskId}::uuid 
+          AND fk_project_id = ${params.projectId}::uuid
+        UNION ALL
+        -- 4. Ancestors of source to descendants of target
+        SELECT rA.fk_project_id, rA.ancestor_task_id, rB.descendant_task_id, rA.min_depth + rB.min_depth + 1, rA.path_count * rB.path_count
+        FROM task_reachability rA, task_reachability rB
+        WHERE rA.descendant_task_id = ${params.sourceTaskId}::uuid 
+          AND rB.ancestor_task_id = ${params.targetTaskId}::uuid
+          AND rA.fk_project_id = ${params.projectId}::uuid 
+          AND rB.fk_project_id = ${params.projectId}::uuid
+        ON CONFLICT (fk_project_id, ancestor_task_id, descendant_task_id) DO UPDATE SET
+            min_depth = LEAST(task_reachability.min_depth, EXCLUDED.min_depth),
+            path_count = task_reachability.path_count + EXCLUDED.path_count;
+    `.execute(db);
 };
 
 export const deleteTaskQuery = async (userId: string, taskId: string): Promise<void> => {
