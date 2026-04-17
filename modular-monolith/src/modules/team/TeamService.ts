@@ -76,15 +76,15 @@ export interface TeamService extends BaseService {
     getTeams(
         userId: string,
         projectId: string,
-        params?: { cursor?: string; limit?: number }
-    ): Promise<{ teams: Team[]; nextCursor: string | null }>;
+        params?: { first?: number; after?: string; last?: number; before?: string },
+    ): Promise<{ teams: Team[]; nextCursor: string | null; prevCursor: string | null }>;
 
     getTeamMembers(
         userId: string,
         projectId: string,
         teamId: string,
-        params?: { cursor?: string; limit?: number }
-    ): Promise<{ members: TeamMember[]; nextCursor: string | null }>;
+        params?: { first?: number; after?: string; last?: number; before?: string },
+    ): Promise<{ members: TeamMember[]; nextCursor: string | null; prevCursor: string | null }>;
 
     /**
      * Search users who are members of a specific team.
@@ -95,9 +95,11 @@ export interface TeamService extends BaseService {
         projectId: string;
         teamId: string;
         search?: string;
-        cursor?: string;
-        limit?: number;
-    }): Promise<{ users: UserResult[]; nextCursor: string | null }>;
+        first?: number;
+        after?: string;
+        last?: number;
+        before?: string;
+    }): Promise<{ users: UserResult[]; nextCursor: string | null; prevCursor: string | null }>;
 
     /**
      * Batch fetch teams by IDs. Used by DataLoaders.

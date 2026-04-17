@@ -1,8 +1,8 @@
 import { gql } from 'graphql-request';
 
 export const GET_PROJECTS = gql`
-  query GetProjects($first: Int, $after: String) {
-    projects(first: $first, after: $after) {
+  query GetProjects($first: Int, $after: String, $last: Int, $before: String) {
+    projects(first: $first, after: $after, last: $last, before: $before) {
       edges {
         node {
           id
@@ -21,6 +21,8 @@ export const GET_PROJECTS = gql`
       }
       pageInfo {
         hasNextPage
+        hasPreviousPage
+        startCursor
         endCursor
       }
     }
@@ -46,8 +48,8 @@ export const GET_PROJECT = gql`
 `;
 
 export const GET_TASKS = gql`
-  query GetTasks($projectId: ID!, $first: Int, $after: String) {
-    tasks(projectId: $projectId, first: $first, after: $after) {
+  query GetTasks($projectId: ID!, $parentId: ID, $first: Int, $after: String, $last: Int, $before: String) {
+    tasks(projectId: $projectId, parentId: $parentId, first: $first, after: $after, last: $last, before: $before) {
       edges {
         node {
           id
@@ -65,8 +67,6 @@ export const GET_TASKS = gql`
             id
             username
           }
-          parentTaskId
-          materializedPath
           version
           createdBy
           creator {
@@ -75,86 +75,41 @@ export const GET_TASKS = gql`
           }
           createdAt
           updatedAt
-
+          links {
+            id
+            type
+            fromTaskId
+            toTaskId
+            toTask {
+              id
+              title
+              status
+            }
+          }
+          story {
+            pathTaskIds
+            pathLinkTypes
+            pathTasks {
+              id
+              title
+            }
+          }
         }
         cursor
       }
       pageInfo {
         hasNextPage
+        hasPreviousPage
+        startCursor
         endCursor
       }
     }
   }
 `;
-
-export const GET_WORKSPACE_DATA = gql`
-  query GetWorkspaceData($projectId: ID!, $first: Int) {
-    tasks(projectId: $projectId, first: $first) {
-      edges {
-        node {
-          id
-          title
-          description
-          status
-          projectId
-          teamId
-          team {
-            id
-            name
-          }
-          memberId
-          assignee {
-            id
-            username
-          }
-          parentTaskId
-          materializedPath
-          version
-          createdBy
-          creator {
-            id
-            username
-          }
-          createdAt
-          updatedAt
-
-        }
-        cursor
-      }
-      pageInfo {
-        hasNextPage
-        endCursor
-      }
-    }
-    teams(projectId: $projectId, first: $first) {
-      edges {
-        node {
-          id
-          name
-          projectId
-          createdBy
-          creator {
-            id
-            username
-          }
-          createdAt
-          updatedAt
-          version
-        }
-        cursor
-      }
-      pageInfo {
-        hasNextPage
-        endCursor
-      }
-    }
-  }
-`;
-
 
 export const GET_TEAMS = gql`
-  query GetTeams($projectId: ID!, $first: Int, $after: String) {
-    teams(projectId: $projectId, first: $first, after: $after) {
+  query GetTeams($projectId: ID!, $first: Int, $after: String, $last: Int, $before: String) {
+    teams(projectId: $projectId, first: $first, after: $after, last: $last, before: $before) {
       edges {
         node {
           id
@@ -172,6 +127,8 @@ export const GET_TEAMS = gql`
       }
       pageInfo {
         hasNextPage
+        hasPreviousPage
+        startCursor
         endCursor
       }
     }
@@ -205,11 +162,23 @@ export const UPDATE_PROJECT = gql`
 `;
 
 export const CREATE_TASK = gql`
-  mutation CreateTask($projectId: ID!, $title: String!, $description: String!, $teamId: ID, $parentTaskId: ID) {
-    createTask(projectId: $projectId, title: $title, description: $description, teamId: $teamId, parentTaskId: $parentTaskId) {
+  mutation CreateTask($projectId: ID!, $title: String!, $description: String!, $teamId: ID) {
+    createTask(projectId: $projectId, title: $title, description: $description, teamId: $teamId) {
       id
       title
     }
+  }
+`;
+
+export const CREATE_TASK_LINK = gql`
+  mutation CreateTaskLink($projectId: ID!, $fromTaskId: ID!, $toTaskId: ID!, $linkType: String!) {
+    createTaskLink(projectId: $projectId, fromTaskId: $fromTaskId, toTaskId: $toTaskId, linkType: $linkType)
+  }
+`;
+
+export const DELETE_TASK_LINK = gql`
+  mutation DeleteTaskLink($projectId: ID!, $linkId: ID!) {
+    deleteTaskLink(projectId: $projectId, linkId: $linkId)
   }
 `;
 
@@ -237,8 +206,8 @@ export const TASK_EVENT_SUBSCRIPTION = gql`
 `;
 
 export const GET_PROJECT_MEMBERS = gql`
-  query GetProjectMembers($projectId: ID!, $first: Int, $after: String) {
-    projectMembers(projectId: $projectId, first: $first, after: $after) {
+  query GetProjectMembers($projectId: ID!, $first: Int, $after: String, $last: Int, $before: String) {
+    projectMembers(projectId: $projectId, first: $first, after: $after, last: $last, before: $before) {
       edges {
         node {
           id
@@ -255,6 +224,8 @@ export const GET_PROJECT_MEMBERS = gql`
       }
       pageInfo {
         hasNextPage
+        hasPreviousPage
+        startCursor
         endCursor
       }
     }
@@ -262,8 +233,8 @@ export const GET_PROJECT_MEMBERS = gql`
 `;
 
 export const GET_TEAM_MEMBERS = gql`
-  query GetTeamMembers($projectId: ID!, $teamId: ID!, $first: Int, $after: String) {
-    teamMembers(projectId: $projectId, teamId: $teamId, first: $first, after: $after) {
+  query GetTeamMembers($projectId: ID!, $teamId: ID!, $first: Int, $after: String, $last: Int, $before: String) {
+    teamMembers(projectId: $projectId, teamId: $teamId, first: $first, after: $after, last: $last, before: $before) {
       edges {
         node {
           id
@@ -280,6 +251,8 @@ export const GET_TEAM_MEMBERS = gql`
       }
       pageInfo {
         hasNextPage
+        hasPreviousPage
+        startCursor
         endCursor
       }
     }
@@ -454,8 +427,8 @@ export const MARK_ALL_NOTIFICATIONS_READ = gql`
 `;
 
 export const SEARCH_USERS = gql`
-  query SearchUsers($search: String, $first: Int, $after: String) {
-    searchUsers(search: $search, first: $first, after: $after) {
+  query SearchUsers($search: String, $first: Int, $after: String, $last: Int, $before: String) {
+    searchUsers(search: $search, first: $first, after: $after, last: $last, before: $before) {
       edges {
         node {
           id
@@ -466,6 +439,8 @@ export const SEARCH_USERS = gql`
       }
       pageInfo {
         hasNextPage
+        hasPreviousPage
+        startCursor
         endCursor
       }
     }
@@ -473,8 +448,8 @@ export const SEARCH_USERS = gql`
 `;
 
 export const SEARCH_TEAM_USERS = gql`
-  query SearchTeamUsers($projectId: ID!, $teamId: ID!, $search: String, $first: Int, $after: String) {
-    searchTeamUsers(projectId: $projectId, teamId: $teamId, search: $search, first: $first, after: $after) {
+  query SearchTeamUsers($projectId: ID!, $teamId: ID!, $search: String, $first: Int, $after: String, $last: Int, $before: String) {
+    searchTeamUsers(projectId: $projectId, teamId: $teamId, search: $search, first: $first, after: $after, last: $last, before: $before) {
       edges {
         node {
           id
@@ -485,8 +460,12 @@ export const SEARCH_TEAM_USERS = gql`
       }
       pageInfo {
         hasNextPage
+        hasPreviousPage
+        startCursor
         endCursor
       }
     }
   }
 `;
+
+// Operations list normalized.

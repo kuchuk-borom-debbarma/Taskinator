@@ -52,7 +52,9 @@ export class KafkaBus implements Bus {
 
     async publish(
         type: string,
-        payload: { id?: string; key: string; data: any } | Array<{ id?: string; key: string; data: any }>,
+        payload:
+            | { id?: string; key: string; data: any }
+            | Array<{ id?: string; key: string; data: any }>,
     ) {
         const items = Array.isArray(payload) ? payload : [payload];
         const topic = EVENT_TO_TOPIC[type];
@@ -66,7 +68,10 @@ export class KafkaBus implements Bus {
         handlers: Record<string, (data: any) => Promise<void>>,
     ) {
         // Group handlers by their Kafka topic, then spin up one consumer per topic.
-        const byTopic: Record<string, Record<string, (data: any) => Promise<void>>> = {};
+        const byTopic: Record<
+            string,
+            Record<string, (data: any) => Promise<void>>
+        > = {};
         for (const [eventType, handler] of Object.entries(handlers)) {
             const topic = EVENT_TO_TOPIC[eventType];
             if (!topic) continue;
@@ -153,7 +158,8 @@ export class KafkaBus implements Bus {
                                             DomainEvent[]
                                         >();
                                         for (const e of live) {
-                                            const bucket = byType.get(e.type) ?? [];
+                                            const bucket =
+                                                byType.get(e.type) ?? [];
                                             bucket.push(e);
                                             byType.set(e.type, bucket);
                                         }
@@ -161,7 +167,8 @@ export class KafkaBus implements Bus {
                                         await Promise.all(
                                             Array.from(byType.entries()).map(
                                                 async ([type, events]) => {
-                                                    const handler = handlers[type];
+                                                    const handler =
+                                                        handlers[type];
                                                     if (!handler) return;
                                                     for (const e of events) {
                                                         await handler(e.data);

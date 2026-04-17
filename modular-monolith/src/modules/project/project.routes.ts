@@ -15,7 +15,10 @@ router.get('/', async (req: any, res: Response) => {
         const cursor = req.query.cursor as string | undefined;
         const limit = parseInt(req.query.limit as string) || 20;
 
-        const result = await projectService.getProjects(userId as string, { cursor, limit });
+        const result = await projectService.getProjects(userId as string, {
+            after: cursor,
+            first: limit,
+        });
         res.status(200).json(result);
     } catch (error: any) {
         console.error('[REST] Error fetching projects:', error);
@@ -54,7 +57,7 @@ router.get('/:projectId/members', async (req: any, res: Response) => {
         const result = await projectService.getProjectMembers(
             userId as string,
             projectId,
-            { cursor, limit }
+            { after: cursor, first: limit },
         );
         res.status(200).json(result);
     } catch (error: any) {
@@ -76,8 +79,8 @@ router.get('/:projectId/members/search', async (req: any, res: Response) => {
             actorId: actorId as string,
             projectId,
             search,
-            cursor,
-            limit
+            after: cursor,
+            first: limit,
         });
         res.status(200).json(result);
     } catch (error: any) {

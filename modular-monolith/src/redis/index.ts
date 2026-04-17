@@ -7,11 +7,19 @@ import { logger } from '../logger';
 export const INSTANCE_ID = `${os.hostname()}-${uuidv4().substring(0, 8)}`;
 
 // Standard clients for the application
-export const redisPublisher = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
-export const redisSubscriber = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
+export const redisPublisher = new Redis(
+    process.env.REDIS_URL || 'redis://localhost:6379',
+);
+export const redisSubscriber = new Redis(
+    process.env.REDIS_URL || 'redis://localhost:6379',
+);
 
-redisPublisher.on('error', (err) => logger.error('[Redis Publisher] Error:', err));
-redisSubscriber.on('error', (err) => logger.error('[Redis Subscriber] Error:', err));
+redisPublisher.on('error', (err) =>
+    logger.error('[Redis Publisher] Error:', err),
+);
+redisSubscriber.on('error', (err) =>
+    logger.error('[Redis Subscriber] Error:', err),
+);
 
 export const stopRedis = async () => {
     await redisPublisher.quit();

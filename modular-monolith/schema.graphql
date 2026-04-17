@@ -1,0 +1,289 @@
+type User {
+  id: ID!
+  username: String!
+  email: String!
+}
+
+type UserSearchResultEdge {
+  node: User!
+  cursor: String!
+}
+
+type UserSearchResultConnection {
+  edges: [UserSearchResultEdge!]!
+  pageInfo: PageInfo!
+}
+
+type Query {
+  me: User
+  searchUsers(search: String, first: Int, after: String, last: Int, before: String): UserSearchResultConnection!
+  searchTeamUsers(projectId: ID!, teamId: ID!, search: String, first: Int, after: String, last: Int, before: String): UserSearchResultConnection!
+  _empty: String
+  automations(projectId: ID, actorId: ID, teamId: ID, targetScope: String, first: Int, after: String): AutomationRuleConnection!
+  projectTasks(projectId: ID!, first: Int, after: String, last: Int, before: String): ProjectTaskConnection!
+  task(id: ID!): ProjectTask
+  taskNeighbourhood(projectId: ID!, taskId: ID!, maxDepth: Int, first: Int, after: String, last: Int, before: String): TaskNeighbourhood!
+  projects(first: Int, after: String, last: Int, before: String): ProjectConnection!
+  project(id: ID!): Project
+  projectMembers(projectId: ID!, first: Int, after: String, last: Int, before: String): ProjectMemberConnection!
+  notifications(first: Int, after: String): NotificationConnection!
+  unreadNotificationsCount: Int!
+  teams(projectId: ID!, first: Int, after: String, last: Int, before: String): TeamConnection!
+  teamMembers(projectId: ID!, teamId: ID!, first: Int, after: String, last: Int, before: String): TeamMemberConnection!
+}
+
+union RealtimeEvent = InternalNotification
+
+type Subscription {
+  """
+  A unified real-time stream for all events relevant to the authenticated user.
+  Automatically filters notifications by userId.
+  """
+  realtimeStream(projectId: String): RealtimeEvent!
+  _empty: String
+}
+
+type PageInfo {
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  startCursor: String
+  endCursor: String
+}
+
+type Mutation {
+  _empty: String
+  addAutomation(projectId: ID!, name: String!, targetScope: String!, teamId: ID, rules: String!, isActive: Boolean): AutomationRule
+  updateAutomation(automationId: ID!, name: String, targetScope: String, teamId: ID, rules: String, isActive: Boolean): AutomationRule
+  deleteAutomation(automationId: ID!): Boolean
+  createTask(projectId: ID!, teamId: ID, memberId: ID, title: String!, description: String, status: String): ProjectTask!
+  updateTask(taskId: ID!, title: String, description: String, status: String): ProjectTask!
+  deleteTask(taskId: ID!): ID!
+  createTaskLink(projectId: ID!, sourceTaskId: ID!, targetTaskId: ID!, label: String!): TaskLink!
+  deleteTaskLink(linkId: ID!): ID!
+  createProject(name: String!, description: String): Project
+  updateProject(id: ID!, name: String, description: String): Project
+  deleteProjects(projectIds: [ID!]!): Boolean
+  addProjectMembers(projectId: ID!, userIds: [String!]!): [ProjectMember]
+  removeProjectMembers(projectId: ID!, memberIds: [ID!]!): [ID]
+  markNotificationAsRead(id: ID!): Boolean
+  markAllNotificationsAsRead: Boolean
+  createTeam(projectId: ID!, name: String!): Team
+  deleteTeams(projectId: ID!, teamIds: [ID!]!): [ID]
+  addTeamMembers(projectId: ID!, teamId: ID!, userIds: [String!]!): [TeamMember]
+  removeTeamMembers(projectId: ID!, teamId: ID!, userIds: [String!]!): [String]
+}
+
+type AutomationRule {
+  id: ID!
+  projectId: ID!
+  actorId: String!
+  name: String!
+  targetScope: String!
+  teamId: ID
+  rules: String!
+  isActive: Boolean!
+  createdAt: String!
+  updatedAt: String
+}
+
+type AutomationRuleEdge {
+  node: AutomationRule!
+  cursor: String!
+}
+
+type AutomationRuleConnection {
+  edges: [AutomationRuleEdge!]!
+  pageInfo: PageInfo!
+}
+
+type TaskLink {
+  id: ID!
+  projectId: ID!
+  sourceTaskId: ID!
+  targetTaskId: ID!
+  label: String!
+  createdBy: ID!
+  createdAt: String!
+  sourceTask: ProjectTask
+  targetTask: ProjectTask
+}
+
+type TaskLinkEdge {
+  node: TaskLink!
+  cursor: String!
+}
+
+type TaskLinkConnection {
+  edges: [TaskLinkEdge!]!
+  pageInfo: PageInfo!
+}
+
+enum NeighbourDirection {
+  incoming
+  outgoing
+  both
+}
+
+type NeighbourhoodNode {
+  task: ProjectTask!
+  depth: Int!
+  direction: NeighbourDirection!
+}
+
+type TaskNeighbourhood {
+  focusedTask: ProjectTask!
+  nodes: [NeighbourhoodNode!]!
+  edges: [TaskLink!]!
+  pageInfo: PageInfo!
+}
+
+type ProjectTask {
+  id: ID!
+  projectId: ID!
+  teamId: ID
+  memberId: ID
+  title: String!
+  description: String!
+  status: String!
+  priority: Int!
+  dueDate: String
+  version: Int!
+  lastEventId: ID
+  createdBy: ID!
+  updatedBy: ID!
+  createdAt: String!
+  updatedAt: String!
+  project: Project
+  team: Team
+  member: User
+  assignee: User
+  creator: User
+  updater: User
+  incomingLinks(first: Int, after: String, last: Int, before: String): TaskLinkConnection!
+  outgoingLinks(first: Int, after: String, last: Int, before: String): TaskLinkConnection!
+}
+
+type ProjectTaskEdge {
+  node: ProjectTask!
+  cursor: String!
+}
+
+type ProjectTaskConnection {
+  edges: [ProjectTaskEdge!]!
+  pageInfo: PageInfo!
+}
+
+type Project {
+  id: ID!
+  name: String!
+  description: String
+  userId: String!
+  creator: User
+  isOwner: Boolean
+  createdAt: String!
+  updatedAt: String
+  version: Int!
+  automations: [AutomationRule!]!
+}
+
+type ProjectEdge {
+  node: Project!
+  cursor: String!
+}
+
+type ProjectConnection {
+  edges: [ProjectEdge!]!
+  pageInfo: PageInfo!
+  totalCount: Int
+}
+
+type ProjectMember {
+  id: ID!
+  projectId: ID!
+  userId: String!
+  user: User
+  project: Project
+  createdAt: String!
+  version: Int!
+}
+
+type ProjectMemberEdge {
+  node: ProjectMember!
+  cursor: String!
+}
+
+type ProjectMemberConnection {
+  edges: [ProjectMemberEdge!]!
+  pageInfo: PageInfo!
+}
+
+type InternalNotification {
+  id: ID!
+  userId: String!
+  title: String!
+  message: String!
+  type: String!
+  metadata: String
+  isRead: Boolean!
+  createdAt: String!
+  readAt: String
+}
+
+type NotificationEdge {
+  node: InternalNotification!
+  cursor: String!
+}
+
+type NotificationConnection {
+  edges: [NotificationEdge!]!
+  pageInfo: PageInfo!
+}
+
+type Team {
+  id: ID!
+  name: String!
+  projectId: ID!
+  createdBy: String!
+  creator: User
+  createdAt: String!
+  updatedAt: String
+  version: Int!
+  automations: [AutomationRule!]!
+  project: Project
+}
+
+type TeamMember {
+  id: ID!
+  teamId: ID!
+  userId: String!
+  user: User
+  team: Team
+  createdAt: String!
+  version: Int!
+}
+
+type TeamEdge {
+  node: Team!
+  cursor: String!
+}
+
+type TeamConnection {
+  edges: [TeamEdge!]!
+  pageInfo: PageInfo!
+}
+
+type TeamMemberEdge {
+  node: TeamMember!
+  cursor: String!
+}
+
+type TeamMemberConnection {
+  edges: [TeamMemberEdge!]!
+  pageInfo: PageInfo!
+}
+
+schema {
+  query: Query
+  mutation: Mutation
+  subscription: Subscription
+}

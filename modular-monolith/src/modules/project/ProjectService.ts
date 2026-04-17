@@ -57,7 +57,12 @@ export interface ProjectService extends BaseService {
      */
     createProjects(data: CreateProjectParam[]): Promise<Project[]>;
 
-    updateProject(data: { userId: string; projectId: string; name?: string; description?: string | null }): Promise<Project | null>;
+    updateProject(data: {
+        userId: string;
+        projectId: string;
+        name?: string;
+        description?: string | null;
+    }): Promise<Project | null>;
 
     deleteProjects(data: DeleteProjectsParam): Promise<void>;
 
@@ -73,16 +78,16 @@ export interface ProjectService extends BaseService {
      */
     getProjects(
         userId: string,
-        params?: { cursor?: string; limit?: number }
-    ): Promise<{ projects: Project[]; nextCursor: string | null }>;
+        params?: { first?: number; after?: string; last?: number; before?: string },
+    ): Promise<{ projects: Project[]; nextCursor: string | null; prevCursor: string | null }>;
 
     getProject(userId: string, projectId: string): Promise<Project | null>;
 
     getProjectMembers(
         userId: string,
         projectId: string,
-        params?: { cursor?: string; limit?: number }
-    ): Promise<{ members: ProjectMember[]; nextCursor: string | null }>;
+        params?: { first?: number; after?: string; last?: number; before?: string },
+    ): Promise<{ members: ProjectMember[]; nextCursor: string | null; prevCursor: string | null }>;
 
     /**
      * Get all project IDs where user is owner or member.
@@ -98,7 +103,13 @@ export interface ProjectService extends BaseService {
         actorId: string;
         projectId: string;
         search?: string;
-        cursor?: string;
-        limit?: number;
-    }): Promise<{ users: { id: string; username: string; email: string }[]; nextCursor: string | null }>;
+        first?: number;
+        after?: string;
+        last?: number;
+        before?: string;
+    }): Promise<{
+        users: { id: string; username: string; email: string }[];
+        nextCursor: string | null;
+        prevCursor: string | null;
+    }>;
 }

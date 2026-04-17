@@ -1,7 +1,6 @@
-import type { BaseService } from "../project";
+import type { BaseService } from '../project';
 
-
-export type AutomationScope = 'TASK' | 'PROJECT' | 'TEAM';
+export type AutomationScope = 'PROJECT' | 'TEAM';
 
 export type AutomationRule = {
     id: string;
@@ -9,7 +8,6 @@ export type AutomationRule = {
     actorId: string;
     name: string;
     targetScope: AutomationScope;
-    taskId?: string | null;
     teamId?: string | null;
     rules: any; // JSONB Array of { operator, rules, actions }
     isActive: boolean;
@@ -23,7 +21,6 @@ export interface AutomationService extends BaseService {
         projectId: string;
         name: string;
         targetScope: AutomationScope;
-        taskId?: string;
         teamId?: string;
         rules: any;
         isActive?: boolean;
@@ -34,7 +31,6 @@ export interface AutomationService extends BaseService {
         automationId: string;
         name?: string;
         targetScope?: AutomationScope;
-        taskId?: string | null;
         teamId?: string | null;
         rules?: any;
         isActive?: boolean;
@@ -43,16 +39,21 @@ export interface AutomationService extends BaseService {
     getAutomationsByFilter(data: {
         projectId?: string;
         actorId?: string;
-        taskId?: string | null;
         teamId?: string | null;
         targetScope?: AutomationScope;
         cursor?: string;
         limit?: number;
     }): Promise<{ automations: AutomationRule[]; nextCursor: string | null }>;
-    
-    getAutomationsByTaskIds(taskIds: string[]): Promise<Map<string, AutomationRule[]>>;
-    getAutomationsByProjectIds(projectIds: string[]): Promise<Map<string, AutomationRule[]>>;
-    getAutomationsByTeamIds(teamIds: string[]): Promise<Map<string, AutomationRule[]>>;
 
-    deleteAutomation(data: { userId: string; automationId: string }): Promise<void>;
+    getAutomationsByProjectIds(
+        projectIds: string[],
+    ): Promise<Map<string, AutomationRule[]>>;
+    getAutomationsByTeamIds(
+        teamIds: string[],
+    ): Promise<Map<string, AutomationRule[]>>;
+
+    deleteAutomation(data: {
+        userId: string;
+        automationId: string;
+    }): Promise<void>;
 }

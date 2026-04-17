@@ -225,10 +225,12 @@ export const deleteAllProjectMembers = async (projectId: string) => {
 
 export const getProjects = async (
     userId: string,
-    params: { cursor?: string; limit?: number } = {}
-): Promise<{ projects: Project[]; nextCursor: string | null }> => {
-    const limit = Math.min(params.limit ?? 20, 50);
-    const cursor = params.cursor; // Expecting format: "YYYY-MM-DDTHH:MM:SS.sssZ|uuid"
+    params: { first?: number; after?: string; last?: number; before?: string } = {},
+): Promise<{ projects: Project[]; nextCursor: string | null; prevCursor: string | null }> => {
+    const limit = Math.min(params.first || params.last || 5, 50);
+    const { after, before } = params;
+    const isBackward = !!before;
+    const cursor = before || after;
 
     let cursorDate: string | null = null;
     let cursorId: string | null = null;
@@ -241,7 +243,7 @@ export const getProjects = async (
         }
     }
 
-        const result = await sql<Project & { isOwner: boolean }>`
+    const result = await sql<Project & { isOwner: boolean }>`
         WITH combined_projects AS (
             SELECT p.*, true as is_owner
             FROM project p
@@ -251,7 +253,7 @@ export const getProjects = async (
             FROM project p
             JOIN project_member pm ON pm.fk_project_id = p.id
             WHERE pm.fk_user_id = ${userId}::text
-              AND p.fk_user_id <> ${userId}::text -- Avoid duplicates if user is somehow both
+              AND p.fk_user_id <> ${userId}::text
         )
         SELECT 
             id,
@@ -266,25 +268,46 @@ export const getProjects = async (
         FROM combined_projects
         WHERE (
             ${cursorDate}::timestamptz IS NULL 
-            OR created_at < ${cursorDate}::timestamptz
-            OR (created_at = ${cursorDate}::timestamptz AND id < ${cursorId}::uuid)
+            OR (
+                CASE 
+                  WHEN ${isBackward} THEN (created_at > ${cursorDate}::timestamptz OR (created_at = ${cursorDate}::timestamptz AND id > ${cursorId}::uuid))
+                  ELSE (created_at < ${cursorDate}::timestamptz OR (created_at = ${cursorDate}::timestamptz AND id < ${cursorId}::uuid))
+                END
+            )
         )
-        ORDER BY created_at DESC, id DESC
+        ORDER BY created_at ${sql.raw(isBackward ? 'ASC' : 'DESC')}, id ${sql.raw(isBackward ? 'ASC' : 'DESC')}
         LIMIT ${limit + 1}
     `.execute(db);
 
-    const hasMore = result.rows.length > limit;
-    const projects = hasMore ? result.rows.slice(0, limit) : result.rows;
-    
-    let nextCursor: string | null = null;
-    if (hasMore && projects.length > 0) {
-        const last = projects[projects.length - 1]!;
-        // Assuming createdAt is returned as a Date or ISO string
-        const dateStr = last.createdAt instanceof Date ? last.createdAt.toISOString() : last.createdAt;
-        nextCursor = `${dateStr}|${last.id}`;
+    let rows = result.rows;
+    const hasMore = rows.length > limit;
+    if (hasMore) {
+        rows = rows.slice(0, limit);
+    }
+    if (isBackward) {
+        rows.reverse();
     }
 
-    return { projects, nextCursor };
+    const projects = rows;
+    let nextCursor: string | null = null;
+    let prevCursor: string | null = null;
+
+    if (projects.length > 0) {
+        const first = projects[0]!;
+        const last = projects[projects.length - 1]!;
+        const firstDateStr = first.createdAt instanceof Date ? first.createdAt.toISOString() : first.createdAt;
+        const lastDateStr = last.createdAt instanceof Date ? last.createdAt.toISOString() : last.createdAt;
+
+        if (isBackward) {
+            nextCursor = hasMore ? `${firstDateStr}|${first.id}` : null;
+            prevCursor = `${lastDateStr}|${last.id}`;
+        } else {
+            nextCursor = hasMore ? `${lastDateStr}|${last.id}` : null;
+            prevCursor = after ? `${firstDateStr}|${first.id}` : null;
+        }
+    }
+
+    return { projects, nextCursor, prevCursor };
 };
 
 export const getProject = async (
@@ -320,10 +343,12 @@ export const getProject = async (
 export const getProjectMembers = async (
     userId: string,
     projectId: string,
-    params: { cursor?: string; limit?: number } = {},
-): Promise<{ members: ProjectMember[]; nextCursor: string | null }> => {
-    const limit = Math.min(params.limit ?? 20, 50);
-    const cursor = params.cursor;
+    params: { first?: number; after?: string; last?: number; before?: string } = {},
+): Promise<{ members: ProjectMember[]; nextCursor: string | null; prevCursor: string | null }> => {
+    const limit = Math.min(params.first || params.last || 5, 50);
+    const { after, before } = params;
+    const isBackward = !!before;
+    const cursor = before || after;
 
     const result = await sql<ProjectMember>`
         WITH auth_check AS (
@@ -345,17 +370,44 @@ export const getProjectMembers = async (
           AND EXISTS (SELECT 1 FROM auth_check)
           AND (
               ${cursor ?? null}::uuid IS NULL
-              OR id > ${cursor ?? null}::uuid
+              OR (
+                  CASE 
+                    WHEN ${isBackward} THEN id < ${cursor ?? null}::uuid
+                    ELSE id > ${cursor ?? null}::uuid
+                  END
+              )
           )
-        ORDER BY id
+        ORDER BY id ${sql.raw(isBackward ? 'DESC' : 'ASC')}
         LIMIT ${limit + 1}
     `.execute(db);
 
-    const hasMore = result.rows.length > limit;
-    const members = hasMore ? result.rows.slice(0, limit) : result.rows;
-    const nextCursor = hasMore ? members[members.length - 1]!.id : null;
+    let rows = result.rows;
+    const hasMore = rows.length > limit;
+    if (hasMore) {
+        rows = rows.slice(0, limit);
+    }
+    if (isBackward) {
+        rows.reverse();
+    }
 
-    return { members, nextCursor };
+    const members = rows;
+    let nextCursor: string | null = null;
+    let prevCursor: string | null = null;
+
+    if (members.length > 0) {
+        const first = members[0]!;
+        const last = members[members.length - 1]!;
+
+        if (isBackward) {
+            nextCursor = hasMore ? first.id : null;
+            prevCursor = last.id;
+        } else {
+            nextCursor = hasMore ? last.id : null;
+            prevCursor = after ? first.id : null;
+        }
+    }
+
+    return { members, nextCursor, prevCursor };
 };
 
 /**
@@ -367,18 +419,26 @@ export const getUserProjectIds = async (userId: string): Promise<string[]> => {
         UNION
         SELECT fk_project_id FROM project_member WHERE fk_user_id = ${userId}
     `.execute(db);
-    return result.rows.map(r => r.id);
+    return result.rows.map((r) => r.id);
 };
 export const searchProjectMembers = async (params: {
     actorId: string;
     projectId: string;
     search?: string;
-    cursor?: string;
-    limit?: number;
-}): Promise<{ users: { id: string; username: string; email: string }[]; nextCursor: string | null }> => {
+    first?: number;
+    after?: string;
+    last?: number;
+    before?: string;
+}): Promise<{
+    users: { id: string; username: string; email: string }[];
+    nextCursor: string | null;
+    prevCursor: string | null;
+}> => {
     const search = params.search?.trim() ?? '';
-    const cursor = params.cursor;
-    const limit  = Math.min(params.limit ?? 20, 50);
+    const { after, before } = params;
+    const isBackward = !!before;
+    const cursor = before || after;
+    const limit = Math.min(params.first || params.last || 5, 50);
 
     const rows = await sql<{ id: string; username: string; email: string }>`
         WITH auth_check AS (
@@ -414,17 +474,44 @@ export const searchProjectMembers = async (params: {
           )
           AND (
             ${cursor ?? null}::uuid IS NULL
-            OR id > ${cursor ?? null}::uuid
+            OR (
+                CASE 
+                  WHEN ${isBackward} THEN id < ${cursor ?? null}::uuid
+                  ELSE id > ${cursor ?? null}::uuid
+                END
+            )
           )
-        ORDER BY id
+        ORDER BY id ${sql.raw(isBackward ? 'DESC' : 'ASC')}
         LIMIT ${limit + 1}
     `.execute(db);
 
-    const hasMore    = rows.rows.length > limit;
-    const users      = hasMore ? rows.rows.slice(0, limit) : rows.rows;
-    const nextCursor = hasMore ? users[users.length - 1]!.id : null;
+    let resultRows = rows.rows;
+    const hasMore = resultRows.length > limit;
+    if (hasMore) {
+        resultRows = resultRows.slice(0, limit);
+    }
+    if (isBackward) {
+        resultRows.reverse();
+    }
 
-    return { users, nextCursor };
+    const users = resultRows;
+    let nextCursor: string | null = null;
+    let prevCursor: string | null = null;
+
+    if (users.length > 0) {
+        const first = users[0]!;
+        const last = users[users.length - 1]!;
+
+        if (isBackward) {
+            nextCursor = hasMore ? first.id : null;
+            prevCursor = last.id;
+        } else {
+            nextCursor = hasMore ? last.id : null;
+            prevCursor = after ? first.id : null;
+        }
+    }
+
+    return { users, nextCursor, prevCursor };
 };
 
 export const getProjectsByIds = async (

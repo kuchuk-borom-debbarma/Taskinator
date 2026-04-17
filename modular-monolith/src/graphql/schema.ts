@@ -7,12 +7,12 @@ import type { GraphQLContext } from './context';
 
 // Load all .graphql files from the schema directory
 const typesArray = loadFilesSync(path.join(import.meta.dirname, 'schema'), {
-  extensions: ['graphql'],
+    extensions: ['graphql'],
 });
 
 export const typeDefs = mergeTypeDefs(typesArray);
 
 export const schema = createSchema<GraphQLContext>({
-  typeDefs,
-  resolvers: resolvers as any,
+    typeDefs,
+    resolvers: resolvers as any,
 });

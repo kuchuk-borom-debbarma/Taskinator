@@ -18,9 +18,10 @@ export interface UserResult {
 export interface SearchUsersParam {
     /** Exact username match OR exact UUID match */
     search?: string;
-    /** Last-seen user id from previous page */
-    cursor?: string;
-    limit?: number;
+    first?: number;
+    after?: string;
+    last?: number;
+    before?: string;
     /** ID of the user performing the search (to exclude from results) */
     actorId?: string;
 }
@@ -40,7 +41,9 @@ export interface AuthService {
      * Cursor-paginated user search.
      * Matches username exactly OR id exactly.
      */
-    searchUsers(params: SearchUsersParam): Promise<{ users: UserResult[]; nextCursor: string | null }>;
+    searchUsers(
+        params: SearchUsersParam,
+    ): Promise<{ users: UserResult[]; nextCursor: string | null; prevCursor: string | null }>;
 
     /**
      * Batch fetch users by IDs. Used by DataLoaders.

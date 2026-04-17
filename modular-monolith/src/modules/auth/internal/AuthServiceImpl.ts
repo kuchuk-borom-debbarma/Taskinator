@@ -116,13 +116,15 @@ export class AuthServiceImpl implements AuthService {
         return { token };
     }
 
-    async searchUsers(params: SearchUsersParam): Promise<{ users: UserResult[]; nextCursor: string | null }> {
+    async searchUsers(
+        params: SearchUsersParam,
+    ): Promise<{ users: UserResult[]; nextCursor: string | null; prevCursor: string | null }> {
         const search = params.search?.trim() ?? '';
-        const cursor = params.cursor || null;
-        const limit  = Math.min(params.limit ?? 20, 50);
+        const { after, before } = params;
+        const isBackward = !!before;
+        const cursor = before || after;
+        const limit = Math.min(params.first || params.last || 10, 50);
 
-        // Exact match only: username = search OR id = search (cast to uuid if possible)
-        // Cursor is the last-seen id for forward pagination (ORDER BY id)
         const rows = await sql<UserResult>`
             SELECT id, username, email
             FROM users
@@ -134,20 +136,45 @@ export class AuthServiceImpl implements AuthService {
                 )
                 AND (
                     ${cursor}::uuid IS NULL
-                    OR id > ${cursor}::uuid
+                    OR (
+                        CASE 
+                          WHEN ${isBackward} THEN id < ${cursor}::uuid
+                          ELSE id > ${cursor}::uuid
+                        END
+                    )
                 )
                 ${params.actorId ? sql`AND id <> ${params.actorId}::uuid` : sql``}
-            ORDER BY id
+            ORDER BY id ${sql.raw(isBackward ? 'DESC' : 'ASC')}
             LIMIT ${limit + 1}
         `.execute(db);
 
+        let resultRows = rows.rows;
+        const hasMore = resultRows.length > limit;
+        if (hasMore) {
+            resultRows = resultRows.slice(0, limit);
+        }
+        if (isBackward) {
+            resultRows.reverse();
+        }
 
-        const hasMore   = rows.rows.length > limit;
-        const users     = hasMore ? rows.rows.slice(0, limit) : rows.rows;
-        const nextCursor = hasMore ? users[users.length - 1]!.id : null;
+        const users = resultRows;
+        let nextCursor: string | null = null;
+        let prevCursor: string | null = null;
 
+        if (users.length > 0) {
+            const first = users[0]!;
+            const last = users[users.length - 1]!;
 
-        return { users, nextCursor };
+            if (isBackward) {
+                nextCursor = hasMore ? first.id : null;
+                prevCursor = last.id;
+            } else {
+                nextCursor = hasMore ? last.id : null;
+                prevCursor = after ? first.id : null;
+            }
+        }
+
+        return { users, nextCursor, prevCursor };
     }
 
     async getUsersByIds(ids: string[]): Promise<UserResult[]> {

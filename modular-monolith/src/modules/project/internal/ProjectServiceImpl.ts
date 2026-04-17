@@ -27,8 +27,8 @@ import eventBus, { KAFKA_EVENTS } from '../../../utils/EventBus.ts';
 export class ProjectServiceImpl implements ProjectService {
     async getProjects(
         userId: string,
-        params?: { cursor?: string; limit?: number },
-    ): Promise<{ projects: Project[]; nextCursor: string | null }> {
+        params?: { first?: number; after?: string; last?: number; before?: string },
+    ): Promise<{ projects: Project[]; nextCursor: string | null; prevCursor: string | null }> {
         console.log(`[Project Service] Getting projects for userId: ${userId}`);
         return getProjects(userId, params);
     }
@@ -43,8 +43,8 @@ export class ProjectServiceImpl implements ProjectService {
     async getProjectMembers(
         userId: string,
         projectId: string,
-        params?: { cursor?: string; limit?: number },
-    ): Promise<{ members: ProjectMember[]; nextCursor: string | null }> {
+        params?: { first?: number; after?: string; last?: number; before?: string },
+    ): Promise<{ members: ProjectMember[]; nextCursor: string | null; prevCursor: string | null }> {
         return getProjectMembers(userId, projectId, params);
     }
 
@@ -52,10 +52,12 @@ export class ProjectServiceImpl implements ProjectService {
         return getUserProjectIds(userId);
     }
 
-    async getProjectsByIds(userId: string, projectIds: string[]): Promise<Project[]> {
+    async getProjectsByIds(
+        userId: string,
+        projectIds: string[],
+    ): Promise<Project[]> {
         return getProjectsByIds(userId, projectIds);
     }
-
 
     async destroy(): Promise<void> {
         console.log(`Disconnecting event bus ${this.constructor.name}`);
@@ -119,15 +121,27 @@ export class ProjectServiceImpl implements ProjectService {
         actorId: string;
         projectId: string;
         search?: string;
-        cursor?: string;
-        limit?: number;
-    }): Promise<{ users: { id: string; username: string; email: string }[]; nextCursor: string | null }> {
+        first?: number;
+        after?: string;
+        last?: number;
+        before?: string;
+    }): Promise<{
+        users: { id: string; username: string; email: string }[];
+        nextCursor: string | null;
+        prevCursor: string | null;
+    }> {
         return searchProjectMembers(params);
     }
 
-    async updateProject(data: { userId: string; projectId: string; name?: string; description?: string | null }): Promise<Project | null> {
+    async updateProject(data: {
+        userId: string;
+        projectId: string;
+        name?: string;
+        description?: string | null;
+    }): Promise<Project | null> {
         const project = await updateProject(data);
-        if (!project) throw new Error('Failed to update project or unauthorized');
+        if (!project)
+            throw new Error('Failed to update project or unauthorized');
         return project;
     }
 }

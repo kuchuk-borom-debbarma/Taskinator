@@ -1,21 +1,35 @@
 type User {
-  id: ID!
-  username: String!
-  email: String!
+    id: ID!
+    username: String!
+    email: String!
 }
 
 type UserSearchResultEdge {
-  node: User!
-  cursor: String!
+    node: User!
+    cursor: String!
 }
 
 type UserSearchResultConnection {
-  edges: [UserSearchResultEdge!]!
-  pageInfo: PageInfo!
+    edges: [UserSearchResultEdge!]!
+    pageInfo: PageInfo!
 }
 
 extend type Query {
-  me: User
-  searchUsers(search: String, first: Int, after: String): UserSearchResultConnection!
-  searchTeamUsers(projectId: ID!, teamId: ID!, search: String, first: Int, after: String): UserSearchResultConnection!
+    me: User
+    searchUsers(
+        search: String
+        first: Int
+        after: String
+        last: Int
+        before: String
+    ): UserSearchResultConnection!
+    searchTeamUsers(
+        projectId: ID!
+        teamId: ID!
+        search: String
+        first: Int
+        after: String
+        last: Int
+        before: String
+    ): UserSearchResultConnection!
 }

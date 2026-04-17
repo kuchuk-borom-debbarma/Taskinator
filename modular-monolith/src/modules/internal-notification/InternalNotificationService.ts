@@ -21,13 +21,20 @@ export interface CreateNotificationParam {
 }
 
 export interface InternalNotificationService extends BaseService {
-    createNotification(data: CreateNotificationParam): Promise<InternalNotification>;
-    createNotificationsBatch(rows: CreateNotificationParam[]): Promise<InternalNotification[]>;
+    createNotification(
+        data: CreateNotificationParam,
+    ): Promise<InternalNotification>;
+    createNotificationsBatch(
+        rows: CreateNotificationParam[],
+    ): Promise<InternalNotification[]>;
     markAsRead(userId: string, notificationId: string): Promise<void>;
     markAllAsRead(userId: string): Promise<void>;
     getNotifications(
         userId: string,
-        params: { cursor?: string; limit?: number }
-    ): Promise<{ notifications: InternalNotification[]; nextCursor: string | null }>;
+        params: { cursor?: string; limit?: number },
+    ): Promise<{
+        notifications: InternalNotification[];
+        nextCursor: string | null;
+    }>;
     getUnreadCount(userId: string): Promise<number>;
 }

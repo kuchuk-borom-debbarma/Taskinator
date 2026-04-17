@@ -2,7 +2,6 @@ import express from 'express';
 import cors from 'cors';
 import projectRoutes from '../modules/project/project.routes';
 import teamRoutes from '../modules/team/team.routes';
-import taskRoutes from '../modules/task/task.routes';
 import authRoutes from '../modules/auth/auth.routes.ts';
 import notificationRoutes from '../modules/internal-notification/internal-notification.routes.ts';
 import { yoga } from '../graphql';
@@ -11,7 +10,9 @@ import { yoga } from '../graphql';
  * startRestServer initializes the Express application and routes.
  * It returns a Promise that resolves once the server is actually listening on the port.
  */
-export const startRestServer = (port: number = 3000): Promise<express.Application> => {
+export const startRestServer = (
+    port: number = 3000,
+): Promise<express.Application> => {
     return new Promise((resolve) => {
         const app = express();
 
@@ -35,7 +36,6 @@ export const startRestServer = (port: number = 3000): Promise<express.Applicatio
         // Domain Routes
         app.use('/projects', projectRoutes);
         app.use('/teams', teamRoutes);
-        app.use('/tasks', taskRoutes);
         app.use('/auth', authRoutes);
         app.use('/notifications', notificationRoutes);
         app.use('/graphql', (req, res) => yoga(req, res));

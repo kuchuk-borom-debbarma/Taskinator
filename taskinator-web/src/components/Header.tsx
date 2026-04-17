@@ -1,22 +1,21 @@
 import React from 'react';
 import { Bell, Settings, ChevronRight } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useUIStore } from '../store/ui';
 
 interface HeaderProps {
   projectName?: string;
-  onOpenSettings: () => void;
-  onOpenNotifications: () => void;
   unreadCount?: number;
   children?: React.ReactNode;
 }
 
 export const Header: React.FC<HeaderProps> = ({ 
   projectName, 
-  onOpenSettings, 
-  onOpenNotifications, 
   unreadCount = 0,
   children
 }) => {
+  const { toggleNotificationPanel, setActiveModal } = useUIStore();
+
   return (
     <div className="h-full w-full flex items-center justify-between px-6">
       {/* Breadcrumbs */}
@@ -35,7 +34,7 @@ export const Header: React.FC<HeaderProps> = ({
           
           {projectName && (
             <button
-              onClick={onOpenSettings}
+              onClick={() => setActiveModal('PROJECT_SETTINGS')}
               className="p-1.5 hover:bg-white/5 rounded-md text-muted-foreground/50 hover:text-foreground transition-all duration-200 ml-1 group"
             >
               <Settings size={14} className="group-hover:rotate-45 transition-transform duration-300" />
@@ -49,7 +48,7 @@ export const Header: React.FC<HeaderProps> = ({
         {/* Notifications */}
         <div className="relative">
           <button
-            onClick={onOpenNotifications}
+            onClick={toggleNotificationPanel}
             className="p-2.5 hover:bg-white/5 rounded-xl text-muted-foreground/60 hover:text-foreground transition-all duration-200 relative group"
           >
             <Bell size={19} className="group-hover:scale-110 transition-transform" />

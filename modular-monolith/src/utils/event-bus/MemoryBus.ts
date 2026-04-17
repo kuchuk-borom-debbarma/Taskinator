@@ -14,7 +14,9 @@ export class MemoryBus implements Bus {
 
     async publish(
         type: string,
-        payload: { id?: string; key: string; data: any } | Array<{ id?: string; key: string; data: any }>,
+        payload:
+            | { id?: string; key: string; data: any }
+            | Array<{ id?: string; key: string; data: any }>,
     ) {
         const items = Array.isArray(payload) ? payload : [payload];
         const topic = EVENT_TO_TOPIC[type];
@@ -22,7 +24,10 @@ export class MemoryBus implements Bus {
         const events = items.map((i) => createEvent(type, i.key, i.data, i.id));
         // Emit with a small async delay to simulate Kafka's async delivery
         for (const e of events) {
-            setTimeout(() => this.emitter.emit(`${topic}:${e.type}`, e.data), 10);
+            setTimeout(
+                () => this.emitter.emit(`${topic}:${e.type}`, e.data),
+                10,
+            );
         }
     }
 

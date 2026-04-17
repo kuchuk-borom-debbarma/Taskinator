@@ -1,6 +1,5 @@
 import { projectService } from './modules/project';
 import { teamService } from './modules/team';
-import { taskService } from './modules/task';
 import { authService } from './modules/auth/index.ts';
 import { externalNotificationService } from './modules/external-notification/index.ts';
 import { internalNotificationService } from './modules/internal-notification/index.ts';
@@ -13,7 +12,7 @@ import eventBus from './utils/EventBus';
 
 /**
  * Main Application Boot Sequence
- * 
+ *
  * Order is critical:
  * 1. Global Event Bus (Connect producer + auto-create Kafka topics)
  * 2. Domain Services & Consumer Groups (Join Kafka and initialize internal state)
@@ -32,7 +31,6 @@ async function bootstrap() {
         await Promise.all([
             projectService.init(),
             teamService.init(),
-            taskService.init(),
             automationService.init(),
             authService.init(),
             externalNotificationService.init(),
@@ -50,7 +48,9 @@ async function bootstrap() {
         startOutboxRelay();
         console.log('[Boot] Phase 4: Outbox Relay started');
 
-        console.log('[Boot] >>> Taskinator is fully READY to handle 10k RPS <<<');
+        console.log(
+            '[Boot] >>> Taskinator is fully READY to handle 10k RPS <<<',
+        );
     } catch (err) {
         console.error('[Boot] CRITICAL: Post-initialization failure', err);
         process.exit(1);

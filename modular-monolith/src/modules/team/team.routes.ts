@@ -16,7 +16,10 @@ router.get('/', async (req: any, res: Response) => {
         const result = await teamService.getTeams(
             userId as string,
             projectId as string,
-            { cursor: cursor as string, limit: parseInt(limit as string) || 20 }
+            {
+                after: cursor as string,
+                first: parseInt(limit as string) || 20,
+            },
         );
         res.status(200).json(result);
     } catch (error: any) {
@@ -36,7 +39,10 @@ router.get('/:teamId/members', async (req: any, res: Response) => {
             userId as string,
             projectId as string,
             teamId,
-            { cursor: cursor as string, limit: parseInt(limit as string) || 20 }
+            {
+                after: cursor as string,
+                first: parseInt(limit as string) || 20,
+            },
         );
         res.status(200).json(result);
     } catch (error: any) {
@@ -59,8 +65,8 @@ router.get('/:teamId/users/search', async (req: any, res: Response) => {
             projectId: projectId as string,
             teamId,
             search: search as string | undefined,
-            cursor: cursor as string | undefined,
-            limit: parseInt(limit as string) || 20,
+            after: cursor as string | undefined,
+            first: parseInt(limit as string) || 20,
         });
         res.status(200).json(result);
     } catch (error: any) {
@@ -68,7 +74,6 @@ router.get('/:teamId/users/search', async (req: any, res: Response) => {
         res.status(400).json({ error: error.message });
     }
 });
-
 
 // Create Teams
 router.post('/', async (req: any, res: Response) => {

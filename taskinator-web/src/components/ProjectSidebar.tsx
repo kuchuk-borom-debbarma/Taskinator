@@ -1,68 +1,121 @@
-import React from 'react';
+import React, { useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { LayoutGrid, LogOut, Hexagon, Plus } from 'lucide-react';
+import { useNavigate, Link } from '@tanstack/react-router';
 import { cn } from '../utils/cn';
+import { gqlClient } from '../graphql/client';
+import { GET_PROJECTS } from '../graphql/operations';
+import { useSlidingWindow } from '../hooks/useSlidingWindow';
+import { useUIStore } from '../store/ui';
 
 interface Project {
   id: string;
   name: string;
+  createdAt: string;
 }
 
 interface ProjectSidebarProps {
-  projects: Project[];
+  userId: string;
   username: string;
   onLogout: () => void;
   selectedProjectId?: string;
-  onSelectProject: (id: string) => void;
-  onCreateProject: () => void;
 }
 
 export const ProjectSidebar: React.FC<ProjectSidebarProps> = ({
-  projects,
+  userId,
   username,
   onLogout,
   selectedProjectId,
-  onSelectProject,
-  onCreateProject,
 }) => {
+  const navigate = useNavigate();
+  const setActiveModal = useUIStore(state => state.setActiveModal);
+
+  // Initial projects fetch
+  const { data } = useQuery({
+    queryKey: ['projects', userId, 'initial'],
+    queryFn: () => gqlClient.request<any>(GET_PROJECTS, { first: 10 }),
+    enabled: !!userId,
+  });
+
+  const connection = useMemo(() => 
+    data?.projects || { edges: [], pageInfo: { hasNextPage: false, hasPreviousPage: false, startCursor: null, endCursor: null } }
+  , [data]);
+
+  const fetchMore = async (params: any) => {
+    const res = await gqlClient.request<any>(GET_PROJECTS, params);
+    return res.projects;
+  };
+
+  const {
+    items: projects,
+    containerRef,
+    topSentinelRef,
+    bottomSentinelRef,
+    isLoadingNext,
+    isLoadingPrev
+  } = useSlidingWindow<Project>({
+    initialData: connection,
+    fetchMore,
+    pageSize: 10,
+    maxWindowSize: 30
+  });
+
   return (
     <div className="h-full w-[72px] bg-[#050505] border-r border-white-[0.03] flex flex-col items-center py-6 gap-8 shrink-0 relative z-50">
       {/* Branding */}
-      <div className="relative group cursor-pointer" onClick={() => onSelectProject('')}>
+      <Link to="/" className="relative group cursor-pointer">
         <div className="h-11 w-11 rounded-2xl bg-primary flex items-center justify-center shadow-[0_0_20px_rgba(99,102,241,0.3)] transition-all duration-500 group-hover:rotate-[360deg] group-hover:scale-110">
           <Hexagon size={24} className="text-white fill-white/20" />
         </div>
         <div className="absolute left-[calc(100%+12px)] top-1/2 -translate-y-1/2 px-2 py-1 bg-white text-background text-[10px] font-bold rounded opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-[100]">
           Taskinator
         </div>
-      </div>
+      </Link>
 
       <div className="w-8 h-[1px] bg-white/5 shrink-0" />
 
       {/* Main Navigation Rail */}
-      <nav className="flex-1 flex flex-col gap-4">
+      <nav className="flex-1 flex flex-col items-center gap-4 w-full overflow-hidden">
         <RailItem
           icon={<LayoutGrid size={20} />}
           label="Dashboard"
           isActive={!selectedProjectId}
-          onClick={() => onSelectProject('')}
+          onClick={() => navigate({ to: '/' })}
         />
 
         <div className="w-8 h-[1px] bg-white/5 shrink-0 my-2" />
 
-        {/* scrollable projects list */}
-        <div className="flex-1 w-full overflow-y-auto no-scrollbar flex flex-col items-center gap-4 py-2">
-          {projects.map((project) => (
+        {/* Scrollable Projects Window */}
+        <div 
+          ref={containerRef}
+          className="flex-1 w-full overflow-y-auto no-scrollbar flex flex-col items-center gap-4 py-2 relative"
+        >
+          {/* Top Sentinel */}
+          <div ref={topSentinelRef} className="h-4 flex items-center justify-center shrink-0">
+              {isLoadingPrev && <div className="w-3 h-3 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />}
+          </div>
+
+          {projects.map((project: Project) => (
             <ProjectIcon
               key={project.id}
               project={project}
               isActive={selectedProjectId === project.id}
-              onClick={() => onSelectProject(project.id)}
+              onClick={() => navigate({ 
+                to: '/project/$projectId/tasks', 
+                params: { projectId: project.id } 
+              })}
             />
           ))}
+
+          {/* Bottom Sentinel */}
+          <div ref={bottomSentinelRef} className="h-10 flex items-center justify-center shrink-0">
+              {isLoadingNext && <div className="w-3 h-3 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />}
+          </div>
+
           <button 
-            onClick={onCreateProject}
-            className="h-12 w-12 rounded-2xl border border-dashed border-white/10 text-muted-foreground/40 hover:text-primary hover:border-primary/40 transition-all flex items-center justify-center shrink-0 group"
+            onClick={() => setActiveModal('CREATE_PROJECT')}
+            className="h-12 w-12 rounded-2xl border border-dashed border-white/10 text-muted-foreground/40 hover:text-primary hover:border-primary/40 transition-all flex items-center justify-center shrink-0 group mb-4"
           >
             <Plus size={20} className="group-hover:scale-110 transition-transform" />
           </button>
@@ -98,7 +151,7 @@ const ProjectIcon: React.FC<{
   const initials = project.name.substring(0, 1).toUpperCase();
   
   return (
-    <div className="relative group">
+    <div className="relative group shrink-0">
       <button
         onClick={onClick}
         className={cn(
@@ -144,7 +197,7 @@ const RailItem: React.FC<{
   onClick: () => void;
 }> = ({ icon, label, isActive, onClick }) => {
   return (
-    <div className="relative group">
+    <div className="relative group shrink-0">
       <button
         onClick={onClick}
         className={cn(

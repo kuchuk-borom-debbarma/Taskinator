@@ -1,20 +1,23 @@
-import React from 'react';
+import React, { useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { Plus, Layout, ChevronRight, Zap, Network, Layers, GitBranch, Server, Database, Cpu, Code, Shield } from 'lucide-react';
+import { useNavigate } from '@tanstack/react-router';
+import { gqlClient } from '../../graphql/client';
+import { GET_PROJECTS } from '../../graphql/operations';
+import { useSlidingWindow } from '../../hooks/useSlidingWindow';
+import { useUIStore } from '../../store/ui';
 
 interface Project {
   id: string;
   name: string;
   creator?: { username: string };
   description?: string;
-  memberCount?: number;
 }
 
 interface ProjectDashboardProps {
+  userId: string;
   username: string;
-  projects: Project[];
-  onSelectProject: (id: string) => void;
-  onCreateProject: () => void;
 }
 
 const ProjectCard: React.FC<{ project: Project; onClick: () => void }> = ({ project, onClick }) => {
@@ -46,7 +49,7 @@ const ProjectCard: React.FC<{ project: Project; onClick: () => void }> = ({ proj
         </div>
       </div>
 
-      <div className="flex items-center justify-between pt-4 border-t border-white/5">
+      <div className="flex items-center justify-between pt-4 border-t border-white/5 shrink-0">
         <div className="flex items-center gap-2">
            <div className="w-6 h-6 rounded-full border-2 border-[#0d0d0d] bg-secondary flex items-center justify-center text-[8px] font-bold">
              {project.creator?.username?.substring(0, 1).toUpperCase() || '?'}
@@ -61,14 +64,48 @@ const ProjectCard: React.FC<{ project: Project; onClick: () => void }> = ({ proj
 };
 
 export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
+  userId,
   username,
-  projects,
-  onSelectProject,
-  onCreateProject,
 }) => {
+  const navigate = useNavigate();
+  const setActiveModal = useUIStore(state => state.setActiveModal);
+
+  // Initial projects fetch
+  const { data, isLoading } = useQuery({
+    queryKey: ['projects', userId, 'dashboard-initial'],
+    queryFn: () => gqlClient.request<any>(GET_PROJECTS, { first: 12 }),
+    enabled: !!userId,
+  });
+
+  const connection = useMemo(() => 
+    data?.projects || { edges: [], pageInfo: { hasNextPage: false, hasPreviousPage: false, startCursor: null, endCursor: null } }
+  , [data]);
+
+  const fetchMore = async (params: any) => {
+    const res = await gqlClient.request<any>(GET_PROJECTS, params);
+    return res.projects;
+  };
+
+  const {
+    items: projects,
+    containerRef,
+    topSentinelRef,
+    bottomSentinelRef,
+    isLoadingNext,
+    isLoadingPrev
+  } = useSlidingWindow<Project>({
+    initialData: connection,
+    fetchMore,
+    pageSize: 12,
+    maxWindowSize: 36
+  });
+
   return (
-    <div className="flex-1 w-full max-w-7xl mx-auto px-10 py-12 overflow-y-auto custom-scrollbar">
-      <header className="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-6">
+    <div 
+        ref={containerRef}
+        className="flex-1 w-full max-w-7xl mx-auto px-10 py-12 overflow-y-auto custom-scrollbar relative"
+    >
+      <header className="mb-12 flex flex-col md:flex-row md:items-end justify-between gap-6 shrink-0">
         <div className="space-y-4 max-w-2xl">
           <h1 className="text-4xl sm:text-5xl font-extrabold tracking-tight flex flex-wrap items-baseline gap-x-3">
             <span className="text-foreground/90">Welcome back,</span>
@@ -78,26 +115,30 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
           </h1>
           <div className="space-y-1">
              <p className="text-base text-foreground/80 font-medium">
-               Taskinator is your central workspace for organizing complex projects, orchestrating teams, and keeping everyone strictly aligned.
+                Taskinator is your central workspace for organizing complex projects, orchestrating teams, and keeping everyone strictly aligned.
              </p>
              <p className="text-sm text-muted-foreground/60 font-medium tracking-wide">
-               You currently have <span className="text-primary">{projects.length}</span> Project{projects.length === 1 ? '' : 's'} and <span className="text-primary">12</span> Tasks.
+                You have <span className="text-primary">{connection.totalCount || projects.length}</span> Project{projects.length === 1 ? '' : 's'} surfacing in your window.
              </p>
           </div>
         </div>
         
         <button
-          onClick={onCreateProject}
-          className="flex items-center gap-2.5 px-6 py-3 rounded-2xl bg-white text-background text-[13px] font-bold hover:bg-white/90 transition-all shadow-2xl shadow-white/10 active:scale-95"
+          onClick={() => setActiveModal('CREATE_PROJECT')}
+          className="flex items-center gap-2.5 px-6 py-3 rounded-2xl bg-white text-background text-[13px] font-bold hover:bg-white/90 transition-all shadow-2xl shadow-white/10 active:scale-95 shrink-0"
         >
           <Plus size={18} strokeWidth={2.5} />
           Create Project
         </button>
       </header>
 
-      {projects.length === 0 ? (
+      {/* Top Sentinel */}
+      <div ref={topSentinelRef} className="h-10 flex items-center justify-center">
+            {isLoadingPrev && <div className="w-6 h-6 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />}
+      </div>
+
+      {projects.length === 0 && !isLoading ? (
         <div className="flex flex-col items-center justify-center py-10 w-full max-w-4xl mx-auto">
-           {/* Hero Icon */}
            <div className="relative mb-8">
               <div className="absolute inset-0 bg-primary/20 blur-3xl rounded-full" />
               <div className="w-24 h-24 rounded-[32px] bg-gradient-to-br from-primary to-indigo-600 flex items-center justify-center border-4 border-background shadow-2xl relative z-10 shadow-primary/20">
@@ -111,7 +152,7 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
            </p>
 
            <button
-              onClick={onCreateProject}
+              onClick={() => setActiveModal('CREATE_PROJECT')}
               className="px-10 py-4 mb-20 rounded-full bg-primary text-white text-[15px] font-black hover:bg-indigo-500 transition-all shadow-[0_10px_40px_rgba(99,102,241,0.3)] hover:-translate-y-1 hover:scale-105 active:scale-95 flex items-center gap-3"
            >
               <Plus size={20} strokeWidth={3} />
@@ -119,18 +160,23 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
            </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {projects.map((project) => (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 pb-10">
+          {projects.map((project: Project) => (
             <ProjectCard
               key={project.id}
               project={project}
-              onClick={() => onSelectProject(project.id)}
+              onClick={() => navigate({ to: '/project/$projectId/tasks', params: { projectId: project.id } })}
             />
           ))}
         </div>
       )}
 
-      {/* Feature Overview (Always visible) */}
+      {/* Bottom Sentinel */}
+      <div ref={bottomSentinelRef} className="h-20 flex items-center justify-center">
+            {isLoadingNext && <div className="w-6 h-6 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />}
+      </div>
+
+      {/* Feature Overview (Visible when scrolled down) */}
       <div className="mt-20 pt-16 border-t border-white/5">
         <h3 className="text-2xl font-black tracking-tight mb-8">Taskinator Advantage</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 w-full pb-16">
@@ -191,7 +237,7 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
             </div>
 
             <div className="md:w-2/3 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
-               {/* 1 */}
+               {/* Architecture Cards remain identical as they are static */}
                <div className="glass p-6 rounded-2xl border border-white/5 hover:border-primary/20 transition-all flex flex-col gap-3">
                   <div className="p-3 bg-indigo-500/10 text-indigo-400 rounded-xl w-max"><Zap size={18} /></div>
                   <div>
@@ -199,8 +245,6 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                      <p className="text-[11px] text-muted-foreground leading-relaxed">A decoupled message bus powered by Kafka. Domains communicate entirely via asynchronous pub/sub events.</p>
                   </div>
                </div>
-
-               {/* 2 */}
                <div className="glass p-6 rounded-2xl border border-white/5 hover:border-primary/20 transition-all flex flex-col gap-3">
                   <div className="p-3 bg-amber-500/10 text-amber-500 rounded-xl w-max"><Database size={18} /></div>
                   <div>
@@ -208,8 +252,6 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                      <p className="text-[11px] text-muted-foreground leading-relaxed">Prevents dual-write failures. Domain mutations and outgoing events are persisted atomically to guarantee exactly-once delivery.</p>
                   </div>
                </div>
-
-               {/* 3 */}
                <div className="glass p-6 rounded-2xl border border-white/5 hover:border-primary/20 transition-all flex flex-col gap-3">
                   <div className="p-3 bg-red-500/10 text-red-500 rounded-xl w-max"><Server size={18} /></div>
                   <div>
@@ -217,8 +259,6 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                      <p className="text-[11px] text-muted-foreground leading-relaxed">Optimized for high-throughput writes. Uses database-level batching and 2-call validation buffers to handle mass requests.</p>
                   </div>
                </div>
-
-               {/* 4 */}
                <div className="glass p-6 rounded-2xl border border-white/5 hover:border-primary/20 transition-all flex flex-col gap-3">
                   <div className="p-3 bg-emerald-500/10 text-emerald-500 rounded-xl w-max"><Network size={18} /></div>
                   <div>
@@ -226,8 +266,6 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                      <p className="text-[11px] text-muted-foreground leading-relaxed">Uses combination of Closure Tables and Materialized Paths in Postgres to ensure O(1) read performance for deep hierarchies.</p>
                   </div>
                </div>
-               
-               {/* 5 */}
                <div className="glass p-6 rounded-2xl border border-white/5 hover:border-primary/20 transition-all flex flex-col gap-3">
                   <div className="p-3 bg-pink-500/10 text-pink-500 rounded-xl w-max"><Cpu size={18} /></div>
                   <div>
@@ -235,8 +273,6 @@ export const ProjectDashboard: React.FC<ProjectDashboardProps> = ({
                      <p className="text-[11px] text-muted-foreground leading-relaxed">Eliminates N+1 relational bottlenecks via batched GraphQL DataLoaders, utilizing deterministic tie-breakers for cursor pagination.</p>
                   </div>
                </div>
-
-               {/* 6 */}
                <div className="glass p-6 rounded-2xl border border-white/5 hover:border-primary/20 transition-all flex flex-col gap-3">
                   <div className="p-3 bg-cyan-500/10 text-cyan-500 rounded-xl w-max"><Shield size={18} /></div>
                   <div>

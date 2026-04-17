@@ -4,7 +4,6 @@ export const KAFKA_TOPICS = {
     PROJECT_TEAM: 'project-team-events',
     PROJECT_TEAM_MEMBER: 'project-team-member-events',
     PROJECT_TASK: 'project-task-events',
-    PROJECT_TASK_TRIGGER: 'project-task-trigger-events',
     AUTH: 'auth-events',
     NOTIFICATION: 'notification-events',
     AUTOMATION: 'automation-events',
@@ -31,14 +30,11 @@ export const KAFKA_EVENTS = {
     },
     PROJECT_TASK: {
         CREATED: 'project.task.created',
-        UPDATED: 'project.task.updated',
         DELETED: 'project.task.deleted',
-        PARENT_DELETED: 'project.task.parent.deleted',
-        CHILDREN_DELETED: 'project.task.children.deleted',
     },
-    PROJECT_TASK_TRIGGER: {
-        TRIGGER: 'project.task.trigger',
-        DELETED: 'project.task.trigger.deleted',
+    PROJECT_TASK_LINK: {
+        CREATED: 'project.task_link.created',
+        DELETED: 'project.task_link.deleted',
     },
     AUTH: {
         SIGNUP_STARTED: 'auth.signup.started',
@@ -49,7 +45,7 @@ export const KAFKA_EVENTS = {
         CREATED: 'notification.created',
     },
     AUTOMATION: {
-        TRIGGER: 'automation.trigger.task',
+        TRIGGER: 'automation.trigger',
     },
 } as const;
 
@@ -64,15 +60,12 @@ export const EVENT_TO_TOPIC: Record<string, string> = {
     'project.team.member.added': KAFKA_TOPICS.PROJECT_TEAM_MEMBER,
     'project.team.member.deleted': KAFKA_TOPICS.PROJECT_TEAM_MEMBER,
     'project.task.created': KAFKA_TOPICS.PROJECT_TASK,
-    'project.task.updated': KAFKA_TOPICS.PROJECT_TASK,
     'project.task.deleted': KAFKA_TOPICS.PROJECT_TASK,
-    'project.task.parent.deleted': KAFKA_TOPICS.PROJECT_TASK,
-    'project.task.children.deleted': KAFKA_TOPICS.PROJECT_TASK,
-    'project.task.trigger': KAFKA_TOPICS.PROJECT_TASK_TRIGGER,
-    'project.task.trigger.deleted': KAFKA_TOPICS.PROJECT_TASK_TRIGGER,
+    'project.task_link.created': KAFKA_TOPICS.PROJECT_TASK,
+    'project.task_link.deleted': KAFKA_TOPICS.PROJECT_TASK,
     'auth.signup.started': KAFKA_TOPICS.AUTH,
     'auth.user.created': KAFKA_TOPICS.AUTH,
     'notification.requested': KAFKA_TOPICS.NOTIFICATION,
     'notification.created': KAFKA_TOPICS.NOTIFICATION,
-    'automation.trigger.task': KAFKA_TOPICS.AUTOMATION,
+    'automation.trigger': KAFKA_TOPICS.AUTOMATION,
 };

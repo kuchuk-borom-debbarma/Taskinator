@@ -1,33 +1,53 @@
 type AutomationRule {
-  id: ID!
-  projectId: ID!
-  actorId: String!
-  name: String!
-  targetScope: String!
-  taskId: ID
-  teamId: ID
-  rules: String!
-  isActive: Boolean!
-  createdAt: String!
-  updatedAt: String
+    id: ID!
+    projectId: ID!
+    actorId: String!
+    name: String!
+    targetScope: String!
+    teamId: ID
+    rules: String!
+    isActive: Boolean!
+    createdAt: String!
+    updatedAt: String
 }
 
 type AutomationRuleEdge {
-  node: AutomationRule!
-  cursor: String!
+    node: AutomationRule!
+    cursor: String!
 }
 
 type AutomationRuleConnection {
-  edges: [AutomationRuleEdge!]!
-  pageInfo: PageInfo!
+    edges: [AutomationRuleEdge!]!
+    pageInfo: PageInfo!
 }
 
 extend type Query {
-  automations(projectId: ID, actorId: ID, taskId: ID, teamId: ID, targetScope: String, first: Int, after: String): AutomationRuleConnection!
+    automations(
+        projectId: ID
+        actorId: ID
+        teamId: ID
+        targetScope: String
+        first: Int
+        after: String
+    ): AutomationRuleConnection!
 }
 
 extend type Mutation {
-  addAutomation(projectId: ID!, name: String!, targetScope: String!, taskId: ID, teamId: ID, rules: String!, isActive: Boolean): AutomationRule
-  updateAutomation(automationId: ID!, name: String, targetScope: String, taskId: ID, teamId: ID, rules: String, isActive: Boolean): AutomationRule
-  deleteAutomation(automationId: ID!): Boolean
+    addAutomation(
+        projectId: ID!
+        name: String!
+        targetScope: String!
+        teamId: ID
+        rules: String!
+        isActive: Boolean
+    ): AutomationRule
+    updateAutomation(
+        automationId: ID!
+        name: String
+        targetScope: String
+        teamId: ID
+        rules: String
+        isActive: Boolean
+    ): AutomationRule
+    deleteAutomation(automationId: ID!): Boolean
 }

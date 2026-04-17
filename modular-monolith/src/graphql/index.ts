@@ -8,13 +8,13 @@ const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-jwt-key';
 export const yoga = createYoga<GraphQLContext>({
     schema,
     context: async (initialContext) => {
-        const authHeader = initialContext.request.headers.get('authorization');
+        const headers = initialContext.request.headers;
+        const authHeader = headers.get('authorization') || (initialContext as any).req?.headers?.['authorization'];
         let token: string | undefined;
 
         if (authHeader && authHeader.startsWith('Bearer ')) {
             token = authHeader.split(' ')[1];
         } else {
-            // Check query param for subscriptions if needed
             const url = new URL(initialContext.request.url);
             token = url.searchParams.get('token') || undefined;
         }
@@ -24,9 +24,12 @@ export const yoga = createYoga<GraphQLContext>({
             try {
                 const decoded = jwt.verify(token, JWT_SECRET) as any;
                 userId = decoded.id;
+                console.log(`[GraphQL] Context initialized for user: ${userId}`);
             } catch (err) {
-                // Token verification failed
+                console.warn('[GraphQL] JWT verification failed:', (err as Error).message);
             }
+        } else {
+            console.log('[GraphQL] Context initialized for anonymous user');
         }
 
         return createContext(userId);

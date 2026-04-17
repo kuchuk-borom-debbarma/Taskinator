@@ -12,10 +12,16 @@ export class NotificationRequestedListener {
                 metadata: any;
             }) => {
                 const { userIds, title, message } = data;
-                console.log(`[External Notification] Processing notification for ${userIds.length} users`);
+                console.log(
+                    `[External Notification] Processing notification for ${userIds.length} users`,
+                );
 
                 // Single provider-level batch call — O(1) outbound HTTP regardless of recipient count
-                await externalNotificationService.sendNotificationBatch({ userIds, title, message });
+                await externalNotificationService.sendNotificationBatch({
+                    userIds,
+                    title,
+                    message,
+                });
             },
         });
     }
@@ -23,4 +29,5 @@ export class NotificationRequestedListener {
     async stop() {}
 }
 
-export const notificationRequestedListener = new NotificationRequestedListener();
+export const notificationRequestedListener =
+    new NotificationRequestedListener();

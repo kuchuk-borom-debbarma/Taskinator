@@ -8,9 +8,8 @@ import {
     getAutomationsQuery,
     insertAutomation,
     updateAutomationQuery,
-    getAutomationsByTaskIdsQuery,
     getAutomationsByProjectIdsQuery,
-    getAutomationsByTeamIdsQuery
+    getAutomationsByTeamIdsQuery,
 } from './AutomationQueries.ts';
 import eventBus from '../../../utils/EventBus.ts';
 import { automationListener } from './listeners/AutomationListener.ts';
@@ -21,7 +20,6 @@ export class AutomationServiceImpl implements AutomationService {
         projectId: string;
         name: string;
         targetScope: AutomationScope;
-        taskId?: string;
         teamId?: string;
         rules: any;
         isActive?: boolean;
@@ -34,7 +32,6 @@ export class AutomationServiceImpl implements AutomationService {
         automationId: string;
         name?: string;
         targetScope?: AutomationScope;
-        taskId?: string | null;
         teamId?: string | null;
         rules?: any;
         isActive?: boolean;
@@ -45,7 +42,6 @@ export class AutomationServiceImpl implements AutomationService {
     async getAutomationsByFilter(data: {
         projectId?: string;
         actorId?: string;
-        taskId?: string | null;
         teamId?: string | null;
         targetScope?: AutomationScope;
         cursor?: string;
@@ -54,15 +50,15 @@ export class AutomationServiceImpl implements AutomationService {
         return getAutomationsQuery(data);
     }
 
-    async getAutomationsByTaskIds(taskIds: string[]): Promise<Map<string, AutomationRule[]>> {
-        return getAutomationsByTaskIdsQuery(taskIds);
-    }
-
-    async getAutomationsByProjectIds(projectIds: string[]): Promise<Map<string, AutomationRule[]>> {
+    async getAutomationsByProjectIds(
+        projectIds: string[],
+    ): Promise<Map<string, AutomationRule[]>> {
         return getAutomationsByProjectIdsQuery(projectIds);
     }
 
-    async getAutomationsByTeamIds(teamIds: string[]): Promise<Map<string, AutomationRule[]>> {
+    async getAutomationsByTeamIds(
+        teamIds: string[],
+    ): Promise<Map<string, AutomationRule[]>> {
         return getAutomationsByTeamIdsQuery(teamIds);
     }
 
