@@ -4,6 +4,7 @@ import { useApi } from '../../context/ApiContext';
 import { TaskMap } from '../Graph/TaskMap';
 import { TaskMapModal } from '../Graph/TaskMapModal';
 import { ChevronLeft, Calendar, Map, Layers, Users, User, Clock, CheckCircle2, Type, Copy, Circle, Edit3, Check, X } from 'lucide-react';
+import { TaskLinkColumn } from './TaskLinkColumn';
 
 interface TaskDetailViewProps {
   taskId: string;
@@ -217,25 +218,27 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
             <p className="text-[17px] leading-relaxed text-text-notion/90 whitespace-pre-wrap max-w-2xl">
               {task.description || "No description provided."}
             </p>
-          </section>
+            </section>
 
-          {/* Task Map Integration */}
-          <section className="flex flex-col gap-6">
-            <div className="flex items-center gap-2 text-[11px] font-bold text-text-dim uppercase tracking-[0.2em] opacity-40">
-              Connections
+          {/* ─── TASK GRAPH CONNECTIONS ─── */}
+          <section className="flex flex-col gap-10">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-[11px] font-bold text-text-dim uppercase tracking-[0.2em] opacity-40">
+                Lattice Connectivity
+              </div>
+              <button 
+                onClick={() => setIsMapOpen(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-bg-secondary hover:bg-focus-blue/10 border border-border-notion hover:border-focus-blue/40 rounded-xl text-[12px] font-bold text-text-notion transition-all group"
+              >
+                <Map size={14} className="group-hover:text-focus-blue" />
+                Open Global Map
+              </button>
             </div>
-            <button 
-              onClick={() => setIsMapOpen(true)}
-              className="group flex items-center gap-6 p-6 border border-border-notion rounded-2xl bg-bg-secondary/30 hover:bg-bg-secondary transition-all text-left w-full max-w-2xl"
-            >
-              <div className="p-4 rounded-xl bg-white border border-border-notion shadow-sm text-focus-blue group-hover:scale-110 transition-transform">
-                <Map size={24} />
-              </div>
-              <div className="flex flex-col gap-1">
-                <span className="text-text-notion font-bold text-base">Open Workspace Map</span>
-                <span className="text-text-dim text-[13px]">Explore dependencies and related tasks.</span>
-              </div>
-            </button>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 bg-white border border-border-notion rounded-3xl p-8 shadow-sm">
+              <TaskLinkColumn taskId={taskId} direction="incoming" title="Incoming Dependencies" />
+              <TaskLinkColumn taskId={taskId} direction="outgoing" title="Outgoing Impacts" />
+            </div>
           </section>
         </div>
 

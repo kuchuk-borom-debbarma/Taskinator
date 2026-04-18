@@ -234,4 +234,52 @@ export class GraphQLTaskAPI implements TaskAPI {
     `), { projectId, sourceId, targetId, label });
     return data.createTaskLink;
   }
+
+  async getTaskIncomingLinks(taskId: string, first?: number, after?: string): Promise<{ links: TaskLink[], hasNextPage: boolean, endCursor: string | null }> {
+    const data = await this.query<any>(`
+      query GetTaskIncomingLinks($taskId: ID!, $first: Int, $after: String) {
+        task(id: $taskId) {
+          incomingLinks(first: $first, after: $after) {
+            edges {
+              node {
+                id projectId sourceTaskId targetTaskId label createdAt
+                sourceTask { id title status }
+              }
+            }
+            pageInfo { hasNextPage endCursor }
+          }
+        }
+      }
+    `, { taskId, first, after });
+    const conn = data.task.incomingLinks;
+    return {
+      links: conn.edges.map((e: any) => e.node),
+      hasNextPage: conn.pageInfo.hasNextPage,
+      endCursor: conn.pageInfo.endCursor
+    };
+  }
+
+  async getTaskOutgoingLinks(taskId: string, first?: number, after?: string): Promise<{ links: TaskLink[], hasNextPage: boolean, endCursor: string | null }> {
+    const data = await this.query<any>(`
+      query GetTaskOutgoingLinks($taskId: ID!, $first: Int, $after: String) {
+        task(id: $taskId) {
+          outgoingLinks(first: $first, after: $after) {
+            edges {
+              node {
+                id projectId sourceTaskId targetTaskId label createdAt
+                targetTask { id title status }
+              }
+            }
+            pageInfo { hasNextPage endCursor }
+          }
+        }
+      }
+    `, { taskId, first, after });
+    const conn = data.task.outgoingLinks;
+    return {
+      links: conn.edges.map((e: any) => e.node),
+      hasNextPage: conn.pageInfo.hasNextPage,
+      endCursor: conn.pageInfo.endCursor
+    };
+  }
 }
