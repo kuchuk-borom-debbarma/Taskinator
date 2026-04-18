@@ -37,8 +37,8 @@ export const TaskLinkColumn: React.FC<TaskLinkColumnProps> = ({ taskId, directio
       const c = activeParam?.cursor;
 
       return direction === 'incoming'
-        ? taskApi.getTaskIncomingLinks(taskId, 2, isBackward ? undefined : c, isBackward ? c : undefined)
-        : taskApi.getTaskOutgoingLinks(taskId, 2, isBackward ? undefined : c, isBackward ? c : undefined);
+        ? taskApi.getTaskIncomingLinks(taskId, isBackward ? undefined : 2, isBackward ? undefined : c, isBackward ? 2 : undefined, isBackward ? c : undefined)
+        : taskApi.getTaskOutgoingLinks(taskId, isBackward ? undefined : 2, isBackward ? undefined : c, isBackward ? 2 : undefined, isBackward ? c : undefined);
     },
     initialPageParam: (cursor ? { direction: dir || 'forward', cursor } : undefined) as { direction: 'forward' | 'backward', cursor: string } | undefined,
     getNextPageParam: (lastPage) => lastPage.hasNextPage ? { direction: 'forward' as const, cursor: lastPage.endCursor! } : undefined,

@@ -178,4 +178,12 @@ export class DummyTaskAPI implements TaskAPI {
     this.links.push(link);
     return link;
   }
+
+  async getTaskIncomingLinks(taskId: string, first?: number, after?: string, last?: number, before?: string): Promise<{ links: TaskLink[], hasNextPage: boolean, hasPreviousPage: boolean, endCursor: string | null, startCursor: string | null }> {
+    return { links: [], hasNextPage: false, hasPreviousPage: false, endCursor: null, startCursor: null };
+  }
+
+  async getTaskOutgoingLinks(taskId: string, first?: number, after?: string, last?: number, before?: string): Promise<{ links: TaskLink[], hasNextPage: boolean, hasPreviousPage: boolean, endCursor: string | null, startCursor: string | null }> {
+    return { links: [], hasNextPage: false, hasPreviousPage: false, endCursor: null, startCursor: null };
+  }
 }

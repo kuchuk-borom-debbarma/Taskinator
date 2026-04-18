@@ -14,6 +14,6 @@ export interface TaskAPI {
   createTask(projectId: string, title: string, description?: string): Promise<ProjectTask>;
   updateTask(taskId: string, updates: Partial<ProjectTask>): Promise<ProjectTask>;
   createTaskLink(projectId: string, sourceId: string, targetId: string, label: string): Promise<TaskLink>;
-  getTaskIncomingLinks(taskId: string, first?: number, after?: string): Promise<{ links: TaskLink[], hasNextPage: boolean, endCursor: string | null }>;
-  getTaskOutgoingLinks(taskId: string, first?: number, after?: string): Promise<{ links: TaskLink[], hasNextPage: boolean, endCursor: string | null }>;
+  getTaskIncomingLinks(taskId: string, first?: number, after?: string, last?: number, before?: string): Promise<{ links: TaskLink[], hasNextPage: boolean, hasPreviousPage: boolean, endCursor: string | null, startCursor: string | null }>;
+  getTaskOutgoingLinks(taskId: string, first?: number, after?: string, last?: number, before?: string): Promise<{ links: TaskLink[], hasNextPage: boolean, hasPreviousPage: boolean, endCursor: string | null, startCursor: string | null }>;
 }

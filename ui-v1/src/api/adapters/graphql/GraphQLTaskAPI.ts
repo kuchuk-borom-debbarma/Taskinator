@@ -259,51 +259,55 @@ export class GraphQLTaskAPI implements TaskAPI {
     return data.createTaskLink;
   }
 
-  async getTaskIncomingLinks(taskId: string, first?: number, after?: string): Promise<{ links: TaskLink[], hasNextPage: boolean, endCursor: string | null }> {
+  async getTaskIncomingLinks(taskId: string, first?: number, after?: string, last?: number, before?: string): Promise<{ links: TaskLink[], hasNextPage: boolean, hasPreviousPage: boolean, endCursor: string | null, startCursor: string | null }> {
     const data = await this.query<any>(`
-      query GetTaskIncomingLinks($taskId: ID!, $first: Int, $after: String) {
+      query GetTaskIncomingLinks($taskId: ID!, $first: Int, $after: String, $last: Int, $before: String) {
         task(id: $taskId) {
-          incomingLinks(first: $first, after: $after) {
+          incomingLinks(first: $first, after: $after, last: $last, before: $before) {
             edges {
               node {
                 id projectId sourceTaskId targetTaskId label createdAt
                 sourceTask { id title status }
               }
             }
-            pageInfo { hasNextPage endCursor }
+            pageInfo { hasNextPage hasPreviousPage endCursor startCursor }
           }
         }
       }
-    `, { taskId, first, after });
+    `, { taskId, first, after, last, before });
     const conn = data.task.incomingLinks;
     return {
       links: conn.edges.map((e: any) => e.node),
       hasNextPage: conn.pageInfo.hasNextPage,
-      endCursor: conn.pageInfo.endCursor
+      hasPreviousPage: conn.pageInfo.hasPreviousPage,
+      endCursor: conn.pageInfo.endCursor,
+      startCursor: conn.pageInfo.startCursor
     };
   }
 
-  async getTaskOutgoingLinks(taskId: string, first?: number, after?: string): Promise<{ links: TaskLink[], hasNextPage: boolean, endCursor: string | null }> {
+  async getTaskOutgoingLinks(taskId: string, first?: number, after?: string, last?: number, before?: string): Promise<{ links: TaskLink[], hasNextPage: boolean, hasPreviousPage: boolean, endCursor: string | null, startCursor: string | null }> {
     const data = await this.query<any>(`
-      query GetTaskOutgoingLinks($taskId: ID!, $first: Int, $after: String) {
+      query GetTaskOutgoingLinks($taskId: ID!, $first: Int, $after: String, $last: Int, $before: String) {
         task(id: $taskId) {
-          outgoingLinks(first: $first, after: $after) {
+          outgoingLinks(first: $first, after: $after, last: $last, before: $before) {
             edges {
               node {
                 id projectId sourceTaskId targetTaskId label createdAt
                 targetTask { id title status }
               }
             }
-            pageInfo { hasNextPage endCursor }
+            pageInfo { hasNextPage hasPreviousPage endCursor startCursor }
           }
         }
       }
-    `, { taskId, first, after });
+    `, { taskId, first, after, last, before });
     const conn = data.task.outgoingLinks;
     return {
       links: conn.edges.map((e: any) => e.node),
-      hasNextPage: conn.pageInfo.hasNextPage,
-      endCursor: conn.pageInfo.endCursor
+      hasNextPage: conn.pageInfo.hasNextPage || false,
+      hasPreviousPage: conn.pageInfo.hasPreviousPage || false,
+      endCursor: conn.pageInfo.endCursor || null,
+      startCursor: conn.pageInfo.startCursor || null
     };
   }
 }
