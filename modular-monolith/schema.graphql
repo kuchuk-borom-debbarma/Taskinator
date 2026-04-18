@@ -26,7 +26,7 @@ type Query {
   projects(first: Int, after: String, last: Int, before: String): ProjectConnection!
   project(id: ID!): Project
   projectMembers(projectId: ID!, first: Int, after: String, last: Int, before: String): ProjectMemberConnection!
-  notifications(first: Int, after: String): NotificationConnection!
+  notifications(first: Int, after: String, last: Int, before: String): NotificationConnection!
   unreadNotificationsCount: Int!
   teams(projectId: ID!, first: Int, after: String, last: Int, before: String): TeamConnection!
   teamMembers(projectId: ID!, teamId: ID!, first: Int, after: String, last: Int, before: String): TeamMemberConnection!
@@ -126,6 +126,16 @@ type TaskLabelCount {
   count: Int!
 }
 
+type TaskLabelCountEdge {
+  node: TaskLabelCount!
+  cursor: String!
+}
+
+type TaskLabelCountConnection {
+  edges: [TaskLabelCountEdge!]!
+  pageInfo: PageInfo!
+}
+
 type ProjectTask {
   id: ID!
   projectId: ID!
@@ -146,8 +156,8 @@ type ProjectTask {
   totalOutgoingLinksCount: Int!
   directIncomingLinksCount: Int!
   directOutgoingLinksCount: Int!
-  incomingLabelCounts: [TaskLabelCount!]!
-  outgoingLabelCounts: [TaskLabelCount!]!
+  incomingLabelCounts: TaskLabelCountConnection!
+  outgoingLabelCounts: TaskLabelCountConnection!
   project: Project
   team: Team
   member: User
