@@ -329,11 +329,14 @@ export const getTasksPage = async (
         }
     }
 
+    console.log(`[TaskQueries] getTasksPage - User: ${userId}, Project: ${projectId}, cursor: ${cursor}, isBackward: ${isBackward}, limit: ${limit}`);
+
+    console.log(`[SQL CRITICAL] Executing getTasksPage query...`);
     const result = await sql<ProjectTask>`
         WITH auth_check AS (
-            SELECT 1 FROM project WHERE id = ${projectId}::uuid AND fk_user_id = ${userId}::text
+            SELECT 1 FROM project WHERE id = ${projectId}::uuid AND fk_user_id = ${userId}::uuid
             UNION ALL
-            SELECT 1 FROM project_member WHERE fk_project_id = ${projectId}::uuid AND fk_user_id = ${userId}::text
+            SELECT 1 FROM project_member WHERE fk_project_id = ${projectId}::uuid AND fk_user_id = ${userId}::uuid
             LIMIT 1
         )
         SELECT 
@@ -349,7 +352,10 @@ export const getTasksPage = async (
             created_by AS "createdBy",
             updated_by AS "updatedBy",
             created_at AS "createdAt",
-            updated_at AS "updatedAt"
+            updated_at AS "updatedAt",
+            parent_ref AS "parentRef",
+            "order",
+            (SELECT count(*) FROM auth_check) as "hasAccess"
         FROM project_task
         WHERE fk_project_id = ${projectId}::uuid
           AND EXISTS (SELECT 1 FROM auth_check)
@@ -365,6 +371,15 @@ export const getTasksPage = async (
         ORDER BY created_at ${sql.raw(isBackward ? 'ASC' : 'DESC')}, id ${sql.raw(isBackward ? 'ASC' : 'DESC')}
         LIMIT ${limit + 1}
     `.execute(db);
+
+    const hasAccess = result.rows.length > 0 ? (result.rows[0] as any).hasAccess : null;
+    console.log(`[SQL CRITICAL] Result rows: ${result.rows.length}, Access check: ${hasAccess}`);
+    
+    if (result.rows.length === 0) {
+        // Fallback check to see if project exists at all
+        const projectExists = await sql`SELECT 1 FROM project WHERE id = ${projectId}::uuid`.execute(db);
+        console.log(`[SQL CRITICAL] Secondary Check - Project ${projectId} exists: ${projectExists.rows.length > 0}`);
+    }
 
     let rows = result.rows;
     const hasMore = rows.length > limit;

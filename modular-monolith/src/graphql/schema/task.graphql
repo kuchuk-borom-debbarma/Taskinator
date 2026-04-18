@@ -68,6 +68,8 @@ type ProjectTask {
   updatedBy: ID! # Needs to resolve to user
   createdAt: String!
   updatedAt: String!
+  parentRef: String
+  order: Int
 
   # Resolved fields
   project: Project

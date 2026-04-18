@@ -23,6 +23,7 @@ type Query {
   projectTasks(projectId: ID!, first: Int, after: String, last: Int, before: String): ProjectTaskConnection!
   task(id: ID!): ProjectTask
   taskNeighbourhood(projectId: ID!, taskId: ID!, maxDepth: Int, first: Int, after: String, last: Int, before: String): TaskNeighbourhood!
+  projectTaskLinks(projectId: ID!): [TaskLink!]!
   projects(first: Int, after: String, last: Int, before: String): ProjectConnection!
   project(id: ID!): Project
   projectMembers(projectId: ID!, first: Int, after: String, last: Int, before: String): ProjectMemberConnection!

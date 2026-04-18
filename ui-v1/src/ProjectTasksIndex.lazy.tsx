@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from '@tanstack/react-router';
 import { useApi } from './context/ApiContext';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { TaskListView } from './components/Tasks/TaskListView';
 import { useState } from 'react';
 import { Plus, Loader2, X, Check } from 'lucide-react';
@@ -14,11 +14,22 @@ export default function ProjectTasksIndex() {
   const [newTitle, setNewTitle] = useState('');
   const [newDesc, setNewDesc] = useState('');
 
-  const { data: tasks, isLoading } = useQuery({
+  const { 
+    data: tasksData, 
+    isLoading, 
+    fetchNextPage, 
+    hasNextPage, 
+    isFetchingNextPage 
+  } = useInfiniteQuery({
     queryKey: ['tasks', projectId],
-    queryFn: () => taskApi.getProjectTasks(projectId!),
+    queryFn: ({ pageParam }) => taskApi.getProjectTasks(projectId!, 20, pageParam), // Batch of 20 for smoother scroll
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (lastPage) => lastPage.hasNextPage ? lastPage.endCursor : undefined,
     enabled: !!projectId,
+    maxPages: 10, // Sliding Window: Keep max 200 tasks in memory
   });
+
+  const allTasks = (tasksData?.pages.flatMap(page => page.tasks) || []);
 
   const { data: links } = useQuery({
     queryKey: ['links', projectId],
@@ -48,7 +59,13 @@ export default function ProjectTasksIndex() {
 
   return (
     <div className="relative">
-      <TaskListView tasks={tasks || []} links={links || []} />
+      <TaskListView 
+        tasks={allTasks} 
+        links={links || []} 
+        hasNextPage={hasNextPage}
+        isFetchingNextPage={isFetchingNextPage}
+        onLoadMore={() => fetchNextPage()}
+      />
 
       {/* Floating Create Task Button */}
       <button

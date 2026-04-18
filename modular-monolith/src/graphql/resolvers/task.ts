@@ -89,8 +89,10 @@ export const taskResolvers = {
             const taskDate = task?.updatedAt;
             return taskDate instanceof Date ? taskDate.toISOString() : taskDate;
         },
-        priority: () => 3, // Default to Medium
-        dueDate: () => null, // Default to no deadline
+        priority: (t: any) => t.priority || 3,
+        dueDate: (t: any) => t.dueDate || null,
+        parentRef: (t: any) => t.parentRef || null,
+        order: (t: any) => t.order || 0,
         project: async (t: any, _: any, context: GraphQLContext) => {
             let projectId = t.projectId;
             if (!projectId) {
@@ -173,12 +175,21 @@ export const taskResolvers = {
             { projectId, first, after, last, before }: any,
             context: GraphQLContext,
         ) => {
+            console.log('--------------------------------------------------');
+            console.log(`[RESOLVER CRITICAL] projectTasks called!`);
+            console.log(`- ProjectID: ${projectId}`);
+            console.log(`- UserID:    ${context.userId}`);
+            console.log('--------------------------------------------------');
+            
             if (!context.userId) throw new Error('Unauthorized');
+            
             const { tasks, nextCursor, prevCursor } = await taskService.getTasks(
                 context.userId,
                 projectId,
                 { first, after, last, before },
             );
+
+            console.log(`[RESOLVER CRITICAL] found ${tasks.length} tasks`);
 
             return {
                 edges: tasks.map((t: ProjectTask) => ({
@@ -238,8 +249,11 @@ export const taskResolvers = {
             { projectId }: any,
             context: GraphQLContext,
         ) => {
+            console.log(`[RESOLVER CRITICAL] projectTaskLinks - projectId: ${projectId}, userId: ${context.userId}`);
             if (!context.userId) throw new Error('Unauthorized');
-            return taskService.getProjectLinks(context.userId, projectId);
+            const links = await taskService.getProjectLinks(context.userId, projectId);
+            console.log(`[RESOLVER CRITICAL] found ${links.length} links`);
+            return links;
         },
     },
 

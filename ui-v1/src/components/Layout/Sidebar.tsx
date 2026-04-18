@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useApi } from '../../context/ApiContext';
 import { Link, useLocation, useNavigate } from '@tanstack/react-router';
+import { useVirtualizer } from '@tanstack/react-virtual';
 import { 
   LayoutDashboard, 
   Settings, 
@@ -107,10 +108,44 @@ export const Sidebar: React.FC = () => {
   const location = useLocation();
   const [showCreateProject, setShowCreateProject] = useState(false);
 
-  const { data: projects } = useQuery({
+  const { 
+    data: projectsData, 
+    fetchNextPage, 
+    hasNextPage, 
+    isFetchingNextPage 
+  } = useInfiniteQuery({
     queryKey: ['projects'],
-    queryFn: () => projectApi.getProjects(),
+    queryFn: ({ pageParam }) => projectApi.getProjects(5, pageParam),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (lastPage) => lastPage.hasNextPage ? lastPage.endCursor : undefined,
   });
+
+  const allProjects = useMemo(() => 
+    projectsData?.pages.flatMap(page => page.projects) || [], 
+    [projectsData]
+  );
+
+  const parentRef = useRef<HTMLElement>(null);
+
+  const rowVirtualizer = useVirtualizer({
+    count: allProjects.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 48,
+    overscan: 10,
+  });
+
+  useEffect(() => {
+    const [lastItem] = [...rowVirtualizer.getVirtualItems()].reverse();
+    if (!lastItem) return;
+
+    if (
+      lastItem.index >= allProjects.length - 1 &&
+      hasNextPage &&
+      !isFetchingNextPage
+    ) {
+      fetchNextPage();
+    }
+  }, [hasNextPage, fetchNextPage, allProjects.length, isFetchingNextPage, rowVirtualizer.getVirtualItems()]);
 
   return (
     <>
@@ -159,8 +194,13 @@ export const Sidebar: React.FC = () => {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-3 pt-6 space-y-1 overflow-y-auto">
-          <SidebarItem to="/" icon={<LayoutDashboard size={14} />} label="Dashboard" active={location.pathname === '/'} />
+        <nav 
+          ref={parentRef}
+          className="flex-1 px-3 pt-6 space-y-1 overflow-y-auto custom-scrollbar"
+        >
+          <div className="mb-1">
+            <SidebarItem to="/" icon={<LayoutDashboard size={14} />} label="Dashboard" active={location.pathname === '/'} />
+          </div>
           
           <div className="px-3 pt-8 pb-2 flex items-center justify-between group">
             <span className="text-[10px] font-bold text-white/20 uppercase tracking-[0.2em]">Workspace</span>
@@ -172,23 +212,51 @@ export const Sidebar: React.FC = () => {
             </button>
           </div>
           
-          <div className="space-y-0.5">
-            {projects?.projects?.map(p => (
-              <SidebarItem 
-                key={p.id} 
-                to="/projects/$projectId" 
-                params={{ projectId: p.id }}
-                label={p.name} 
-                icon={<Hash size={14} className="text-white/20 group-hover:text-white/40 transition-colors" />}
-                active={location.pathname.startsWith(`/projects/${p.id}`)}
-              />
-            ))}
-            {(!projects?.projects || projects.projects.length === 0) && (
-              <div className="px-3 py-3">
-                <p className="text-[11px] text-white/15 font-medium">No projects yet.</p>
-              </div>
-            )}
+          <div 
+            style={{
+              height: `${rowVirtualizer.getTotalSize()}px`,
+              width: '100%',
+              position: 'relative',
+            }}
+          >
+            {rowVirtualizer.getVirtualItems().map((virtualRow) => {
+              const p = allProjects[virtualRow.index];
+              return (
+                <div
+                  key={virtualRow.key}
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: `${virtualRow.size}px`,
+                    transform: `translateY(${virtualRow.start}px)`,
+                  }}
+                  className="py-0.5"
+                >
+                  <SidebarItem 
+                    to="/projects/$projectId" 
+                    params={{ projectId: p.id }}
+                    label={p.name} 
+                    icon={<Hash size={14} className="text-white/20 group-hover:text-white/40 transition-colors" />}
+                    active={location.pathname.startsWith(`/projects/${p.id}`)}
+                  />
+                </div>
+              );
+            })}
           </div>
+
+          {isFetchingNextPage && (
+            <div className="flex items-center justify-center py-4 opacity-20">
+              <Loader2 size={14} className="animate-spin" />
+            </div>
+          )}
+
+          {allProjects.length === 0 && !isFetchingNextPage && (
+            <div className="px-3 py-3">
+              <p className="text-[11px] text-white/15 font-medium">No projects yet.</p>
+            </div>
+          )}
         </nav>
 
         {/* User Footer Section */}

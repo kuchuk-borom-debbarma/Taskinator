@@ -63,10 +63,10 @@ export class GraphQLTaskAPI implements TaskAPI {
     };
   }
 
-  async getProjectTasks(projectId: string): Promise<ProjectTask[]> {
+  async getProjectTasks(projectId: string, first?: number, after?: string): Promise<{ tasks: ProjectTask[], hasNextPage: boolean, endCursor: string | null }> {
     const data = await this.query<GetProjectTasksQuery>(graphql(`
-      query GetProjectTasks($projectId: ID!) {
-        projectTasks(projectId: $projectId) {
+      query GetProjectTasks($projectId: ID!, $first: Int, $after: String) {
+        projectTasks(projectId: $projectId, first: $first, after: $after) {
           edges {
             node {
               id projectId teamId memberId title description status priority dueDate version createdAt updatedAt createdBy
@@ -74,10 +74,19 @@ export class GraphQLTaskAPI implements TaskAPI {
               assignee { id username }
             }
           }
+          pageInfo {
+            hasNextPage
+            endCursor
+          }
         }
       }
-    `), { projectId });
-    return data.projectTasks.edges.map(e => this.mapTask(e.node));
+    `), { projectId, first, after });
+    
+    return {
+      tasks: data.projectTasks.edges.map(e => this.mapTask(e.node)),
+      hasNextPage: data.projectTasks.pageInfo.hasNextPage || false,
+      endCursor: data.projectTasks.pageInfo.endCursor || null
+    };
   }
 
   async getProjectLinks(projectId: string): Promise<TaskLink[]> {

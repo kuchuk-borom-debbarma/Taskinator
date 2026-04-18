@@ -1,6 +1,6 @@
 import type { BaseService } from './index.ts';
 
-export type TaskStatus = 'TODO' | 'IN_PROGRESS' | 'DONE';
+export type TaskStatus = string;
 
 export type ProjectTask = {
     id: string;

@@ -34,5 +34,17 @@ export const yoga = createYoga<GraphQLContext>({
 
         return createContext(userId);
     },
+    plugins: [
+        {
+            onExecute({ args }) {
+                console.log(`[GQL] Executing: ${args.operationName ?? 'Anonymous'}`);
+            },
+            onResponse({ result }) {
+                if (result.errors) {
+                    console.error(`[GQL] Execution Errors:`, JSON.stringify(result.errors, null, 2));
+                }
+            }
+        }
+    ],
     graphiql: true,
 });

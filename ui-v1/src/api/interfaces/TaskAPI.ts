@@ -1,7 +1,7 @@
 import type { ProjectTask, TaskLink, TaskNeighbourhood } from '../types';
 
 export interface TaskAPI {
-  getProjectTasks(projectId: string): Promise<ProjectTask[]>;
+  getProjectTasks(projectId: string, first?: number, after?: string): Promise<{ tasks: ProjectTask[], hasNextPage: boolean, endCursor: string | null }>;
   getProjectLinks(projectId: string): Promise<TaskLink[]>;
   getTask(id: string): Promise<ProjectTask | null>;
   getTaskNeighbourhood(projectId: string, taskId: string, maxDepth?: number, limit?: number, after?: string): Promise<TaskNeighbourhood>;
