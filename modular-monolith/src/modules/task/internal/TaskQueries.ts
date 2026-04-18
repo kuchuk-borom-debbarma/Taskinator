@@ -711,18 +711,18 @@ export const getNeighbourhood = async (
                 CASE
                   WHEN ${isBackward} THEN
                     (min_depth < ${cursorDepth}::int 
-                      OR (min_depth = ${cursorDepth}::int AND createdAt > ${cursorEpoch}::timestamptz)
-                      OR (min_depth = ${cursorDepth}::int AND createdAt = ${cursorEpoch}::timestamptz AND neighbour_id > ${cursorId}::uuid))
+                      OR (min_depth = ${cursorDepth}::int AND "createdAt" > ${cursorEpoch}::timestamptz)
+                      OR (min_depth = ${cursorDepth}::int AND "createdAt" = ${cursorEpoch}::timestamptz AND neighbour_id > ${cursorId}::uuid))
                   ELSE
                     (min_depth > ${cursorDepth}::int 
-                      OR (min_depth = ${cursorDepth}::int AND createdAt < ${cursorEpoch}::timestamptz)
-                      OR (min_depth = ${cursorDepth}::int AND createdAt = ${cursorEpoch}::timestamptz AND neighbour_id < ${cursorId}::uuid))
+                      OR (min_depth = ${cursorDepth}::int AND "createdAt" < ${cursorEpoch}::timestamptz)
+                      OR (min_depth = ${cursorDepth}::int AND "createdAt" = ${cursorEpoch}::timestamptz AND neighbour_id < ${cursorId}::uuid))
                 END
             )
         )
         ORDER BY 
             min_depth ${sql.raw(isBackward ? 'DESC' : 'ASC')}, 
-            createdAt ${sql.raw(isBackward ? 'ASC' : 'DESC')}, 
+            "createdAt" ${sql.raw(isBackward ? 'ASC' : 'DESC')}, 
             neighbour_id ${sql.raw(isBackward ? 'ASC' : 'DESC')}
         LIMIT ${limit + 1}
     `.execute(db);

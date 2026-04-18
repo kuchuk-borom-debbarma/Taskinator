@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useApi } from '../../hooks/useApi';
 import { TaskMap } from '../Graph/TaskMap';
 import { TaskMapModal } from '../Graph/TaskMapModal';
-import { ChevronLeft, Calendar, Map, Layers, Users, User, Clock, CheckCircle2, Type, Copy, Circle, Edit3, Check, X } from 'lucide-react';
+import { ChevronLeft, Calendar, Map as MapIcon, Layers, Users, User, Clock, CheckCircle2, Type, Copy, Circle, Edit3, Check, X } from 'lucide-react';
 import { TaskLinkColumn } from './TaskLinkColumn';
 
 interface TaskDetailViewProps {
@@ -191,11 +191,6 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
             isDimmed={!task.assignee}
           />
           <PropertyBlock 
-            icon={<User size={14} />} 
-            label="Creator" 
-            value={task.createdById || 'System'} 
-          />
-          <PropertyBlock 
             icon={<Calendar size={14} />} 
             label="Created" 
             value={new Date(task.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })} 
@@ -205,6 +200,29 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
             label="Updated" 
             value={new Date(task.updatedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })} 
           />
+
+          {/* Semantic Tags Section */}
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-2 text-text-dim opacity-50">
+              <MapIcon size={14} />
+              <span className="text-[11px] font-bold uppercase tracking-wider">Semantic Tags</span>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {(() => {
+                const labelMap = new Map<string, number>();
+                [...(task.incomingLabelCounts || []), ...(task.outgoingLabelCounts || [])].forEach(lc => {
+                  labelMap.set(lc.label, (labelMap.get(lc.label) || 0) + lc.count);
+                });
+                const labels = Array.from(labelMap.entries());
+                if (labels.length === 0) return <span className="text-[13px] font-medium text-text-dim opacity-40 italic">No connections</span>;
+                return labels.map(([label, count]) => (
+                  <span key={label} className="text-[10px] font-black uppercase tracking-wider text-focus-blue bg-focus-blue/10 px-2 py-0.5 rounded border border-focus-blue/20">
+                    {label} <span className="opacity-40 ml-0.5">({count})</span>
+                  </span>
+                ));
+              })()}
+            </div>
+          </div>
         </section>
 
         {/* ─── SUPPORTING CONTENT ─── */}
@@ -230,7 +248,7 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
                 onClick={() => setIsMapOpen(true)}
                 className="flex items-center gap-2 px-4 py-2 bg-bg-secondary hover:bg-focus-blue/10 border border-border-notion hover:border-focus-blue/40 rounded-xl text-[12px] font-bold text-text-notion transition-all group"
               >
-                <Map size={14} className="group-hover:text-focus-blue" />
+                <MapIcon size={14} className="group-hover:text-focus-blue" />
                 Open Global Map
               </button>
             </div>
