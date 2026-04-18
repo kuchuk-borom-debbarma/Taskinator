@@ -380,21 +380,18 @@ export const getTasksPage = async (
     const isBackward = !!before;
     const cursor = before || after;
 
-    let cursorDate: string | null = null;
+    let cursorEpoch: string | null = null;
     let cursorId: string | null = null;
 
-    if (cursor && cursor.includes('|')) {
-        const parts = cursor.split('|');
-        if (parts.length === 2) {
-            cursorDate = parts[0]!;
-            cursorId = parts[1]!;
-        }
+    if (cursor) {
+        const decoded = decodeCursor(cursor);
+        cursorEpoch = decoded.timeValue;
+        cursorId = decoded.id;
     }
 
     console.log(`[TaskQueries] getTasksPage - User: ${userId}, Project: ${projectId}, cursor: ${cursor}, isBackward: ${isBackward}, limit: ${limit}`);
 
-    console.log(`[SQL CRITICAL] Executing getTasksPage query...`);
-    const result = await sql<ProjectTask>`
+    const result = await sql<ProjectTask & { epochPrecision: string }>`
         WITH auth_check AS (
             SELECT 1 FROM project WHERE id = ${projectId}::uuid AND fk_user_id = ${userId}::text
             UNION ALL
@@ -414,33 +411,23 @@ export const getTasksPage = async (
             created_by AS "createdBy",
             updated_by AS "updatedBy",
             created_at AS "createdAt",
-            TO_CHAR(created_at, 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as "createdAtPrecision",
-            updated_at AS "updatedAt",
-            (SELECT count(*) FROM auth_check) as "hasAccess"
+            (EXTRACT(EPOCH FROM created_at) * 1000000)::bigint::text as "epochPrecision",
+            updated_at AS "updatedAt"
         FROM project_task
         WHERE fk_project_id = ${projectId}::uuid
           AND EXISTS (SELECT 1 FROM auth_check)
           AND (
-            ${cursorDate}::timestamptz IS NULL 
+            ${cursorEpoch}::bigint IS NULL 
             OR (
                 CASE 
-                  WHEN ${isBackward} THEN (created_at > ${cursorDate}::timestamptz OR (created_at = ${cursorDate}::timestamptz AND id > ${cursorId}::uuid))
-                  ELSE (created_at < ${cursorDate}::timestamptz OR (created_at = ${cursorDate}::timestamptz AND id < ${cursorId}::uuid))
+                  WHEN ${isBackward} THEN ((EXTRACT(EPOCH FROM created_at) * 1000000)::bigint > ${cursorEpoch}::bigint OR ((EXTRACT(EPOCH FROM created_at) * 1000000)::bigint = ${cursorEpoch}::bigint AND id > ${cursorId}::uuid))
+                  ELSE ((EXTRACT(EPOCH FROM created_at) * 1000000)::bigint < ${cursorEpoch}::bigint OR ((EXTRACT(EPOCH FROM created_at) * 1000000)::bigint = ${cursorEpoch}::bigint AND id < ${cursorId}::uuid))
                 END
             )
           )
         ORDER BY created_at ${sql.raw(isBackward ? 'ASC' : 'DESC')}, id ${sql.raw(isBackward ? 'ASC' : 'DESC')}
         LIMIT ${limit + 1}
     `.execute(db);
-
-    const hasAccess = result.rows.length > 0 ? (result.rows[0] as any).hasAccess : null;
-    console.log(`[SQL CRITICAL] Result rows: ${result.rows.length}, Access check: ${hasAccess}`);
-    
-    if (result.rows.length === 0) {
-        // Fallback check to see if project exists at all
-        const projectExists = await sql`SELECT 1 FROM project WHERE id = ${projectId}::uuid`.execute(db);
-        console.log(`[SQL CRITICAL] Secondary Check - Project ${projectId} exists: ${projectExists.rows.length > 0}`);
-    }
 
     let rows = result.rows;
     const hasMore = rows.length > limit;
@@ -457,15 +444,15 @@ export const getTasksPage = async (
     if (rows.length > 0) {
         const first = rows[0]!;
         const last = rows[rows.length - 1]!;
-        const firstDateStr = (first as any).createdAtPrecision;
-        const lastDateStr = (last as any).createdAtPrecision;
+        const firstEpoch = (first as any).epochPrecision;
+        const lastEpoch = (last as any).epochPrecision;
 
         if (isBackward) {
-            nextCursor = `${lastDateStr}|${last.id}`;
-            prevCursor = hasMore ? `${firstDateStr}|${first.id}` : null;
+            nextCursor = encodeCursor(lastEpoch, last.id);
+            prevCursor = hasMore ? encodeCursor(firstEpoch, first.id) : null;
         } else {
-            nextCursor = hasMore ? `${lastDateStr}|${last.id}` : null;
-            prevCursor = after ? `${firstDateStr}|${first.id}` : null;
+            nextCursor = hasMore ? encodeCursor(lastEpoch, last.id) : null;
+            prevCursor = after ? encodeCursor(firstEpoch, first.id) : null;
         }
     }
 
@@ -516,22 +503,20 @@ export const getTaskLinksPage = async (
     const isBackward = !!before;
     const cursor = before || after;
 
-    let cursorDate: string | null = null;
+    let cursorEpoch: string | null = null;
     let cursorId: string | null = null;
 
-    if (cursor && cursor.includes('|')) {
-        const parts = cursor.split('|');
-        if (parts.length === 2) {
-            cursorDate = parts[0]!;
-            cursorId = parts[1]!;
-        }
+    if (cursor) {
+        const decoded = decodeCursor(cursor);
+        cursorEpoch = decoded.timeValue;
+        cursorId = decoded.id;
     }
 
     // incoming: links pointing TO this task (target_task_id = taskId)
     // outgoing: links pointing FROM this task (source_task_id = taskId)
     const filterCol = direction === 'incoming' ? 'target_task_id' : 'source_task_id';
 
-    const result = await sql<TaskLink>`
+    const result = await sql<TaskLink & { epochPrecision: string }>`
         WITH auth_check AS (
             SELECT 1 FROM project WHERE id = ${projectId}::uuid AND fk_user_id = ${userId}::text
             UNION ALL
@@ -546,17 +531,17 @@ export const getTaskLinksPage = async (
             label,
             created_by AS "createdBy",
             created_at AS "createdAt",
-            TO_CHAR(created_at, 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as "createdAtPrecision"
+            (EXTRACT(EPOCH FROM created_at) * 1000000)::bigint::text as "epochPrecision"
         FROM task_link
         WHERE fk_project_id = ${projectId}::uuid
           AND ${sql.raw(filterCol)} = ${taskId}::uuid
           AND EXISTS (SELECT 1 FROM auth_check)
           AND (
-            ${cursorDate}::timestamptz IS NULL
+            ${cursorEpoch}::bigint IS NULL
             OR (
                 CASE
-                  WHEN ${isBackward} THEN (created_at > ${cursorDate}::timestamptz OR (created_at = ${cursorDate}::timestamptz AND id > ${cursorId}::uuid))
-                  ELSE (created_at < ${cursorDate}::timestamptz OR (created_at = ${cursorDate}::timestamptz AND id < ${cursorId}::uuid))
+                  WHEN ${isBackward} THEN ((EXTRACT(EPOCH FROM created_at) * 1000000)::bigint > ${cursorEpoch}::bigint OR ((EXTRACT(EPOCH FROM created_at) * 1000000)::bigint = ${cursorEpoch}::bigint AND id > ${cursorId}::uuid))
+                  ELSE ((EXTRACT(EPOCH FROM created_at) * 1000000)::bigint < ${cursorEpoch}::bigint OR ((EXTRACT(EPOCH FROM created_at) * 1000000)::bigint = ${cursorEpoch}::bigint AND id < ${cursorId}::uuid))
                 END
             )
           )
@@ -575,15 +560,15 @@ export const getTaskLinksPage = async (
     if (rows.length > 0) {
         const first = rows[0]!;
         const last = rows[rows.length - 1]!;
-        const firstDateStr = (first as any).createdAtPrecision;
-        const lastDateStr = (last as any).createdAtPrecision;
+        const firstEpoch = (first as any).epochPrecision;
+        const lastEpoch = (last as any).epochPrecision;
 
         if (isBackward) {
-            nextCursor = `${lastDateStr}|${last.id}`;
-            prevCursor = hasMore ? `${firstDateStr}|${first.id}` : null;
+            nextCursor = encodeCursor(lastEpoch, last.id);
+            prevCursor = hasMore ? encodeCursor(firstEpoch, first.id) : null;
         } else {
-            nextCursor = hasMore ? `${lastDateStr}|${last.id}` : null;
-            prevCursor = after ? `${firstDateStr}|${first.id}` : null;
+            nextCursor = hasMore ? encodeCursor(lastEpoch, last.id) : null;
+            prevCursor = after ? encodeCursor(firstEpoch, first.id) : null;
         }
     }
 
@@ -602,16 +587,14 @@ export const getNeighbourhood = async (
     let cursorCreatedAt: string | null = null;
     let cursorId: string | null = null;
 
-    if (cursor && cursor.includes('|')) {
-        const parts = cursor.split('|');
-        if (parts.length === 3) {
+    if (cursor) {
+        const decoded = decodeCursor(cursor);
+        const parts = decoded.timeValue.split('|');
+        if (parts.length === 2) {
             cursorDepth = parseInt(parts[0]!, 10);
-            cursorCreatedAt = parts[1]!;
-            cursorId = parts[2]!;
-        } else if (parts.length === 2) {
-            cursorDepth = parseInt(parts[0]!, 10);
-            cursorId = parts[1]!;
+            cursorEpoch = parts[1]!;
         }
+        cursorId = decoded.id;
     }
 
     // ── Step 1: Paginate neighbours from task_reachability ──────────────────
@@ -621,6 +604,7 @@ export const getNeighbourhood = async (
         neighbour_id: string; 
         min_depth: number; 
         direction: string; 
+        epochPrecision: string;
         
         // Hydrated fields from project_task
         id: string;
@@ -695,6 +679,7 @@ export const getNeighbourhood = async (
                 t.created_by AS "createdBy",
                 t.updated_by AS "updatedBy",
                 t.created_at AS "createdAt",
+                (EXTRACT(EPOCH FROM t.created_at) * 1000000)::bigint::text as "epochPrecision",
                 t.updated_at AS "updatedAt",
                 t.direct_incoming_count AS "directIncomingCount",
                 t.direct_outgoing_count AS "directOutgoingCount",
@@ -713,19 +698,19 @@ export const getNeighbourhood = async (
                 CASE
                   WHEN ${isBackward} THEN
                     (min_depth < ${cursorDepth}::int 
-                      OR (min_depth = ${cursorDepth}::int AND "createdAt" > ${cursorCreatedAt}::timestamp)
-                      OR (min_depth = ${cursorDepth}::int AND "createdAt" = ${cursorCreatedAt}::timestamp AND neighbour_id < ${cursorId}::uuid))
+                      OR (min_depth = ${cursorDepth}::int AND "epochPrecision"::bigint > ${cursorEpoch}::bigint)
+                      OR (min_depth = ${cursorDepth}::int AND "epochPrecision"::bigint = ${cursorEpoch}::bigint AND neighbour_id > ${cursorId}::uuid))
                   ELSE
                     (min_depth > ${cursorDepth}::int 
-                      OR (min_depth = ${cursorDepth}::int AND "createdAt" < ${cursorCreatedAt}::timestamp)
-                      OR (min_depth = ${cursorDepth}::int AND "createdAt" = ${cursorCreatedAt}::timestamp AND neighbour_id > ${cursorId}::uuid))
+                      OR (min_depth = ${cursorDepth}::int AND "epochPrecision"::bigint < ${cursorEpoch}::bigint)
+                      OR (min_depth = ${cursorDepth}::int AND "epochPrecision"::bigint = ${cursorEpoch}::bigint AND neighbour_id < ${cursorId}::uuid))
                 END
             )
         )
         ORDER BY 
             min_depth ${sql.raw(isBackward ? 'DESC' : 'ASC')}, 
-            "createdAt" ${sql.raw(isBackward ? 'ASC' : 'DESC')}, 
-            neighbour_id ${sql.raw(isBackward ? 'DESC' : 'ASC')}
+            "epochPrecision" ${sql.raw(isBackward ? 'ASC' : 'DESC')}, 
+            neighbour_id ${sql.raw(isBackward ? 'ASC' : 'DESC')}
         LIMIT ${limit + 1}
     `.execute(db);
 
@@ -743,11 +728,11 @@ export const getNeighbourhood = async (
         const last = reachRows[reachRows.length - 1]!;
 
         if (isBackward) {
-            nextCursor = `${last.min_depth}|${(last as any).task.createdAtPrecision}|${last.neighbour_id}`;
-            prevCursor = hasMore ? `${first.min_depth}|${(first as any).task.createdAtPrecision}|${first.neighbour_id}` : null;
+            nextCursor = encodeCursor(`${last.min_depth}|${(last as any).epochPrecision}`, last.neighbour_id);
+            prevCursor = hasMore ? encodeCursor(`${first.min_depth}|${(first as any).epochPrecision}`, first.neighbour_id) : null;
         } else {
-            nextCursor = hasMore ? `${last.min_depth}|${(last as any).task.createdAtPrecision}|${last.neighbour_id}` : null;
-            prevCursor = params.after ? `${first.min_depth}|${(first as any).task.createdAtPrecision}|${first.neighbour_id}` : null;
+            nextCursor = hasMore ? encodeCursor(`${last.min_depth}|${(last as any).epochPrecision}`, last.neighbour_id) : null;
+            prevCursor = params.after ? encodeCursor(`${first.min_depth}|${(first as any).epochPrecision}`, first.neighbour_id) : null;
         }
     }
 

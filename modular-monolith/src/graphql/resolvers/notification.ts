@@ -1,6 +1,8 @@
 import { internalNotificationService as notificationService } from '../../modules/internal-notification';
+import { projectService } from '../../modules/project';
 import { pubsub } from '../pubsub';
 import { UnauthorizedError } from '../errors';
+import { encodeCursor } from '../../utils/utils.ts';
 import type { GraphQLContext } from '../context';
 
 export const notificationResolvers = {
@@ -23,16 +25,9 @@ export const notificationResolvers = {
                 await notificationService.getNotifications(context.userId, args);
 
             return {
-                edges: notifications.map((n: any) => ({
-                    node: {
-                        ...n,
-                        metadata: n.metadata
-                            ? typeof n.metadata === 'string' 
-                                ? n.metadata 
-                                : JSON.stringify(n.metadata)
-                            : null,
-                    },
-                    cursor: `${n.createdAtPrecision || (n.createdAt instanceof Date ? n.createdAt.toISOString() : n.createdAt)}|${n.id}`,
+                edges: notifications.map((n: any) => ({ 
+                    node: n, 
+                    cursor: encodeCursor(n.epochPrecision, n.id) 
                 })),
                 pageInfo: {
                     hasNextPage: !!nextCursor,

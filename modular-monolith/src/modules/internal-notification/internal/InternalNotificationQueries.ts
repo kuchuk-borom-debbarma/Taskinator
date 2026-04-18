@@ -62,6 +62,9 @@ export const insertNotification = async (
     return result.rows[0];
 };
 
+import { decodeCursor, encodeCursor, getTimeString } from '../../../utils/utils.ts';
+// ... (rest of imports)
+
 export const getNotifications = async (
     userId: string,
     params: { first?: number; after?: string; last?: number; before?: string } = {},
@@ -75,18 +78,16 @@ export const getNotifications = async (
     const isBackward = !!before;
     const cursor = before || after;
 
-    let cursorDate: string | null = null;
+    let cursorEpoch: string | null = null;
     let cursorId: string | null = null;
 
-    if (cursor && cursor.includes('|')) {
-        const parts = cursor.split('|');
-        if (parts.length === 2) {
-            cursorDate = parts[0]!;
-            cursorId = parts[1]!;
-        }
+    if (cursor) {
+        const decoded = decodeCursor(cursor);
+        cursorEpoch = decoded.timeValue;
+        cursorId = decoded.id;
     }
 
-    const result = await sql<any>`
+    const result = await sql<InternalNotification & { epochPrecision: string }>`
         SELECT 
             id,
             fk_user_id AS "userId",
@@ -96,16 +97,16 @@ export const getNotifications = async (
             metadata,
             is_read AS "isRead",
             created_at AS "createdAt",
-            TO_CHAR(created_at, 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as "createdAtPrecision",
+            (EXTRACT(EPOCH FROM created_at) * 1000000)::bigint::text as "epochPrecision",
             read_at AS "readAt"
         FROM internal_notification
         WHERE fk_user_id = ${userId}::text
           AND (
-              ${cursorDate}::timestamptz IS NULL
+              ${cursorEpoch}::bigint IS NULL
               OR (
                   CASE 
-                    WHEN ${isBackward} THEN (created_at > ${cursorDate}::timestamptz OR (created_at = ${cursorDate}::timestamptz AND id > ${cursorId}::uuid))
-                    ELSE (created_at < ${cursorDate}::timestamptz OR (created_at = ${cursorDate}::timestamptz AND id < ${cursorId}::uuid))
+                    WHEN ${isBackward} THEN ((EXTRACT(EPOCH FROM created_at) * 1000000)::bigint > ${cursorEpoch}::bigint OR ((EXTRACT(EPOCH FROM created_at) * 1000000)::bigint = ${cursorEpoch}::bigint AND id > ${cursorId}::uuid))
+                    ELSE ((EXTRACT(EPOCH FROM created_at) * 1000000)::bigint < ${cursorEpoch}::bigint OR ((EXTRACT(EPOCH FROM created_at) * 1000000)::bigint = ${cursorEpoch}::bigint AND id < ${cursorId}::uuid))
                   END
               )
           )
@@ -129,16 +130,15 @@ export const getNotifications = async (
     if (notifications.length > 0) {
         const first = notifications[0]!;
         const last = notifications[notifications.length - 1]!;
-        const firstDateStr = last.createdAtPrecision; // wait, first is first, last is last
-        const fDate = first.createdAtPrecision;
-        const lDate = last.createdAtPrecision;
+        const firstEpoch = (first as any).epochPrecision;
+        const lastEpoch = (last as any).epochPrecision;
 
         if (isBackward) {
-            nextCursor = `${lDate}|${last.id}`;
-            prevCursor = hasMore ? `${fDate}|${first.id}` : null;
+            nextCursor = encodeCursor(lastEpoch, last.id);
+            prevCursor = hasMore ? encodeCursor(firstEpoch, first.id) : null;
         } else {
-            nextCursor = hasMore ? `${lDate}|${last.id}` : null;
-            prevCursor = after ? `${fDate}|${first.id}` : null;
+            nextCursor = hasMore ? encodeCursor(lastEpoch, last.id) : null;
+            prevCursor = after ? encodeCursor(firstEpoch, first.id) : null;
         }
     }
 

@@ -2,6 +2,7 @@ import type { GraphQLContext } from '../context.ts';
 import { projectService } from '../../modules/project';
 import { resolveProject, resolveUser, buildRef } from './helpers.ts';
 import { UnauthorizedError } from '../errors';
+import { encodeCursor } from '../../utils/utils.ts';
 
 export const projectResolvers = {
     Project: {
@@ -51,7 +52,7 @@ export const projectResolvers = {
             return {
                 edges: projects.map((p: any) => ({
                     node: p,
-                    cursor: `${p.createdAtPrecision || (p.createdAt instanceof Date ? p.createdAt.toISOString() : p.createdAt)}|${p.id}`,
+                    cursor: encodeCursor(p.epochPrecision, p.id),
                 })),
                 pageInfo: {
                     hasNextPage: !!nextCursor,
@@ -80,7 +81,7 @@ export const projectResolvers = {
             return {
                 edges: members.map((m: any) => ({ 
                     node: m, 
-                    cursor: `${m.createdAtPrecision || (m.createdAt instanceof Date ? m.createdAt.toISOString() : m.createdAt)}|${m.id}` 
+                    cursor: encodeCursor(m.epochPrecision, m.id) 
                 })),
                 pageInfo: {
                     hasNextPage: !!nextCursor,

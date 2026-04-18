@@ -222,6 +222,7 @@ export const deleteAllProjectMembers = async (projectId: string) => {
         .where('fk_project_id', '=', sql`${projectId}::uuid` as any)
         .execute();
 };
+import { decodeCursor, encodeCursor, getTimeString } from '../../../utils/utils.ts';
 
 export const getProjects = async (
     userId: string,
@@ -232,18 +233,16 @@ export const getProjects = async (
     const isBackward = !!before;
     const cursor = before || after;
 
-    let cursorDate: string | null = null;
+    let cursorEpoch: string | null = null;
     let cursorId: string | null = null;
 
-    if (cursor && cursor.includes('|')) {
-        const parts = cursor.split('|');
-        if (parts.length === 2) {
-            cursorDate = parts[0]!;
-            cursorId = parts[1]!;
-        }
+    if (cursor) {
+        const decoded = decodeCursor(cursor);
+        cursorEpoch = decoded.timeValue;
+        cursorId = decoded.id;
     }
 
-    const result = await sql<Project & { isOwner: boolean }>`
+    const result = await sql<Project & { isOwner: boolean; epochPrecision: string }>`
         WITH combined_projects AS (
             SELECT p.*, true as is_owner
             FROM project p
@@ -263,16 +262,16 @@ export const getProjects = async (
             version,
             last_event_id AS "lastEventId",
             created_at AS "createdAt",
-            TO_CHAR(created_at, 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as "createdAtPrecision",
+            (EXTRACT(EPOCH FROM created_at) * 1000000)::bigint::text as "epochPrecision",
             updated_at AS "updatedAt",
             is_owner AS "isOwner"
         FROM combined_projects
         WHERE (
-            ${cursorDate}::timestamptz IS NULL 
+            ${cursorEpoch}::bigint IS NULL 
             OR (
                 CASE 
-                  WHEN ${isBackward} THEN (created_at > ${cursorDate}::timestamptz OR (created_at = ${cursorDate}::timestamptz AND id > ${cursorId}::uuid))
-                  ELSE (created_at < ${cursorDate}::timestamptz OR (created_at = ${cursorDate}::timestamptz AND id < ${cursorId}::uuid))
+                  WHEN ${isBackward} THEN ((EXTRACT(EPOCH FROM created_at) * 1000000)::bigint > ${cursorEpoch}::bigint OR ((EXTRACT(EPOCH FROM created_at) * 1000000)::bigint = ${cursorEpoch}::bigint AND id > ${cursorId}::uuid))
+                  ELSE ((EXTRACT(EPOCH FROM created_at) * 1000000)::bigint < ${cursorEpoch}::bigint OR ((EXTRACT(EPOCH FROM created_at) * 1000000)::bigint = ${cursorEpoch}::bigint AND id < ${cursorId}::uuid))
                 END
             )
         )
@@ -296,15 +295,15 @@ export const getProjects = async (
     if (projects.length > 0) {
         const first = projects[0]!;
         const last = projects[projects.length - 1]!;
-        const firstDateStr = (first as any).createdAtPrecision;
-        const lastDateStr = (last as any).createdAtPrecision;
+        const firstEpoch = (first as any).epochPrecision;
+        const lastEpoch = (last as any).epochPrecision;
 
         if (isBackward) {
-            nextCursor = `${lastDateStr}|${last.id}`;
-            prevCursor = hasMore ? `${firstDateStr}|${first.id}` : null;
+            nextCursor = encodeCursor(lastEpoch, last.id);
+            prevCursor = hasMore ? encodeCursor(firstEpoch, first.id) : null;
         } else {
-            nextCursor = hasMore ? `${lastDateStr}|${last.id}` : null;
-            prevCursor = after ? `${firstDateStr}|${first.id}` : null;
+            nextCursor = hasMore ? encodeCursor(lastEpoch, last.id) : null;
+            prevCursor = after ? encodeCursor(firstEpoch, first.id) : null;
         }
     }
 
@@ -351,18 +350,16 @@ export const getProjectMembers = async (
     const isBackward = !!before;
     const cursor = before || after;
 
-    let cursorDate: string | null = null;
+    let cursorEpoch: string | null = null;
     let cursorId: string | null = null;
 
-    if (cursor && cursor.includes('|')) {
-        const parts = cursor.split('|');
-        if (parts.length === 2) {
-            cursorDate = parts[0]!;
-            cursorId = parts[1]!;
-        }
+    if (cursor) {
+        const decoded = decodeCursor(cursor);
+        cursorEpoch = decoded.timeValue;
+        cursorId = decoded.id;
     }
 
-    const result = await sql<ProjectMember>`
+    const result = await sql<ProjectMember & { epochPrecision: string }>`
         WITH auth_check AS (
             SELECT 1 FROM project WHERE id = ${projectId}::uuid AND fk_user_id = ${userId}::text
             UNION ALL
@@ -376,17 +373,17 @@ export const getProjectMembers = async (
             version, 
             last_event_id AS "lastEventId", 
             created_at AS "createdAt", 
-            TO_CHAR(created_at, 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as "createdAtPrecision",
+            (EXTRACT(EPOCH FROM created_at) * 1000000)::bigint::text as "epochPrecision",
             updated_at AS "updatedAt"
         FROM project_member
         WHERE fk_project_id = ${projectId}::uuid
           AND EXISTS (SELECT 1 FROM auth_check)
           AND (
-              ${cursorDate}::timestamptz IS NULL
+              ${cursorEpoch}::bigint IS NULL
               OR (
                   CASE 
-                    WHEN ${isBackward} THEN (created_at > ${cursorDate}::timestamptz OR (created_at = ${cursorDate}::timestamptz AND id > ${cursorId}::uuid))
-                    ELSE (created_at < ${cursorDate}::timestamptz OR (created_at = ${cursorDate}::timestamptz AND id < ${cursorId}::uuid))
+                    WHEN ${isBackward} THEN ((EXTRACT(EPOCH FROM created_at) * 1000000)::bigint > ${cursorEpoch}::bigint OR ((EXTRACT(EPOCH FROM created_at) * 1000000)::bigint = ${cursorEpoch}::bigint AND id > ${cursorId}::uuid))
+                    ELSE ((EXTRACT(EPOCH FROM created_at) * 1000000)::bigint < ${cursorEpoch}::bigint OR ((EXTRACT(EPOCH FROM created_at) * 1000000)::bigint = ${cursorEpoch}::bigint AND id < ${cursorId}::uuid))
                   END
               )
           )
@@ -410,15 +407,15 @@ export const getProjectMembers = async (
     if (members.length > 0) {
         const first = members[0]!;
         const last = members[members.length - 1]!;
-        const fDate = (first as any).createdAtPrecision;
-        const lDate = (last as any).createdAtPrecision;
+        const firstEpoch = (first as any).epochPrecision;
+        const lastEpoch = (last as any).epochPrecision;
 
         if (isBackward) {
-            nextCursor = `${lDate}|${last.id}`;
-            prevCursor = hasMore ? `${fDate}|${first.id}` : null;
+            nextCursor = encodeCursor(lastEpoch, last.id);
+            prevCursor = hasMore ? encodeCursor(firstEpoch, first.id) : null;
         } else {
-            nextCursor = hasMore ? `${lDate}|${last.id}` : null;
-            prevCursor = after ? `${fDate}|${first.id}` : null;
+            nextCursor = hasMore ? encodeCursor(lastEpoch, last.id) : null;
+            prevCursor = after ? encodeCursor(firstEpoch, first.id) : null;
         }
     }
 
@@ -445,7 +442,7 @@ export const searchProjectMembers = async (params: {
     last?: number;
     before?: string;
 }): Promise<{
-    users: { id: string; username: string; email: string }[];
+    users: { id: string; username: string; email: string; epochPrecision: string }[];
     nextCursor: string | null;
     prevCursor: string | null;
 }> => {
@@ -455,7 +452,16 @@ export const searchProjectMembers = async (params: {
     const cursor = before || after;
     const limit = Math.min(params.first || params.last || 5, 50);
 
-    const rows = await sql<{ id: string; username: string; email: string; createdAtPrecision: string }>`
+    let cursorEpoch: string | null = null;
+    let cursorId: string | null = null;
+
+    if (cursor) {
+        const decoded = decodeCursor(cursor);
+        cursorEpoch = decoded.timeValue;
+        cursorId = decoded.id;
+    }
+
+    const rows = await sql<{ id: string; username: string; email: string; epochPrecision: string }>`
         WITH auth_check AS (
             SELECT 1 FROM project WHERE id = ${params.projectId}::uuid AND fk_user_id = ${params.actorId}
             UNION ALL
@@ -481,7 +487,7 @@ export const searchProjectMembers = async (params: {
         )
         SELECT 
             id, username, email,
-            TO_CHAR(created_at, 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as "createdAtPrecision"
+            (EXTRACT(EPOCH FROM created_at) * 1000000)::bigint::text as "epochPrecision"
         FROM all_eligible_users
         WHERE EXISTS (SELECT 1 FROM auth_check)
           AND (
@@ -490,11 +496,11 @@ export const searchProjectMembers = async (params: {
             OR id::text = ${search}
           )
           AND (
-            ${cursorDate}::timestamptz IS NULL
+            ${cursorEpoch}::bigint IS NULL
             OR (
                 CASE 
-                  WHEN ${isBackward} THEN (created_at > ${cursorDate}::timestamptz OR (created_at = ${cursorDate}::timestamptz AND id > ${cursorId}::uuid))
-                  ELSE (created_at < ${cursorDate}::timestamptz OR (created_at = ${cursorDate}::timestamptz AND id < ${cursorId}::uuid))
+                  WHEN ${isBackward} THEN ((EXTRACT(EPOCH FROM created_at) * 1000000)::bigint > ${cursorEpoch}::bigint OR ((EXTRACT(EPOCH FROM created_at) * 1000000)::bigint = ${cursorEpoch}::bigint AND id > ${cursorId}::uuid))
+                  ELSE ((EXTRACT(EPOCH FROM created_at) * 1000000)::bigint < ${cursorEpoch}::bigint OR ((EXTRACT(EPOCH FROM created_at) * 1000000)::bigint = ${cursorEpoch}::bigint AND id < ${cursorId}::uuid))
                 END
             )
           )
@@ -518,15 +524,15 @@ export const searchProjectMembers = async (params: {
     if (users.length > 0) {
         const first = users[0]!;
         const last = users[users.length - 1]!;
-        const fDate = first.createdAtPrecision;
-        const lDate = last.createdAtPrecision;
+        const firstEpoch = first.epochPrecision;
+        const lastEpoch = last.epochPrecision;
 
         if (isBackward) {
-            nextCursor = `${lDate}|${last.id}`;
-            prevCursor = hasMore ? `${fDate}|${first.id}` : null;
+            nextCursor = encodeCursor(lastEpoch, last.id);
+            prevCursor = hasMore ? encodeCursor(firstEpoch, first.id) : null;
         } else {
-            nextCursor = hasMore ? `${lDate}|${last.id}` : null;
-            prevCursor = after ? `${fDate}|${first.id}` : null;
+            nextCursor = hasMore ? encodeCursor(lastEpoch, last.id) : null;
+            prevCursor = after ? encodeCursor(firstEpoch, first.id) : null;
         }
     }
 
