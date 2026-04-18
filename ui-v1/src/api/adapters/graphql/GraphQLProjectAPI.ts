@@ -114,4 +114,39 @@ export class GraphQLProjectAPI implements ProjectAPI {
     `), { name, description });
     return data.createProject as Project;
   }
+
+  async deleteProjects(projectIds: string[]): Promise<{ success: boolean; deletedCount: number }> {
+    const data = await this.query<any>(`
+      mutation DeleteProjects($projectIds: [ID!]!) {
+        deleteProjects(projectIds: $projectIds) {
+          success
+          deletedCount
+        }
+      }
+    `, { projectIds });
+    return data.deleteProjects;
+  }
+
+  async addProjectMembers(projectId: string, userIds: string[]): Promise<{ success: boolean }> {
+    const data = await this.query<any>(`
+      mutation AddProjectMembers($projectId: ID!, $userIds: [String!]!) {
+        addProjectMembers(projectId: $projectId, userIds: $userIds) {
+          success
+        }
+      }
+    `, { projectId, userIds });
+    return data.addProjectMembers;
+  }
+
+  async removeProjectMembers(projectId: string, memberIds: string[]): Promise<{ success: boolean; removedCount: number }> {
+    const data = await this.query<any>(`
+      mutation RemoveProjectMembers($projectId: ID!, $memberIds: [ID!]!) {
+        removeProjectMembers(projectId: $projectId, memberIds: $memberIds) {
+          success
+          removedCount
+        }
+      }
+    `, { projectId, memberIds });
+    return data.removeProjectMembers;
+  }
 }

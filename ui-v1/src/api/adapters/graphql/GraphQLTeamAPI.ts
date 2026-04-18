@@ -53,10 +53,10 @@ export class GraphQLTeamAPI implements TeamAPI {
     return result.data as T;
   }
 
-  async getTeams(projectId: string): Promise<Team[]> {
+  async getTeams(projectId: string, first?: number, after?: string): Promise<{ teams: Team[], hasNextPage: boolean, endCursor: string | null }> {
     const data = await this.query<GetTeamsQuery>(graphql(`
-      query GetTeams($projectId: ID!) {
-        teams(projectId: $projectId) {
+      query GetTeams($projectId: ID!, $first: Int, $after: String) {
+        teams(projectId: $projectId, first: $first, after: $after) {
           edges {
             node {
               id
@@ -64,16 +64,25 @@ export class GraphQLTeamAPI implements TeamAPI {
               projectId
             }
           }
+          pageInfo {
+            hasNextPage
+            endCursor
+          }
         }
       }
-    `), { projectId });
-    return data.teams.edges.map((e: any) => e.node);
+    `), { projectId, first, after });
+    
+    return {
+      teams: data.teams.edges.map(e => e.node),
+      hasNextPage: data.teams.pageInfo.hasNextPage,
+      endCursor: data.teams.pageInfo.endCursor || null
+    };
   }
 
-  async getTeamMembers(projectId: string, teamId: string): Promise<Member[]> {
+  async getTeamMembers(projectId: string, teamId: string, first?: number, after?: string): Promise<{ members: Member[], hasNextPage: boolean, endCursor: string | null }> {
     const data = await this.query<GetTeamMembersQuery>(graphql(`
-      query GetTeamMembers($projectId: ID!, $teamId: ID!) {
-        teamMembers(projectId: $projectId, teamId: $teamId) {
+      query GetTeamMembers($projectId: ID!, $teamId: ID!, $first: Int, $after: String) {
+        teamMembers(projectId: $projectId, teamId: $teamId, first: $first, after: $after) {
           edges {
             node {
               id
@@ -84,13 +93,68 @@ export class GraphQLTeamAPI implements TeamAPI {
               }
             }
           }
+          pageInfo {
+            hasNextPage
+            endCursor
+          }
         }
       }
-    `), { projectId, teamId });
-    return data.teamMembers.edges.map(e => ({
-      id: e.node.user?.id || '',
-      username: e.node.user?.username || '',
-      email: e.node.user?.email || '',
-    }));
+    `), { projectId, teamId, first, after });
+
+    return {
+      members: data.teamMembers.edges.map(e => ({
+        id: e.node.user?.id || '',
+        username: e.node.user?.username || '',
+        email: e.node.user?.email || '',
+      })),
+      hasNextPage: data.teamMembers.pageInfo.hasNextPage,
+      endCursor: data.teamMembers.pageInfo.endCursor || null
+    };
+  }
+
+  async createTeam(projectId: string, name: string): Promise<{ success: boolean; team?: Team }> {
+    const data = await this.query<any>(`
+      mutation CreateTeam($projectId: ID!, $name: String!) {
+        createTeam(projectId: $projectId, name: $name) {
+          success
+          team { id name projectId }
+        }
+      }
+    `, { projectId, name });
+    return data.createTeam;
+  }
+
+  async deleteTeams(projectId: string, teamIds: string[]): Promise<{ success: boolean; deletedCount: number }> {
+    const data = await this.query<any>(`
+      mutation DeleteTeams($projectId: ID!, $teamIds: [ID!]!) {
+        deleteTeams(projectId: $projectId, teamIds: $teamIds) {
+          success
+          deletedCount
+        }
+      }
+    `, { projectId, teamIds });
+    return data.deleteTeams;
+  }
+
+  async addTeamMembers(projectId: string, teamId: string, userIds: string[]): Promise<{ success: boolean }> {
+    const data = await this.query<any>(`
+      mutation AddTeamMembers($projectId: ID!, $teamId: ID!, $userIds: [String!]!) {
+        addTeamMembers(projectId: $projectId, teamId: $teamId, userIds: $userIds) {
+          success
+        }
+      }
+    `, { projectId, teamId, userIds });
+    return data.addTeamMembers;
+  }
+
+  async removeTeamMembers(projectId: string, teamId: string, userIds: string[]): Promise<{ success: boolean }> {
+    const data = await this.query<any>(`
+      mutation RemoveTeamMembers($projectId: ID!, $teamId: ID!, $userIds: [String!]!) {
+        removeTeamMembers(projectId: $projectId, teamId: $teamId, userIds: $userIds) {
+          success
+        }
+      }
+    `, { projectId, teamId, userIds });
+    return data.removeTeamMembers;
   }
 }

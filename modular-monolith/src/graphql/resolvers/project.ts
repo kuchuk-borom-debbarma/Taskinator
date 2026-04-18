@@ -120,11 +120,11 @@ export const projectResolvers = {
             context: GraphQLContext,
         ) => {
             if (!context.userId) throw new UnauthorizedError();
-            await projectService.deleteProjects({
+            const deletedCount = await projectService.deleteProjects({
                 userId: context.userId,
                 projectIds,
             });
-            return true;
+            return { success: true, deletedCount: projectIds.length };
         },
         addProjectMembers: async (
             _: any,
@@ -132,11 +132,15 @@ export const projectResolvers = {
             context: GraphQLContext,
         ) => {
             if (!context.userId) throw new UnauthorizedError();
-            return projectService.addProjectMembers({
+            await projectService.addProjectMembers({
                 userId: context.userId,
                 projectId,
                 usersToAdd: userIds,
             });
+            return { 
+                success: true, 
+                project: { id: projectId } 
+            };
         },
         removeProjectMembers: async (
             _: any,
@@ -149,7 +153,11 @@ export const projectResolvers = {
                 projectId,
                 memberIds,
             });
-            return memberIds;
+            return {
+                success: true,
+                removedCount: memberIds.length,
+                project: { id: projectId }
+            };
         },
     },
 };

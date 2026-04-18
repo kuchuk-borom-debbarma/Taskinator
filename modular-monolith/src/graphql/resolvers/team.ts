@@ -111,12 +111,15 @@ export const teamResolvers = {
             context: GraphQLContext,
         ) => {
             if (!context.userId) throw new UnauthorizedError();
-            const teams = await teamService.createTeams({
+            const team = await teamService.createTeams({
                 userId: context.userId,
                 projectId,
                 teams: [name],
             });
-            return teams[0];
+            return {
+                success: true,
+                team: team[0],
+            };
         },
         deleteTeams: async (
             _: any,
@@ -124,11 +127,16 @@ export const teamResolvers = {
             context: GraphQLContext,
         ) => {
             if (!context.userId) throw new UnauthorizedError();
-            return teamService.deleteTeams({
-                userId: context.userId,
+            await teamService.deleteTeams({
                 projectId,
                 teamIds,
+                userId: context.userId,
             });
+            return {
+                success: true,
+                deletedCount: teamIds.length,
+                project: { id: projectId },
+            };
         },
         addTeamMembers: async (
             _: any,
@@ -136,12 +144,16 @@ export const teamResolvers = {
             context: GraphQLContext,
         ) => {
             if (!context.userId) throw new UnauthorizedError();
-            return teamService.addTeamMembers({
-                userId: context.userId,
+            await teamService.addTeamMembers({
                 projectId,
                 teamId,
-                members: userIds,
+                userIds,
+                currentUserId: context.userId,
             });
+            return {
+                success: true,
+                team: { id: teamId },
+            };
         },
         removeTeamMembers: async (
             _: any,

@@ -53,16 +53,37 @@ extend type Query {
 }
 
 extend type Mutation {
-    createTeam(projectId: ID!, name: String!): Team
-    deleteTeams(projectId: ID!, teamIds: [ID!]!): [ID]
+    createTeam(projectId: ID!, name: String!): CreateTeamPayload
+    deleteTeams(projectId: ID!, teamIds: [ID!]!): DeleteTeamsPayload
     addTeamMembers(
         projectId: ID!
         teamId: ID!
         userIds: [String!]!
-    ): [TeamMember]
+    ): AddTeamMembersPayload
     removeTeamMembers(
         projectId: ID!
         teamId: ID!
         userIds: [String!]!
-    ): [String]
+    ): RemoveTeamMembersPayload
+}
+
+type CreateTeamPayload {
+    success: Boolean!
+    team: Team
+}
+
+type DeleteTeamsPayload {
+    success: Boolean!
+    deletedCount: Int!
+    project: Project
+}
+
+type AddTeamMembersPayload {
+    success: Boolean!
+    team: Team
+}
+
+type RemoveTeamMembersPayload {
+    success: Boolean!
+    team: Team
 }

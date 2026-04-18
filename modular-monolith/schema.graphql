@@ -59,15 +59,15 @@ type Mutation {
   deleteTaskLink(linkId: ID!): ID!
   createProject(name: String!, description: String): Project
   updateProject(id: ID!, name: String, description: String): Project
-  deleteProjects(projectIds: [ID!]!): Boolean
-  addProjectMembers(projectId: ID!, userIds: [String!]!): [ProjectMember]
-  removeProjectMembers(projectId: ID!, memberIds: [ID!]!): [ID]
+  deleteProjects(projectIds: [ID!]!): DeleteProjectsPayload
+  addProjectMembers(projectId: ID!, userIds: [String!]!): AddProjectMembersPayload
+  removeProjectMembers(projectId: ID!, memberIds: [ID!]!): RemoveProjectMembersPayload
   markNotificationAsRead(id: ID!): Boolean
   markAllNotificationsAsRead: Boolean
-  createTeam(projectId: ID!, name: String!): Team
-  deleteTeams(projectId: ID!, teamIds: [ID!]!): [ID]
-  addTeamMembers(projectId: ID!, teamId: ID!, userIds: [String!]!): [TeamMember]
-  removeTeamMembers(projectId: ID!, teamId: ID!, userIds: [String!]!): [String]
+  createTeam(projectId: ID!, name: String!): CreateTeamPayload
+  deleteTeams(projectId: ID!, teamIds: [ID!]!): DeleteTeamsPayload
+  addTeamMembers(projectId: ID!, teamId: ID!, userIds: [String!]!): AddTeamMembersPayload
+  removeTeamMembers(projectId: ID!, teamId: ID!, userIds: [String!]!): RemoveTeamMembersPayload
 }
 
 type TaskLink {
@@ -137,8 +137,6 @@ type ProjectTask {
   updatedBy: ID!
   createdAt: String!
   updatedAt: String!
-  parentRef: String
-  order: Int
   incomingLinksCount: Int!
   outgoingLinksCount: Int!
   directIncomingLinksCount: Int!
@@ -208,6 +206,22 @@ type ProjectMemberConnection {
   pageInfo: PageInfo!
 }
 
+type AddProjectMembersPayload {
+  success: Boolean!
+  project: Project
+}
+
+type RemoveProjectMembersPayload {
+  success: Boolean!
+  removedCount: Int!
+  project: Project
+}
+
+type DeleteProjectsPayload {
+  success: Boolean!
+  deletedCount: Int!
+}
+
 type InternalNotification {
   id: ID!
   userId: String!
@@ -270,6 +284,27 @@ type TeamMemberEdge {
 type TeamMemberConnection {
   edges: [TeamMemberEdge!]!
   pageInfo: PageInfo!
+}
+
+type CreateTeamPayload {
+  success: Boolean!
+  team: Team
+}
+
+type DeleteTeamsPayload {
+  success: Boolean!
+  deletedCount: Int!
+  project: Project
+}
+
+type AddTeamMembersPayload {
+  success: Boolean!
+  team: Team
+}
+
+type RemoveTeamMembersPayload {
+  success: Boolean!
+  team: Team
 }
 
 schema {
