@@ -32,10 +32,11 @@ export class InternalNotificationServiceImpl
 
     async getNotifications(
         userId: string,
-        params: { cursor?: string; limit?: number },
+        params: { first?: number; after?: string; last?: number; before?: string },
     ): Promise<{
         notifications: InternalNotification[];
         nextCursor: string | null;
+        prevCursor: string | null;
     }> {
         return await Queries.getNotifications(userId, params);
     }

@@ -11,12 +11,12 @@ router.use(requireAuth as any);
 router.get('/', async (req: any, res: Response) => {
     try {
         const userId = req.userId;
-        const cursor = req.query.cursor as string | undefined;
-        const limit = parseInt(req.query.limit as string) || 20;
+        const after = req.query.cursor as string | undefined;
+        const first = parseInt(req.query.limit as string) || 20;
 
         const result = await internalNotificationService.getNotifications(
             userId,
-            { cursor, limit },
+            { after, first },
         );
         res.status(200).json(result);
     } catch (error: any) {

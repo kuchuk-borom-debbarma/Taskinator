@@ -12,7 +12,7 @@ import type {
     TaskLink,
     TaskNeighbourhoodResult,
 } from '../TaskService.ts';
-import { getTimeString } from '../../../utils/utils.ts';
+import { decodeCursor, encodeCursor, getTimeString } from '../../../utils/utils.ts';
 
 export const insertTask = async (data: CreateTaskParam): Promise<ProjectTask> => {
     const result = await sql<ProjectTask>`
@@ -584,7 +584,7 @@ export const getNeighbourhood = async (
     const cursor = params.before || params.after;
 
     let cursorDepth: number | null = null;
-    let cursorCreatedAt: string | null = null;
+    let cursorEpoch: string | null = null;
     let cursorId: string | null = null;
 
     if (cursor) {

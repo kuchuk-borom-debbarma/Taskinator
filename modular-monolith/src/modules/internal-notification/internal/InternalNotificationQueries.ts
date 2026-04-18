@@ -4,7 +4,7 @@ import type {
     CreateNotificationParam,
     InternalNotification,
 } from '../InternalNotificationService.ts';
-import { getTimeString } from '../../../utils/utils.ts';
+import { decodeCursor, encodeCursor, getTimeString } from '../../../utils/utils.ts';
 
 export const insertNotificationsBatch = async (
     rows: CreateNotificationParam[],
@@ -61,9 +61,6 @@ export const insertNotification = async (
     `.execute(db);
     return result.rows[0];
 };
-
-import { decodeCursor, encodeCursor, getTimeString } from '../../../utils/utils.ts';
-// ... (rest of imports)
 
 export const getNotifications = async (
     userId: string,

@@ -3,15 +3,16 @@ import { taskService } from '../../modules/task';
 import type { ProjectTask, TaskLink } from '../../modules/task/TaskService.ts';
 import { resolveTask, buildRef } from './helpers.ts';
 import { UnauthorizedError, NotFoundError } from '../errors';
+import { encodeCursor } from '../../utils/utils.ts';
 
 const buildLinkConnection = (
     links: TaskLink[],
     nextCursor: string | null,
     prevCursor: string | null,
 ) => ({
-    edges: links.map((l: TaskLink) => ({
+    edges: links.map((l: TaskLink & { epochPrecision?: string }) => ({
         node: l,
-        cursor: `${l.createdAtPrecision || (l.createdAt instanceof Date ? l.createdAt.toISOString() : l.createdAt)}|${l.id}`,
+        cursor: encodeCursor(l.epochPrecision || '', l.id),
     })),
     pageInfo: {
         hasNextPage: !!nextCursor,
@@ -228,9 +229,9 @@ export const taskResolvers = {
             console.log(`[RESOLVER CRITICAL] found ${tasks.length} tasks`);
 
             return {
-                edges: tasks.map((t: ProjectTask) => ({
+                edges: tasks.map((t: ProjectTask & { epochPrecision?: string }) => ({
                     node: t,
-                    cursor: `${t.createdAtPrecision || (t.createdAt instanceof Date ? t.createdAt.toISOString() : t.createdAt)}|${t.id}`,
+                    cursor: encodeCursor(t.epochPrecision || '', t.id),
                 })),
                 pageInfo: {
                     hasNextPage: !!nextCursor,
@@ -272,7 +273,7 @@ export const taskResolvers = {
                 nodes: {
                     edges: result.neighbours.map(n => ({
                         node: n,
-                        cursor: `${n.depth}|${n.task?.createdAtPrecision || n.task?.createdAt.toISOString()}|${n.taskId}`
+                        cursor: encodeCursor(`${n.depth}|${(n.task as any)?.epochPrecision || ''}`, n.taskId)
                     })),
                     pageInfo: {
                         hasNextPage: !!result.nextCursor,

@@ -7,7 +7,7 @@ import type {
     ProjectMember,
 } from '../ProjectService.ts';
 import { db } from '../../../database';
-import { getTimeString } from '../../../utils/utils.ts';
+import { decodeCursor, encodeCursor, getTimeString } from '../../../utils/utils.ts';
 import { sql } from 'kysely';
 
 export const insertProject = async (
@@ -222,8 +222,6 @@ export const deleteAllProjectMembers = async (projectId: string) => {
         .where('fk_project_id', '=', sql`${projectId}::uuid` as any)
         .execute();
 };
-import { decodeCursor, encodeCursor, getTimeString } from '../../../utils/utils.ts';
-
 export const getProjects = async (
     userId: string,
     params: { first?: number; after?: string; last?: number; before?: string } = {},
