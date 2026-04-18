@@ -16,6 +16,7 @@ import {
     deleteLinkQuery,
     deleteTaskQuery,
     getNeighbourhood,
+    getProjectTaskLinksPage,
     getTaskLinksPage,
     getTasksByIds as getTasksByIdsQuery,
     getTasksPage,
@@ -74,6 +75,14 @@ export class TaskServiceImpl implements TaskService {
         params: GetNeighbourhoodParam,
     ): Promise<TaskNeighbourhoodResult> {
         return await getNeighbourhood(params);
+    }
+
+    async getProjectLinks(
+        userId: string, 
+        projectId: string,
+        pagination: PaginationParams
+    ): Promise<LinkConnection> {
+        return await getProjectTaskLinksPage(userId, projectId, pagination);
     }
 
     async init(): Promise<void> {

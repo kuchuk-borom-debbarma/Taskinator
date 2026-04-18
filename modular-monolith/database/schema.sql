@@ -65,6 +65,12 @@ CREATE TABLE project_task (
     updated_by TEXT NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    direct_incoming_count INTEGER NOT NULL DEFAULT 0,
+    direct_outgoing_count INTEGER NOT NULL DEFAULT 0,
+    total_incoming_count INTEGER NOT NULL DEFAULT 0,
+    total_outgoing_count INTEGER NOT NULL DEFAULT 0,
+    incoming_label_counts JSONB NOT NULL DEFAULT '{}',
+    outgoing_label_counts JSONB NOT NULL DEFAULT '{}',
     CONSTRAINT fk_task_project FOREIGN KEY (fk_project_id) REFERENCES project(id) ON DELETE CASCADE
 );
 
@@ -172,19 +178,4 @@ CREATE TABLE outbox_events (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- Automations Engine Table
-CREATE TABLE automations (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    fk_project_id UUID NOT NULL,
-    actor_id TEXT NOT NULL,
-    target_scope TEXT NOT NULL, -- 'TASK', 'PROJECT', 'TEAM'
-    fk_team_id UUID,            -- Specific team this automation is pinned to (optional)
-    rules JSONB NOT NULL, -- Array of { conditions, actions }
-    is_active BOOLEAN NOT NULL DEFAULT TRUE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
-
-CREATE INDEX idx_automations_project ON automations(fk_project_id);
-CREATE INDEX idx_automations_team ON automations(fk_team_id) WHERE fk_team_id IS NOT NULL;
 

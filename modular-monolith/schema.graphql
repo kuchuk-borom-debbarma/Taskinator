@@ -19,10 +19,10 @@ type Query {
   searchUsers(search: String, first: Int, after: String, last: Int, before: String): UserSearchResultConnection!
   searchTeamUsers(projectId: ID!, teamId: ID!, search: String, first: Int, after: String, last: Int, before: String): UserSearchResultConnection!
   _empty: String
-  automations(projectId: ID, actorId: ID, teamId: ID, targetScope: String, first: Int, after: String): AutomationRuleConnection!
   projectTasks(projectId: ID!, first: Int, after: String, last: Int, before: String): ProjectTaskConnection!
   task(id: ID!): ProjectTask
   taskNeighbourhood(projectId: ID!, taskId: ID!, maxDepth: Int, first: Int, after: String, last: Int, before: String): TaskNeighbourhood!
+  projectTaskLinks(projectId: ID!, first: Int, after: String, last: Int, before: String): TaskLinkConnection!
   projects(first: Int, after: String, last: Int, before: String): ProjectConnection!
   project(id: ID!): Project
   projectMembers(projectId: ID!, first: Int, after: String, last: Int, before: String): ProjectMemberConnection!
@@ -52,9 +52,6 @@ type PageInfo {
 
 type Mutation {
   _empty: String
-  addAutomation(projectId: ID!, name: String!, targetScope: String!, teamId: ID, rules: String!, isActive: Boolean): AutomationRule
-  updateAutomation(automationId: ID!, name: String, targetScope: String, teamId: ID, rules: String, isActive: Boolean): AutomationRule
-  deleteAutomation(automationId: ID!): Boolean
   createTask(projectId: ID!, teamId: ID, memberId: ID, title: String!, description: String, status: String): ProjectTask!
   updateTask(taskId: ID!, title: String, description: String, status: String): ProjectTask!
   deleteTask(taskId: ID!): ID!
@@ -62,38 +59,15 @@ type Mutation {
   deleteTaskLink(linkId: ID!): ID!
   createProject(name: String!, description: String): Project
   updateProject(id: ID!, name: String, description: String): Project
-  deleteProjects(projectIds: [ID!]!): Boolean
-  addProjectMembers(projectId: ID!, userIds: [String!]!): [ProjectMember]
-  removeProjectMembers(projectId: ID!, memberIds: [ID!]!): [ID]
+  deleteProjects(projectIds: [ID!]!): DeleteProjectsPayload
+  addProjectMembers(projectId: ID!, userIds: [String!]!): AddProjectMembersPayload
+  removeProjectMembers(projectId: ID!, memberIds: [ID!]!): RemoveProjectMembersPayload
   markNotificationAsRead(id: ID!): Boolean
   markAllNotificationsAsRead: Boolean
-  createTeam(projectId: ID!, name: String!): Team
-  deleteTeams(projectId: ID!, teamIds: [ID!]!): [ID]
-  addTeamMembers(projectId: ID!, teamId: ID!, userIds: [String!]!): [TeamMember]
-  removeTeamMembers(projectId: ID!, teamId: ID!, userIds: [String!]!): [String]
-}
-
-type AutomationRule {
-  id: ID!
-  projectId: ID!
-  actorId: String!
-  name: String!
-  targetScope: String!
-  teamId: ID
-  rules: String!
-  isActive: Boolean!
-  createdAt: String!
-  updatedAt: String
-}
-
-type AutomationRuleEdge {
-  node: AutomationRule!
-  cursor: String!
-}
-
-type AutomationRuleConnection {
-  edges: [AutomationRuleEdge!]!
-  pageInfo: PageInfo!
+  createTeam(projectId: ID!, name: String!): CreateTeamPayload
+  deleteTeams(projectId: ID!, teamIds: [ID!]!): DeleteTeamsPayload
+  addTeamMembers(projectId: ID!, teamId: ID!, userIds: [String!]!): AddTeamMembersPayload
+  removeTeamMembers(projectId: ID!, teamId: ID!, userIds: [String!]!): RemoveTeamMembersPayload
 }
 
 type TaskLink {
@@ -130,10 +104,20 @@ type NeighbourhoodNode {
   direction: NeighbourDirection!
 }
 
+type NeighbourhoodNodeEdge {
+  node: NeighbourhoodNode!
+  cursor: String!
+}
+
+type NeighbourhoodNodeConnection {
+  edges: [NeighbourhoodNodeEdge!]!
+  pageInfo: PageInfo!
+}
+
 type TaskNeighbourhood {
   focusedTask: ProjectTask!
-  nodes: [NeighbourhoodNode!]!
-  edges: [TaskLink!]!
+  nodes(first: Int, after: String, last: Int, before: String): NeighbourhoodNodeConnection!
+  edges(first: Int, after: String, last: Int, before: String): TaskLinkConnection!
   pageInfo: PageInfo!
 }
 
@@ -153,6 +137,12 @@ type ProjectTask {
   updatedBy: ID!
   createdAt: String!
   updatedAt: String!
+  incomingLinksCount: Int!
+  outgoingLinksCount: Int!
+  directIncomingLinksCount: Int!
+  directOutgoingLinksCount: Int!
+  incomingLabelCounts: String!
+  outgoingLabelCounts: String!
   project: Project
   team: Team
   member: User
@@ -183,7 +173,6 @@ type Project {
   createdAt: String!
   updatedAt: String
   version: Int!
-  automations: [AutomationRule!]!
 }
 
 type ProjectEdge {
@@ -217,6 +206,22 @@ type ProjectMemberConnection {
   pageInfo: PageInfo!
 }
 
+type AddProjectMembersPayload {
+  success: Boolean!
+  project: Project
+}
+
+type RemoveProjectMembersPayload {
+  success: Boolean!
+  removedCount: Int!
+  project: Project
+}
+
+type DeleteProjectsPayload {
+  success: Boolean!
+  deletedCount: Int!
+}
+
 type InternalNotification {
   id: ID!
   userId: String!
@@ -248,7 +253,6 @@ type Team {
   createdAt: String!
   updatedAt: String
   version: Int!
-  automations: [AutomationRule!]!
   project: Project
 }
 
@@ -280,6 +284,27 @@ type TeamMemberEdge {
 type TeamMemberConnection {
   edges: [TeamMemberEdge!]!
   pageInfo: PageInfo!
+}
+
+type CreateTeamPayload {
+  success: Boolean!
+  team: Team
+}
+
+type DeleteTeamsPayload {
+  success: Boolean!
+  deletedCount: Int!
+  project: Project
+}
+
+type AddTeamMembersPayload {
+  success: Boolean!
+  team: Team
+}
+
+type RemoveTeamMembersPayload {
+  success: Boolean!
+  team: Team
 }
 
 schema {

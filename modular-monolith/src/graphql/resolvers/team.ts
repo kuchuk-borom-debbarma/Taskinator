@@ -1,6 +1,7 @@
 import type { GraphQLContext } from '../context.ts';
 import { teamService } from '../../modules/team';
 import { resolveTeam, buildRef } from './helpers.ts';
+import { UnauthorizedError } from '../errors';
 
 export const teamResolvers = {
     Team: {
@@ -23,8 +24,6 @@ export const teamResolvers = {
         },
         creator: (t: any) => buildRef(t.createdBy, 'User'),
         project: (t: any) => buildRef(t.projectId, 'Project'),
-        automations: (t: any, _: any, context: GraphQLContext) =>
-            context.loaders.teamAutomations.load(t.id),
     },
     TeamMember: {
         id: (m: any) => m.id,
@@ -41,7 +40,7 @@ export const teamResolvers = {
             { projectId, first, after, last, before }: any,
             context: GraphQLContext,
         ) => {
-            if (!context.userId) throw new Error('Unauthorized');
+            if (!context.userId) throw new UnauthorizedError();
             const { teams, nextCursor, prevCursor } = await teamService.getTeams(
                 context.userId,
                 projectId,
@@ -62,7 +61,7 @@ export const teamResolvers = {
             { projectId, teamId, first, after, last, before }: any,
             context: GraphQLContext,
         ) => {
-            if (!context.userId) throw new Error('Unauthorized');
+            if (!context.userId) throw new UnauthorizedError();
             const { members, nextCursor, prevCursor } = await teamService.getTeamMembers(
                 context.userId,
                 projectId,
@@ -111,45 +110,57 @@ export const teamResolvers = {
             { projectId, name }: any,
             context: GraphQLContext,
         ) => {
-            if (!context.userId) throw new Error('Unauthorized');
-            const teams = await teamService.createTeams({
+            if (!context.userId) throw new UnauthorizedError();
+            const team = await teamService.createTeams({
                 userId: context.userId,
                 projectId,
                 teams: [name],
             });
-            return teams[0];
+            return {
+                success: true,
+                team: team[0],
+            };
         },
         deleteTeams: async (
             _: any,
             { projectId, teamIds }: any,
             context: GraphQLContext,
         ) => {
-            if (!context.userId) throw new Error('Unauthorized');
-            return teamService.deleteTeams({
-                userId: context.userId,
+            if (!context.userId) throw new UnauthorizedError();
+            await teamService.deleteTeams({
                 projectId,
                 teamIds,
+                userId: context.userId,
             });
+            return {
+                success: true,
+                deletedCount: teamIds.length,
+                project: { id: projectId },
+            };
         },
         addTeamMembers: async (
             _: any,
             { projectId, teamId, userIds }: any,
             context: GraphQLContext,
         ) => {
-            if (!context.userId) throw new Error('Unauthorized');
-            return teamService.addTeamMembers({
-                userId: context.userId,
+            if (!context.userId) throw new UnauthorizedError();
+            await teamService.addTeamMembers({
                 projectId,
                 teamId,
-                members: userIds,
+                userIds,
+                currentUserId: context.userId,
             });
+            return {
+                success: true,
+                team: { id: teamId },
+            };
         },
         removeTeamMembers: async (
             _: any,
             { projectId, teamId, userIds }: any,
             context: GraphQLContext,
         ) => {
-            if (!context.userId) throw new Error('Unauthorized');
+            if (!context.userId) throw new UnauthorizedError();
             return teamService.deleteTeamMembers({
                 userId: context.userId,
                 projectId,

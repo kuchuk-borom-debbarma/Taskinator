@@ -2,6 +2,7 @@ import type { GraphQLContext } from '../context.ts';
 import { taskService } from '../../modules/task';
 import type { ProjectTask, TaskLink } from '../../modules/task/TaskService.ts';
 import { resolveTask, buildRef } from './helpers.ts';
+import { UnauthorizedError, NotFoundError } from '../errors';
 
 const buildLinkConnection = (
     links: TaskLink[],
@@ -89,8 +90,8 @@ export const taskResolvers = {
             const taskDate = task?.updatedAt;
             return taskDate instanceof Date ? taskDate.toISOString() : taskDate;
         },
-        priority: () => 3, // Default to Medium
-        dueDate: () => null, // Default to no deadline
+        priority: (t: any) => t.priority || 3,
+        dueDate: (t: any) => t.dueDate || null,
         project: async (t: any, _: any, context: GraphQLContext) => {
             let projectId = t.projectId;
             if (!projectId) {
@@ -140,12 +141,19 @@ export const taskResolvers = {
             return buildRef(updatedBy, 'User');
         },
 
+        incomingLinksCount: (t: any) => t.totalIncomingCount || 0,
+        outgoingLinksCount: (t: any) => t.totalOutgoingCount || 0,
+        directIncomingLinksCount: (t: any) => t.directIncomingCount || 0,
+        directOutgoingLinksCount: (t: any) => t.directOutgoingCount || 0,
+        incomingLabelCounts: (t: any) => JSON.stringify(t.incomingLabelCounts || {}),
+        outgoingLabelCounts: (t: any) => JSON.stringify(t.outgoingLabelCounts || {}),
+
         incomingLinks: async (
             t: any,
             { first, after, last, before }: any,
             context: GraphQLContext,
         ) => {
-            if (!context.userId) throw new Error('Unauthorized');
+            if (!context.userId) throw new UnauthorizedError();
             const { links, nextCursor, prevCursor } = await taskService.getTaskLinks(
                 { userId: context.userId, projectId: t.projectId, taskId: t.id, direction: 'incoming' },
                 { first, after, last, before },
@@ -158,7 +166,7 @@ export const taskResolvers = {
             { first, after, last, before }: any,
             context: GraphQLContext,
         ) => {
-            if (!context.userId) throw new Error('Unauthorized');
+            if (!context.userId) throw new UnauthorizedError();
             const { links, nextCursor, prevCursor } = await taskService.getTaskLinks(
                 { userId: context.userId, projectId: t.projectId, taskId: t.id, direction: 'outgoing' },
                 { first, after, last, before },
@@ -173,12 +181,21 @@ export const taskResolvers = {
             { projectId, first, after, last, before }: any,
             context: GraphQLContext,
         ) => {
-            if (!context.userId) throw new Error('Unauthorized');
+            console.log('--------------------------------------------------');
+            console.log(`[RESOLVER CRITICAL] projectTasks called!`);
+            console.log(`- ProjectID: ${projectId}`);
+            console.log(`- UserID:    ${context.userId}`);
+            console.log('--------------------------------------------------');
+            
+            if (!context.userId) throw new UnauthorizedError();
+            
             const { tasks, nextCursor, prevCursor } = await taskService.getTasks(
                 context.userId,
                 projectId,
                 { first, after, last, before },
             );
+
+            console.log(`[RESOLVER CRITICAL] found ${tasks.length} tasks`);
 
             return {
                 edges: tasks.map((t: ProjectTask) => ({
@@ -194,7 +211,7 @@ export const taskResolvers = {
             };
         },
         task: async (_: any, { id }: any, context: GraphQLContext) => {
-            if (!context.userId) throw new Error('Unauthorized');
+            if (!context.userId) throw new UnauthorizedError();
             return context.loaders.task.load(id);
         },
         taskNeighbourhood: async (
@@ -202,7 +219,7 @@ export const taskResolvers = {
             { projectId, taskId, maxDepth, first, after, last, before }: any,
             context: GraphQLContext,
         ) => {
-            if (!context.userId) throw new Error('Unauthorized');
+            if (!context.userId) throw new UnauthorizedError();
 
             const [focusedTask, result] = await Promise.all([
                 context.loaders.task.load(taskId),
@@ -218,12 +235,34 @@ export const taskResolvers = {
                 }),
             ]);
 
-            if (!focusedTask) throw new Error('Task not found');
+            if (!focusedTask) throw new NotFoundError('Task not found');
 
             return {
                 focusedTask,
-                nodes: result.neighbours,
-                edges: result.edges,
+                nodes: {
+                    edges: result.neighbours.map(n => ({
+                        node: n,
+                        cursor: `${n.depth}|${n.task?.createdAt.toISOString()}|${n.taskId}`
+                    })),
+                    pageInfo: {
+                        hasNextPage: !!result.nextCursor,
+                        hasPreviousPage: !!result.prevCursor,
+                        startCursor: result.prevCursor,
+                        endCursor: result.nextCursor,
+                    }
+                },
+                edges: {
+                    edges: result.edges.map(e => ({
+                        node: e,
+                        cursor: e.id
+                    })),
+                    pageInfo: {
+                        hasNextPage: false,
+                        hasPreviousPage: false,
+                        startCursor: null,
+                        endCursor: null,
+                    }
+                },
                 pageInfo: {
                     hasNextPage: !!result.nextCursor,
                     hasPreviousPage: !!result.prevCursor,
@@ -231,6 +270,22 @@ export const taskResolvers = {
                     endCursor: result.nextCursor,
                 },
             };
+        },
+
+        projectTaskLinks: async (
+            _: any,
+            { projectId, first, after, last, before }: any,
+            context: GraphQLContext,
+        ) => {
+            console.log(`[RESOLVER CRITICAL] projectTaskLinks - projectId: ${projectId}, userId: ${context.userId}`);
+            if (!context.userId) throw new UnauthorizedError();
+            const { links, nextCursor, prevCursor } = await taskService.getProjectLinks(
+                context.userId, 
+                projectId, 
+                { first, after, last, before }
+            );
+            console.log(`[RESOLVER CRITICAL] found ${links.length} links`);
+            return buildLinkConnection(links, nextCursor, prevCursor);
         },
     },
 
@@ -240,7 +295,7 @@ export const taskResolvers = {
             { projectId, teamId, memberId, title, description, status }: any,
             context: GraphQLContext,
         ) => {
-            if (!context.userId) throw new Error('Unauthorized');
+            if (!context.userId) throw new UnauthorizedError();
             return taskService.createTask({
                 userId: context.userId,
                 projectId,
@@ -256,7 +311,7 @@ export const taskResolvers = {
             { taskId, title, description, status }: any,
             context: GraphQLContext,
         ) => {
-            if (!context.userId) throw new Error('Unauthorized');
+            if (!context.userId) throw new UnauthorizedError();
             return taskService.updateTask({
                 userId: context.userId,
                 taskId,
@@ -266,7 +321,7 @@ export const taskResolvers = {
             });
         },
         deleteTask: async (_: any, { taskId }: any, context: GraphQLContext) => {
-            if (!context.userId) throw new Error('Unauthorized');
+            if (!context.userId) throw new UnauthorizedError();
             await taskService.deleteTask(context.userId, taskId);
             return taskId;
         },
@@ -275,7 +330,7 @@ export const taskResolvers = {
             { projectId, sourceTaskId, targetTaskId, label }: any,
             context: GraphQLContext,
         ) => {
-            if (!context.userId) throw new Error('Unauthorized');
+            if (!context.userId) throw new UnauthorizedError();
             return taskService.createLink({
                 userId: context.userId,
                 projectId,
@@ -285,7 +340,7 @@ export const taskResolvers = {
             });
         },
         deleteTaskLink: async (_: any, { linkId }: any, context: GraphQLContext) => {
-            if (!context.userId) throw new Error('Unauthorized');
+            if (!context.userId) throw new UnauthorizedError();
             await taskService.deleteLink(context.userId, linkId);
             return linkId;
         },

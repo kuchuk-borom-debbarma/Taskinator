@@ -8,7 +8,6 @@ type Project {
     createdAt: String!
     updatedAt: String
     version: Int!
-    automations: [AutomationRule!]!
 }
 
 type ProjectEdge {
@@ -57,7 +56,23 @@ extend type Query {
 extend type Mutation {
     createProject(name: String!, description: String): Project
     updateProject(id: ID!, name: String, description: String): Project
-    deleteProjects(projectIds: [ID!]!): Boolean
-    addProjectMembers(projectId: ID!, userIds: [String!]!): [ProjectMember]
-    removeProjectMembers(projectId: ID!, memberIds: [ID!]!): [ID]
+    deleteProjects(projectIds: [ID!]!): DeleteProjectsPayload
+    addProjectMembers(projectId: ID!, userIds: [String!]!): AddProjectMembersPayload
+    removeProjectMembers(projectId: ID!, memberIds: [ID!]!): RemoveProjectMembersPayload
+}
+
+type AddProjectMembersPayload {
+    success: Boolean!
+    project: Project
+}
+
+type RemoveProjectMembersPayload {
+    success: Boolean!
+    removedCount: Int!
+    project: Project
+}
+
+type DeleteProjectsPayload {
+    success: Boolean!
+    deletedCount: Int!
 }

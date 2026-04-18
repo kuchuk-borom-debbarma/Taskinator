@@ -20,6 +20,12 @@ export interface ProjectTaskTable {
     updated_by: string;
     created_at: ColumnType<Date, string | undefined, never>;
     updated_at: ColumnType<Date, string | undefined, string | undefined>;
+    direct_incoming_count: Generated<number>;
+    direct_outgoing_count: Generated<number>;
+    total_incoming_count: Generated<number>;
+    total_outgoing_count: Generated<number>;
+    incoming_label_counts: Generated<Record<string, number>>;
+    outgoing_label_counts: Generated<Record<string, number>>;
 }
 
 export type ProjectTask = Selectable<ProjectTaskTable>;

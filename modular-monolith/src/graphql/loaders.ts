@@ -5,8 +5,6 @@ import { teamService } from '../modules/team';
 import type { Team } from '../modules/team/TeamService';
 import { authService } from '../modules/auth';
 import type { UserResult } from '../modules/auth/AuthService';
-import { automationService } from '../modules/automation';
-import type { AutomationRule } from '../modules/automation/AutomationService';
 import { taskService } from '../modules/task';
 import type { ProjectTask } from '../modules/task/TaskService';
 
@@ -33,22 +31,6 @@ export const createLoaders = (userId: string) => {
             const map = new Map(users.map((u) => [u.id, u]));
             return ids.map((id) => map.get(id) || null);
         }),
-        projectAutomations: new DataLoader<string, AutomationRule[]>(
-            async (projectIds) => {
-                const map = await automationService.getAutomationsByProjectIds(
-                    projectIds as string[],
-                );
-                return projectIds.map((id) => map.get(id) || []);
-            },
-        ),
-        teamAutomations: new DataLoader<string, AutomationRule[]>(
-            async (teamIds) => {
-                const map = await automationService.getAutomationsByTeamIds(
-                    teamIds as string[],
-                );
-                return teamIds.map((id) => map.get(id) || []);
-            },
-        ),
         task: new DataLoader<string, ProjectTask | null>(async (ids) => {
             const tasks = await taskService.getTasksByIds(userId, ids as string[]);
             const map = new Map(tasks.map((t: ProjectTask) => [t.id, t]));

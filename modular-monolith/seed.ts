@@ -324,14 +324,17 @@ async function seed() {
         await sql`INSERT INTO project_member (fk_project_id, fk_user_id) VALUES (${starterProjectId}::uuid, ${adminId}) ON CONFLICT DO NOTHING`.execute(db);
 
         const starterTaskRows = [
-            [`'${starterTaskIds.concept}'::uuid`, `'${starterProjectId}'::uuid`, `NULL`, `'${adminId}'`, `'Concept Development'`, `'Define the north star vision and core user personas.'`, `'DONE'`, `'${adminId}'`, `'${adminId}'`],
-            [`'${starterTaskIds.arch}'::uuid`, `'${starterProjectId}'::uuid`, `NULL`, `'${adminId}'`, `'Architecture Design'`, `'System design, GraphQL schema and database indexing strategy.'`, `'IN_PROGRESS'`, `'${adminId}'`, `'${adminId}'`],
-            [`'${starterTaskIds.api}'::uuid`, `'${starterProjectId}'::uuid`, `NULL`, `'${adminId}'`, `'API Implementation'`, `'Building the Yoga GraphQL server and Kysely adapters.'`, `'TODO'`, `'${adminId}'`, `'${adminId}'`],
-            [`'${starterTaskIds.ui}'::uuid`, `'${starterProjectId}'::uuid`, `NULL`, `'${adminId}'`, `'Frontend Integration'`, `'Connecting the React app to the live GraphQL stream.'`, `'TODO'`, `'${adminId}'`, `'${adminId}'`],
-            [`'${starterTaskIds.test}'::uuid`, `'${starterProjectId}'::uuid`, `NULL`, `'${adminId}'`, `'E2E Verification'`, `'Final regression tests and performance benchmarking.'`, `'TODO'`, `'${adminId}'`, `'${adminId}'`]
+            [`'${starterTaskIds.concept}'::uuid`, `'${starterProjectId}'::uuid`, `NULL`, `'${adminId}'`, `'Concept Development'`, `'Define the north star vision and core user personas.'`, `'DONE'`, `'${adminId}'`, `'${adminId}'`, 0, 0, 0, 0, `'{}'::jsonb`, `'{}'::jsonb`],
+            [`'${starterTaskIds.arch}'::uuid`, `'${starterProjectId}'::uuid`, `NULL`, `'${adminId}'`, `'Architecture Design'`, `'System design, GraphQL schema and database indexing strategy.'`, `'IN_PROGRESS'`, `'${adminId}'`, `'${adminId}'`, 0, 0, 0, 0, `'{}'::jsonb`, `'{}'::jsonb`],
+            [`'${starterTaskIds.api}'::uuid`, `'${starterProjectId}'::uuid`, `NULL`, `'${adminId}'`, `'API Implementation'`, `'Building the Yoga GraphQL server and Kysely adapters.'`, `'TODO'`, `'${adminId}'`, `'${adminId}'`, 0, 0, 0, 0, `'{}'::jsonb`, `'{}'::jsonb`],
+            [`'${starterTaskIds.ui}'::uuid`, `'${starterProjectId}'::uuid`, `NULL`, `'${adminId}'`, `'Frontend Integration'`, `'Connecting the React app to the live GraphQL stream.'`, `'TODO'`, `'${adminId}'`, `'${adminId}'`, 0, 0, 0, 0, `'{}'::jsonb`, `'{}'::jsonb`],
+            [`'${starterTaskIds.test}'::uuid`, `'${starterProjectId}'::uuid`, `NULL`, `'${adminId}'`, `'E2E Verification'`, `'Final regression tests and performance benchmarking.'`, `'TODO'`, `'${adminId}'`, `'${adminId}'`, 0, 0, 0, 0, `'{}'::jsonb`, `'{}'::jsonb`]
         ];
 
-        await bulkInsert('project_task', ['id', 'fk_project_id', 'fk_team_id', 'fk_member_id', 'title', 'description', 'status', 'created_by', 'updated_by'], starterTaskRows);
+        await bulkInsert('project_task', [
+            'id', 'fk_project_id', 'fk_team_id', 'fk_member_id', 'title', 'description', 'status', 'created_by', 'updated_by',
+            'direct_incoming_count', 'direct_outgoing_count', 'total_incoming_count', 'total_outgoing_count', 'incoming_label_counts', 'outgoing_label_counts'
+        ], starterTaskRows);
 
         const starterLinkRows = [
             [`'${uuidv4()}'::uuid`, `'${starterProjectId}'::uuid`, `'${starterTaskIds.concept}'::uuid`, `'${starterTaskIds.arch}'::uuid`, `'Blocks'`, `'${adminId}'`],
@@ -422,13 +425,15 @@ async function seed() {
                 `'${status}'`,
                 `'${adminId}'`,            // created_by is TEXT
                 `'${adminId}'`,            // updated_by is TEXT
+                0, 0, 0, 0, `'{}'::jsonb`, `'{}'::jsonb`
             ]);
         }
 
         await bulkInsert(
             'project_task',
             ['id', 'fk_project_id', 'fk_team_id', 'fk_member_id',
-                'title', 'description', 'status', 'created_by', 'updated_by'],
+                'title', 'description', 'status', 'created_by', 'updated_by',
+                'direct_incoming_count', 'direct_outgoing_count', 'total_incoming_count', 'total_outgoing_count', 'incoming_label_counts', 'outgoing_label_counts'],
             taskRows,
         );
         console.log(`   ✓ ${taskIds.length.toLocaleString()} tasks (${elapsed(t0)})`);
@@ -597,6 +602,7 @@ async function seed() {
                     `'${status}'`,
                     `'${owner}'`,
                     `'${owner}'`,
+                    0, 0, 0, 0, `'{}'::jsonb`, `'{}'::jsonb`
                 ]);
             }
         }
@@ -604,9 +610,79 @@ async function seed() {
         await bulkInsert('project', ['id', 'name', 'description', 'fk_user_id'], extraProjectRows);
         await bulkInsert('project_member', ['fk_project_id', 'fk_user_id'], extraMemberRows);
         await bulkInsert('project_team', ['id', 'name', 'fk_project_id', 'fk_user_id'], extraTeamRows);
-        await bulkInsert('project_task', ['id', 'fk_project_id', 'fk_team_id', 'fk_member_id', 'title', 'description', 'status', 'created_by', 'updated_by'], extraTaskRows);
+        await bulkInsert('project_task', [
+            'id', 'fk_project_id', 'fk_team_id', 'fk_member_id', 'title', 'description', 'status', 'created_by', 'updated_by',
+            'direct_incoming_count', 'direct_outgoing_count', 'total_incoming_count', 'total_outgoing_count', 'incoming_label_counts', 'outgoing_label_counts'
+        ], extraTaskRows);
 
         console.log(`   ✓ Extra projects done (${elapsed(t0)})`);
+
+        // ----------------------------------------------------------
+        // 10. Synchronize Denormalized Counts
+        // ----------------------------------------------------------
+        console.log('\n🔄 Synchronizing denormalized link counts...');
+
+        // 10.1. Direct Counts & Label Maps
+        await sql.raw(`
+            WITH incoming_stats AS (
+                SELECT target_task_id, COUNT(*) as cnt, jsonb_object_agg(label, label_cnt) as labels
+                FROM (
+                    SELECT target_task_id, label, COUNT(*) as label_cnt
+                    FROM task_link
+                    GROUP BY target_task_id, label
+                ) l
+                GROUP BY target_task_id
+            )
+            UPDATE project_task pt
+            SET direct_incoming_count = s.cnt,
+                incoming_label_counts = s.labels
+            FROM incoming_stats s
+            WHERE pt.id = s.target_task_id;
+        `).execute(db);
+
+        await sql.raw(`
+            WITH outgoing_stats AS (
+                SELECT source_task_id, COUNT(*) as cnt, jsonb_object_agg(label, label_cnt) as labels
+                FROM (
+                    SELECT source_task_id, label, COUNT(*) as label_cnt
+                    FROM task_link
+                    GROUP BY source_task_id, label
+                ) l
+                GROUP BY source_task_id
+            )
+            UPDATE project_task pt
+            SET direct_outgoing_count = s.cnt,
+                outgoing_label_counts = s.labels
+            FROM outgoing_stats s
+            WHERE pt.id = s.source_task_id;
+        `).execute(db);
+
+        // 10.2. Total (Transitive) Counts
+        await sql.raw(`
+            WITH incoming_total AS (
+                SELECT descendant_task_id, COUNT(*) as cnt
+                FROM task_reachability
+                GROUP BY descendant_task_id
+            )
+            UPDATE project_task pt
+            SET total_incoming_count = s.cnt
+            FROM incoming_total s
+            WHERE pt.id = s.descendant_task_id;
+        `).execute(db);
+
+        await sql.raw(`
+            WITH outgoing_total AS (
+                SELECT ancestor_task_id, COUNT(*) as cnt
+                FROM task_reachability
+                GROUP BY ancestor_task_id
+            )
+            UPDATE project_task pt
+            SET total_outgoing_count = s.cnt
+            FROM outgoing_total s
+            WHERE pt.id = s.ancestor_task_id;
+        `).execute(db);
+
+        console.log(`   ✓ Counts synchronized (${elapsed(t0)})`);
 
         // ----------------------------------------------------------
         // Done

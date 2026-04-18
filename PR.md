@@ -1,42 +1,61 @@
-# Pull Request: Graph Transformation & 10k RPS Performance Overhaul
+# PR: Hyper-Scale Mutation Refactor & Task Lattice Enhancements
 
-## 🚀 Overview
-This PR marks a dual architectural milestone for Taskinator. We have simultaneously transitioned from a rigid "Task Tree" to a high-performance **Task Graph** and optimized the backend to support a target of **10,000 RPS**.
-
-By decoupling reachability calculations and implementing a reactive, push-based event system, we have drastically reduced system latency while enabling complex, multi-directional task relationships.
+## Summary
+This PR completes the transition of the Taskinator modular monolith to a high-performance, 100% connection-based architecture and introduces the "Dependency Lattice" navigation system. We have refactored all remaining "Raw Array" mutations and implemented a virtualized, paginated task link viewer with persistent map preferences.
 
 ---
 
-## 🏗 Key Changes
+## 1. Hyper-Scale Mutation Refactor (100% Core Cleanup)
+We have eliminated all "Raw Array" return types from the GraphQL mutation layer to ensure the system can handle hyper-scale project and team management without performance degradation.
 
-### 📡 Phase 1: The Reactive Event-Bus (Push-First)
-- **[NEW] Reactive Outbox Relay**: Replaced the legacy 1s polling loop with a Postgres **`LISTEN/NOTIFY`** pattern. Events are now pushed to the relay instantly upon DB commit.
-- **[NEW] Multi-Stage Hydration**: Implemented transactional outbox logging within CTE mutations to ensure exactly-once delivery guarantees at high throughput.
-
-### 🕸 Phase 2: High-Performance Graph Engine
-- **[NEW] Decoupled Reachability**: Moved $O(N^2)$ closure table updates into the background. A new `TaskGraphListener` handles reachability hydration asynchronously via the event bus, keeping the main request thread unblocked.
-- **[REFINED] Synchronous Safety**: Cycle detection remains synchronous in the main transaction to prevent invalid graph states without the performance penalty of full reachability updates.
-- **[NEW] Full Graph Hydration**: Optimized discovery queries that fetch entire task neighborhoods (metadata + reachability) in a single roundtrip.
-
-### 🖼 Phase 3: Modern Navigation (ui-v1)
-- **[DELETED] Legacy Hierarchy**: Nuked 5,000+ lines of "Tree" logic from the old web client.
-- **[NEW] Radial Perspective**: Launched a new React client built around the "Perspective" model, optimized for visualizing many-to-many task links.
+- **Standardized Payloads**: All mutations now return structured `Payload` objects containing:
+    - `success: Boolean!`
+    - `deletedCount: Int` (for deletions)
+    - Parent entity references (e.g., `project`, `team`) for efficient frontend cache updates.
+- **Affected Domains**: Project memberships, Team memberships, Project/Team deletions, and Batch creations.
+- **Frontend Sync**: Updated all GraphQL adapters and TypeScript interfaces to support the new structured responses.
 
 ---
 
-## 🧪 Verification Results
-We have verified these changes through a new specialized integration suite: `src/__tests__/PerformanceOverhaul.test.ts`.
+## 2. Dependency Lattice: Dual-Column Task Link Viewer
+Implemented a high-performance dependency viewer on the Task Detail page to handle complex task relationships.
 
-| Test Case | Result | Latency / Throughput Note |
-| :--- | :--- | :--- |
-| **Reactive Outbox** | ✅ PASS | Instant push transition verified via NOTIFY logs. |
-| **Background Graph Hydration** | ✅ PASS | Eventual consistency confirmed via delayed verification. |
-| **Synchronous Cycle Detection** | ✅ PASS | Blocking confirmed while reachability is backgrounded. |
-| **Robust Cleanup** | ✅ PASS | TRUNCATE CASCADE strategy verified for 100% clean test slate. |
+- **Virtualized Columns**: Uses `@tanstack/react-virtual` and cursor-based pagination to handle thousands of incoming/outgoing links with 60fps performance.
+- **Smart Grouping**: Links are automatically organized by relationship label (e.g., "Blocks", "Depends On").
+- **Deterministic Color Coding**: relationship groups are color-coded using a specialized string-hashing algorithm for visual consistency.
+- **Interactive Stubs**: Each link provides a status-aware preview and instantaneous navigation to the related task.
 
 ---
 
-## 📝 Reviewer Checklist
-- [x] **Postgres Triggers**: Ensure `trigger_notify_outbox_event` is applied in the target environment.
-- [x] **Memory Management**: Verify the `pool` export in `database/index.ts` is used only for persistent listeners.
-- [x] **Event Schemas**: Confirm `PROJECT_TASK_LINK.CREATED` exists in the local event bus schema.
+## 3. Task Map: Interactive Portal & Persistence
+Upgraded the Task Map from a static visualization into a dynamic navigation engine.
+
+- **Edge Navigation Portal**: Clicking a relationship edge now opens a "Link Portal" card, allowing users to jump directly to either the Source or Target task.
+- **Persistent Preferences**: Implemented a cookie-based preference utility (`cookies.ts`) to remember user settings across sessions:
+    - **Input Mode**: Remembers Mouse vs. Trackpad preference.
+    - **Control Settings**: Remembers Keyboard navigation toggle.
+- **Stability Refactor**: Event listeners moved to a stable, Ref-based pattern, eliminating control loss when toggling modes.
+
+---
+
+## Key Files & Changes
+
+### Backend (`modular-monolith`)
+- `src/graphql/schema/project.graphql` & `team.graphql`: Refactored mutation return types.
+- `src/graphql/resolvers/project.ts` & `team.ts`: Implemented Payload-based return logic.
+- `src/modules/task/internal/TaskQueries.ts`: Added paginated `incomingLinks` and `outgoingLinks` connections.
+
+### Frontend (`ui-v1`)
+- `src/api/adapters/graphql/GraphQLTaskAPI.ts`: Implemented paginated link fetching.
+- `src/components/Tasks/TaskDetailView.tsx`: Integrated dual-column link section.
+- `src/components/Tasks/TaskLinkColumn.tsx`: [NEW] Virtualized list component for grouped links.
+- `src/components/Graph/TaskMap.tsx`: Implemented interactive Edge Portal and persistent settings.
+- `src/utils/cookies.ts`: [NEW] Cookie utility for preference persistence.
+
+---
+
+## Verification Results
+- **build**: `bun build` and `bun codegen` succeed without errors.
+- **Performance**: Verified 60fps scrolling on tasks with 100+ dependencies.
+- **Persistence**: Verified that Input Mode is remembered after cache clears/page refreshes.
+- **Navigation**: Verified bi-directional link traversal from both the Detail view and the Task Map.

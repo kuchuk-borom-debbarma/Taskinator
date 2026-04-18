@@ -1,6 +1,7 @@
 import type { GraphQLContext } from '../context.ts';
 import { projectService } from '../../modules/project';
 import { resolveProject, resolveUser, buildRef } from './helpers.ts';
+import { UnauthorizedError } from '../errors';
 
 export const projectResolvers = {
     Project: {
@@ -25,8 +26,6 @@ export const projectResolvers = {
             return date instanceof Date ? date.toISOString() : date;
         },
         creator: (p: any) => buildRef(p.userId, 'User'),
-        automations: (p: any, _: any, context: GraphQLContext) =>
-            context.loaders.projectAutomations.load(p.id),
     },
     ProjectMember: {
         id: (m: any) => m.id,
@@ -43,7 +42,7 @@ export const projectResolvers = {
             { first, after, last, before }: any,
             context: GraphQLContext,
         ) => {
-            if (!context.userId) throw new Error('Unauthorized');
+            if (!context.userId) throw new UnauthorizedError();
             const { projects, nextCursor, prevCursor } = await projectService.getProjects(
                 context.userId,
                 { first, after, last, before },
@@ -63,7 +62,7 @@ export const projectResolvers = {
             };
         },
         project: async (_: any, { id }: any, context: GraphQLContext) => {
-            if (!context.userId) throw new Error('Unauthorized');
+            if (!context.userId) throw new UnauthorizedError();
             return projectService.getProject(context.userId, id);
         },
         projectMembers: async (
@@ -71,7 +70,7 @@ export const projectResolvers = {
             { projectId, first, after, last, before }: any,
             context: GraphQLContext,
         ) => {
-            if (!context.userId) throw new Error('Unauthorized');
+            if (!context.userId) throw new UnauthorizedError();
             const { members, nextCursor, prevCursor } =
                 await projectService.getProjectMembers(
                     context.userId,
@@ -95,7 +94,7 @@ export const projectResolvers = {
             { name, description }: any,
             context: GraphQLContext,
         ) => {
-            if (!context.userId) throw new Error('Unauthorized');
+            if (!context.userId) throw new UnauthorizedError();
             return projectService.createProject({
                 name,
                 description,
@@ -107,7 +106,7 @@ export const projectResolvers = {
             { id, name, description }: any,
             context: GraphQLContext,
         ) => {
-            if (!context.userId) throw new Error('Unauthorized');
+            if (!context.userId) throw new UnauthorizedError();
             return projectService.updateProject({
                 userId: context.userId,
                 projectId: id,
@@ -120,37 +119,45 @@ export const projectResolvers = {
             { projectIds }: any,
             context: GraphQLContext,
         ) => {
-            if (!context.userId) throw new Error('Unauthorized');
-            await projectService.deleteProjects({
+            if (!context.userId) throw new UnauthorizedError();
+            const deletedCount = await projectService.deleteProjects({
                 userId: context.userId,
                 projectIds,
             });
-            return true;
+            return { success: true, deletedCount: projectIds.length };
         },
         addProjectMembers: async (
             _: any,
             { projectId, userIds }: any,
             context: GraphQLContext,
         ) => {
-            if (!context.userId) throw new Error('Unauthorized');
-            return projectService.addProjectMembers({
+            if (!context.userId) throw new UnauthorizedError();
+            await projectService.addProjectMembers({
                 userId: context.userId,
                 projectId,
                 usersToAdd: userIds,
             });
+            return { 
+                success: true, 
+                project: { id: projectId } 
+            };
         },
         removeProjectMembers: async (
             _: any,
             { projectId, memberIds }: any,
             context: GraphQLContext,
         ) => {
-            if (!context.userId) throw new Error('Unauthorized');
+            if (!context.userId) throw new UnauthorizedError();
             await projectService.deleteProjectMembers({
                 userId: context.userId,
                 projectId,
                 memberIds,
             });
-            return memberIds;
+            return {
+                success: true,
+                removedCount: memberIds.length,
+                project: { id: projectId }
+            };
         },
     },
 };

@@ -1,6 +1,6 @@
-import type { GraphQLContext } from '../context.ts';
 import { internalNotificationService as notificationService } from '../../modules/internal-notification';
 import { pubsub } from '../pubsub';
+import { UnauthorizedError } from '../errors';
 
 export const notificationResolvers = {
     InternalNotification: {
@@ -17,7 +17,7 @@ export const notificationResolvers = {
             args: { first?: number; after?: string },
             context: GraphQLContext,
         ) => {
-            if (!context.userId) throw new Error('Unauthorized');
+            if (!context.userId) throw new UnauthorizedError();
             const { notifications, nextCursor } =
                 await notificationService.getNotifications(context.userId, {
                     limit: args.first,
@@ -46,7 +46,7 @@ export const notificationResolvers = {
             __: any,
             context: GraphQLContext,
         ) => {
-            if (!context.userId) throw new Error('Unauthorized');
+            if (!context.userId) throw new UnauthorizedError();
             return notificationService.getUnreadCount(context.userId);
         },
     },
@@ -56,7 +56,7 @@ export const notificationResolvers = {
             { id }: any,
             context: GraphQLContext,
         ) => {
-            if (!context.userId) throw new Error('Unauthorized');
+            if (!context.userId) throw new UnauthorizedError();
             await notificationService.markAsRead(context.userId, id);
             return true;
         },
@@ -65,7 +65,7 @@ export const notificationResolvers = {
             __: any,
             context: GraphQLContext,
         ) => {
-            if (!context.userId) throw new Error('Unauthorized');
+            if (!context.userId) throw new UnauthorizedError();
             await notificationService.markAllAsRead(context.userId);
             return true;
         },

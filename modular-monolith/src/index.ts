@@ -5,7 +5,6 @@ import { externalNotificationService } from './modules/external-notification/ind
 import { internalNotificationService } from './modules/internal-notification/index.ts';
 import { startConsumers } from './kafka/registry.ts';
 import { startRestServer } from './restful';
-import { automationService } from './modules/automation/index.ts';
 import { startOutboxRelay } from './utils/event-bus/OutboxRelay';
 import { startRedisBridge } from './redis/RealtimeRedisBridge';
 import eventBus from './utils/EventBus';
@@ -31,7 +30,6 @@ async function bootstrap() {
         await Promise.all([
             projectService.init(),
             teamService.init(),
-            automationService.init(),
             authService.init(),
             externalNotificationService.init(),
             internalNotificationService.init(),

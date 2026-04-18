@@ -3,15 +3,18 @@ import type { Project } from '../../types';
 import { graphql } from '../../../gql';
 import { print } from 'graphql';
 import type { GetProjectsQuery, GetProjectQuery, CreateProjectMutation } from '../../../gql/graphql';
+import { AuthenticationError } from '../../errors';
 
 const GRAPHQL_URL = 'http://localhost:3000/graphql';
 
 export class GraphQLProjectAPI implements ProjectAPI {
   private token: string | null;
+  private onUnauthorized?: () => void;
   private static queryCache = new Map<any, string>();
 
-  constructor(token: string | null) {
+  constructor(token: string | null, options?: { onUnauthorized?: () => void }) {
     this.token = token;
+    this.onUnauthorized = options?.onUnauthorized;
   }
 
   private async query<T>(query: any, variables: any = {}): Promise<T> {
@@ -40,7 +43,12 @@ export class GraphQLProjectAPI implements ProjectAPI {
     const result = await response.json();
     if (result.errors) {
       console.error('GraphQL Errors:', JSON.stringify(result.errors, null, 2));
-      throw new Error(result.errors[0].message);
+      const firstError = result.errors[0];
+      if (firstError.extensions?.code === 'UNAUTHENTICATED') {
+        this.onUnauthorized?.();
+        throw new AuthenticationError();
+      }
+      throw new Error(firstError.message);
     }
     return result.data as T;
   }
@@ -105,5 +113,40 @@ export class GraphQLProjectAPI implements ProjectAPI {
       }
     `), { name, description });
     return data.createProject as Project;
+  }
+
+  async deleteProjects(projectIds: string[]): Promise<{ success: boolean; deletedCount: number }> {
+    const data = await this.query<any>(`
+      mutation DeleteProjects($projectIds: [ID!]!) {
+        deleteProjects(projectIds: $projectIds) {
+          success
+          deletedCount
+        }
+      }
+    `, { projectIds });
+    return data.deleteProjects;
+  }
+
+  async addProjectMembers(projectId: string, userIds: string[]): Promise<{ success: boolean }> {
+    const data = await this.query<any>(`
+      mutation AddProjectMembers($projectId: ID!, $userIds: [String!]!) {
+        addProjectMembers(projectId: $projectId, userIds: $userIds) {
+          success
+        }
+      }
+    `, { projectId, userIds });
+    return data.addProjectMembers;
+  }
+
+  async removeProjectMembers(projectId: string, memberIds: string[]): Promise<{ success: boolean; removedCount: number }> {
+    const data = await this.query<any>(`
+      mutation RemoveProjectMembers($projectId: ID!, $memberIds: [ID!]!) {
+        removeProjectMembers(projectId: $projectId, memberIds: $memberIds) {
+          success
+          removedCount
+        }
+      }
+    `, { projectId, memberIds });
+    return data.removeProjectMembers;
   }
 }

@@ -1,6 +1,6 @@
 import type { BaseService } from './index.ts';
 
-export type TaskStatus = 'TODO' | 'IN_PROGRESS' | 'DONE';
+export type TaskStatus = string;
 
 export type ProjectTask = {
     id: string;
@@ -16,6 +16,12 @@ export type ProjectTask = {
     updatedBy: string;
     createdAt: Date;
     updatedAt: Date;
+    directIncomingCount: number;
+    directOutgoingCount: number;
+    totalIncomingCount: number;
+    totalOutgoingCount: number;
+    incomingLabelCounts: Record<string, number>;
+    outgoingLabelCounts: Record<string, number>;
 };
 
 export type TaskLink = {
@@ -99,6 +105,12 @@ export interface TaskService extends BaseService {
     getTaskLinks(
         params: GetTaskLinksParam,
         pagination: PaginationParams,
+    ): Promise<LinkConnection>;
+
+    getProjectLinks(
+        userId: string, 
+        projectId: string,
+        pagination: PaginationParams
     ): Promise<LinkConnection>;
 
     getTaskNeighbourhood(params: GetNeighbourhoodParam): Promise<TaskNeighbourhoodResult>;

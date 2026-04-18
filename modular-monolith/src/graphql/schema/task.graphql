@@ -39,15 +39,25 @@ type NeighbourhoodNode {
   direction: NeighbourDirection!
 }
 
+type NeighbourhoodNodeEdge {
+  node: NeighbourhoodNode!
+  cursor: String!
+}
+
+type NeighbourhoodNodeConnection {
+  edges: [NeighbourhoodNodeEdge!]!
+  pageInfo: PageInfo!
+}
+
 type TaskNeighbourhood {
   # Always the root/centre — NOT in nodes
   focusedTask: ProjectTask!
 
   # Arranged nodes, ordered by (depth ASC, direction) — server does the work
-  nodes: [NeighbourhoodNode!]!
+  nodes(first: Int, after: String, last: Int, before: String): NeighbourhoodNodeConnection!
 
   # Direct links between any two nodes in {focusedTask} ∪ {nodes}
-  edges: [TaskLink!]!
+  edges(first: Int, after: String, last: Int, before: String): TaskLinkConnection!
 
   pageInfo: PageInfo!
 }
@@ -68,6 +78,13 @@ type ProjectTask {
   updatedBy: ID! # Needs to resolve to user
   createdAt: String!
   updatedAt: String!
+
+  incomingLinksCount: Int!
+  outgoingLinksCount: Int!
+  directIncomingLinksCount: Int!
+  directOutgoingLinksCount: Int!
+  incomingLabelCounts: String!
+  outgoingLabelCounts: String!
 
   # Resolved fields
   project: Project
@@ -112,6 +129,9 @@ extend type Query {
     last: Int
     before: String
   ): TaskNeighbourhood!
+
+  # Returns all direct task_link edges in a project (for list view dependency chips)
+  projectTaskLinks(projectId: ID!, first: Int, after: String, last: Int, before: String): TaskLinkConnection!
 }
 
 extend type Mutation {
