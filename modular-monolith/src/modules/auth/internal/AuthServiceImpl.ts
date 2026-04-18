@@ -166,8 +166,8 @@ export class AuthServiceImpl implements AuthService {
             const last = users[users.length - 1]!;
 
             if (isBackward) {
-                nextCursor = hasMore ? first.id : null;
-                prevCursor = last.id;
+                nextCursor = last.id;
+                prevCursor = hasMore ? first.id : null;
             } else {
                 nextCursor = hasMore ? last.id : null;
                 prevCursor = after ? first.id : null;

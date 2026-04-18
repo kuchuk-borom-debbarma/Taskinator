@@ -269,8 +269,8 @@ export const getTeams = async (
         const last = teams[teams.length - 1]!;
 
         if (isBackward) {
-            nextCursor = hasMore ? first.id : null;
-            prevCursor = last.id;
+            nextCursor = last.id;
+            prevCursor = hasMore ? first.id : null;
         } else {
             nextCursor = hasMore ? last.id : null;
             prevCursor = after ? first.id : null;
@@ -342,8 +342,8 @@ export const getTeamMembers = async (
         const last = members[members.length - 1]!;
 
         if (isBackward) {
-            nextCursor = hasMore ? first.id : null;
-            prevCursor = last.id;
+            nextCursor = last.id;
+            prevCursor = hasMore ? first.id : null;
         } else {
             nextCursor = hasMore ? last.id : null;
             prevCursor = after ? first.id : null;
@@ -425,8 +425,8 @@ export const searchTeamUsers = async (params: {
         const lastUser = users[users.length - 1]!;
 
         if (isBackward) {
-            nextCursor = hasMore ? firstUser.id : null;
-            prevCursor = lastUser.id;
+            nextCursor = lastUser.id;
+            prevCursor = hasMore ? firstUser.id : null;
         } else {
             nextCursor = hasMore ? lastUser.id : null;
             prevCursor = after ? firstUser.id : null;

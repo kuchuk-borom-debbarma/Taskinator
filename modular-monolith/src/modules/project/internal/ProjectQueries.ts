@@ -299,8 +299,8 @@ export const getProjects = async (
         const lastDateStr = last.createdAt instanceof Date ? last.createdAt.toISOString() : last.createdAt;
 
         if (isBackward) {
-            nextCursor = hasMore ? `${firstDateStr}|${first.id}` : null;
-            prevCursor = `${lastDateStr}|${last.id}`;
+            nextCursor = `${lastDateStr}|${last.id}`;
+            prevCursor = hasMore ? `${firstDateStr}|${first.id}` : null;
         } else {
             nextCursor = hasMore ? `${lastDateStr}|${last.id}` : null;
             prevCursor = after ? `${firstDateStr}|${first.id}` : null;
@@ -399,8 +399,8 @@ export const getProjectMembers = async (
         const last = members[members.length - 1]!;
 
         if (isBackward) {
-            nextCursor = hasMore ? first.id : null;
-            prevCursor = last.id;
+            nextCursor = last.id;
+            prevCursor = hasMore ? first.id : null;
         } else {
             nextCursor = hasMore ? last.id : null;
             prevCursor = after ? first.id : null;
@@ -503,8 +503,8 @@ export const searchProjectMembers = async (params: {
         const last = users[users.length - 1]!;
 
         if (isBackward) {
-            nextCursor = hasMore ? first.id : null;
-            prevCursor = last.id;
+            nextCursor = last.id;
+            prevCursor = hasMore ? first.id : null;
         } else {
             nextCursor = hasMore ? last.id : null;
             prevCursor = after ? first.id : null;

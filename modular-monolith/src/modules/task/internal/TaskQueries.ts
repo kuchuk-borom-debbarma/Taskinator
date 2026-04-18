@@ -460,8 +460,8 @@ export const getTasksPage = async (
         const lastDateStr = last.createdAt instanceof Date ? last.createdAt.toISOString() : last.createdAt;
 
         if (isBackward) {
-            nextCursor = hasMore ? `${firstDateStr}|${first.id}` : null;
-            prevCursor = `${lastDateStr}|${last.id}`;
+            nextCursor = `${lastDateStr}|${last.id}`;
+            prevCursor = hasMore ? `${firstDateStr}|${first.id}` : null;
         } else {
             nextCursor = hasMore ? `${lastDateStr}|${last.id}` : null;
             prevCursor = after ? `${firstDateStr}|${first.id}` : null;
@@ -577,8 +577,8 @@ export const getTaskLinksPage = async (
         const lastDateStr = last.createdAt instanceof Date ? last.createdAt.toISOString() : last.createdAt;
 
         if (isBackward) {
-            nextCursor = hasMore ? `${firstDateStr}|${first.id}` : null;
-            prevCursor = `${lastDateStr}|${last.id}`;
+            nextCursor = `${lastDateStr}|${last.id}`;
+            prevCursor = hasMore ? `${firstDateStr}|${first.id}` : null;
         } else {
             nextCursor = hasMore ? `${lastDateStr}|${last.id}` : null;
             prevCursor = after ? `${firstDateStr}|${first.id}` : null;
@@ -741,8 +741,8 @@ export const getNeighbourhood = async (
         const last = reachRows[reachRows.length - 1]!;
 
         if (isBackward) {
-            nextCursor = hasMore ? `${first.min_depth}|${first.createdAt.toISOString()}|${first.neighbour_id}` : null;
-            prevCursor = `${last.min_depth}|${last.createdAt.toISOString()}|${last.neighbour_id}`;
+            nextCursor = `${last.min_depth}|${last.createdAt.toISOString()}|${last.neighbour_id}`;
+            prevCursor = hasMore ? `${first.min_depth}|${first.createdAt.toISOString()}|${first.neighbour_id}` : null;
         } else {
             nextCursor = hasMore ? `${last.min_depth}|${last.createdAt.toISOString()}|${last.neighbour_id}` : null;
             prevCursor = params.after ? `${first.min_depth}|${first.createdAt.toISOString()}|${first.neighbour_id}` : null;
@@ -944,8 +944,8 @@ export const getProjectTaskLinksPage = async (
         const lastDateStr = last.createdAt instanceof Date ? last.createdAt.toISOString() : last.createdAt;
 
         if (isBackward) {
-            nextCursor = hasMore ? `${firstDateStr}|${first.id}` : null;
-            prevCursor = `${lastDateStr}|${last.id}`;
+            nextCursor = `${lastDateStr}|${last.id}`;
+            prevCursor = hasMore ? `${firstDateStr}|${first.id}` : null;
         } else {
             nextCursor = hasMore ? `${lastDateStr}|${last.id}` : null;
             prevCursor = after ? `${firstDateStr}|${first.id}` : null;
