@@ -33,7 +33,7 @@ export const notificationResolvers = {
                             ? JSON.stringify(n.metadata)
                             : null,
                     },
-                    cursor: `${n.createdAt instanceof Date ? n.createdAt.toISOString() : n.createdAt}|${n.id}`,
+                    cursor: `${n.createdAtPrecision || (n.createdAt instanceof Date ? n.createdAt.toISOString() : n.createdAt)}|${n.id}`,
                 })),
                 pageInfo: {
                     hasNextPage: !!nextCursor,

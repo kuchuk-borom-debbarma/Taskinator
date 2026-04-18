@@ -414,6 +414,7 @@ export const getTasksPage = async (
             created_by AS "createdBy",
             updated_by AS "updatedBy",
             created_at AS "createdAt",
+            TO_CHAR(created_at, 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as "createdAtPrecision",
             updated_at AS "updatedAt",
             (SELECT count(*) FROM auth_check) as "hasAccess"
         FROM project_task
@@ -456,8 +457,8 @@ export const getTasksPage = async (
     if (rows.length > 0) {
         const first = rows[0]!;
         const last = rows[rows.length - 1]!;
-        const firstDateStr = first.createdAt instanceof Date ? first.createdAt.toISOString() : first.createdAt;
-        const lastDateStr = last.createdAt instanceof Date ? last.createdAt.toISOString() : last.createdAt;
+        const firstDateStr = (first as any).createdAtPrecision;
+        const lastDateStr = (last as any).createdAtPrecision;
 
         if (isBackward) {
             nextCursor = `${lastDateStr}|${last.id}`;
@@ -544,7 +545,8 @@ export const getTaskLinksPage = async (
             target_task_id AS "targetTaskId",
             label,
             created_by AS "createdBy",
-            created_at AS "createdAt"
+            created_at AS "createdAt",
+            TO_CHAR(created_at, 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as "createdAtPrecision"
         FROM task_link
         WHERE fk_project_id = ${projectId}::uuid
           AND ${sql.raw(filterCol)} = ${taskId}::uuid
@@ -573,8 +575,8 @@ export const getTaskLinksPage = async (
     if (rows.length > 0) {
         const first = rows[0]!;
         const last = rows[rows.length - 1]!;
-        const firstDateStr = first.createdAt instanceof Date ? first.createdAt.toISOString() : first.createdAt;
-        const lastDateStr = last.createdAt instanceof Date ? last.createdAt.toISOString() : last.createdAt;
+        const firstDateStr = (first as any).createdAtPrecision;
+        const lastDateStr = (last as any).createdAtPrecision;
 
         if (isBackward) {
             nextCursor = `${lastDateStr}|${last.id}`;
@@ -741,11 +743,11 @@ export const getNeighbourhood = async (
         const last = reachRows[reachRows.length - 1]!;
 
         if (isBackward) {
-            nextCursor = `${last.min_depth}|${last.createdAt.toISOString()}|${last.neighbour_id}`;
-            prevCursor = hasMore ? `${first.min_depth}|${first.createdAt.toISOString()}|${first.neighbour_id}` : null;
+            nextCursor = `${last.min_depth}|${(last as any).task.createdAtPrecision}|${last.neighbour_id}`;
+            prevCursor = hasMore ? `${first.min_depth}|${(first as any).task.createdAtPrecision}|${first.neighbour_id}` : null;
         } else {
-            nextCursor = hasMore ? `${last.min_depth}|${last.createdAt.toISOString()}|${last.neighbour_id}` : null;
-            prevCursor = params.after ? `${first.min_depth}|${first.createdAt.toISOString()}|${first.neighbour_id}` : null;
+            nextCursor = hasMore ? `${last.min_depth}|${(last as any).task.createdAtPrecision}|${last.neighbour_id}` : null;
+            prevCursor = params.after ? `${first.min_depth}|${(first as any).task.createdAtPrecision}|${first.neighbour_id}` : null;
         }
     }
 
@@ -908,7 +910,8 @@ export const getProjectTaskLinksPage = async (
             target_task_id AS "targetTaskId",
             label,
             created_by AS "createdBy",
-            created_at AS "createdAt"
+            created_at AS "createdAt",
+            TO_CHAR(created_at, 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as "createdAtPrecision"
         FROM task_link
         WHERE fk_project_id = ${projectId}::uuid
           AND EXISTS (SELECT 1 FROM auth_check)
@@ -940,8 +943,8 @@ export const getProjectTaskLinksPage = async (
     if (rows.length > 0) {
         const first = rows[0]!;
         const last = rows[rows.length - 1]!;
-        const firstDateStr = first.createdAt instanceof Date ? first.createdAt.toISOString() : first.createdAt;
-        const lastDateStr = last.createdAt instanceof Date ? last.createdAt.toISOString() : last.createdAt;
+        const firstDateStr = (first as any).createdAtPrecision;
+        const lastDateStr = (last as any).createdAtPrecision;
 
         if (isBackward) {
             nextCursor = `${lastDateStr}|${last.id}`;

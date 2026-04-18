@@ -22,6 +22,7 @@ export type ProjectTask = {
     totalOutgoingCount: number;
     incomingLabelCounts: Record<string, number>;
     outgoingLabelCounts: Record<string, number>;
+    createdAtPrecision?: string;
 };
 
 export type TaskLink = {
@@ -32,6 +33,7 @@ export type TaskLink = {
     label: string;
     createdBy: string;
     createdAt: Date;
+    createdAtPrecision?: string;
 };
 
 export interface CreateTaskParam {

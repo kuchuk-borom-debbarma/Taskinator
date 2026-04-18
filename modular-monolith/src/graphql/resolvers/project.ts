@@ -49,9 +49,9 @@ export const projectResolvers = {
             );
 
             return {
-                edges: projects.map((p) => ({
+                edges: projects.map((p: any) => ({
                     node: p,
-                    cursor: `${p.createdAt instanceof Date ? p.createdAt.toISOString() : p.createdAt}|${p.id}`,
+                    cursor: `${p.createdAtPrecision || (p.createdAt instanceof Date ? p.createdAt.toISOString() : p.createdAt)}|${p.id}`,
                 })),
                 pageInfo: {
                     hasNextPage: !!nextCursor,

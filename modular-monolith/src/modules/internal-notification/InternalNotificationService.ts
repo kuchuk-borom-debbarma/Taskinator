@@ -9,6 +9,7 @@ export interface InternalNotification {
     metadata: any;
     isRead: boolean;
     createdAt: Date;
+    createdAtPrecision?: string;
     readAt: Date | null;
 }
 

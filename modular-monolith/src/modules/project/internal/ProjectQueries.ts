@@ -263,6 +263,7 @@ export const getProjects = async (
             version,
             last_event_id AS "lastEventId",
             created_at AS "createdAt",
+            TO_CHAR(created_at, 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as "createdAtPrecision",
             updated_at AS "updatedAt",
             is_owner AS "isOwner"
         FROM combined_projects
@@ -295,8 +296,8 @@ export const getProjects = async (
     if (projects.length > 0) {
         const first = projects[0]!;
         const last = projects[projects.length - 1]!;
-        const firstDateStr = first.createdAt instanceof Date ? first.createdAt.toISOString() : first.createdAt;
-        const lastDateStr = last.createdAt instanceof Date ? last.createdAt.toISOString() : last.createdAt;
+        const firstDateStr = (first as any).createdAtPrecision;
+        const lastDateStr = (last as any).createdAtPrecision;
 
         if (isBackward) {
             nextCursor = `${lastDateStr}|${last.id}`;

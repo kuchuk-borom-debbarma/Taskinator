@@ -11,7 +11,7 @@ const buildLinkConnection = (
 ) => ({
     edges: links.map((l: TaskLink) => ({
         node: l,
-        cursor: `${l.createdAt instanceof Date ? l.createdAt.toISOString() : l.createdAt}|${l.id}`,
+        cursor: `${l.createdAtPrecision || (l.createdAt instanceof Date ? l.createdAt.toISOString() : l.createdAt)}|${l.id}`,
     })),
     pageInfo: {
         hasNextPage: !!nextCursor,
@@ -230,7 +230,7 @@ export const taskResolvers = {
             return {
                 edges: tasks.map((t: ProjectTask) => ({
                     node: t,
-                    cursor: `${t.createdAt instanceof Date ? t.createdAt.toISOString() : t.createdAt}|${t.id}`,
+                    cursor: `${t.createdAtPrecision || (t.createdAt instanceof Date ? t.createdAt.toISOString() : t.createdAt)}|${t.id}`,
                 })),
                 pageInfo: {
                     hasNextPage: !!nextCursor,
@@ -272,7 +272,7 @@ export const taskResolvers = {
                 nodes: {
                     edges: result.neighbours.map(n => ({
                         node: n,
-                        cursor: `${n.depth}|${n.task?.createdAt.toISOString()}|${n.taskId}`
+                        cursor: `${n.depth}|${n.task?.createdAtPrecision || n.task?.createdAt.toISOString()}|${n.taskId}`
                     })),
                     pageInfo: {
                         hasNextPage: !!result.nextCursor,

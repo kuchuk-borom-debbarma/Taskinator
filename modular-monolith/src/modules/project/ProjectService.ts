@@ -9,6 +9,7 @@ export type Project = {
     lastEventId: string | null;
     isOwner?: boolean;
     createdAt: Date;
+    createdAtPrecision?: string;
     updatedAt?: Date;
 };
 

@@ -93,6 +93,7 @@ export const getNotifications = async (
             metadata,
             is_read AS "isRead",
             created_at AS "createdAt",
+            TO_CHAR(created_at, 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as "createdAtPrecision",
             read_at AS "readAt"
         FROM internal_notification
         WHERE fk_user_id = ${userId}::text
@@ -111,10 +112,7 @@ export const getNotifications = async (
     let nextCursor: string | null = null;
     if (hasMore && notifications.length > 0) {
         const last = notifications[notifications.length - 1]!;
-        const dateStr =
-            last.createdAt instanceof Date
-                ? last.createdAt.toISOString()
-                : last.createdAt;
+        const dateStr = last.createdAtPrecision;
         nextCursor = `${dateStr}|${last.id}`;
     }
 
