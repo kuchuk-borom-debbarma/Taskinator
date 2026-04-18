@@ -134,15 +134,27 @@ export const Sidebar: React.FC = () => {
     overscan: 10,
   });
 
+  const isTriggeringRef = useRef(false);
+
+  // Reset the trigger guard when fetching finishes
   useEffect(() => {
-    const [lastItem] = [...rowVirtualizer.getVirtualItems()].reverse();
-    if (!lastItem) return;
+    if (!isFetchingNextPage) {
+      isTriggeringRef.current = false;
+    }
+  }, [isFetchingNextPage]);
+
+  useEffect(() => {
+    const virtualItems = rowVirtualizer.getVirtualItems();
+    if (virtualItems.length === 0 || isTriggeringRef.current) return;
+
+    const lastItem = virtualItems[virtualItems.length - 1];
 
     if (
       lastItem.index >= allProjects.length - 1 &&
       hasNextPage &&
       !isFetchingNextPage
     ) {
+      isTriggeringRef.current = true;
       fetchNextPage();
     }
   }, [hasNextPage, fetchNextPage, allProjects.length, isFetchingNextPage, rowVirtualizer.getVirtualItems()]);

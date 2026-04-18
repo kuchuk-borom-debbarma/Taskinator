@@ -81,10 +81,16 @@ export class GraphQLTaskAPI implements TaskAPI {
     } as unknown as ProjectTask;
   }
 
-  async getProjectTasks(projectId: string, first?: number, after?: string): Promise<{ tasks: ProjectTask[], hasNextPage: boolean, endCursor: string | null }> {
+  async getProjectTasks(
+    projectId: string, 
+    first?: number, 
+    after?: string, 
+    last?: number, 
+    before?: string
+  ): Promise<{ tasks: ProjectTask[], hasNextPage: boolean, hasPreviousPage: boolean, endCursor: string | null, startCursor: string | null }> {
     const data = await this.query<GetProjectTasksQuery>(graphql(`
-      query GetProjectTasks($projectId: ID!, $first: Int, $after: String) {
-        projectTasks(projectId: $projectId, first: $first, after: $after) {
+      query GetProjectTasks($projectId: ID!, $first: Int, $after: String, $last: Int, $before: String) {
+        projectTasks(projectId: $projectId, first: $first, after: $after, last: $last, before: $before) {
           edges {
             node {
               id projectId teamId memberId title description status priority dueDate version createdAt updatedAt createdBy
@@ -97,16 +103,20 @@ export class GraphQLTaskAPI implements TaskAPI {
           }
           pageInfo {
             hasNextPage
+            hasPreviousPage
+            startCursor
             endCursor
           }
         }
       }
-    `), { projectId, first, after });
+    `), { projectId, first, after, last, before });
     
     return {
       tasks: data.projectTasks.edges.map(e => this.mapTask(e.node)),
       hasNextPage: data.projectTasks.pageInfo.hasNextPage || false,
-      endCursor: data.projectTasks.pageInfo.endCursor || null
+      hasPreviousPage: data.projectTasks.pageInfo.hasPreviousPage || false,
+      endCursor: data.projectTasks.pageInfo.endCursor || null,
+      startCursor: data.projectTasks.pageInfo.startCursor || null
     };
   }
 

@@ -69,10 +69,19 @@ export const TaskLinkColumn: React.FC<TaskLinkColumnProps> = ({ taskId, directio
     overscan: 10,
   });
 
+  const isTriggeringRef = useRef(false);
+
+  // Reset the trigger guard when fetching finishes
+  useEffect(() => {
+    if (!isFetchingNextPage) {
+      isTriggeringRef.current = false;
+    }
+  }, [isFetchingNextPage]);
+
   // Infinite Scroll Trigger
   useEffect(() => {
     const virtualItems = rowVirtualizer.getVirtualItems();
-    if (virtualItems.length === 0) return;
+    if (virtualItems.length === 0 || isTriggeringRef.current) return;
 
     const lastItem = virtualItems[virtualItems.length - 1];
     if (
@@ -80,6 +89,7 @@ export const TaskLinkColumn: React.FC<TaskLinkColumnProps> = ({ taskId, directio
       hasNextPage &&
       !isFetchingNextPage
     ) {
+      isTriggeringRef.current = true;
       fetchNextPage();
     }
   }, [hasNextPage, isFetchingNextPage, virtualData.length, fetchNextPage, rowVirtualizer.getVirtualItems()]);
