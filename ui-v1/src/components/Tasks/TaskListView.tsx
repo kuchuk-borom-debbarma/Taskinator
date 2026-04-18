@@ -17,10 +17,10 @@ export const TaskListView: React.FC<TaskListViewProps> = ({ tasks, links }) => {
   };
 
   return (
-    <div className="flex flex-col gap-10 px-6 py-10 md:px-16 w-full max-w-5xl mx-auto">
+    <div className="flex flex-col gap-10 px-6 py-10 md:px-16 w-full max-w-5xl mx-auto text-slate-100">
       <header>
-        <h1 className="text-4xl font-extrabold tracking-tight text-text-notion mb-2">Tasks</h1>
-        <p className="text-text-dim text-lg">Manage your project dependencies and progress.</p>
+        <h1 className="text-4xl font-extrabold tracking-tight text-white mb-2">Tasks</h1>
+        <p className="text-slate-300/80 text-lg">Manage your project dependencies and progress.</p>
       </header>
 
       <div className="flex flex-col gap-12">
@@ -40,13 +40,13 @@ const TaskGroup: React.FC<{
   icon: React.ReactNode 
 }> = ({ title, tasks, links, allTasks, icon }) => (
   <section className="flex flex-col gap-4">
-    <div className="flex items-center gap-2 pb-2 border-b border-border-notion">
+    <div className="flex items-center gap-2 pb-2 border-b border-white/8">
       {icon}
-      <h2 className="text-xs font-bold uppercase tracking-widest text-text-notion">{title}</h2>
-      <span className="text-xs text-text-dim ml-1">{tasks.length}</span>
+      <h2 className="text-xs font-bold uppercase tracking-widest text-white/90">{title}</h2>
+      <span className="text-xs text-slate-400 ml-1">{tasks.length}</span>
     </div>
     
-    <div className="divide-y divide-border-notion">
+    <div className="space-y-3">
       {tasks.map(task => {
         // Find direct links for this task
         const incomingLinks = links.filter(l => l.targetTaskId === task.id);
@@ -74,15 +74,15 @@ const TaskGroup: React.FC<{
             key={task.id} 
             to="/projects/$projectId/tasks/$taskId"
             params={{ projectId: task.projectId, taskId: task.id }}
-            className="group flex items-start justify-between py-5 px-3 text-sm transition-all duration-150 hover:bg-bg-secondary rounded-lg"
+            className="group glass-card-dark flex items-start justify-between py-5 px-4 text-sm transition-all duration-150 hover:bg-slate-800/70 hover:border-white/12 rounded-2xl"
           >
             <div className="flex flex-col gap-3 flex-1 overflow-hidden">
-              <span className="font-bold text-text-notion group-hover:text-focus-blue text-base leading-tight">{task.title}</span>
+              <span className="font-bold text-white group-hover:text-blue-300 text-base leading-tight">{task.title}</span>
               
               <div className="flex flex-col gap-2.5">
                 {Object.keys(incomingByLabel).length > 0 && (
                   <div className="flex items-start gap-2">
-                    <ArrowDownLeft size={12} className="text-text-dim mt-1 shrink-0" />
+                    <ArrowDownLeft size={12} className="text-slate-400 mt-1 shrink-0" />
                     <div className="flex flex-col gap-2 flex-1">
                       {Object.entries(incomingByLabel).map(([label, ts]) => (
                         <div key={label} className="flex flex-wrap items-center gap-1.5 min-h-[22px]">
@@ -94,7 +94,7 @@ const TaskGroup: React.FC<{
                           </span>
                           <div className="flex flex-wrap gap-1.5">
                             {ts.map(t => (
-                              <div key={t.id} className="flex items-center gap-1.5 px-2 py-0.5 bg-white border border-border-notion rounded text-[10px] text-text-notion shadow-sm whitespace-nowrap">
+                              <div key={t.id} className="flex items-center gap-1.5 px-2 py-0.5 bg-white/8 border border-white/10 rounded text-[10px] text-white/85 shadow-sm whitespace-nowrap">
                                 <StatusIcon status={t.status} size={10} />
                                 <span className="max-w-[120px] truncate">{t.title}</span>
                               </div>
@@ -108,7 +108,7 @@ const TaskGroup: React.FC<{
 
                 {Object.keys(outgoingByLabel).length > 0 && (
                   <div className="flex items-start gap-2">
-                    <ArrowUpRight size={12} className="text-text-dim mt-1 shrink-0" />
+                    <ArrowUpRight size={12} className="text-slate-400 mt-1 shrink-0" />
                     <div className="flex flex-col gap-2 flex-1">
                       {Object.entries(outgoingByLabel).map(([label, ts]) => (
                         <div key={label} className="flex flex-wrap items-center gap-1.5 min-h-[22px]">
@@ -120,7 +120,7 @@ const TaskGroup: React.FC<{
                           </span>
                           <div className="flex flex-wrap gap-1.5">
                             {ts.map(t => (
-                              <div key={t.id} className="flex items-center gap-1.5 px-2 py-0.5 bg-white border border-border-notion rounded text-[10px] text-text-notion shadow-sm whitespace-nowrap">
+                              <div key={t.id} className="flex items-center gap-1.5 px-2 py-0.5 bg-white/8 border border-white/10 rounded text-[10px] text-white/85 shadow-sm whitespace-nowrap">
                                 <StatusIcon status={t.status} size={10} />
                                 <span className="max-w-[120px] truncate">{t.title}</span>
                               </div>
@@ -134,7 +134,7 @@ const TaskGroup: React.FC<{
               </div>
             </div>
             
-            <span className="text-[11px] text-text-dim font-bold mt-1 px-2 py-1 bg-bg-secondary rounded shrink-0">
+            <span className="text-[11px] text-slate-300/80 font-bold mt-1 px-2.5 py-1 bg-white/8 border border-white/8 rounded-full shrink-0">
               {new Date(task.updatedAt).toLocaleDateString(undefined, { day: '2-digit', month: 'short' })}
             </span>
           </Link>

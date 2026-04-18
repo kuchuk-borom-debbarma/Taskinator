@@ -3,7 +3,6 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useApi } from '../../context/ApiContext';
 import { Link, useLocation, useNavigate } from '@tanstack/react-router';
 import { 
-  FolderKanban, 
   LayoutDashboard, 
   Settings, 
   LogOut, 
@@ -115,30 +114,30 @@ export const Sidebar: React.FC = () => {
 
   return (
     <>
-      <aside className="w-68 h-screen bg-[#09090b] border-r border-[#1e1e21] flex flex-col shadow-2xl overflow-hidden shrink-0 select-none">
+      <aside className="w-72 h-screen glass-dark text-white flex flex-col overflow-hidden shrink-0 select-none m-3 mr-0 rounded-[28px]">
         {/* Workspace Header */}
-        <div className="p-4 flex items-center justify-between group cursor-pointer hover:bg-white/[0.03] transition-colors border-b border-[#1e1e21]/50">
+        <div className="p-5 flex items-center justify-between group cursor-pointer hover:bg-white/[0.04] transition-colors border-b border-white/8">
           <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 bg-focus-blue rounded-md flex items-center justify-center text-white text-[10px] font-black shadow-lg shadow-focus-blue/20">
+            <div className="w-8 h-8 bg-gradient-to-br from-focus-blue to-blue-400 rounded-xl flex items-center justify-center text-white text-[10px] font-black shadow-lg shadow-focus-blue/30">
               T
             </div>
             <div className="flex flex-col">
               <span className="text-sm font-bold text-white tracking-tight leading-none mb-0.5">Taskinator Workspace</span>
-              <span className="text-[10px] font-medium text-white/30 uppercase tracking-widest leading-none">Pro Edition</span>
+              <span className="text-[10px] font-medium text-white/35 uppercase tracking-[0.28em] leading-none">Pro Edition</span>
             </div>
           </div>
           <ChevronDown size={14} className="text-white/20 group-hover:text-white/40 transition-colors" />
         </div>
 
         {/* Global Actions */}
-        <div className="px-3 pt-4 space-y-0.5">
+        <div className="px-3 pt-4 space-y-1">
           <button
             onClick={() => {
               // ⌘K shortcut hint only — real Search could be wired in future
               const input = document.querySelector('input[type="search"]') as HTMLInputElement;
               if (input) input.focus();
             }}
-            className="w-full flex items-center justify-between px-3 py-2 text-white/40 hover:text-white/70 hover:bg-white/[0.03] rounded-lg transition-all text-xs font-medium group"
+            className="w-full flex items-center justify-between px-3.5 py-2.5 text-white/55 hover:text-white/80 hover:bg-white/[0.05] rounded-xl transition-all text-xs font-medium group border border-transparent hover:border-white/8"
             title="Search (coming soon)"
           >
             <div className="flex items-center gap-2.5">
@@ -152,7 +151,7 @@ export const Sidebar: React.FC = () => {
           </button>
           <button
             onClick={() => setShowCreateProject(true)}
-            className="w-full flex items-center gap-2.5 px-3 py-2 text-white/40 hover:text-white/70 hover:bg-white/[0.03] rounded-lg transition-all text-xs font-medium"
+            className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-white/55 hover:text-white/80 hover:bg-white/[0.05] rounded-xl transition-all text-xs font-medium border border-transparent hover:border-white/8"
           >
             <Plus size={14} />
             <span>New Project</span>
@@ -160,7 +159,7 @@ export const Sidebar: React.FC = () => {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-3 pt-6 space-y-0.5 overflow-y-auto">
+        <nav className="flex-1 px-3 pt-6 space-y-1 overflow-y-auto">
           <SidebarItem to="/" icon={<LayoutDashboard size={14} />} label="Dashboard" active={location.pathname === '/'} />
           
           <div className="px-3 pt-8 pb-2 flex items-center justify-between group">
@@ -193,10 +192,10 @@ export const Sidebar: React.FC = () => {
         </nav>
 
         {/* User Footer Section */}
-        <div className="mt-auto p-3 border-t border-[#1e1e21]">
+        <div className="mt-auto p-3 border-t border-white/8">
           <div className="flex flex-col gap-1">
-            <div className="flex items-center gap-3 p-2 hover:bg-white/[0.03] rounded-xl transition-colors group cursor-default">
-              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-focus-blue/20 to-purple-500/10 border border-white/5 flex items-center justify-center text-focus-blue overflow-hidden shadow-inner">
+            <div className="flex items-center gap-3 p-3 bg-white/[0.03] hover:bg-white/[0.05] rounded-2xl transition-colors group cursor-default border border-white/6">
+              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-focus-blue/20 to-sky-200/10 border border-white/8 flex items-center justify-center text-focus-blue overflow-hidden shadow-inner">
                 <User size={18} strokeWidth={2.5} />
               </div>
               <div className="flex-1 min-w-0">
@@ -234,13 +233,13 @@ const SidebarItem: React.FC<{
   <Link 
     to={to as any} 
     params={params}
-    className={`group px-3 py-1.5 flex items-center gap-2.5 text-[13px] font-medium rounded-lg transition-all duration-200 border border-transparent ${
+    className={`group px-3.5 py-2.5 flex items-center gap-2.5 text-[13px] font-medium rounded-xl transition-all duration-200 border ${
       active 
-        ? 'bg-white/[0.05] text-white border-white/5 shadow-inner' 
-        : 'text-white/40 hover:text-white/70 hover:bg-white/[0.02]'
+        ? 'bg-white/[0.08] text-white border-white/14 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_0_0_1px_rgba(35,131,226,0.35)]' 
+        : 'text-white/45 border-transparent hover:text-white/75 hover:bg-white/[0.04] hover:border-white/8'
     }`}
   >
-    {icon && <span className={`shrink-0 ${active ? 'text-focus-blue' : 'opacity-40 group-hover:opacity-70'} transition-opacity`}>{icon}</span>}
+    {icon && <span className={`shrink-0 ${active ? 'text-focus-blue' : 'opacity-45 group-hover:opacity-75'} transition-opacity`}>{icon}</span>}
     <span className="truncate tracking-tight">{label}</span>
   </Link>
 );
