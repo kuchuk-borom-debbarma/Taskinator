@@ -7,7 +7,6 @@ import {
   PlusCircle,
   Loader2,
   Target,
-  MousePointer2,
   ChevronUp,
   ChevronDown,
   ChevronLeft,
@@ -31,6 +30,23 @@ interface Coordinate {
   x: number;
   y: number;
 }
+
+interface ViewTransform {
+  x: number;
+  y: number;
+  scale: number;
+}
+
+interface PanVelocity {
+  x: number;
+  y: number;
+}
+
+const MIN_SCALE = 0.3;
+const MAX_SCALE = 2.5;
+const EDGE_PAN_THRESHOLD = 80;
+const EDGE_PAN_MAX_SPEED = 14;
+
 const ControlButton: React.FC<{ onClick: () => void, title: string, children: React.ReactNode }> = ({ onClick, title, children }) => (
   <button
     onClick={onClick}
@@ -92,7 +108,7 @@ export const TaskMap: React.FC<TaskMapProps> = ({ projectId, taskId }) => {
   const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null);
 
   // Canvas State: Pan & Zoom
-  const [transform, setTransform] = useState({ x: 0, y: 0, scale: 0.8 });
+  const [transform, setTransform] = useState<ViewTransform>({ x: 0, y: 0, scale: 0.8 });
   const [inputMode, setInputMode] = useState<'mouse' | 'trackpad'>('mouse');
   const [keyboardEnabled, setKeyboardEnabled] = useState(true);
 
@@ -102,12 +118,16 @@ export const TaskMap: React.FC<TaskMapProps> = ({ projectId, taskId }) => {
   const dragStart = useRef({ x: 0, y: 0 });
   const nodeStartPos = useRef({ x: 0, y: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
+  const dragPointerRef = useRef({ x: 0, y: 0 });
+  const edgePanVelocityRef = useRef<PanVelocity>({ x: 0, y: 0 });
+  const edgePanFrameRef = useRef<number | null>(null);
 
   // Layout & Pinning State
   const [isComputing, setIsComputing] = useState(false);
   const [mapData, setMapData] = useState<{ nodes: MapNode[], allEdges: any[] } | null>(null);
   const [coordinateCache, setCoordinateCache] = useState<Record<string, Coordinate>>({});
   const workerRef = useRef<Worker | null>(null);
+  const isDragLocked = draggedNodeId !== null;
 
   // 1. Dependency Engine
   const {
@@ -163,6 +183,7 @@ export const TaskMap: React.FC<TaskMapProps> = ({ projectId, taskId }) => {
   }, [data, taskId]);
 
   const autoLayout = () => {
+    if (isDragLocked) return;
     setCoordinateCache({});
     if (workerRef.current && data) {
       setIsComputing(true);
@@ -179,37 +200,156 @@ export const TaskMap: React.FC<TaskMapProps> = ({ projectId, taskId }) => {
   const transformRef = useRef(transform);
   useEffect(() => { transformRef.current = transform; }, [transform]);
 
+  const zoomAtPoint = (clientX: number, clientY: number, scaleFactor: number) => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const rect = container.getBoundingClientRect();
+    const pointerX = clientX - rect.left - rect.width / 2;
+    const pointerY = clientY - rect.top - rect.height / 2;
+
+    setTransform(prev => {
+      const nextScale = Math.min(MAX_SCALE, Math.max(MIN_SCALE, prev.scale * scaleFactor));
+      if (nextScale === prev.scale) return prev;
+
+      const worldX = (pointerX - prev.x) / prev.scale;
+      const worldY = (pointerY - prev.y) / prev.scale;
+
+      return {
+        x: pointerX - worldX * nextScale,
+        y: pointerY - worldY * nextScale,
+        scale: nextScale,
+      };
+    });
+  };
+
+  const zoomAtViewportCenter = (scaleFactor: number) => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const rect = container.getBoundingClientRect();
+    zoomAtPoint(rect.left + rect.width / 2, rect.top + rect.height / 2, scaleFactor);
+  };
+
+  const syncNodePosition = (nodeId: string, x: number, y: number) => {
+    setCoordinateCache(prev => ({
+      ...prev,
+      [nodeId]: { x, y }
+    }));
+
+    setMapData(prev => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        nodes: prev.nodes.map(n => n.task.id === nodeId ? { ...n, x, y } : n)
+      };
+    });
+  };
+
+  const getDraggedNodePosition = (scale: number) => ({
+    x: nodeStartPos.current.x + (dragPointerRef.current.x - dragStart.current.x) / scale,
+    y: nodeStartPos.current.y + (dragPointerRef.current.y - dragStart.current.y) / scale,
+  });
+
+  const stopEdgeAutoPan = () => {
+    edgePanVelocityRef.current = { x: 0, y: 0 };
+    if (edgePanFrameRef.current !== null) {
+      cancelAnimationFrame(edgePanFrameRef.current);
+      edgePanFrameRef.current = null;
+    }
+  };
+
+  const computeEdgePanSpeed = (distanceToEdge: number, direction: -1 | 1) => {
+    if (distanceToEdge >= EDGE_PAN_THRESHOLD) return 0;
+    const ratio = (EDGE_PAN_THRESHOLD - Math.max(distanceToEdge, 0)) / EDGE_PAN_THRESHOLD;
+    return direction * Math.max(2, ratio * EDGE_PAN_MAX_SPEED);
+  };
+
+  const getEdgePanVelocity = (clientX: number, clientY: number, rect: DOMRect): PanVelocity => {
+    const localX = clientX - rect.left;
+    const localY = clientY - rect.top;
+
+    return {
+      x:
+        localX < EDGE_PAN_THRESHOLD
+          ? computeEdgePanSpeed(localX, 1)
+          : rect.width - localX < EDGE_PAN_THRESHOLD
+            ? computeEdgePanSpeed(rect.width - localX, -1)
+            : 0,
+      y:
+        localY < EDGE_PAN_THRESHOLD
+          ? computeEdgePanSpeed(localY, 1)
+          : rect.height - localY < EDGE_PAN_THRESHOLD
+            ? computeEdgePanSpeed(rect.height - localY, -1)
+            : 0,
+    };
+  };
+
+  const updateEdgeAutoPan = (clientX: number, clientY: number) => {
+    const container = containerRef.current;
+    if (!container || !draggedNodeId) {
+      stopEdgeAutoPan();
+      return;
+    }
+
+    const rect = container.getBoundingClientRect();
+    const velocity = getEdgePanVelocity(clientX, clientY, rect);
+    edgePanVelocityRef.current = velocity;
+
+    if (velocity.x === 0 && velocity.y === 0) {
+      if (edgePanFrameRef.current !== null) {
+        cancelAnimationFrame(edgePanFrameRef.current);
+        edgePanFrameRef.current = null;
+      }
+      return;
+    }
+
+    if (edgePanFrameRef.current !== null) return;
+
+    const tick = () => {
+      const { x: vx, y: vy } = edgePanVelocityRef.current;
+      if (!draggedNodeId || (vx === 0 && vy === 0)) {
+        edgePanFrameRef.current = null;
+        return;
+      }
+
+      setTransform(prev => ({ ...prev, x: prev.x + vx, y: prev.y + vy }));
+      dragStart.current = {
+        x: dragStart.current.x + vx,
+        y: dragStart.current.y + vy,
+      };
+
+      const nodeId = draggedNodeId;
+      const scale = transformRef.current.scale;
+      const { x, y } = getDraggedNodePosition(scale);
+      syncNodePosition(nodeId, x, y);
+
+      edgePanFrameRef.current = requestAnimationFrame(tick);
+    };
+
+    edgePanFrameRef.current = requestAnimationFrame(tick);
+  };
+
+  useEffect(() => () => stopEdgeAutoPan(), []);
+
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
     const handleWheel = (e: WheelEvent) => {
+      if (isDragLocked) return;
       e.preventDefault();
 
-      const { x, y, scale: prevScale } = transformRef.current;
-
-      if (e.ctrlKey) {
-        // ZOOM TO CURSOR
-        const delta = e.deltaY > 0 ? 0.9 : 1.1;
-        const newScale = prevScale * delta;
-
-        // Get mouse pos relative to screen center (roughly origin of our transform)
-        const rect = container.getBoundingClientRect();
-        const mx = e.clientX - rect.left - rect.width / 2;
-        const my = e.clientY - rect.top - rect.height / 2;
-
-        // Offset so mouse point stays fixed
-        const newX = mx - (mx - x) * (newScale / prevScale);
-        const newY = my - (my - y) * (newScale / prevScale);
-
-        setTransform({ x: newX, y: newY, scale: newScale });
+      const isZoomGesture = e.ctrlKey || inputMode === 'mouse';
+      if (isZoomGesture) {
+        zoomAtPoint(e.clientX, e.clientY, e.deltaY > 0 ? 0.9 : 1.1);
       } else if (inputMode === 'trackpad') {
         setTransform(prev => ({ ...prev, x: prev.x - e.deltaX, y: prev.y - e.deltaY }));
       }
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (!keyboardEnabled) return;
+      if (!keyboardEnabled || isDragLocked) return;
 
       const key = e.key.toLowerCase();
       // Prevent scrolling page
@@ -225,8 +365,8 @@ export const TaskMap: React.FC<TaskMapProps> = ({ projectId, taskId }) => {
         case 'arrowright': case 'd': setTransform(p => ({ ...p, x: p.x - step })); break;
         case 'arrowup': case 'w': setTransform(p => ({ ...p, y: p.y + step })); break;
         case 'arrowdown': case 's': setTransform(p => ({ ...p, y: p.y - step })); break;
-        case '+': case '=': setTransform(p => ({ ...p, scale: p.scale * 1.2 })); break;
-        case '-': case '_': setTransform(p => ({ ...p, scale: p.scale * 0.8 })); break;
+        case '+': case '=': zoomAtViewportCenter(1.2); break;
+        case '-': case '_': zoomAtViewportCenter(0.8); break;
         case '0': setTransform(p => ({ ...p, scale: 1 })); break;
       }
     };
@@ -241,9 +381,10 @@ export const TaskMap: React.FC<TaskMapProps> = ({ projectId, taskId }) => {
       container.removeEventListener('wheel', handleWheel);
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [inputMode, keyboardEnabled]);
+  }, [inputMode, keyboardEnabled, isDragLocked]);
 
   const handleMouseDown = (e: React.MouseEvent) => {
+    if (isDragLocked) return;
     if (e.button !== 0) return;
     setIsDraggingCanvas(true);
     dragStart.current = { x: e.clientX - transform.x, y: e.clientY - transform.y };
@@ -251,32 +392,22 @@ export const TaskMap: React.FC<TaskMapProps> = ({ projectId, taskId }) => {
 
   const handleNodeMouseDown = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
+    setHoveredNodeId(null);
+    setHoveredEdgeId(null);
+    setIsDraggingCanvas(false);
     setDraggedNodeId(id);
     const pos = coordinateCache[id] || { x: 0, y: 0 };
     dragStart.current = { x: e.clientX, y: e.clientY };
     nodeStartPos.current = { ...pos };
+    dragPointerRef.current = { x: e.clientX, y: e.clientY };
   };
 
   const handleMouseMove = (e: React.MouseEvent) => {
     if (draggedNodeId) {
-      const dx = (e.clientX - dragStart.current.x) / transform.scale;
-      const dy = (e.clientY - dragStart.current.y) / transform.scale;
-      const newX = nodeStartPos.current.x + dx;
-      const newY = nodeStartPos.current.y + dy;
-
-      setCoordinateCache(prev => ({
-        ...prev,
-        [draggedNodeId]: { x: newX, y: newY }
-      }));
-
-      // Update mapData for immediate render
-      setMapData(prev => {
-        if (!prev) return prev;
-        return {
-          ...prev,
-          nodes: prev.nodes.map(n => n.task.id === draggedNodeId ? { ...n, x: newX, y: newY } : n)
-        };
-      });
+      dragPointerRef.current = { x: e.clientX, y: e.clientY };
+      const { x, y } = getDraggedNodePosition(transform.scale);
+      syncNodePosition(draggedNodeId, x, y);
+      updateEdgeAutoPan(e.clientX, e.clientY);
     } else if (isDraggingCanvas && inputMode === 'mouse') {
       setTransform(prev => ({
         ...prev,
@@ -288,6 +419,7 @@ export const TaskMap: React.FC<TaskMapProps> = ({ projectId, taskId }) => {
 
   const handleMouseUp = () => {
     if (draggedNodeId) {
+      stopEdgeAutoPan();
       resolveCollisions(draggedNodeId);
       setDraggedNodeId(null);
     }
@@ -405,17 +537,22 @@ export const TaskMap: React.FC<TaskMapProps> = ({ projectId, taskId }) => {
       onMouseLeave={handleMouseUp}
     >
       {/* ── Control Center ── */}
-      <div className="absolute top-8 left-8 z-50 flex flex-col gap-4 pointer-events-none">
+      <div className={`absolute top-8 left-8 z-50 flex flex-col gap-4 pointer-events-none transition-opacity ${isDragLocked ? 'opacity-40' : ''}`}>
         <div className="flex items-center gap-1.5 bg-white border border-border-notion p-1.5 rounded-xl shadow-premium pointer-events-auto">
-          <ControlButton onClick={recenter} title="Center View"><Target size={18} className="text-focus-blue" /></ControlButton>
-          <ControlButton onClick={zoomReset} title="Reset Zoom (100%)"><Maximize size={18} className="text-focus-blue" /></ControlButton>
+          <fieldset disabled={isDragLocked} className="contents">
+            <ControlButton onClick={recenter} title="Center View"><Target size={18} className="text-focus-blue" /></ControlButton>
+            <ControlButton onClick={zoomReset} title="Reset Zoom (100%)"><Maximize size={18} className="text-focus-blue" /></ControlButton>
+          </fieldset>
           <div className="flex items-center justify-center px-2.5 min-w-[48px] bg-bg-secondary rounded-lg h-9 border border-border-notion/50 pointer-events-none select-none">
             <span className="text-[10px] font-bold text-focus-blue tracking-tighter">{Math.round(transform.scale * 100)}%</span>
           </div>
-          <ControlButton onClick={autoLayout} title="Auto-Layout"><Sparkles size={16} className={`${isComputing ? 'animate-spin' : ''} text-text-dim`} /></ControlButton>
+          <fieldset disabled={isDragLocked} className="contents">
+            <ControlButton onClick={autoLayout} title="Auto-Layout"><Sparkles size={16} className={`${isComputing ? 'animate-spin' : ''} text-text-dim`} /></ControlButton>
+          </fieldset>
         </div>
 
         <div className="flex flex-col gap-2 p-1.5 bg-white/80 backdrop-blur-md border border-border-notion rounded-xl shadow-premium pointer-events-auto">
+          <fieldset disabled={isDragLocked} className="contents">
           <div className="grid grid-cols-2 gap-1 bg-bg-secondary p-1 rounded-lg">
             <button
               onClick={() => setInputMode('mouse')}
@@ -439,39 +576,37 @@ export const TaskMap: React.FC<TaskMapProps> = ({ projectId, taskId }) => {
           >
             <Keyboard size={14} />
           </button>
+          </fieldset>
         </div>
       </div>
 
       {/* ── Directional Controls ── */}
-      <div className="absolute bottom-8 left-8 z-50 flex flex-col items-center gap-1 pointer-events-auto">
-        <button onClick={() => setTransform(p => ({ ...p, y: p.y + 100 / p.scale }))} className="p-2 bg-white border border-border-notion rounded-t-lg hover:bg-bg-secondary text-text-dim"><ChevronUp size={16} /></button>
+      <div className={`absolute bottom-8 left-8 z-50 flex flex-col items-center gap-1 pointer-events-auto transition-opacity ${isDragLocked ? 'opacity-40' : ''}`}>
+        <button disabled={isDragLocked} onClick={() => setTransform(p => ({ ...p, y: p.y + 100 / p.scale }))} className="p-2 bg-white border border-border-notion rounded-t-lg hover:bg-bg-secondary text-text-dim disabled:opacity-50"><ChevronUp size={16} /></button>
         <div className="flex gap-1">
-          <button onClick={() => setTransform(p => ({ ...p, x: p.x + 100 / p.scale }))} className="p-2 bg-white border border-border-notion hover:bg-bg-secondary text-text-dim"><ChevronLeft size={16} /></button>
-          <button onClick={recenter} className="p-2 bg-white border border-border-notion hover:bg-bg-secondary text-focus-blue"><Circle size={10} fill="currentColor" /></button>
-          <button onClick={() => setTransform(p => ({ ...p, x: p.x - 100 / p.scale }))} className="p-2 bg-white border border-border-notion hover:bg-bg-secondary text-text-dim"><ChevronRight size={16} /></button>
+          <button disabled={isDragLocked} onClick={() => setTransform(p => ({ ...p, x: p.x + 100 / p.scale }))} className="p-2 bg-white border border-border-notion hover:bg-bg-secondary text-text-dim disabled:opacity-50"><ChevronLeft size={16} /></button>
+          <button disabled={isDragLocked} onClick={recenter} className="p-2 bg-white border border-border-notion hover:bg-bg-secondary text-focus-blue disabled:opacity-50"><Circle size={10} fill="currentColor" /></button>
+          <button disabled={isDragLocked} onClick={() => setTransform(p => ({ ...p, x: p.x - 100 / p.scale }))} className="p-2 bg-white border border-border-notion hover:bg-bg-secondary text-text-dim disabled:opacity-50"><ChevronRight size={16} /></button>
         </div>
-        <button onClick={() => setTransform(p => ({ ...p, y: p.y - 100 / p.scale }))} className="p-2 bg-white border border-border-notion rounded-b-lg hover:bg-bg-secondary text-text-dim"><ChevronDown size={16} /></button>
+        <button disabled={isDragLocked} onClick={() => setTransform(p => ({ ...p, y: p.y - 100 / p.scale }))} className="p-2 bg-white border border-border-notion rounded-b-lg hover:bg-bg-secondary text-text-dim disabled:opacity-50"><ChevronDown size={16} /></button>
 
         <div className="mt-4 flex flex-col gap-1 w-full">
-          <button onClick={() => setTransform(p => ({ ...p, scale: p.scale * 1.2 }))} className="p-2 bg-white border border-border-notion rounded-lg hover:bg-bg-secondary text-text-dim font-bold">+</button>
-          <button onClick={() => setTransform(p => ({ ...p, scale: p.scale * 0.8 }))} className="p-2 bg-white border border-border-notion rounded-lg hover:bg-bg-secondary text-text-dim font-bold">-</button>
+          <button disabled={isDragLocked} onClick={() => zoomAtViewportCenter(1.2)} className="p-2 bg-white border border-border-notion rounded-lg hover:bg-bg-secondary text-text-dim font-bold disabled:opacity-50">+</button>
+          <button disabled={isDragLocked} onClick={() => zoomAtViewportCenter(0.8)} className="p-2 bg-white border border-border-notion rounded-lg hover:bg-bg-secondary text-text-dim font-bold disabled:opacity-50">-</button>
         </div>
       </div>
 
       <div className="absolute bottom-8 right-8 z-30 pointer-events-none flex flex-col items-end gap-3">
         {hasNextPage && (
           <button
+            disabled={isDragLocked}
             onClick={() => fetchNextPage()}
-            className="pointer-events-auto p-3 rounded-full bg-text-notion text-white shadow-lg hover:bg-focus-blue transition-all active:scale-95"
+            className="pointer-events-auto p-3 rounded-full bg-text-notion text-white shadow-lg hover:bg-focus-blue transition-all active:scale-95 disabled:opacity-50 disabled:hover:bg-text-notion"
             title="Load Next Layer"
           >
             {isFetchingNextPage ? <Loader2 size={18} className="animate-spin" /> : <PlusCircle size={18} />}
           </button>
         )}
-        <div className="flex items-center gap-3 px-4 py-2 bg-white border border-border-notion rounded-md shadow-sm">
-          <MousePointer2 size={12} className="text-text-dim" />
-          <span className="text-[10px] font-medium text-text-dim uppercase tracking-wider">Pan • Scroll to zoom</span>
-        </div>
       </div>
 
       <div
@@ -510,9 +645,9 @@ export const TaskMap: React.FC<TaskMapProps> = ({ projectId, taskId }) => {
                   fill="none"
                   stroke="transparent"
                   strokeWidth={20}
-                  className="pointer-events-auto cursor-help"
-                  onMouseEnter={() => setHoveredEdgeId(edge.id)}
-                  onMouseLeave={() => setHoveredEdgeId(null)}
+                  className={isDragLocked ? 'pointer-events-none' : 'pointer-events-auto cursor-help'}
+                  onMouseEnter={() => { if (!isDragLocked) setHoveredEdgeId(edge.id); }}
+                  onMouseLeave={() => { if (!isDragLocked) setHoveredEdgeId(null); }}
                 />
 
                 <path
@@ -547,8 +682,8 @@ export const TaskMap: React.FC<TaskMapProps> = ({ projectId, taskId }) => {
             <div
               key={node.task.id}
               onMouseDown={(e) => handleNodeMouseDown(node.task.id, e)}
-              onMouseEnter={() => setHoveredNodeId(node.task.id)}
-              onMouseLeave={() => setHoveredNodeId(null)}
+              onMouseEnter={() => { if (!isDragLocked) setHoveredNodeId(node.task.id); }}
+              onMouseLeave={() => { if (!isDragLocked) setHoveredNodeId(null); }}
               className={`
                 absolute transition-all transform -translate-x-1/2 -translate-y-1/2
                 ${draggedNodeId === node.task.id ? 'z-50 duration-75 scale-105' : 'duration-500'}
@@ -569,7 +704,7 @@ export const TaskMap: React.FC<TaskMapProps> = ({ projectId, taskId }) => {
                 <Link
                   to="/projects/$projectId/tasks/$taskId"
                   params={{ projectId: node.task.projectId, taskId: node.task.id }}
-                  className="group"
+                  className={`group ${isDragLocked ? 'pointer-events-none' : ''}`}
                 >
                   <div className="flex items-center justify-between mb-2">
                     <div className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider text-white" style={{ backgroundColor: color }}>
@@ -607,7 +742,7 @@ export const TaskMap: React.FC<TaskMapProps> = ({ projectId, taskId }) => {
       </div>
 
       {/* Floating Relationship Tooltip */}
-      {hoveredEdgeId && mapData && (
+      {!isDragLocked && hoveredEdgeId && mapData && (
         <RelationshipTooltip edgeId={hoveredEdgeId} mapData={mapData} />
       )}
     </div>
