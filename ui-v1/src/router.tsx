@@ -1,70 +1,98 @@
-import { useEffect } from 'react';
 import { 
-  createRootRoute, 
+  createRootRouteWithContext, 
   createRoute, 
   createRouter, 
   Outlet, 
   useNavigate,
-  useParams,
-  lazyRouteComponent
+  lazyRouteComponent,
+  redirect
 } from '@tanstack/react-router';
 import { Sidebar } from './components/Layout/Sidebar';
-import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
+import { useInfiniteQuery } from '@tanstack/react-query';
 import { useApi } from './context/ApiContext';
-import { useAuth } from './context/AuthContext';
+import { useAuth, type AuthContextType } from './context/AuthContext';
 import { AuthScreen } from './components/Auth/AuthScreen';
 import { LayoutGrid, ArrowRight, Loader2 } from 'lucide-react';
 import { NotFoundComponent, GlobalErrorComponent } from './components/Layout/RouterFeedback';
 
-// Root Route - Contains the Global Sidebar
-const rootRoute = createRootRoute({
+interface MyRouterContext {
+  auth: AuthContextType;
+}
+
+// Root Route - Handles Global State & Loading
+export const rootRoute = createRootRouteWithContext<MyRouterContext>()({
   component: RootComponent,
   notFoundComponent: NotFoundComponent,
   errorComponent: GlobalErrorComponent,
 });
 
 function RootComponent() {
-  const { isAuthenticated, isLoading } = useAuth();
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      navigate({ to: '/auth' });
-    }
-  }, [isAuthenticated, isLoading, navigate]);
+  const { isLoading } = useAuth();
 
   if (isLoading) {
     return (
-      <div className="h-screen flex items-center justify-center bg-bg-notion">
-        <div className="w-8 h-8 border-4 border-focus-blue border-t-transparent rounded-full animate-spin" />
+      <div className="h-screen flex items-center justify-center bg-[#0d0d0e]">
+        <div className="flex flex-col items-center gap-6">
+          <div className="w-12 h-12 border-2 border-focus-blue border-t-transparent rounded-full animate-spin shadow-[0_0_20px_rgba(35,131,226,0.3)]" />
+          <div className="flex flex-col items-center gap-1">
+            <p className="text-[10px] font-bold text-white/40 uppercase tracking-[0.3em]">System Initializing</p>
+            <p className="text-[10px] font-bold text-focus-blue uppercase tracking-[0.1em]">Taskinator v2.0</p>
+          </div>
+        </div>
       </div>
     );
   }
 
-  if (!isAuthenticated) {
-    return <Outlet />; // AuthScreen will handles this
-  }
+  return <Outlet />;
+}
 
-  return (
-    <div style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
+// --- Layout Routes ---
+
+// Authenticated Layout (Sidebar + Protected Content)
+const authLayoutRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  id: 'authenticated-layout',
+  beforeLoad: ({ context }) => {
+    if (context.auth.isLoading) return;
+    if (!context.auth.isAuthenticated) {
+      throw redirect({ to: '/auth' });
+    }
+  },
+  component: () => (
+    <div className="flex h-screen overflow-hidden bg-bg-notion">
       <Sidebar />
-      <main style={{ flex: 1, height: '100vh', overflowY: 'auto', backgroundColor: 'var(--bg-primary)' }}>
+      <main className="flex-1 h-screen overflow-y-auto bg-white/50">
         <Outlet />
       </main>
     </div>
-  );
-}
+  ),
+});
 
-// Auth Route
-const authRoute = createRoute({
+// Primary Public Layout (Clean Shell)
+const publicLayoutRoute = createRoute({
   getParentRoute: () => rootRoute,
+  id: 'public-layout',
+  beforeLoad: ({ context }) => {
+    if (context.auth.isLoading) return;
+    if (context.auth.isAuthenticated) {
+      throw redirect({ to: '/' });
+    }
+  },
+  component: () => <Outlet />,
+});
+
+// --- Auth Routes ---
+
+const authRoute = createRoute({
+  getParentRoute: () => publicLayoutRoute,
   path: '/auth',
   component: () => <AuthScreen />,
 });
 
-// Index Route (Dashboard)
+// --- Protected Routes ---
+
 const indexRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => authLayoutRoute,
   path: '/',
   component: ProjectDashboard,
 });
@@ -108,7 +136,7 @@ function ProjectDashboard() {
   }
 
   return (
-    <div className="p-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
+    <div className="p-8 animate-in fade-in slide-in-from-bottom-2 duration-500">
       <div className="flex items-center justify-between mb-8">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 bg-focus-blue rounded-lg flex items-center justify-center text-white shadow-md">
@@ -167,39 +195,43 @@ function ProjectDashboard() {
   );
 }
 
-// Project Layout Route (Handles $projectId context)
 const projectLayoutRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => authLayoutRoute,
   path: 'projects/$projectId',
 });
 
-// Project List (Index of Project Layout)
 const projectListRoute = createRoute({
   getParentRoute: () => projectLayoutRoute,
   path: '/',
   component: lazyRouteComponent(() => import('./ProjectTasksIndex.lazy.tsx')),
 });
 
-// Task Detail Page (Sibling to List within Project Layout)
 const taskDetailRoute = createRoute({
   getParentRoute: () => projectLayoutRoute,
   path: 'tasks/$taskId',
   component: lazyRouteComponent(() => import('./TaskDetailPage.lazy.tsx')),
 });
 
-// These components are now moved to lazy files
+// --- Route Tree Construction ---
 
 export const routeTree = rootRoute.addChildren([
-  authRoute,
-  indexRoute,
-  projectLayoutRoute.addChildren([
-    projectListRoute,
-    taskDetailRoute,
+  publicLayoutRoute.addChildren([
+    authRoute,
+  ]),
+  authLayoutRoute.addChildren([
+    indexRoute,
+    projectLayoutRoute.addChildren([
+      projectListRoute,
+      taskDetailRoute,
+    ]),
   ]),
 ]);
 
 export const router = createRouter({ 
   routeTree,
+  context: {
+    auth: undefined! 
+  },
   defaultNotFoundComponent: NotFoundComponent,
   defaultErrorComponent: GlobalErrorComponent,
 });

@@ -6,7 +6,7 @@ interface AuthUser {
   email: string;
 }
 
-interface AuthContextType {
+export interface AuthContextType {
   token: string | null;
   user: AuthUser | null;
   isAuthenticated: boolean;
