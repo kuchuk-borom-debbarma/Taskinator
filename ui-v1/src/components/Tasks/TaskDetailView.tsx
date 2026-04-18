@@ -1,23 +1,49 @@
 import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useApi } from '../../context/ApiContext';
 import { TaskMap } from '../Graph/TaskMap';
 import { TaskMapModal } from '../Graph/TaskMapModal';
-import { ChevronLeft, Calendar, Map, Layers, Users, User, Clock, CheckCircle2, Type, Copy } from 'lucide-react';
+import { ChevronLeft, Calendar, Map, Layers, Users, User, Clock, CheckCircle2, Type, Copy, Circle, Edit3, Check, X } from 'lucide-react';
 
 interface TaskDetailViewProps {
   taskId: string;
   onClose: () => void;
 }
 
+const STATUS_OPTIONS = ['TODO', 'IN_PROGRESS', 'DONE'] as const;
+
+const getStatusInfo = (s: string) => {
+  const statuses: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
+    'TODO':        { label: 'To Do',       color: '#94a3b8', icon: <Circle size={13} className="text-todo" /> },
+    'IN_PROGRESS': { label: 'In Progress', color: 'var(--color-focus-blue)', icon: <Clock size={13} className="text-focus-blue" /> },
+    'DONE':        { label: 'Done',        color: 'var(--color-done)', icon: <CheckCircle2 size={13} className="text-done" /> },
+  };
+  return statuses[s] || { label: s, color: '#888', icon: null };
+};
+
 export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose }) => {
   const { taskApi } = useApi();
+  const queryClient = useQueryClient();
   const [isMapOpen, setIsMapOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [editingStatus, setEditingStatus] = useState(false);
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [titleDraft, setTitleDraft] = useState('');
 
   const { data: task, isLoading: isTaskLoading } = useQuery({
     queryKey: ['task', taskId],
     queryFn: () => taskApi.getTask(taskId),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: (updates: { status?: string; title?: string; description?: string }) =>
+      taskApi.updateTask(taskId, updates as any),
+    onSuccess: (updated) => {
+      queryClient.setQueryData(['task', taskId], updated);
+      queryClient.invalidateQueries({ queryKey: ['tasks'] });
+      setEditingStatus(false);
+      setEditingTitle(false);
+    },
   });
 
   if (isTaskLoading || !task) {
@@ -28,46 +54,24 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
     );
   }
 
-  // Mock lookups for Team and Member
-  const getTeamName = (id?: string) => {
-    if (!id) return null;
-    const teams: Record<string, string> = { t1: 'Strategy & Brand', t2: 'Operations', t3: 'Design & Build', t4: 'Culinary' };
-    return teams[id] || id;
-  };
-
-  const getMemberName = (id?: string) => {
-    if (!id) return null;
-    const members: Record<string, string> = { m1: 'Alex Chen', m2: 'Sarah Miller', m3: 'David K.' };
-    return members[id] || id;
-  };
-
-  const getPriorityInfo = (p: number) => {
-    const labels: Record<number, { label: string, color: string }> = {
-      1: { label: 'Urgent', color: '#FF4444' },
-      2: { label: 'High', color: '#FF8800' },
-      3: { label: 'Medium', color: '#00AAFF' },
-      4: { label: 'Low', color: '#888888' },
-      5: { label: 'Backlog', color: '#CCCCCC' }
-    };
-    return labels[p] || { label: `P${p}`, color: '#888888' };
-  };
-
-  const getStatusInfo = (s: string) => {
-    const statuses: Record<string, { label: string, color: string, icon: React.ReactNode }> = {
-      'TODO': { label: 'To Do', color: '#888888', icon: <div className="w-2.5 h-2.5 rounded-full border-2 border-current opacity-40" /> },
-      'IN_PROGRESS': { label: 'In Progress', color: 'var(--color-focus-blue)', icon: <Clock size={13} className="text-focus-blue" /> },
-      'DONE': { label: 'Done', color: 'var(--color-done)', icon: <CheckCircle2 size={13} className="text-done" /> }
-    };
-    return statuses[s] || { label: s, color: '#888888', icon: null };
-  };
-
-  const priority = getPriorityInfo(task.priority);
   const statusInfo = getStatusInfo(task.status);
 
   const handleCopyId = () => {
     navigator.clipboard.writeText(task.id);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleStatusChange = (newStatus: string) => {
+    updateMutation.mutate({ status: newStatus });
+  };
+
+  const handleTitleSave = () => {
+    if (titleDraft.trim() && titleDraft !== task.title) {
+      updateMutation.mutate({ title: titleDraft.trim() });
+    } else {
+      setEditingTitle(false);
+    }
   };
 
   return (
@@ -91,7 +95,7 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
         <header className="flex flex-col gap-4">
           <div className="flex items-center gap-2">
             <div className="px-2 py-0.5 rounded border border-border-notion text-[9px] font-bold uppercase tracking-tighter text-text-dim w-fit opacity-50">
-              ID: {task.id}
+              {task.id}
             </div>
             <button 
               onClick={handleCopyId}
@@ -101,50 +105,94 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
               {copied ? <CheckCircle2 size={12} /> : <Copy size={12} />}
             </button>
           </div>
-          <h1 className="text-[42px] font-bold tracking-tight text-text-notion leading-tight">
-            {task.title}
-          </h1>
+
+          {/* Editable Title */}
+          {editingTitle ? (
+            <div className="flex items-start gap-3">
+              <textarea
+                autoFocus
+                className="flex-1 text-[38px] font-bold tracking-tight text-text-notion leading-tight bg-bg-secondary border border-focus-blue/40 rounded-xl px-4 py-3 resize-none focus:outline-none focus:border-focus-blue"
+                value={titleDraft}
+                onChange={e => setTitleDraft(e.target.value)}
+                rows={2}
+                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleTitleSave(); } if (e.key === 'Escape') setEditingTitle(false); }}
+              />
+              <div className="flex flex-col gap-1.5 mt-2">
+                <button onClick={handleTitleSave} className="p-2 rounded-lg bg-focus-blue text-white hover:bg-focus-blue/90 transition-colors shadow-sm"><Check size={14} /></button>
+                <button onClick={() => setEditingTitle(false)} className="p-2 rounded-lg bg-bg-secondary border border-border-notion text-text-dim hover:text-text-notion transition-colors"><X size={14} /></button>
+              </div>
+            </div>
+          ) : (
+            <div className="group relative flex items-start gap-3">
+              <h1 className="text-[42px] font-bold tracking-tight text-text-notion leading-tight flex-1">
+                {task.title}
+              </h1>
+              <button
+                onClick={() => { setTitleDraft(task.title); setEditingTitle(true); }}
+                className="mt-3 p-2 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-bg-secondary text-text-dim transition-all"
+                title="Edit title"
+              >
+                <Edit3 size={15} />
+              </button>
+            </div>
+          )}
         </header>
 
-        {/* ─── PROPERTIES DASHBOARD (Primary Focus) ─── */}
+        {/* ─── PROPERTIES DASHBOARD ─── */}
         <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-y-6 gap-x-12 p-8 border border-border-notion rounded-2xl bg-white shadow-sm">
-          <PropertyBlock 
-            icon={<Layers size={14} />} 
-            label="Status" 
-            value={
-              <div className="flex items-center gap-2">
+          
+          {/* Status — Editable */}
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center gap-2 text-text-dim opacity-50">
+              <Layers size={14} />
+              <span className="text-[11px] font-bold uppercase tracking-wider">Status</span>
+            </div>
+            {editingStatus ? (
+              <div className="flex flex-col gap-1.5">
+                {STATUS_OPTIONS.map(s => {
+                  const info = getStatusInfo(s);
+                  return (
+                    <button
+                      key={s}
+                      onClick={() => handleStatusChange(s)}
+                      disabled={updateMutation.isPending}
+                      className={`flex items-center gap-2 px-3 py-2 rounded-lg text-[13px] font-semibold border transition-all ${task.status === s ? 'border-focus-blue bg-focus-blue/5 text-focus-blue' : 'border-border-notion hover:border-text-dim text-text-notion'}`}
+                    >
+                      {info.icon}
+                      {info.label}
+                    </button>
+                  );
+                })}
+                <button onClick={() => setEditingStatus(false)} className="text-[11px] text-text-dim hover:text-text-notion transition-colors mt-1">Cancel</button>
+              </div>
+            ) : (
+              <button
+                onClick={() => setEditingStatus(true)}
+                className="flex items-center gap-2 text-[15px] font-semibold text-text-notion hover:text-focus-blue transition-colors group"
+              >
                 {statusInfo.icon}
                 <span>{statusInfo.label}</span>
-              </div>
-            } 
-          />
-          <PropertyBlock 
-            icon={<AlertCircleIcon size={14} color={priority.color} />} 
-            label="Priority" 
-            value={priority.label} 
-          />
-          <PropertyBlock 
-            icon={<CheckCircle2 size={14} />} 
-            label="Due Date" 
-            value={task.dueDate ? new Date(task.dueDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) : 'No deadline'} 
-            isDimmed={!task.dueDate}
-          />
+                <Edit3 size={11} className="opacity-0 group-hover:opacity-40 transition-opacity ml-1" />
+              </button>
+            )}
+          </div>
+
           <PropertyBlock 
             icon={<Users size={14} />} 
             label="Assigned Team" 
-            value={getTeamName(task.teamId) || 'Unassigned'} 
-            isDimmed={!task.teamId}
+            value={task.team?.name || 'Unassigned'} 
+            isDimmed={!task.team}
           />
           <PropertyBlock 
             icon={<User size={14} />} 
             label="Assignee" 
-            value={getMemberName(task.memberId) || 'Unassigned'} 
-            isDimmed={!task.memberId}
+            value={task.assignee?.username || 'Unassigned'} 
+            isDimmed={!task.assignee}
           />
           <PropertyBlock 
             icon={<User size={14} />} 
             label="Creator" 
-            value={getMemberName(task.createdById) || 'System'} 
+            value={task.createdById || 'System'} 
           />
           <PropertyBlock 
             icon={<Calendar size={14} />} 
@@ -207,7 +255,7 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
   );
 };
 
-const PropertyBlock: React.FC<{ icon: React.ReactNode, label: string, value: React.ReactNode, isDimmed?: boolean }> = ({ icon, label, value, isDimmed }) => (
+const PropertyBlock: React.FC<{ icon: React.ReactNode; label: string; value: React.ReactNode; isDimmed?: boolean }> = ({ icon, label, value, isDimmed }) => (
   <div className="flex flex-col gap-2">
     <div className="flex items-center gap-2 text-text-dim opacity-50">
       {icon}
@@ -216,12 +264,5 @@ const PropertyBlock: React.FC<{ icon: React.ReactNode, label: string, value: Rea
     <div className={`text-[15px] font-semibold ${isDimmed ? 'text-text-dim font-medium opacity-40' : 'text-text-notion'}`}>
       {value}
     </div>
-  </div>
-);
-
-const AlertCircleIcon: React.FC<{ size: number, color: string }> = ({ size, color }) => (
-  <div className="relative flex items-center justify-center" style={{ width: size, height: size }}>
-    <div className="absolute inset-0 rounded-full opacity-20" style={{ backgroundColor: color }} />
-    <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: color }} />
   </div>
 );

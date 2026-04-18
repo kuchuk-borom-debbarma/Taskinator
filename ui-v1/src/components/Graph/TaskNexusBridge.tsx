@@ -38,22 +38,24 @@ export const TaskNexusBridge: React.FC<TaskNexusBridgeProps> = ({ neighbourhood 
   // 2. Track positions of all task cards for SVG drawing
   useEffect(() => {
     const updateRects = () => {
-      if (!containerRef.current) return;
-      const newRects: Record<string, DOMRect> = {};
-      const containerRect = containerRef.current.getBoundingClientRect();
+      requestAnimationFrame(() => {
+        if (!containerRef.current) return;
+        const newRects: Record<string, DOMRect> = {};
+        const containerRect = containerRef.current.getBoundingClientRect();
 
-      containerRef.current.querySelectorAll('[data-task-id]').forEach(el => {
-        const id = el.getAttribute('data-task-id');
-        if (id) {
-          const rect = el.getBoundingClientRect();
-          newRects[id] = {
-            ...rect,
-            x: rect.left - containerRect.left,
-            y: rect.top - containerRect.top,
-          } as DOMRect;
-        }
+        containerRef.current.querySelectorAll('[data-task-id]').forEach(el => {
+          const id = el.getAttribute('data-task-id');
+          if (id) {
+            const rect = el.getBoundingClientRect();
+            newRects[id] = {
+              ...rect,
+              x: rect.left - containerRect.left,
+              y: rect.top - containerRect.top,
+            } as DOMRect;
+          }
+        });
+        setRects(newRects);
       });
-      setRects(newRects);
     };
 
     updateRects();

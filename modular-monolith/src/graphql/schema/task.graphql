@@ -112,6 +112,9 @@ extend type Query {
     last: Int
     before: String
   ): TaskNeighbourhood!
+
+  # Returns all direct task_link edges in a project (for list view dependency chips)
+  projectTaskLinks(projectId: ID!): [TaskLink!]!
 }
 
 extend type Mutation {

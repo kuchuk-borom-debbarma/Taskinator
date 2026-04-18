@@ -31,6 +31,18 @@ self.onmessage = (e: MessageEvent<WorkerInput>) => {
 
   // 1. Accumulate unique entities
   pages.forEach(p => {
+    // ── CRITICAL: Add the focused task at rank 0 ──
+    // The API returns focusedTask separately from nodes (neighbours).
+    // Without this, every edge connecting to/from the focused task
+    // has no MapNode, causing them to return null in the SVG render.
+    if (p.focusedTask) {
+      allTasks.set(p.focusedTask.id, p.focusedTask);
+      // Focused task is always at depth 0 — do not overwrite with neighbour data
+      if (!nodeDepths.has(p.focusedTask.id)) {
+        nodeDepths.set(p.focusedTask.id, { depth: 0, direction: 'outgoing' });
+      }
+    }
+
     p.nodes.forEach((n: NeighbourhoodNode) => {
       allTasks.set(n.task.id, n.task);
       const existing = nodeDepths.get(n.task.id);

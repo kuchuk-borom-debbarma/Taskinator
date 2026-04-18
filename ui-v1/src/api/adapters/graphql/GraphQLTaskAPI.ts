@@ -80,8 +80,16 @@ export class GraphQLTaskAPI implements TaskAPI {
     return data.projectTasks.edges.map(e => this.mapTask(e.node));
   }
 
-  async getProjectLinks(_projectId: string): Promise<TaskLink[]> {
-    return [];
+  async getProjectLinks(projectId: string): Promise<TaskLink[]> {
+    const data = await this.query<{ projectTaskLinks: TaskLink[] }>(
+      `query GetProjectTaskLinks($projectId: ID!) {
+        projectTaskLinks(projectId: $projectId) {
+          id projectId sourceTaskId targetTaskId label createdAt
+        }
+      }`,
+      { projectId }
+    );
+    return data.projectTaskLinks || [];
   }
 
   async getTask(id: string): Promise<ProjectTask | null> {

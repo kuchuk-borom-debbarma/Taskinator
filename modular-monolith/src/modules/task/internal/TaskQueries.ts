@@ -687,11 +687,12 @@ export const getNeighbourhood = async (
         return { neighbours: [], edges: [], nextCursor, prevCursor };
     }
 
-    // ── Step 2: Fetch direct edges involving the current page nodes ─────────
-    // To ensure consistency during 'Load More', we fetch links where at least 
-    // one end is in our current nodeIds, and the other end is within the graph scope.
-    const nodeIds = [params.taskId, ...neighbours.map((n) => n.taskId)];
-
+    // ── Step 2: Fetch ALL direct edges in the reachable subgraph ──────────
+    // We fetch ALL edges between reachable nodes (not just current-page nodes).
+    // The nodeIds filter was wrong: it excluded edges between nodes not on the
+    // current pagination page, causing silent edge drops on first load.
+    // The frontend only renders edges whose endpoints exist in mapData.nodes,
+    // so returning extra edges is safe and correct.
     const edgeResult = await sql<TaskLink>`
         WITH reachable_ids AS (
             SELECT ancestor_task_id AS id FROM task_reachability 
@@ -712,7 +713,6 @@ export const getNeighbourhood = async (
             created_at AS "createdAt"
         FROM task_link
         WHERE fk_project_id = ${params.projectId}::uuid
-          AND (source_task_id = ANY(${nodeIds}::uuid[]) OR target_task_id = ANY(${nodeIds}::uuid[]))
           AND source_task_id IN (SELECT id FROM reachable_ids)
           AND target_task_id IN (SELECT id FROM reachable_ids)
     `.execute(db);
@@ -781,3 +781,32 @@ export const updateTaskQuery = async (data: UpdateTaskParam): Promise<ProjectTas
     if (!task) throw new Error('Unauthorized or failed to update task');
     return task;
 };
+
+export const getProjectTaskLinks = async (
+    userId: string,
+    projectId: string,
+): Promise<TaskLink[]> => {
+    const result = await sql<TaskLink>`
+        WITH auth_check AS (
+            SELECT 1 FROM project WHERE id = ${projectId}::uuid AND fk_user_id = ${userId}::text
+            UNION ALL
+            SELECT 1 FROM project_member WHERE fk_project_id = ${projectId}::uuid AND fk_user_id = ${userId}::text
+            LIMIT 1
+        )
+        SELECT
+            id,
+            fk_project_id AS "projectId",
+            source_task_id AS "sourceTaskId",
+            target_task_id AS "targetTaskId",
+            label,
+            created_by AS "createdBy",
+            created_at AS "createdAt"
+        FROM task_link
+        WHERE fk_project_id = ${projectId}::uuid
+          AND EXISTS (SELECT 1 FROM auth_check)
+        ORDER BY created_at ASC
+    `.execute(db);
+
+    return result.rows;
+};
+

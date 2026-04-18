@@ -172,11 +172,6 @@ export const AuthScreen: React.FC = () => {
             <div>
               <div className="flex justify-between items-center mb-2.5">
                 <label className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] pl-1">Secret Key</label>
-                {isLogin && (
-                  <button type="button" className="text-[10px] text-focus-blue hover:text-focus-blue/80 font-black uppercase tracking-[0.1em] transition-colors">
-                    Reset Key
-                  </button>
-                )}
               </div>
               <AuthInput 
                 type="password" 
@@ -309,8 +304,14 @@ const FeatureItem: React.FC<{ text: string }> = ({ text }) => (
 );
 
 const SocialButton: React.FC<{ icon: React.ReactNode, label: string }> = ({ icon, label }) => (
-  <button className="flex items-center justify-center gap-3 py-4 px-6 bg-white/[0.015] border border-white/5 rounded-2xl hover:bg-white/[0.04] hover:border-white/10 transition-all font-black text-[11px] uppercase tracking-widest text-white/30 hover:text-white">
+  <button
+    type="button"
+    disabled
+    title="Coming soon"
+    className="flex items-center justify-center gap-3 py-4 px-6 bg-white/[0.015] border border-white/5 rounded-2xl font-black text-[11px] uppercase tracking-widest text-white/15 cursor-not-allowed relative"
+  >
     {icon}
     <span>{label}</span>
+    <span className="absolute top-1.5 right-2 text-[8px] font-black uppercase tracking-widest text-white/20">soon</span>
   </button>
 );

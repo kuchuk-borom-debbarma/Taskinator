@@ -13,11 +13,6 @@ interface TaskMapProps {
 
 import type { MapNode } from './layoutWorker';
 
-interface TaskMapProps {
-  projectId: string;
-  taskId: string;
-}
-
 interface Coordinate {
   x: number;
   y: number;
@@ -283,14 +278,24 @@ export const TaskMap: React.FC<TaskMapProps> = ({ projectId, taskId }) => {
             const isHighlight = hoveredNodeId === s.task.id || hoveredNodeId === t.task.id || hoveredEdgeId === edge.id;
             const isDimmed = (hoveredNodeId || hoveredEdgeId) && !isHighlight;
             
-            const cp1y = s.y + (t.y - s.y) * 0.5;
-            const cp2y = s.y + (t.y - s.y) * 0.5;
-            const pathD = `M ${s.x} ${s.y} C ${s.x} ${cp1y}, ${t.x} ${cp2y}, ${t.x} ${t.y}`;
+            // Vertical bezier: source bottom → target top
+            // Nodes are stacked by rank (Y-axis)
+            const nodeHalfHeight = s.task.id === taskId ? 60 : 50; 
+            const targetHalfHeight = t.task.id === taskId ? 60 : 50;
+            
+            const sx = s.x;
+            const sy = s.y + nodeHalfHeight;
+            const tx = t.x;
+            const ty = t.y - targetHalfHeight;
+            
+            const cpOffset = Math.abs(ty - sy) * 0.5;
+            const pathD = `M ${sx} ${sy} C ${sx} ${sy + cpOffset}, ${tx} ${ty - cpOffset}, ${tx} ${ty}`;
             const color = getLinkLabelColor(edge.label);
+
+            const defaultStroke = '#c8c7c4';
 
             return (
               <React.Fragment key={edge.id}>
-                {/* Interaction Hit-Area (Invisible but wider for easy hovering) */}
                 <path
                   d={pathD}
                   fill="none"
@@ -304,14 +309,14 @@ export const TaskMap: React.FC<TaskMapProps> = ({ projectId, taskId }) => {
                 <path 
                   d={pathD} 
                   fill="none" 
-                  stroke={isHighlight ? color : 'var(--color-border-notion)'} 
-                  strokeWidth={isHighlight ? 2 : 1} 
-                  strokeOpacity={isDimmed ? 0.1 : 1} 
+                  stroke={isHighlight ? color : defaultStroke} 
+                  strokeWidth={isHighlight ? 2.5 : 1.5} 
+                  strokeOpacity={isDimmed ? 0.1 : isHighlight ? 1 : 0.7} 
                   className="transition-all duration-300 pointer-events-none" 
                 />
                 
                 {isHighlight && (
-                  <foreignObject x={(s.x + t.x) / 2 - 40} y={(s.y + t.y) / 2 - 10} width="80" height="20">
+                  <foreignObject x={(sx + tx) / 2 - 40} y={(sy + ty) / 2 - 10} width="80" height="20">
                     <div className="flex justify-center pointer-events-none">
                        <div className="px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider text-white" style={{ backgroundColor: color }}>
                         {edge.label}

@@ -101,6 +101,8 @@ export interface TaskService extends BaseService {
         pagination: PaginationParams,
     ): Promise<LinkConnection>;
 
+    getProjectLinks(userId: string, projectId: string): Promise<TaskLink[]>;
+
     getTaskNeighbourhood(params: GetNeighbourhoodParam): Promise<TaskNeighbourhoodResult>;
 }
 

@@ -232,6 +232,15 @@ export const taskResolvers = {
                 },
             };
         },
+
+        projectTaskLinks: async (
+            _: any,
+            { projectId }: any,
+            context: GraphQLContext,
+        ) => {
+            if (!context.userId) throw new Error('Unauthorized');
+            return taskService.getProjectLinks(context.userId, projectId);
+        },
     },
 
     Mutation: {

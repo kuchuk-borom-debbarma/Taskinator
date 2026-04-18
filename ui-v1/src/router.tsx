@@ -8,7 +8,8 @@ import {
   redirect
 } from '@tanstack/react-router';
 import { Sidebar } from './components/Layout/Sidebar';
-import { useInfiniteQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
 import { useApi } from './context/ApiContext';
 import { useAuth, type AuthContextType } from './context/AuthContext';
 import { AuthScreen } from './components/Auth/AuthScreen';
@@ -100,7 +101,11 @@ const indexRoute = createRoute({
 function ProjectDashboard() {
   const navigate = useNavigate();
   const { projectApi } = useApi();
-  
+  const queryClient = useQueryClient();
+  const [showCreate, setShowCreate] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [newDesc, setNewDesc] = useState('');
+
   const {
     data,
     fetchNextPage,
@@ -110,18 +115,30 @@ function ProjectDashboard() {
     isError
   } = useInfiniteQuery({
     queryKey: ['dashboard-projects'],
-    queryFn: ({ pageParam }) => projectApi.getProjects(5, pageParam as string | undefined),
+    queryFn: ({ pageParam }) => projectApi.getProjects(12, pageParam as string | undefined),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (lastPage) => lastPage.hasNextPage ? lastPage.endCursor : undefined,
+  });
+
+  const createMutation = useMutation({
+    mutationFn: () => projectApi.createProject(newName.trim(), newDesc.trim() || undefined),
+    onSuccess: (project) => {
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-projects'] });
+      setShowCreate(false);
+      setNewName('');
+      setNewDesc('');
+      navigate({ to: '/projects/$projectId', params: { projectId: project.id } });
+    },
   });
 
   const projects = data?.pages.flatMap(p => p.projects) || [];
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <Loader2 className="w-8 h-8 animate-spin text-focus-blue" />
-        <span className="ml-3 text-text-dim">Loading your projects...</span>
+      <div className="flex items-center justify-center h-64 gap-3 text-text-dim">
+        <Loader2 className="w-5 h-5 animate-spin text-focus-blue" />
+        <span className="text-[13px] font-medium">Loading projects...</span>
       </div>
     );
   }
@@ -142,11 +159,15 @@ function ProjectDashboard() {
           <div className="w-10 h-10 bg-focus-blue rounded-lg flex items-center justify-center text-white shadow-md">
             <LayoutGrid size={22} />
           </div>
-          <h1 className="text-3xl font-bold tracking-tight">Project Dashboard</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Projects</h1>
         </div>
-        <div className="text-xs font-mono bg-bg-secondary px-2 py-1 rounded text-text-dim border border-border-notion">
-          LIMIT: 5 (TEST_MODE)
-        </div>
+        <button
+          onClick={() => setShowCreate(true)}
+          className="flex items-center gap-2 px-4 py-2 bg-focus-blue text-white rounded-lg font-bold text-[13px] hover:bg-focus-blue/90 transition-all shadow-md shadow-focus-blue/20 active:scale-95"
+        >
+          <ArrowRight size={15} className="-rotate-45" />
+          New Project
+        </button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -154,7 +175,7 @@ function ProjectDashboard() {
           <div 
             key={p.id}
             onClick={() => navigate({ to: '/projects/$projectId', params: { projectId: p.id } })}
-            className="group p-6 bg-white border border-border-notion rounded-xl shadow-notion hover:shadow-premium hover:border-focus-blue transition-all cursor-pointer flex flex-col justify-between"
+            className="group p-6 bg-white border border-border-notion rounded-xl shadow-notion hover:shadow-premium hover:border-focus-blue transition-all cursor-pointer flex flex-col justify-between min-h-[140px]"
           >
             <div>
               <h3 className="text-lg font-bold mb-2 group-hover:text-focus-blue transition-colors">{p.name}</h3>
@@ -171,9 +192,12 @@ function ProjectDashboard() {
           </div>
         ))}
 
-        <div className="p-6 border-2 border-dashed border-border-notion rounded-xl flex flex-col items-center justify-center gap-2 hover:bg-black/5 hover:border-focus-blue/30 transition-all cursor-pointer opacity-70 group min-h-[160px]">
+        <div
+          onClick={() => setShowCreate(true)}
+          className="p-6 border-2 border-dashed border-border-notion rounded-xl flex flex-col items-center justify-center gap-2 hover:bg-black/5 hover:border-focus-blue/30 transition-all cursor-pointer opacity-70 group min-h-[140px]"
+        >
           <div className="w-10 h-10 rounded-full bg-bg-secondary flex items-center justify-center text-text-dim group-hover:bg-focus-blue group-hover:text-white transition-all">
-            <span className="text-xl font-bold">+</span>
+            <span className="text-xl font-bold leading-none">+</span>
           </div>
           <p className="text-sm font-medium">New Project</p>
         </div>
@@ -189,6 +213,62 @@ function ProjectDashboard() {
             {isFetchingNextPage ? <Loader2 size={16} className="animate-spin" /> : <ArrowRight size={16} className="rotate-90" />}
             {isFetchingNextPage ? 'Loading...' : 'Load More Projects'}
           </button>
+        </div>
+      )}
+
+      {/* Create Project Modal */}
+      {showCreate && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setShowCreate(false)} />
+          <div className="relative z-10 w-full max-w-md bg-white border border-border-notion rounded-2xl shadow-2xl p-6 animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between mb-5">
+              <h3 className="font-bold text-text-notion text-base tracking-tight">Create New Project</h3>
+              <button onClick={() => setShowCreate(false)} className="p-1.5 rounded-lg text-text-dim hover:bg-bg-secondary transition-all"><ArrowRight size={14} className="rotate-45" /></button>
+            </div>
+            <form
+              onSubmit={e => { e.preventDefault(); if (newName.trim()) createMutation.mutate(); }}
+              className="flex flex-col gap-4"
+            >
+              <div>
+                <label className="block text-[10px] font-black text-text-dim uppercase tracking-[0.2em] mb-2">Project Name</label>
+                <input
+                  autoFocus
+                  type="text"
+                  value={newName}
+                  onChange={e => setNewName(e.target.value)}
+                  placeholder="e.g. Q3 Product Launch"
+                  className="w-full px-4 py-3 bg-bg-secondary border border-border-notion rounded-xl text-[14px] font-medium text-text-notion focus:outline-none focus:border-focus-blue/50 placeholder:text-text-dim/40 transition-all"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-[10px] font-black text-text-dim uppercase tracking-[0.2em] mb-2">Description <span className="normal-case font-medium opacity-50">(optional)</span></label>
+                <textarea
+                  value={newDesc}
+                  onChange={e => setNewDesc(e.target.value)}
+                  placeholder="What is this project about?"
+                  rows={3}
+                  className="w-full px-4 py-3 bg-bg-secondary border border-border-notion rounded-xl text-[14px] font-medium text-text-notion focus:outline-none focus:border-focus-blue/50 placeholder:text-text-dim/40 transition-all resize-none"
+                />
+              </div>
+              {createMutation.isError && (
+                <p className="text-red-500 text-xs font-bold">{(createMutation.error as Error).message}</p>
+              )}
+              <div className="flex gap-3 mt-1">
+                <button type="button" onClick={() => setShowCreate(false)} className="flex-1 py-3 border border-border-notion rounded-xl text-text-dim hover:text-text-notion font-bold text-[13px] transition-all hover:bg-bg-secondary">
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={createMutation.isPending || !newName.trim()}
+                  className="flex-1 py-3 bg-focus-blue text-white rounded-xl font-bold text-[13px] flex items-center justify-center gap-2 hover:bg-focus-blue/90 transition-all disabled:opacity-50 shadow-md shadow-focus-blue/20"
+                >
+                  {createMutation.isPending ? <Loader2 size={14} className="animate-spin" /> : null}
+                  {createMutation.isPending ? 'Creating...' : 'Create Project'}
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>
