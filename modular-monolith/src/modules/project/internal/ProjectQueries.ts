@@ -346,10 +346,21 @@ export const getProjectMembers = async (
     projectId: string,
     params: { first?: number; after?: string; last?: number; before?: string } = {},
 ): Promise<{ members: ProjectMember[]; nextCursor: string | null; prevCursor: string | null }> => {
-    const limit = Math.min(params.first || params.last || 5, 50);
+    const limit = Math.min(params.first || params.last || 15, 50);
     const { after, before } = params;
     const isBackward = !!before;
     const cursor = before || after;
+
+    let cursorDate: string | null = null;
+    let cursorId: string | null = null;
+
+    if (cursor && cursor.includes('|')) {
+        const parts = cursor.split('|');
+        if (parts.length === 2) {
+            cursorDate = parts[0]!;
+            cursorId = parts[1]!;
+        }
+    }
 
     const result = await sql<ProjectMember>`
         WITH auth_check AS (
@@ -365,20 +376,21 @@ export const getProjectMembers = async (
             version, 
             last_event_id AS "lastEventId", 
             created_at AS "createdAt", 
+            TO_CHAR(created_at, 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as "createdAtPrecision",
             updated_at AS "updatedAt"
         FROM project_member
         WHERE fk_project_id = ${projectId}::uuid
           AND EXISTS (SELECT 1 FROM auth_check)
           AND (
-              ${cursor ?? null}::uuid IS NULL
+              ${cursorDate}::timestamptz IS NULL
               OR (
                   CASE 
-                    WHEN ${isBackward} THEN id < ${cursor ?? null}::uuid
-                    ELSE id > ${cursor ?? null}::uuid
+                    WHEN ${isBackward} THEN (created_at > ${cursorDate}::timestamptz OR (created_at = ${cursorDate}::timestamptz AND id > ${cursorId}::uuid))
+                    ELSE (created_at < ${cursorDate}::timestamptz OR (created_at = ${cursorDate}::timestamptz AND id < ${cursorId}::uuid))
                   END
               )
           )
-        ORDER BY id ${sql.raw(isBackward ? 'DESC' : 'ASC')}
+        ORDER BY created_at ${sql.raw(isBackward ? 'ASC' : 'DESC')}, id ${sql.raw(isBackward ? 'ASC' : 'DESC')}
         LIMIT ${limit + 1}
     `.execute(db);
 
@@ -398,13 +410,15 @@ export const getProjectMembers = async (
     if (members.length > 0) {
         const first = members[0]!;
         const last = members[members.length - 1]!;
+        const fDate = (first as any).createdAtPrecision;
+        const lDate = (last as any).createdAtPrecision;
 
         if (isBackward) {
-            nextCursor = last.id;
-            prevCursor = hasMore ? first.id : null;
+            nextCursor = `${lDate}|${last.id}`;
+            prevCursor = hasMore ? `${fDate}|${first.id}` : null;
         } else {
-            nextCursor = hasMore ? last.id : null;
-            prevCursor = after ? first.id : null;
+            nextCursor = hasMore ? `${lDate}|${last.id}` : null;
+            prevCursor = after ? `${fDate}|${first.id}` : null;
         }
     }
 
@@ -441,7 +455,7 @@ export const searchProjectMembers = async (params: {
     const cursor = before || after;
     const limit = Math.min(params.first || params.last || 5, 50);
 
-    const rows = await sql<{ id: string; username: string; email: string }>`
+    const rows = await sql<{ id: string; username: string; email: string; createdAtPrecision: string }>`
         WITH auth_check AS (
             SELECT 1 FROM project WHERE id = ${params.projectId}::uuid AND fk_user_id = ${params.actorId}
             UNION ALL
@@ -449,13 +463,13 @@ export const searchProjectMembers = async (params: {
             LIMIT 1
         ),
         project_owner AS (
-            SELECT u.id, u.username, u.email
+            SELECT u.id, u.username, u.email, p.created_at
             FROM project p
             JOIN users u ON u.id::text = p.fk_user_id
             WHERE p.id = ${params.projectId}::uuid
         ),
         project_members AS (
-            SELECT u.id, u.username, u.email
+            SELECT u.id, u.username, u.email, pm.created_at
             FROM project_member pm
             JOIN users u ON u.id::text = pm.fk_user_id
             WHERE pm.fk_project_id = ${params.projectId}::uuid
@@ -465,7 +479,9 @@ export const searchProjectMembers = async (params: {
             UNION
             SELECT * FROM project_members
         )
-        SELECT id, username, email
+        SELECT 
+            id, username, email,
+            TO_CHAR(created_at, 'YYYY-MM-DD"T"HH24:MI:SS.US"Z"') as "createdAtPrecision"
         FROM all_eligible_users
         WHERE EXISTS (SELECT 1 FROM auth_check)
           AND (
@@ -474,15 +490,15 @@ export const searchProjectMembers = async (params: {
             OR id::text = ${search}
           )
           AND (
-            ${cursor ?? null}::uuid IS NULL
+            ${cursorDate}::timestamptz IS NULL
             OR (
                 CASE 
-                  WHEN ${isBackward} THEN id < ${cursor ?? null}::uuid
-                  ELSE id > ${cursor ?? null}::uuid
+                  WHEN ${isBackward} THEN (created_at > ${cursorDate}::timestamptz OR (created_at = ${cursorDate}::timestamptz AND id > ${cursorId}::uuid))
+                  ELSE (created_at < ${cursorDate}::timestamptz OR (created_at = ${cursorDate}::timestamptz AND id < ${cursorId}::uuid))
                 END
             )
           )
-        ORDER BY id ${sql.raw(isBackward ? 'DESC' : 'ASC')}
+        ORDER BY created_at ${sql.raw(isBackward ? 'ASC' : 'DESC')}, id ${sql.raw(isBackward ? 'ASC' : 'DESC')}
         LIMIT ${limit + 1}
     `.execute(db);
 
@@ -502,13 +518,15 @@ export const searchProjectMembers = async (params: {
     if (users.length > 0) {
         const first = users[0]!;
         const last = users[users.length - 1]!;
+        const fDate = first.createdAtPrecision;
+        const lDate = last.createdAtPrecision;
 
         if (isBackward) {
-            nextCursor = last.id;
-            prevCursor = hasMore ? first.id : null;
+            nextCursor = `${lDate}|${last.id}`;
+            prevCursor = hasMore ? `${fDate}|${first.id}` : null;
         } else {
-            nextCursor = hasMore ? last.id : null;
-            prevCursor = after ? first.id : null;
+            nextCursor = hasMore ? `${lDate}|${last.id}` : null;
+            prevCursor = after ? `${fDate}|${first.id}` : null;
         }
     }
 

@@ -32,10 +32,11 @@ export interface InternalNotificationService extends BaseService {
     markAllAsRead(userId: string): Promise<void>;
     getNotifications(
         userId: string,
-        params: { cursor?: string; limit?: number },
+        params: { first?: number; after?: string; last?: number; before?: string },
     ): Promise<{
         notifications: InternalNotification[];
         nextCursor: string | null;
+        prevCursor: string | null;
     }>;
     getUnreadCount(userId: string): Promise<number>;
 }

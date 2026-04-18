@@ -15,30 +15,30 @@ export const notificationResolvers = {
     Query: {
         notifications: async (
             _: any,
-            args: { first?: number; after?: string },
+            args: { first?: number; after?: string; last?: number; before?: string },
             context: GraphQLContext,
         ) => {
             if (!context.userId) throw new UnauthorizedError();
-            const { notifications, nextCursor } =
-                await notificationService.getNotifications(context.userId, {
-                    limit: args.first,
-                    cursor: args.after,
-                });
+            const { notifications, nextCursor, prevCursor } =
+                await notificationService.getNotifications(context.userId, args);
 
             return {
                 edges: notifications.map((n: any) => ({
                     node: {
                         ...n,
                         metadata: n.metadata
-                            ? JSON.stringify(n.metadata)
+                            ? typeof n.metadata === 'string' 
+                                ? n.metadata 
+                                : JSON.stringify(n.metadata)
                             : null,
                     },
                     cursor: `${n.createdAtPrecision || (n.createdAt instanceof Date ? n.createdAt.toISOString() : n.createdAt)}|${n.id}`,
                 })),
                 pageInfo: {
                     hasNextPage: !!nextCursor,
+                    hasPreviousPage: !!prevCursor,
+                    startCursor: prevCursor,
                     endCursor: nextCursor,
-                    hasPreviousPage: false,
                 },
             };
         },

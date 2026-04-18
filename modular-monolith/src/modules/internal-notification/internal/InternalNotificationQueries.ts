@@ -64,13 +64,16 @@ export const insertNotification = async (
 
 export const getNotifications = async (
     userId: string,
-    params: { cursor?: string; limit?: number } = {},
+    params: { first?: number; after?: string; last?: number; before?: string } = {},
 ): Promise<{
     notifications: InternalNotification[];
     nextCursor: string | null;
+    prevCursor: string | null;
 }> => {
-    const limit = Math.min(params.limit ?? 20, 50);
-    const cursor = params.cursor; // Expecting format: "ISO_DATE|uuid"
+    const limit = Math.min(params.first || params.last || 20, 50);
+    const { after, before } = params;
+    const isBackward = !!before;
+    const cursor = before || after;
 
     let cursorDate: string | null = null;
     let cursorId: string | null = null;
@@ -99,24 +102,47 @@ export const getNotifications = async (
         WHERE fk_user_id = ${userId}::text
           AND (
               ${cursorDate}::timestamptz IS NULL
-              OR created_at < ${cursorDate}::timestamptz
-              OR (created_at = ${cursorDate}::timestamptz AND id < ${cursorId}::uuid)
+              OR (
+                  CASE 
+                    WHEN ${isBackward} THEN (created_at > ${cursorDate}::timestamptz OR (created_at = ${cursorDate}::timestamptz AND id > ${cursorId}::uuid))
+                    ELSE (created_at < ${cursorDate}::timestamptz OR (created_at = ${cursorDate}::timestamptz AND id < ${cursorId}::uuid))
+                  END
+              )
           )
-        ORDER BY created_at DESC, id DESC
+        ORDER BY created_at ${sql.raw(isBackward ? 'ASC' : 'DESC')}, id ${sql.raw(isBackward ? 'ASC' : 'DESC')}
         LIMIT ${limit + 1}
     `.execute(db);
 
-    const hasMore = result.rows.length > limit;
-    const notifications = hasMore ? result.rows.slice(0, limit) : result.rows;
-
-    let nextCursor: string | null = null;
-    if (hasMore && notifications.length > 0) {
-        const last = notifications[notifications.length - 1]!;
-        const dateStr = last.createdAtPrecision;
-        nextCursor = `${dateStr}|${last.id}`;
+    let rows = result.rows;
+    const hasMore = rows.length > limit;
+    if (hasMore) {
+        rows = rows.slice(0, limit);
+    }
+    if (isBackward) {
+        rows.reverse();
     }
 
-    return { notifications, nextCursor };
+    const notifications = rows;
+    let nextCursor: string | null = null;
+    let prevCursor: string | null = null;
+
+    if (notifications.length > 0) {
+        const first = notifications[0]!;
+        const last = notifications[notifications.length - 1]!;
+        const firstDateStr = last.createdAtPrecision; // wait, first is first, last is last
+        const fDate = first.createdAtPrecision;
+        const lDate = last.createdAtPrecision;
+
+        if (isBackward) {
+            nextCursor = `${lDate}|${last.id}`;
+            prevCursor = hasMore ? `${fDate}|${first.id}` : null;
+        } else {
+            nextCursor = hasMore ? `${lDate}|${last.id}` : null;
+            prevCursor = after ? `${fDate}|${first.id}` : null;
+        }
+    }
+
+    return { notifications, nextCursor, prevCursor };
 };
 
 export const markAsRead = async (userId: string, id: string): Promise<void> => {

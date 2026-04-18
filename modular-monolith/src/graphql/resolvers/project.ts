@@ -78,7 +78,10 @@ export const projectResolvers = {
                     { first, after, last, before },
                 );
             return {
-                edges: members.map((m) => ({ node: m, cursor: m.id })),
+                edges: members.map((m: any) => ({ 
+                    node: m, 
+                    cursor: `${m.createdAtPrecision || (m.createdAt instanceof Date ? m.createdAt.toISOString() : m.createdAt)}|${m.id}` 
+                })),
                 pageInfo: {
                     hasNextPage: !!nextCursor,
                     hasPreviousPage: !!prevCursor,
