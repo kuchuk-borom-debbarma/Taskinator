@@ -70,7 +70,6 @@ type Mutation {
   removeTeamMembers(projectId: ID!, teamId: ID!, userIds: [String!]!): [String]
 }
 
-
 type TaskLink {
   id: ID!
   projectId: ID!
@@ -138,18 +137,20 @@ type ProjectTask {
   updatedBy: ID!
   createdAt: String!
   updatedAt: String!
-  project: Project
-  team: Team
-  member: User
-  assignee: User
-  creator: User
-  updater: User
+  parentRef: String
+  order: Int
   incomingLinksCount: Int!
   outgoingLinksCount: Int!
   directIncomingLinksCount: Int!
   directOutgoingLinksCount: Int!
   incomingLabelCounts: String!
   outgoingLabelCounts: String!
+  project: Project
+  team: Team
+  member: User
+  assignee: User
+  creator: User
+  updater: User
   incomingLinks(first: Int, after: String, last: Int, before: String): TaskLinkConnection!
   outgoingLinks(first: Int, after: String, last: Int, before: String): TaskLinkConnection!
 }
