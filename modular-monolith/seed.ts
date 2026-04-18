@@ -149,12 +149,15 @@ function generateTeamName(i: number) { return `${pick(TEAM_PREFIXES)} ${pick(TEA
 // ============================================================
 //  ⚡  Bulk INSERT helper (batched)
 // ============================================================
-async function bulkInsert(table: string, columns: string[], rows: string[][]) {
+// ============================================================
+//  ⚡  Bulk INSERT helper (batched)
+// ============================================================
+async function bulkInsert(table: string, columns: string[], rows: (string | number | null)[][]) {
     if (!rows.length) return;
     const cols = columns.join(', ');
     for (let offset = 0; offset < rows.length; offset += CONFIG.COPY_BATCH_ROWS) {
         const chunk = rows.slice(offset, offset + CONFIG.COPY_BATCH_ROWS);
-        const values = chunk.map(r => `(${r.join(', ')})`).join(',\n');
+        const values = chunk.map(r => `(${r.map(v => v === null ? 'NULL' : v).join(', ')})`).join(',\n');
         await sql.raw(`INSERT INTO ${table} (${cols}) VALUES ${values}`).execute(db);
     }
 }
@@ -260,7 +263,7 @@ async function seed() {
     `.execute(db);
 
         const userIds: string[] = [adminId];
-        const userRows: string[][] = [];
+        const userRows: (string | number | null)[][] = [];
 
         for (let i = 1; i < CONFIG.TOTAL_USERS; i++) {
             const id = uuidv4();
@@ -351,7 +354,7 @@ async function seed() {
         // ----------------------------------------------------------
         console.log(`\n🛡 Creating ${CONFIG.TOTAL_TEAMS.toLocaleString()} teams...`);
         const teamIds: string[] = [];
-        const teamRows: string[][] = [];
+        const teamRows: (string | number | null)[][] = [];
 
         for (let i = 1; i <= CONFIG.TOTAL_TEAMS; i++) {
             const id = uuidv4();
@@ -372,7 +375,7 @@ async function seed() {
         // 5. Team members
         // ----------------------------------------------------------
         console.log(`\n👥 Assigning ~${CONFIG.MEMBERS_PER_TEAM} members per team...`);
-        const teamMemberRows: string[][] = [];
+        const teamMemberRows: (string | number | null)[][] = [];
         const teamMembersById = new Map<string, string[]>();
 
         for (const teamId of teamIds) {
@@ -405,7 +408,7 @@ async function seed() {
         // ----------------------------------------------------------
         console.log(`\n📋 Creating ${CONFIG.TOTAL_TASKS.toLocaleString()} tasks...`);
         const taskIds: string[] = [];
-        const taskRows: string[][] = [];
+        const taskRows: (string | number | null)[][] = [];
 
         for (let i = 0; i < CONFIG.TOTAL_TASKS; i++) {
             const id = uuidv4();
@@ -464,7 +467,7 @@ async function seed() {
             forests.push(shuffled.slice(start, end));
         }
 
-        const allLinkRows: string[][] = [];
+        const allLinkRows: (string | number | null)[][] = [];
         let totalLinks = 0;
 
         for (const forest of forests) {
@@ -562,10 +565,10 @@ async function seed() {
         // 9. Extra lightweight projects
         // ----------------------------------------------------------
         console.log(`\n📁 Creating ${CONFIG.TOTAL_EXTRA_PROJECTS} extra projects...`);
-        const extraProjectRows: string[][] = [];
-        const extraMemberRows: string[][] = [];
-        const extraTeamRows: string[][] = [];
-        const extraTaskRows: string[][] = [];
+        const extraProjectRows: (string | number | null)[][] = [];
+        const extraMemberRows: (string | number | null)[][] = [];
+        const extraTeamRows: (string | number | null)[][] = [];
+        const extraTaskRows: (string | number | null)[][] = [];
 
         for (let p = 0; p < CONFIG.TOTAL_EXTRA_PROJECTS; p++) {
             const pid = uuidv4();

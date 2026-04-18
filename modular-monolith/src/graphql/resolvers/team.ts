@@ -147,8 +147,8 @@ export const teamResolvers = {
             await teamService.addTeamMembers({
                 projectId,
                 teamId,
-                userIds,
-                currentUserId: context.userId,
+                members: userIds,
+                userId: context.userId,
             });
             return {
                 success: true,

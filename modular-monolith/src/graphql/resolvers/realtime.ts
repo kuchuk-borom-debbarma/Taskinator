@@ -2,6 +2,7 @@ import { pubsub } from '../pubsub';
 import { logger } from '../../logger';
 import { redisPublisher, INSTANCE_ID } from '../../redis/index.ts';
 import { UnauthorizedError } from '../errors';
+import type { GraphQLContext } from '../context';
 
 /**
  * realtimeResolvers handles the unified event stream for Notification events.

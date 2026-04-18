@@ -634,6 +634,12 @@ export const getNeighbourhood = async (
         updatedBy: string;
         createdAt: Date;
         updatedAt: Date;
+        directIncomingCount: number;
+        directOutgoingCount: number;
+        totalIncomingCount: number;
+        totalOutgoingCount: number;
+        incomingLabelCounts: Record<string, number>;
+        outgoingLabelCounts: Record<string, number>;
     };
 
     const reachResult = await sql<ReachRow>`
@@ -687,7 +693,13 @@ export const getNeighbourhood = async (
                 t.created_by AS "createdBy",
                 t.updated_by AS "updatedBy",
                 t.created_at AS "createdAt",
-                t.updated_at AS "updatedAt"
+                t.updated_at AS "updatedAt",
+                t.direct_incoming_count AS "directIncomingCount",
+                t.direct_outgoing_count AS "directOutgoingCount",
+                t.total_incoming_count AS "totalIncomingCount",
+                t.total_outgoing_count AS "totalOutgoingCount",
+                t.incoming_label_counts AS "incomingLabelCounts",
+                t.outgoing_label_counts AS "outgoingLabelCounts"
             FROM deduped d
             JOIN project_task t ON d.neighbour_id = t.id
         )
@@ -754,7 +766,13 @@ export const getNeighbourhood = async (
             createdBy: r.createdBy,
             updatedBy: r.updatedBy,
             createdAt: r.createdAt,
-            updatedAt: r.updatedAt
+            updatedAt: r.updatedAt,
+            directIncomingCount: r.directIncomingCount,
+            directOutgoingCount: r.directOutgoingCount,
+            totalIncomingCount: r.totalIncomingCount,
+            totalOutgoingCount: r.totalOutgoingCount,
+            incomingLabelCounts: r.incomingLabelCounts,
+            outgoingLabelCounts: r.outgoingLabelCounts
         }
     }));
 

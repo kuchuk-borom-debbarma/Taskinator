@@ -1,6 +1,7 @@
 import { internalNotificationService as notificationService } from '../../modules/internal-notification';
 import { pubsub } from '../pubsub';
 import { UnauthorizedError } from '../errors';
+import type { GraphQLContext } from '../context';
 
 export const notificationResolvers = {
     InternalNotification: {
