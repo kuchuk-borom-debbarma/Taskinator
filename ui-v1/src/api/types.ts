@@ -26,8 +26,8 @@ export interface ProjectTask {
   totalOutgoingLinksCount: number;
   directIncomingLinksCount: number;
   directOutgoingLinksCount: number;
-  incomingLabelCounts: Record<string, number>;
-  outgoingLabelCounts: Record<string, number>;
+  incomingLabelCounts: { label: string; count: number }[];
+  outgoingLabelCounts: { label: string; count: number }[];
   team?: Team;
   assignee?: Member;
 }

@@ -68,14 +68,8 @@ export class GraphQLTaskAPI implements TaskAPI {
       createdById: t.createdBy,
       incomingLinksCount: t.totalIncomingLinksCount,
       outgoingLinksCount: t.totalOutgoingLinksCount,
-      incomingLabelCounts: (t.incomingLabelCounts?.edges || []).reduce((acc: any, edge: any) => {
-        acc[edge.node.label] = edge.node.count;
-        return acc;
-      }, {}),
-      outgoingLabelCounts: (t.outgoingLabelCounts?.edges || []).reduce((acc: any, edge: any) => {
-        acc[edge.node.label] = edge.node.count;
-        return acc;
-      }, {}),
+      incomingLabelCounts: t.incomingLabelCounts,
+      outgoingLabelCounts: t.outgoingLabelCounts,
       team: t.team ? { id: t.team.id, name: t.team.name, projectId: t.projectId } : undefined,
       assignee: t.assignee ? { id: t.assignee.id, username: t.assignee.username, email: '' } : undefined,
     } as unknown as ProjectTask;
@@ -95,8 +89,8 @@ export class GraphQLTaskAPI implements TaskAPI {
             node {
               id projectId teamId memberId title description status priority dueDate version createdAt updatedAt createdBy
       totalIncomingLinksCount totalOutgoingLinksCount directIncomingLinksCount directOutgoingLinksCount 
-      incomingLabelCounts { edges { node { label count } } } 
-      outgoingLabelCounts { edges { node { label count } } }
+      incomingLabelCounts { label count } 
+      outgoingLabelCounts { label count }
               team { id name }
               assignee { id username }
             }
@@ -150,8 +144,8 @@ export class GraphQLTaskAPI implements TaskAPI {
         task(id: $id) {
           id projectId teamId memberId title description status priority dueDate version createdAt updatedAt createdBy
       totalIncomingLinksCount totalOutgoingLinksCount directIncomingLinksCount directOutgoingLinksCount 
-      incomingLabelCounts { edges { node { label count } } } 
-      outgoingLabelCounts { edges { node { label count } } }
+      incomingLabelCounts { label count } 
+      outgoingLabelCounts { label count }
           team { id name }
           assignee { id username }
         }
@@ -167,8 +161,8 @@ export class GraphQLTaskAPI implements TaskAPI {
           focusedTask {
             id projectId teamId memberId title description status priority dueDate version createdAt updatedAt createdBy
             totalIncomingLinksCount totalOutgoingLinksCount directIncomingLinksCount directOutgoingLinksCount 
-      incomingLabelCounts { edges { node { label count } } } 
-      outgoingLabelCounts { edges { node { label count } } }
+      incomingLabelCounts { label count } 
+      outgoingLabelCounts { label count }
             team { id name }
             assignee { id username }
           }
@@ -178,8 +172,8 @@ export class GraphQLTaskAPI implements TaskAPI {
                 task {
                   id projectId teamId memberId title description status priority dueDate version createdAt updatedAt createdBy
                   totalIncomingLinksCount totalOutgoingLinksCount directIncomingLinksCount directOutgoingLinksCount 
-      incomingLabelCounts { edges { node { label count } } } 
-      outgoingLabelCounts { edges { node { label count } } }
+      incomingLabelCounts { label count } 
+      outgoingLabelCounts { label count }
                   team { id name }
                   assignee { id username }
                 }
@@ -228,8 +222,8 @@ export class GraphQLTaskAPI implements TaskAPI {
         createTask(projectId: $projectId, title: $title, description: $description) {
           id projectId teamId memberId title description status priority dueDate version createdAt updatedAt createdBy
       totalIncomingLinksCount totalOutgoingLinksCount directIncomingLinksCount directOutgoingLinksCount 
-      incomingLabelCounts { edges { node { label count } } } 
-      outgoingLabelCounts { edges { node { label count } } }
+      incomingLabelCounts { label count } 
+      outgoingLabelCounts { label count }
           team { id name }
           assignee { id username }
         }
@@ -244,8 +238,8 @@ export class GraphQLTaskAPI implements TaskAPI {
         updateTask(taskId: $taskId, title: $title, description: $description, status: $status) {
           id projectId teamId memberId title description status priority dueDate version createdAt updatedAt createdBy
       totalIncomingLinksCount totalOutgoingLinksCount directIncomingLinksCount directOutgoingLinksCount 
-      incomingLabelCounts { edges { node { label count } } } 
-      outgoingLabelCounts { edges { node { label count } } }
+      incomingLabelCounts { label count } 
+      outgoingLabelCounts { label count }
           team { id name }
           assignee { id username }
         }

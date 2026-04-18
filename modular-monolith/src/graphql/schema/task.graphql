@@ -67,15 +67,6 @@ type TaskLabelCount {
   count: Int!
 }
 
-type TaskLabelCountEdge {
-  node: TaskLabelCount!
-  cursor: String!
-}
-
-type TaskLabelCountConnection {
-  edges: [TaskLabelCountEdge!]!
-  pageInfo: PageInfo!
-}
 
 type ProjectTask {
   id: ID!
@@ -98,8 +89,8 @@ type ProjectTask {
   totalOutgoingLinksCount: Int!
   directIncomingLinksCount: Int!
   directOutgoingLinksCount: Int!
-  incomingLabelCounts: TaskLabelCountConnection!
-  outgoingLabelCounts: TaskLabelCountConnection!
+  incomingLabelCounts: [TaskLabelCount!]!
+  outgoingLabelCounts: [TaskLabelCount!]!
 
   # Resolved fields
   project: Project
