@@ -83,66 +83,11 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
   }, [tasks.length, isFetchingPreviousPage, rowVirtualizer.getTotalSize()]);
 
   // ─── Bi-directional scroll trigger ───────────────────────────────────────────
-  useEffect(() => {
-    const virtualItems = rowVirtualizer.getVirtualItems();
-    if (virtualItems.length === 0) return;
-
-    // On the very first render, seed the dedup refs with the current boundary
-    // task IDs so neither direction fires immediately.
-    if (!isInitializedRef.current) {
-      isInitializedRef.current = true;
-      lastTriggeredPrevRef.current = tasks[0]?.id ?? null;
-      lastTriggeredNextRef.current = tasks[tasks.length - 1]?.id ?? null;
-      return;
-    }
-
-    if (cooldownRef.current) return;
-
-    const firstItem = virtualItems[0];
-    const lastItem = virtualItems[virtualItems.length - 1];
-
-    // ── Load next page (scroll down) ────────────────────────────────────────
-    if (
-      lastItem.index >= tasks.length - 1 &&
-      hasNextPage &&
-      !isFetchingNextPage &&
-      onLoadMore
-    ) {
-      const lastTaskId = tasks[tasks.length - 1]?.id;
-      if (lastTaskId && lastTaskId !== lastTriggeredNextRef.current) {
-        console.log(`[SCROLL] Fetch next — last task: ${lastTaskId}`);
-        lastTriggeredNextRef.current = lastTaskId;
-        cooldownRef.current = true;
-        onLoadMore();
-        setTimeout(() => {
-          cooldownRef.current = false;
-        }, 300);
-      }
-    }
-
-    // ── Load previous page (scroll up) ──────────────────────────────────────
-    // Guard with scrollTop so this never fires unless the user is actually at
-    // the top of the scroll container (not just virtually at index 0 on mount).
-    if (
-      firstItem.index === 0 &&
-      parentRef.current &&
-      parentRef.current.scrollTop < 60 &&
-      hasPreviousPage &&
-      !isFetchingPreviousPage &&
-      onLoadPrev
-    ) {
-      const firstTaskId = tasks[0]?.id;
-      if (firstTaskId && firstTaskId !== lastTriggeredPrevRef.current) {
-        console.log(`[SCROLL] Fetch previous — first task: ${firstTaskId}`);
-        lastTriggeredPrevRef.current = firstTaskId;
-        cooldownRef.current = true;
-        onLoadPrev();
-        setTimeout(() => {
-          cooldownRef.current = false;
-        }, 300);
-      }
-    }
-  }, [
+  // Keep latest prop values in a ref so the scroll listener never needs to be
+  // re-attached — this eliminates the double-call that happened when
+  // rowVirtualizer.getVirtualItems() was listed as a dependency (it creates a
+  // new array reference every render, making the effect re-run on every paint).
+  const scrollPropsRef = useRef({
     hasNextPage,
     hasPreviousPage,
     isFetchingNextPage,
@@ -150,8 +95,92 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
     tasks,
     onLoadMore,
     onLoadPrev,
-    rowVirtualizer.getVirtualItems(),
-  ]);
+  });
+  useEffect(() => {
+    scrollPropsRef.current = {
+      hasNextPage,
+      hasPreviousPage,
+      isFetchingNextPage,
+      isFetchingPreviousPage,
+      tasks,
+      onLoadMore,
+      onLoadPrev,
+    };
+  });
+
+  useEffect(() => {
+    const el = parentRef.current;
+    if (!el) return;
+
+    const handleScroll = () => {
+      const {
+        hasNextPage,
+        hasPreviousPage,
+        isFetchingNextPage,
+        isFetchingPreviousPage,
+        tasks,
+        onLoadMore,
+        onLoadPrev,
+      } = scrollPropsRef.current;
+
+      if (!isInitializedRef.current) {
+        isInitializedRef.current = true;
+        lastTriggeredPrevRef.current = tasks[0]?.id ?? null;
+        lastTriggeredNextRef.current = tasks[tasks.length - 1]?.id ?? null;
+        return;
+      }
+
+      if (cooldownRef.current) return;
+
+      const virtualItems = rowVirtualizer.getVirtualItems();
+      if (virtualItems.length === 0) return;
+
+      const firstItem = virtualItems[0];
+      const lastItem = virtualItems[virtualItems.length - 1];
+
+      // ── Load next page (scroll down) ──────────────────────────────────────
+      if (lastItem.index >= tasks.length - 1 && hasNextPage && !isFetchingNextPage && onLoadMore) {
+        const lastTaskId = tasks[tasks.length - 1]?.id;
+        if (lastTaskId && lastTaskId !== lastTriggeredNextRef.current) {
+          console.log(`[SCROLL] Fetch next — last task: ${lastTaskId}`);
+          lastTriggeredNextRef.current = lastTaskId;
+          cooldownRef.current = true;
+          onLoadMore();
+          setTimeout(() => { cooldownRef.current = false; }, 300);
+        }
+      }
+
+      // ── Load previous page (scroll up) ────────────────────────────────────
+      if (
+        firstItem.index === 0 &&
+        el.scrollTop < 60 &&
+        hasPreviousPage &&
+        !isFetchingPreviousPage &&
+        onLoadPrev
+      ) {
+        const firstTaskId = tasks[0]?.id;
+        if (firstTaskId && firstTaskId !== lastTriggeredPrevRef.current) {
+          console.log(`[SCROLL] Fetch previous — first task: ${firstTaskId}`);
+          lastTriggeredPrevRef.current = firstTaskId;
+          cooldownRef.current = true;
+          onLoadPrev();
+          setTimeout(() => { cooldownRef.current = false; }, 300);
+        }
+      }
+    };
+
+    // Seed dedup refs on mount without firing a fetch
+    const virtualItems = rowVirtualizer.getVirtualItems();
+    if (virtualItems.length > 0 && !isInitializedRef.current) {
+      isInitializedRef.current = true;
+      lastTriggeredPrevRef.current = scrollPropsRef.current.tasks[0]?.id ?? null;
+      lastTriggeredNextRef.current = scrollPropsRef.current.tasks[scrollPropsRef.current.tasks.length - 1]?.id ?? null;
+    }
+
+    el.addEventListener('scroll', handleScroll, { passive: true });
+    return () => el.removeEventListener('scroll', handleScroll);
+    // Only re-attach listener when projectId changes (props handled via ref above)
+  }, [projectId, rowVirtualizer]);
 
   // ─── Render ───────────────────────────────────────────────────────────────────
   return (

@@ -3,13 +3,13 @@ import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-q
 import { useApi } from '../../context/ApiContext';
 import { Link, useLocation, useNavigate } from '@tanstack/react-router';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { 
-  LayoutDashboard, 
-  Settings, 
-  LogOut, 
-  User, 
-  Plus, 
-  Search, 
+import {
+  LayoutDashboard,
+  Settings,
+  LogOut,
+  User,
+  Plus,
+  Search,
   ChevronDown,
   Hash,
   X,
@@ -108,11 +108,11 @@ export const Sidebar: React.FC = () => {
   const location = useLocation();
   const [showCreateProject, setShowCreateProject] = useState(false);
 
-  const { 
-    data: projectsData, 
-    fetchNextPage, 
-    hasNextPage, 
-    isFetchingNextPage 
+  const {
+    data: projectsData,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage
   } = useInfiniteQuery({
     queryKey: ['projects'],
     queryFn: ({ pageParam }) => projectApi.getProjects(5, pageParam),
@@ -120,8 +120,8 @@ export const Sidebar: React.FC = () => {
     getNextPageParam: (lastPage) => lastPage.hasNextPage ? lastPage.endCursor : undefined,
   });
 
-  const allProjects = useMemo(() => 
-    projectsData?.pages.flatMap(page => page.projects) || [], 
+  const allProjects = useMemo(() =>
+    projectsData?.pages.flatMap(page => page.projects) || [],
     [projectsData]
   );
 
@@ -143,21 +143,32 @@ export const Sidebar: React.FC = () => {
     }
   }, [isFetchingNextPage]);
 
+  // Stable ref for scroll handler
+  const scrollPropsRef = useRef({ hasNextPage, isFetchingNextPage, allProjects, fetchNextPage });
   useEffect(() => {
-    const virtualItems = rowVirtualizer.getVirtualItems();
-    if (virtualItems.length === 0 || isTriggeringRef.current) return;
+    scrollPropsRef.current = { hasNextPage, isFetchingNextPage, allProjects, fetchNextPage };
+  });
 
-    const lastItem = virtualItems[virtualItems.length - 1];
+  useEffect(() => {
+    const el = parentRef.current;
+    if (!el) return;
 
-    if (
-      lastItem.index >= allProjects.length - 1 &&
-      hasNextPage &&
-      !isFetchingNextPage
-    ) {
-      isTriggeringRef.current = true;
-      fetchNextPage();
-    }
-  }, [hasNextPage, fetchNextPage, allProjects.length, isFetchingNextPage, rowVirtualizer.getVirtualItems()]);
+    const handleScroll = () => {
+      if (isTriggeringRef.current) return;
+      const { hasNextPage, isFetchingNextPage, allProjects, fetchNextPage } = scrollPropsRef.current;
+      const virtualItems = rowVirtualizer.getVirtualItems();
+      if (virtualItems.length === 0) return;
+
+      const lastItem = virtualItems[virtualItems.length - 1];
+      if (lastItem.index >= allProjects.length - 1 && hasNextPage && !isFetchingNextPage) {
+        isTriggeringRef.current = true;
+        fetchNextPage();
+      }
+    };
+
+    el.addEventListener('scroll', handleScroll, { passive: true });
+    return () => el.removeEventListener('scroll', handleScroll);
+  }, [rowVirtualizer]);
 
   return (
     <>
@@ -206,14 +217,14 @@ export const Sidebar: React.FC = () => {
         </div>
 
         {/* Navigation */}
-        <nav 
+        <nav
           ref={parentRef}
           className="flex-1 px-3 pt-6 space-y-1 overflow-y-auto custom-scrollbar"
         >
           <div className="mb-1">
             <SidebarItem to="/" icon={<LayoutDashboard size={14} />} label="Dashboard" active={location.pathname === '/'} />
           </div>
-          
+
           <div className="px-3 pt-8 pb-2 flex items-center justify-between group">
             <span className="text-[10px] font-bold text-white/20 uppercase tracking-[0.2em]">Workspace</span>
             <button
@@ -223,8 +234,8 @@ export const Sidebar: React.FC = () => {
               <Plus size={12} />
             </button>
           </div>
-          
-          <div 
+
+          <div
             style={{
               height: `${rowVirtualizer.getTotalSize()}px`,
               width: '100%',
@@ -246,10 +257,10 @@ export const Sidebar: React.FC = () => {
                   }}
                   className="py-0.5"
                 >
-                  <SidebarItem 
-                    to="/projects/$projectId" 
+                  <SidebarItem
+                    to="/projects/$projectId"
                     params={{ projectId: p.id }}
-                    label={p.name} 
+                    label={p.name}
                     icon={<Hash size={14} className="text-white/20 group-hover:text-white/40 transition-colors" />}
                     active={location.pathname.startsWith(`/projects/${p.id}`)}
                   />
@@ -285,7 +296,7 @@ export const Sidebar: React.FC = () => {
               <Settings size={14} className="text-white/10 group-hover:text-white/40 cursor-pointer transition-colors" />
             </div>
 
-            <button 
+            <button
               onClick={() => logout()}
               className="w-full mt-1 px-3 py-2.5 flex items-center gap-2.5 text-[11px] font-bold text-red-500/60 hover:text-red-400 hover:bg-red-500/5 rounded-lg transition-all duration-300 group"
             >
@@ -303,21 +314,20 @@ export const Sidebar: React.FC = () => {
   );
 };
 
-const SidebarItem: React.FC<{ 
-  to: string; 
-  icon?: React.ReactNode; 
-  label: string; 
+const SidebarItem: React.FC<{
+  to: string;
+  icon?: React.ReactNode;
+  label: string;
   params?: any;
   active?: boolean;
 }> = ({ to, icon, label, params, active }) => (
-  <Link 
-    to={to as any} 
+  <Link
+    to={to as any}
     params={params}
-    className={`group px-3.5 py-2.5 flex items-center gap-2.5 text-[13px] font-medium rounded-xl transition-all duration-200 border ${
-      active 
-        ? 'bg-white/[0.08] text-white border-white/14 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_0_0_1px_rgba(35,131,226,0.35)]' 
+    className={`group px-3.5 py-2.5 flex items-center gap-2.5 text-[13px] font-medium rounded-xl transition-all duration-200 border ${active
+        ? 'bg-white/[0.08] text-white border-white/14 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_0_0_1px_rgba(35,131,226,0.35)]'
         : 'text-white/45 border-transparent hover:text-white/75 hover:bg-white/[0.04] hover:border-white/8'
-    }`}
+      }`}
   >
     {icon && <span className={`shrink-0 ${active ? 'text-focus-blue' : 'opacity-45 group-hover:opacity-75'} transition-opacity`}>{icon}</span>}
     <span className="truncate tracking-tight">{label}</span>

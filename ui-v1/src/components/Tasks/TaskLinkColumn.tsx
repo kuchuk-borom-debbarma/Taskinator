@@ -24,8 +24,8 @@ export const TaskLinkColumn: React.FC<TaskLinkColumnProps> = ({ taskId, directio
     isLoading
   } = useInfiniteQuery({
     queryKey: ['task-links', taskId, direction],
-    queryFn: ({ pageParam }) => 
-      direction === 'incoming' 
+    queryFn: ({ pageParam }) =>
+      direction === 'incoming'
         ? taskApi.getTaskIncomingLinks(taskId, 15, pageParam)
         : taskApi.getTaskOutgoingLinks(taskId, 15, pageParam),
     initialPageParam: undefined as string | undefined,
@@ -35,7 +35,7 @@ export const TaskLinkColumn: React.FC<TaskLinkColumnProps> = ({ taskId, directio
   // Flatten and Group
   const virtualData = useMemo(() => {
     const allLinks = data?.pages.flatMap(p => p.links) || [];
-    
+
     // Grouping logic
     const groups: Record<string, typeof allLinks> = {};
     allLinks.forEach(link => {
@@ -43,7 +43,7 @@ export const TaskLinkColumn: React.FC<TaskLinkColumnProps> = ({ taskId, directio
       // However, for grouping consistency, we use lowercase keys
       const displayLabel = (link.label || 'Related').trim();
       const groupKey = displayLabel.toLowerCase();
-      
+
       if (!groups[groupKey]) {
         groups[groupKey] = { label: displayLabel, items: [] };
       }
@@ -78,27 +78,41 @@ export const TaskLinkColumn: React.FC<TaskLinkColumnProps> = ({ taskId, directio
     }
   }, [isFetchingNextPage]);
 
-  // Infinite Scroll Trigger
+  // Stable ref for scroll handler props
+  const scrollPropsRef = useRef({ hasNextPage, isFetchingNextPage, virtualData, fetchNextPage });
   useEffect(() => {
-    const virtualItems = rowVirtualizer.getVirtualItems();
-    if (virtualItems.length === 0 || isTriggeringRef.current) return;
+    scrollPropsRef.current = { hasNextPage, isFetchingNextPage, virtualData, fetchNextPage };
+  });
 
-    const lastItem = virtualItems[virtualItems.length - 1];
-    if (
-      lastItem.index >= virtualData.length - 5 &&
-      hasNextPage &&
-      !isFetchingNextPage
-    ) {
-      isTriggeringRef.current = true;
-      fetchNextPage();
-    }
-  }, [hasNextPage, isFetchingNextPage, virtualData.length, fetchNextPage, rowVirtualizer.getVirtualItems()]);
+  // Infinite Scroll Trigger — uses scroll listener instead of virtualItems dep
+  // to avoid the double-fetch caused by getVirtualItems() returning a new array
+  // reference each render and re-running the effect on every paint.
+  useEffect(() => {
+    const el = parentRef.current;
+    if (!el) return;
+
+    const handleScroll = () => {
+      if (isTriggeringRef.current) return;
+      const { hasNextPage, isFetchingNextPage, virtualData, fetchNextPage } = scrollPropsRef.current;
+      const virtualItems = rowVirtualizer.getVirtualItems();
+      if (virtualItems.length === 0) return;
+
+      const lastItem = virtualItems[virtualItems.length - 1];
+      if (lastItem.index >= virtualData.length - 5 && hasNextPage && !isFetchingNextPage) {
+        isTriggeringRef.current = true;
+        fetchNextPage();
+      }
+    };
+
+    el.addEventListener('scroll', handleScroll, { passive: true });
+    return () => el.removeEventListener('scroll', handleScroll);
+  }, [rowVirtualizer]);
 
   if (isLoading) {
     return (
       <div className="flex flex-col gap-4 w-full">
-         <div className="h-6 w-32 bg-slate-100 rounded animate-pulse" />
-         <div className="h-20 w-full bg-slate-50 rounded-xl animate-pulse" />
+        <div className="h-6 w-32 bg-slate-100 rounded animate-pulse" />
+        <div className="h-20 w-full bg-slate-50 rounded-xl animate-pulse" />
       </div>
     );
   }
@@ -106,8 +120,8 @@ export const TaskLinkColumn: React.FC<TaskLinkColumnProps> = ({ taskId, directio
   return (
     <div className="flex flex-col gap-4 w-full h-full">
       <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-text-dim opacity-50 px-2">{title}</h3>
-      
-      <div 
+
+      <div
         ref={parentRef}
         className="flex-1 w-full overflow-y-auto custom-scrollbar pr-2 min-h-[400px]"
       >
@@ -142,27 +156,27 @@ export const TaskLinkColumn: React.FC<TaskLinkColumnProps> = ({ taskId, directio
                 >
                   {isHeader ? (
                     <div className="flex items-center gap-2 h-full pt-4 pb-2">
-                       <div 
-                        className="w-1.5 h-1.5 rounded-full" 
+                      <div
+                        className="w-1.5 h-1.5 rounded-full"
                         style={{ backgroundColor: getLinkLabelColor(item.label) }}
-                       />
-                       <span className="text-[10px] font-black uppercase tracking-widest text-text-notion/60">{item.label}</span>
-                       <div className="flex-1 h-px bg-border-notion opacity-50" />
+                      />
+                      <span className="text-[10px] font-black uppercase tracking-widest text-text-notion/60">{item.label}</span>
+                      <div className="flex-1 h-px bg-border-notion opacity-50" />
                     </div>
                   ) : (
                     <Link
                       to="/projects/$projectId/tasks/$taskId"
-                      params={{ 
-                        projectId: item.link.projectId, 
-                        taskId: direction === 'incoming' ? item.link.sourceTask.id : item.link.targetTask.id 
+                      params={{
+                        projectId: item.link.projectId,
+                        taskId: direction === 'incoming' ? item.link.sourceTask.id : item.link.targetTask.id
                       }}
                       className="group flex flex-col justify-center px-4 h-[75px] bg-white border border-border-notion rounded-xl hover:border-focus-blue/30 hover:shadow-md transition-all mb-2"
                     >
                       <div className="flex items-start justify-between">
-                         <span className="text-[14px] font-bold text-text-notion group-hover:text-focus-blue transition-colors line-clamp-1">
-                           {(direction === 'incoming' ? item.link.sourceTask.title : item.link.targetTask.title) || 'Untitled Task'}
-                         </span>
-                         <ArrowRight size={14} className="opacity-0 group-hover:opacity-40 transition-all -translate-x-2 group-hover:translate-x-0" />
+                        <span className="text-[14px] font-bold text-text-notion group-hover:text-focus-blue transition-colors line-clamp-1">
+                          {(direction === 'incoming' ? item.link.sourceTask.title : item.link.targetTask.title) || 'Untitled Task'}
+                        </span>
+                        <ArrowRight size={14} className="opacity-0 group-hover:opacity-40 transition-all -translate-x-2 group-hover:translate-x-0" />
                       </div>
                       <div className="flex items-center gap-2 mt-1">
                         <span className="text-[9px] font-bold uppercase tracking-tighter opacity-40">
@@ -180,7 +194,7 @@ export const TaskLinkColumn: React.FC<TaskLinkColumnProps> = ({ taskId, directio
             })}
           </div>
         )}
-        
+
         {isFetchingNextPage && (
           <div className="py-4 flex justify-center opacity-30">
             <Loader2 size={16} className="animate-spin" />
