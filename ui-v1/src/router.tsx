@@ -99,9 +99,24 @@ const projectListRoute = createRoute({
   component: lazyRouteComponent(() => import('./ProjectTasksIndex.lazy.tsx')),
 });
 
+type LinkSearch = {
+  inCursor?: string;
+  inDir?: 'forward' | 'backward';
+  outCursor?: string;
+  outDir?: 'forward' | 'backward';
+};
+
 const taskDetailRoute = createRoute({
   getParentRoute: () => projectLayoutRoute,
   path: 'tasks/$taskId',
+  validateSearch: (search: Record<string, unknown>): LinkSearch => {
+    return {
+      inCursor: (search.inCursor as string) || undefined,
+      inDir: (search.inDir as 'forward' | 'backward') || undefined,
+      outCursor: (search.outCursor as string) || undefined,
+      outDir: (search.outDir as 'forward' | 'backward') || undefined,
+    };
+  },
   component: lazyRouteComponent(() => import('./TaskDetailPage.lazy.tsx')),
 });
 

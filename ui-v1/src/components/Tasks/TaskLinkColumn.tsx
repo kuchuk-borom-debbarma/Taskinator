@@ -3,8 +3,8 @@ import { useInfiniteQuery } from '@tanstack/react-query';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { useApi } from '../../hooks/useApi';
 import { getLinkLabelColor } from '../../utils/color';
-import { Loader2, ArrowRight, ChevronRight } from 'lucide-react';
-import { Link } from '@tanstack/react-router';
+import { Loader2, ArrowRight, ChevronRight, ChevronLeft } from 'lucide-react';
+import { Link, useSearch, useNavigate } from '@tanstack/react-router';
 
 interface TaskLinkColumnProps {
   taskId: string;
@@ -15,21 +15,34 @@ interface TaskLinkColumnProps {
 export const TaskLinkColumn: React.FC<TaskLinkColumnProps> = ({ taskId, direction, title }) => {
   const { taskApi } = useApi();
   const parentRef = useRef<HTMLDivElement>(null);
+  const search = useSearch({ from: '/authenticated-layout/projects/$projectId/tasks/$taskId' });
+  const navigate = useNavigate();
+
+  const isIncoming = direction === 'incoming';
+  const cursor = isIncoming ? search.inCursor : search.outCursor;
+  const dir = isIncoming ? search.inDir : search.outDir;
 
   const {
     data,
-    fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
+    hasPreviousPage,
+    isFetchingPreviousPage,
     isLoading
   } = useInfiniteQuery({
-    queryKey: ['task-links', taskId, direction],
-    queryFn: ({ pageParam }) =>
-      direction === 'incoming'
-        ? taskApi.getTaskIncomingLinks(taskId, 15, pageParam)
-        : taskApi.getTaskOutgoingLinks(taskId, 15, pageParam),
-    initialPageParam: undefined as string | undefined,
-    getNextPageParam: (lastPage) => lastPage.hasNextPage ? lastPage.endCursor : undefined,
+    queryKey: ['task-links', taskId, direction, cursor, dir],
+    queryFn: ({ pageParam }) => {
+      const activeParam = pageParam || (cursor ? { direction: dir || 'forward', cursor } : undefined);
+      const isBackward = activeParam?.direction === 'backward';
+      const c = activeParam?.cursor;
+
+      return direction === 'incoming'
+        ? taskApi.getTaskIncomingLinks(taskId, 15, isBackward ? undefined : c, isBackward ? c : undefined)
+        : taskApi.getTaskOutgoingLinks(taskId, 15, isBackward ? undefined : c, isBackward ? c : undefined);
+    },
+    initialPageParam: (cursor ? { direction: dir || 'forward', cursor } : undefined) as { direction: 'forward' | 'backward', cursor: string } | undefined,
+    getNextPageParam: (lastPage) => lastPage.hasNextPage ? { direction: 'forward' as const, cursor: lastPage.endCursor! } : undefined,
+    getPreviousPageParam: (firstPage) => firstPage.hasPreviousPage ? { direction: 'backward' as const, cursor: firstPage.startCursor! } : undefined,
     maxPages: 1,
   });
 
@@ -74,8 +87,57 @@ export const TaskLinkColumn: React.FC<TaskLinkColumnProps> = ({ taskId, directio
   }
 
   return (
-    <div className="flex flex-col gap-4 w-full h-full">
-      <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-text-dim opacity-50 px-2">{title}</h3>
+    <div className="flex flex-col gap-4 w-full h-full relative">
+      <div className="flex items-center justify-between px-2">
+        <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-text-dim opacity-50">{title}</h3>
+        
+        <div className="flex items-center gap-1.5 opacity-80 scale-90 origin-right">
+          <button
+            onClick={() => {
+               const firstPage = data?.pages[0];
+               if (firstPage?.hasPreviousPage) {
+                 navigate({
+                   search: (prev) => ({ 
+                     ...prev, 
+                     [isIncoming ? 'inCursor' : 'outCursor']: firstPage.startCursor!,
+                     [isIncoming ? 'inDir' : 'outDir']: 'backward' as const
+                   }),
+                 });
+               }
+            }}
+            disabled={!hasPreviousPage || isFetchingPreviousPage}
+            className="p-1 px-2 rounded-lg bg-bg-secondary border border-border-notion text-text-notion disabled:opacity-20 hover:bg-bg-notion transition-all active:scale-95 flex items-center gap-1.5 text-[10px] font-bold"
+          >
+            <ChevronLeft size={12} />
+            Prev
+          </button>
+          <button
+            onClick={() => {
+              const lastPage = data?.pages[data.pages.length - 1];
+              if (lastPage?.hasNextPage) {
+                navigate({
+                  search: (prev) => ({ 
+                    ...prev, 
+                    [isIncoming ? 'inCursor' : 'outCursor']: lastPage.endCursor!,
+                    [isIncoming ? 'inDir' : 'outDir']: 'forward' as const
+                  }),
+                });
+              }
+            }}
+            disabled={!hasNextPage || isFetchingNextPage}
+            className="p-1 px-2 rounded-lg bg-bg-secondary border border-border-notion text-text-notion disabled:opacity-20 hover:bg-bg-notion transition-all active:scale-95 flex items-center gap-1.5 text-[10px] font-bold"
+          >
+            Next
+            <ChevronRight size={12} />
+          </button>
+        </div>
+      </div>
+
+      {(isFetchingPreviousPage || isFetchingNextPage) && (
+        <div className="absolute top-0 right-14">
+          <Loader2 size={12} className="animate-spin text-focus-blue" />
+        </div>
+      )}
 
       <div
         ref={parentRef}
@@ -131,17 +193,6 @@ export const TaskLinkColumn: React.FC<TaskLinkColumnProps> = ({ taskId, directio
                 </Link>
               );
             })}
-
-            {hasNextPage && (
-              <button
-                onClick={() => fetchNextPage()}
-                disabled={isFetchingNextPage}
-                className="mt-4 p-3 rounded-xl border border-dashed border-border-notion text-[11px] font-bold uppercase tracking-widest text-text-dim hover:text-focus-blue hover:border-focus-blue/30 transition-all flex items-center justify-center gap-2"
-              >
-                {isFetchingNextPage ? <Loader2 size={14} className="animate-spin" /> : <ChevronRight size={14} />}
-                {isFetchingNextPage ? 'Loading...' : 'Load More'}
-              </button>
-            )}
           </>
         )}
       </div>
