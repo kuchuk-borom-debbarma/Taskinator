@@ -62,6 +62,21 @@ type TaskNeighbourhood {
   pageInfo: PageInfo!
 }
 
+type TaskLabelCount {
+  label: String!
+  count: Int!
+}
+
+type TaskLabelCountEdge {
+  node: TaskLabelCount!
+  cursor: String!
+}
+
+type TaskLabelCountConnection {
+  edges: [TaskLabelCountEdge!]!
+  pageInfo: PageInfo!
+}
+
 type ProjectTask {
   id: ID!
   projectId: ID!
@@ -79,12 +94,12 @@ type ProjectTask {
   createdAt: String!
   updatedAt: String!
 
-  incomingLinksCount: Int!
-  outgoingLinksCount: Int!
+  totalIncomingLinksCount: Int!
+  totalOutgoingLinksCount: Int!
   directIncomingLinksCount: Int!
   directOutgoingLinksCount: Int!
-  incomingLabelCounts: String!
-  outgoingLabelCounts: String!
+  incomingLabelCounts: TaskLabelCountConnection!
+  outgoingLabelCounts: TaskLabelCountConnection!
 
   # Resolved fields
   project: Project

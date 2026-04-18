@@ -141,12 +141,42 @@ export const taskResolvers = {
             return buildRef(updatedBy, 'User');
         },
 
-        incomingLinksCount: (t: any) => t.totalIncomingCount || 0,
-        outgoingLinksCount: (t: any) => t.totalOutgoingCount || 0,
+        totalIncomingLinksCount: (t: any) => t.totalIncomingCount || 0,
+        totalOutgoingLinksCount: (t: any) => t.totalOutgoingCount || 0,
         directIncomingLinksCount: (t: any) => t.directIncomingCount || 0,
         directOutgoingLinksCount: (t: any) => t.directOutgoingCount || 0,
-        incomingLabelCounts: (t: any) => JSON.stringify(t.incomingLabelCounts || {}),
-        outgoingLabelCounts: (t: any) => JSON.stringify(t.outgoingLabelCounts || {}),
+        incomingLabelCounts: (t: any) => {
+            const counts = t.incomingLabelCounts || {};
+            const edges = Object.entries(counts).map(([label, count]) => ({
+                node: { label, count: Number(count) },
+                cursor: label,
+            }));
+            return {
+                edges,
+                pageInfo: {
+                    hasNextPage: false,
+                    hasPreviousPage: false,
+                    startCursor: edges.length > 0 ? edges[0]?.cursor : null,
+                    endCursor: edges.length > 0 ? edges[edges.length - 1]?.cursor : null,
+                },
+            };
+        },
+        outgoingLabelCounts: (t: any) => {
+            const counts = t.outgoingLabelCounts || {};
+            const edges = Object.entries(counts).map(([label, count]) => ({
+                node: { label, count: Number(count) },
+                cursor: label,
+            }));
+            return {
+                edges,
+                pageInfo: {
+                    hasNextPage: false,
+                    hasPreviousPage: false,
+                    startCursor: edges.length > 0 ? edges[0]?.cursor : null,
+                    endCursor: edges.length > 0 ? edges[edges.length - 1]?.cursor : null,
+                },
+            };
+        },
 
         incomingLinks: async (
             t: any,

@@ -22,8 +22,8 @@ export interface ProjectTask {
   version: number;
   createdAt: string;
   updatedAt: string;
-  incomingLinksCount: number;
-  outgoingLinksCount: number;
+  totalIncomingLinksCount: number;
+  totalOutgoingLinksCount: number;
   directIncomingLinksCount: number;
   directOutgoingLinksCount: number;
   incomingLabelCounts: Record<string, number>;
