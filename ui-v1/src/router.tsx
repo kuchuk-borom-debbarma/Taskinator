@@ -71,9 +71,20 @@ const authRoute = createRoute({
 
 // --- Protected Routes ---
 
+type DashboardSearch = {
+  cursor?: string;
+  direction?: 'forward' | 'backward';
+};
+
 const indexRoute = createRoute({
   getParentRoute: () => authLayoutRoute,
   path: '/',
+  validateSearch: (search: Record<string, unknown>): DashboardSearch => {
+    return {
+      cursor: (search.cursor as string) || undefined,
+      direction: (search.direction as 'forward' | 'backward') || undefined,
+    };
+  },
   component: ProjectDashboard,
 });
 

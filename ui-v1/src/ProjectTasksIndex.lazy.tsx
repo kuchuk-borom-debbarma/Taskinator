@@ -61,11 +61,8 @@ export default function ProjectTasksIndex() {
   });
 
   const allTasks = tasksData?.pages.flatMap((page) => page.tasks) ?? [];
-
-  console.log(
-    `[SLIDING-WINDOW] Pages: ${tasksData?.pages.length}, Tasks: ${allTasks.length}, ` +
-    `HasPrev: ${hasPreviousPage}, HasNext: ${hasNextPage}`,
-  );
+  const firstPage = tasksData?.pages[0];
+  const lastPage = tasksData?.pages[tasksData.pages.length - 1];
 
   const createMutation = useMutation({
     mutationFn: () =>
@@ -96,8 +93,8 @@ export default function ProjectTasksIndex() {
       <TaskListView
         tasks={allTasks}
         projectId={projectId!}
-        hasNextPage={hasNextPage}
-        hasPreviousPage={hasPreviousPage}
+        hasNextPage={lastPage?.hasNextPage}
+        hasPreviousPage={firstPage?.hasPreviousPage}
         isFetchingNextPage={isFetchingNextPage}
         isFetchingPreviousPage={isFetchingPreviousPage}
         onLoadMore={() => {

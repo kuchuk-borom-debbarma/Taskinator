@@ -53,22 +53,26 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
           </p>
         </div>
 
-        <div className="flex items-center gap-2 mb-1">
+        <div className="flex items-center gap-2">
           <button
             onClick={onLoadPrev}
             disabled={!hasPreviousPage || isFetchingPreviousPage}
-            className="p-2.5 rounded-xl bg-white/5 border border-white/10 text-white disabled:opacity-20 hover:bg-white/10 transition-all active:scale-95 flex items-center justify-center transition-all"
+            className="p-2.5 rounded-xl bg-white border border-border-notion text-text-notion disabled:opacity-20 hover:bg-bg-secondary transition-all active:scale-95 flex items-center justify-center transition-all shadow-sm"
             title="Previous Page"
           >
-            <ChevronLeft size={18} />
+            <ChevronLeft size={18} className="text-text-notion" />
           </button>
           <button
             onClick={onLoadMore}
             disabled={!hasNextPage || isFetchingNextPage}
-            className="p-2.5 rounded-xl bg-white/5 border border-white/10 text-white disabled:opacity-20 hover:bg-white/10 transition-all active:scale-95 flex items-center justify-center transition-all"
+            className="p-2.5 rounded-xl bg-white border border-border-notion text-text-notion disabled:opacity-20 hover:bg-bg-secondary transition-all active:scale-95 flex items-center justify-center transition-all shadow-sm"
             title="Next Page"
           >
-            <ChevronRight size={18} />
+            {isFetchingNextPage || isFetchingPreviousPage ? (
+              <Loader2 size={18} className="animate-spin text-focus-blue" />
+            ) : (
+              <ChevronRight size={18} className="text-text-notion" />
+            )}
           </button>
         </div>
       </header>

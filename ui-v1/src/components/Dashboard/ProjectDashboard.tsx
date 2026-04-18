@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { useNavigate } from '@tanstack/react-router';
+import { useNavigate, useSearch } from '@tanstack/react-router';
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useApi } from '../../hooks/useApi';
-import { LayoutGrid, ArrowRight, Loader2 } from 'lucide-react';
+import { LayoutGrid, ArrowRight, Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
 
 export function ProjectDashboard() {
   const navigate = useNavigate();
+  const { cursor, direction } = useSearch({ from: '/' });
   const { projectApi } = useApi();
   const queryClient = useQueryClient();
   const [showCreate, setShowCreate] = useState(false);
@@ -14,16 +15,25 @@ export function ProjectDashboard() {
 
   const {
     data,
-    fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
+    hasPreviousPage,
+    isFetchingPreviousPage,
     isLoading,
     isError
   } = useInfiniteQuery({
-    queryKey: ['dashboard-projects'],
-    queryFn: ({ pageParam }) => projectApi.getProjects(12, pageParam as string | undefined),
-    initialPageParam: undefined as string | undefined,
-    getNextPageParam: (lastPage) => lastPage.hasNextPage ? lastPage.endCursor : undefined,
+    queryKey: ['dashboard-projects', cursor, direction],
+    queryFn: ({ pageParam }) => {
+      const activeParam = pageParam || (cursor ? { direction: direction || 'forward', cursor } : undefined);
+      const isBackward = activeParam?.direction === 'backward';
+      const c = activeParam?.cursor;
+
+      return projectApi.getProjects(6, isBackward ? undefined : c, isBackward ? c : undefined);
+    },
+    initialPageParam: (cursor ? { direction: direction || 'forward', cursor } : undefined) as { direction: 'forward' | 'backward', cursor: string } | undefined,
+    getNextPageParam: (lastPage) => lastPage.hasNextPage ? { direction: 'forward' as const, cursor: lastPage.endCursor! } : undefined,
+    getPreviousPageParam: (firstPage) => firstPage.hasPreviousPage ? { direction: 'backward' as const, cursor: firstPage.startCursor! } : undefined,
+    maxPages: 1,
   });
 
   const createMutation = useMutation({
@@ -39,6 +49,8 @@ export function ProjectDashboard() {
   });
 
   const projects = data?.pages.flatMap(p => p.projects) || [];
+  const firstPage = data?.pages[0];
+  const lastPage = data?.pages[data.pages.length - 1];
 
   if (isLoading) {
     return (
@@ -61,12 +73,57 @@ export function ProjectDashboard() {
   return (
     <div className="p-8 md:p-10 animate-in fade-in slide-in-from-bottom-2 duration-500">
       <div className="flex items-center justify-between mb-8">
-        <div className="flex items-center gap-3">
-          <div className="w-11 h-11 bg-gradient-to-br from-focus-blue to-blue-400 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-focus-blue/20">
-            <LayoutGrid size={22} />
+        <div className="flex items-center gap-6">
+          <div className="flex items-center gap-3">
+            <div className="w-11 h-11 bg-gradient-to-br from-focus-blue to-blue-400 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-focus-blue/20">
+              <LayoutGrid size={22} />
+            </div>
+            <h1 className="text-3xl font-bold tracking-tight">Projects</h1>
           </div>
-          <h1 className="text-3xl font-bold tracking-tight">Projects</h1>
+          
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                if (firstPage?.hasPreviousPage) {
+                  navigate({
+                    search: (prev) => ({ 
+                      ...prev, 
+                      cursor: firstPage.startCursor!, 
+                      direction: 'backward' as const 
+                    }),
+                  });
+                }
+              }}
+              disabled={!firstPage?.hasPreviousPage || isFetchingPreviousPage}
+              className="p-2.5 rounded-xl bg-white/70 border border-slate-200 text-text-notion disabled:opacity-20 hover:bg-white transition-all active:scale-95 flex items-center justify-center transition-all shadow-sm"
+              title="Previous Page"
+            >
+              <ChevronLeft size={18} className="text-text-notion" />
+            </button>
+            <button
+              onClick={() => {
+                if (lastPage?.hasNextPage) {
+                  navigate({
+                    search: (prev) => ({ 
+                      ...prev, 
+                      cursor: lastPage.endCursor!, 
+                      direction: 'forward' as const 
+                    }),
+                  });
+                }
+              }}
+              disabled={!lastPage?.hasNextPage || isFetchingNextPage}
+              className="p-2.5 rounded-xl bg-white/70 border border-slate-200 text-text-notion disabled:opacity-20 hover:bg-white transition-all active:scale-95 flex items-center justify-center transition-all shadow-sm"
+              title="Next Page"
+            >
+              <ChevronRight size={18} className="text-text-notion" />
+            </button>
+            {(isFetchingPreviousPage || isFetchingNextPage) && (
+              <Loader2 size={16} className="animate-spin text-focus-blue ml-2" />
+            )}
+          </div>
         </div>
+        
         <button
           onClick={() => setShowCreate(true)}
           className="flex items-center gap-2 px-4 py-2.5 bg-gradient-to-br from-focus-blue to-blue-400 text-white rounded-2xl font-bold text-[13px] hover:brightness-105 transition-all shadow-lg shadow-focus-blue/20 active:scale-95"
@@ -108,19 +165,6 @@ export function ProjectDashboard() {
           <p className="text-sm font-semibold text-text-notion">New Project</p>
         </div>
       </div>
-
-      {hasNextPage && (
-        <div className="mt-12 flex justify-center">
-          <button
-            onClick={() => fetchNextPage()}
-            disabled={isFetchingNextPage}
-            className="glass-button px-6 py-2.5 rounded-full hover:shadow-premium hover:border-focus-blue/30 transition-all flex items-center gap-2 text-sm font-semibold disabled:opacity-50"
-          >
-            {isFetchingNextPage ? <Loader2 size={16} className="animate-spin" /> : <ArrowRight size={16} className="rotate-90" />}
-            {isFetchingNextPage ? 'Loading...' : 'Load More Projects'}
-          </button>
-        </div>
-      )}
 
       {/* Create Project Modal */}
       {showCreate && (

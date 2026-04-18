@@ -77,11 +77,15 @@ export const TaskLinkColumn: React.FC<TaskLinkColumnProps> = ({ taskId, directio
   }, [data]);
 
 
+  const firstPage = data?.pages[0];
+  const lastPage = data?.pages[data.pages.length - 1];
+
   if (isLoading) {
     return (
-      <div className="flex flex-col gap-4 w-full">
-        <div className="h-6 w-32 bg-slate-100 rounded animate-pulse" />
-        <div className="h-20 w-full bg-slate-50 rounded-xl animate-pulse" />
+      <div className="flex flex-col gap-3">
+        <div className="h-4 w-24 bg-bg-secondary animate-pulse rounded" />
+        <div className="h-20 w-full bg-bg-secondary animate-pulse rounded-2xl" />
+        <div className="h-20 w-full bg-bg-secondary animate-pulse rounded-2xl" />
       </div>
     );
   }
@@ -89,12 +93,11 @@ export const TaskLinkColumn: React.FC<TaskLinkColumnProps> = ({ taskId, directio
   return (
     <div className="flex flex-col gap-4 w-full h-full relative">
       <div className="flex items-center justify-between px-2">
-        <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-text-dim opacity-50">{title}</h3>
+        <h3 className="text-[11px] font-black uppercase tracking-[0.2em] text-text-dim opacity-70">{title}</h3>
         
-        <div className="flex items-center gap-1.5 opacity-80 scale-90 origin-right">
+        <div className="flex items-center gap-1.5 scale-90 origin-right">
           <button
             onClick={() => {
-               const firstPage = data?.pages[0];
                if (firstPage?.hasPreviousPage) {
                  navigate({
                    search: (prev: any) => ({ 
@@ -105,30 +108,33 @@ export const TaskLinkColumn: React.FC<TaskLinkColumnProps> = ({ taskId, directio
                  });
                }
             }}
-            disabled={!hasPreviousPage || isFetchingPreviousPage}
-            className="p-1.5 rounded-lg bg-bg-secondary border border-border-notion text-text-notion disabled:opacity-20 hover:bg-bg-notion transition-all active:scale-95 flex items-center justify-center transition-all"
+            disabled={!firstPage?.hasPreviousPage || isFetchingPreviousPage}
+            className="p-1.5 rounded-lg bg-bg-secondary border border-border-notion text-text-notion disabled:opacity-20 hover:bg-bg-notion transition-all active:scale-95 flex items-center justify-center transition-all shadow-sm"
             title="Previous"
           >
-            <ChevronLeft size={14} />
+            <ChevronLeft size={14} className="text-text-notion" />
           </button>
           <button
             onClick={() => {
-              const lastPage = data?.pages[data.pages.length - 1];
-              if (lastPage?.hasNextPage) {
-                navigate({
-                  search: (prev: any) => ({ 
-                    ...prev, 
-                    [isIncoming ? 'inCursor' : 'outCursor']: lastPage.endCursor!,
-                    [isIncoming ? 'inDir' : 'outDir']: 'forward' as const
-                  }),
-                });
-              }
+               if (lastPage?.hasNextPage) {
+                 navigate({
+                   search: (prev: any) => ({ 
+                     ...prev, 
+                     [isIncoming ? 'inCursor' : 'outCursor']: lastPage.endCursor!,
+                     [isIncoming ? 'inDir' : 'outDir']: 'forward' as const
+                   }),
+                 });
+               }
             }}
-            disabled={!hasNextPage || isFetchingNextPage}
-            className="p-1.5 rounded-lg bg-bg-secondary border border-border-notion text-text-notion disabled:opacity-20 hover:bg-bg-notion transition-all active:scale-95 flex items-center justify-center transition-all"
+            disabled={!lastPage?.hasNextPage || isFetchingNextPage}
+            className="p-1.5 rounded-lg bg-bg-secondary border border-border-notion text-text-notion disabled:opacity-20 hover:bg-bg-notion transition-all active:scale-95 flex items-center justify-center transition-all shadow-sm"
             title="Next"
           >
-            <ChevronRight size={14} />
+            {isFetchingNextPage || isFetchingPreviousPage ? (
+              <Loader2 size={14} className="animate-spin text-focus-blue" />
+            ) : (
+              <ChevronRight size={14} className="text-text-notion" />
+            )}
           </button>
         </div>
       </div>
