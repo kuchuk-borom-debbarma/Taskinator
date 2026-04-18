@@ -16,8 +16,13 @@ import {
   MousePointer,
   Maximize,
   Sparkles,
-  Zap
+  Zap,
+  ExternalLink,
+  ArrowRightLeft,
+  X
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { getCookie, setCookie } from '../../utils/cookies';
 
 interface TaskMapProps {
   projectId: string;
@@ -103,21 +108,51 @@ const RelationshipTooltip: React.FC<RelationshipTooltipProps> = ({ edgeId, mapDa
 };
 
 export const TaskMap: React.FC<TaskMapProps> = ({ projectId, taskId }) => {
+  // ─── STATE & REFS ───
   const { taskApi } = useApi();
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
   const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null);
+  const [selectedEdgeId, setSelectedEdgeId] = useState<string | null>(null);
+
+  // Persistence Initializers
+  const [inputMode, setInputMode] = useState<'mouse' | 'trackpad'>(() => {
+    const saved = getCookie('task-map-input-mode');
+    return (saved === 'mouse' || saved === 'trackpad') ? saved : 'mouse';
+  });
+  const [keyboardEnabled, setKeyboardEnabled] = useState(() => {
+    const saved = getCookie('task-map-keyboard-enabled');
+    return saved !== null ? saved === 'true' : true;
+  });
 
   // Canvas State: Pan & Zoom
   const [transform, setTransform] = useState<ViewTransform>({ x: 0, y: 0, scale: 0.8 });
-  const [inputMode, setInputMode] = useState<'mouse' | 'trackpad'>('mouse');
-  const [keyboardEnabled, setKeyboardEnabled] = useState(true);
+  const transformRef = useRef(transform);
+  useEffect(() => { transformRef.current = transform; }, [transform]);
+
+  // Mirror Refs for stable event listeners
+  const inputModeRef = useRef(inputMode);
+  const keyboardEnabledRef = useRef(keyboardEnabled);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    inputModeRef.current = inputMode;
+    setCookie('task-map-input-mode', inputMode);
+  }, [inputMode]);
+
+  useEffect(() => {
+    keyboardEnabledRef.current = keyboardEnabled;
+    setCookie('task-map-keyboard-enabled', String(keyboardEnabled));
+  }, [keyboardEnabled]);
 
   // Dragging State
   const [isDraggingCanvas, setIsDraggingCanvas] = useState(false);
   const [draggedNodeId, setDraggedNodeId] = useState<string | null>(null);
+  const isDragLocked = draggedNodeId !== null;
+  const isDragLockedRef = useRef(isDragLocked);
+  useEffect(() => { isDragLockedRef.current = isDragLocked; }, [isDragLocked]);
+
   const dragStart = useRef({ x: 0, y: 0 });
   const nodeStartPos = useRef({ x: 0, y: 0 });
-  const containerRef = useRef<HTMLDivElement>(null);
   const dragPointerRef = useRef({ x: 0, y: 0 });
   const edgePanVelocityRef = useRef<PanVelocity>({ x: 0, y: 0 });
   const edgePanFrameRef = useRef<number | null>(null);
@@ -127,8 +162,6 @@ export const TaskMap: React.FC<TaskMapProps> = ({ projectId, taskId }) => {
   const [mapData, setMapData] = useState<{ nodes: MapNode[], allEdges: any[] } | null>(null);
   const [coordinateCache, setCoordinateCache] = useState<Record<string, Coordinate>>({});
   const workerRef = useRef<Worker | null>(null);
-  const isDragLocked = draggedNodeId !== null;
-
   // 1. Dependency Engine
   const {
     data,
@@ -197,8 +230,6 @@ export const TaskMap: React.FC<TaskMapProps> = ({ projectId, taskId }) => {
   };
 
   // 3. Handlers
-  const transformRef = useRef(transform);
-  useEffect(() => { transformRef.current = transform; }, [transform]);
 
   const zoomAtPoint = (clientX: number, clientY: number, scaleFactor: number) => {
     const container = containerRef.current;
@@ -337,19 +368,21 @@ export const TaskMap: React.FC<TaskMapProps> = ({ projectId, taskId }) => {
     if (!container) return;
 
     const handleWheel = (e: WheelEvent) => {
-      if (isDragLocked) return;
+      if (isDragLockedRef.current) return;
       e.preventDefault();
 
-      const isZoomGesture = e.ctrlKey || inputMode === 'mouse';
+      const currentMode = inputModeRef.current;
+      const isZoomGesture = e.ctrlKey || currentMode === 'mouse';
+      
       if (isZoomGesture) {
         zoomAtPoint(e.clientX, e.clientY, e.deltaY > 0 ? 0.9 : 1.1);
-      } else if (inputMode === 'trackpad') {
+      } else if (currentMode === 'trackpad') {
         setTransform(prev => ({ ...prev, x: prev.x - e.deltaX, y: prev.y - e.deltaY }));
       }
     };
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (!keyboardEnabled || isDragLocked) return;
+      if (!keyboardEnabledRef.current || isDragLockedRef.current) return;
 
       const key = e.key.toLowerCase();
       // Prevent scrolling page
@@ -381,13 +414,18 @@ export const TaskMap: React.FC<TaskMapProps> = ({ projectId, taskId }) => {
       container.removeEventListener('wheel', handleWheel);
       window.removeEventListener('keydown', handleKeyDown);
     };
-  }, [inputMode, keyboardEnabled, isDragLocked]);
+  }, [containerRef.current]); // Re-attach only if container Ref actually changes (should be stable)
 
   const handleMouseDown = (e: React.MouseEvent) => {
     if (isDragLocked) return;
     if (e.button !== 0) return;
     setIsDraggingCanvas(true);
     dragStart.current = { x: e.clientX - transform.x, y: e.clientY - transform.y };
+    
+    // Clear selection if clicking canvas
+    if (selectedEdgeId && e.target === containerRef.current) {
+        setSelectedEdgeId(null);
+    }
   };
 
   const handleNodeMouseDown = (id: string, e: React.MouseEvent) => {
@@ -645,24 +683,28 @@ export const TaskMap: React.FC<TaskMapProps> = ({ projectId, taskId }) => {
                   fill="none"
                   stroke="transparent"
                   strokeWidth={20}
-                  className={isDragLocked ? 'pointer-events-none' : 'pointer-events-auto cursor-help'}
+                  className={isDragLocked ? 'pointer-events-none' : 'pointer-events-auto cursor-pointer'}
                   onMouseEnter={() => { if (!isDragLocked) setHoveredEdgeId(edge.id); }}
                   onMouseLeave={() => { if (!isDragLocked) setHoveredEdgeId(null); }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedEdgeId(edge.id);
+                  }}
                 />
 
                 <path
                   d={pathD}
                   fill="none"
-                  stroke={isHighlight ? color : defaultStroke}
-                  strokeWidth={isHighlight ? 2.5 : 1.5}
-                  strokeOpacity={isDimmed ? 0.1 : isHighlight ? 1 : 0.7}
+                  stroke={isHighlight || selectedEdgeId === edge.id ? color : defaultStroke}
+                  strokeWidth={isHighlight || selectedEdgeId === edge.id ? 2.5 : 1.5}
+                  strokeOpacity={isDimmed && selectedEdgeId !== edge.id ? 0.1 : 1}
                   className="transition-all duration-300 pointer-events-none"
                 />
 
-                {isHighlight && (
+                {(isHighlight || selectedEdgeId === edge.id) && (
                   <foreignObject x={(sx + tx) / 2 - 40} y={(sy + ty) / 2 - 10} width="80" height="20">
                     <div className="flex justify-center pointer-events-none">
-                      <div className="px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider text-white" style={{ backgroundColor: color }}>
+                      <div className="px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider text-white shadow-sm" style={{ backgroundColor: color }}>
                         {edge.label}
                       </div>
                     </div>
@@ -742,9 +784,85 @@ export const TaskMap: React.FC<TaskMapProps> = ({ projectId, taskId }) => {
       </div>
 
       {/* Floating Relationship Tooltip */}
-      {!isDragLocked && hoveredEdgeId && mapData && (
+      {!isDragLocked && hoveredEdgeId && !selectedEdgeId && mapData && (
         <RelationshipTooltip edgeId={hoveredEdgeId} mapData={mapData} />
       )}
+
+      {/* Interactive Edge Link Portal */}
+      <AnimatePresence>
+        {selectedEdgeId && mapData && (
+          <EdgeLinkPortal 
+            edgeId={selectedEdgeId} 
+             mapData={mapData} 
+             onClose={() => setSelectedEdgeId(null)} 
+          />
+        )}
+      </AnimatePresence>
     </div>
+  );
+};
+
+const EdgeLinkPortal: React.FC<{ edgeId: string, mapData: { nodes: MapNode[], allEdges: any[] }, onClose: () => void }> = ({ edgeId, mapData, onClose }) => {
+  const edge = mapData.allEdges.find(e => e.id === edgeId);
+  if (!edge) return null;
+  const s = mapData.nodes.find(n => n.task.id === edge.sourceTaskId);
+  const t = mapData.nodes.find(n => n.task.id === edge.targetTaskId);
+  if (!s || !t) return null;
+
+  const color = getLinkLabelColor(edge.label);
+
+  return (
+    <motion.div 
+      initial={{ opacity: 0, y: 20, scale: 0.95 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: 10, scale: 0.95 }}
+      className="absolute bottom-8 left-1/2 -translate-x-1/2 z-[200] flex items-center bg-white/90 backdrop-blur-xl border border-border-notion rounded-3xl shadow-premium overflow-hidden min-w-[500px]"
+    >
+      <div className="flex-1 flex flex-col p-6 hover:bg-bg-secondary transition-colors group">
+        <Link 
+          to="/projects/$projectId/tasks/$taskId" 
+          params={{ projectId: s.task.projectId, taskId: s.task.id }}
+          className="flex flex-col gap-1"
+        >
+          <span className="text-[10px] font-bold text-text-dim uppercase tracking-widest opacity-60">Source Task</span>
+          <span className="text-[15px] font-bold text-text-notion group-hover:text-focus-blue transition-colors line-clamp-1">{s.task.title}</span>
+          <div className="flex items-center gap-2 mt-2">
+            <div className="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider text-white" style={{ backgroundColor: s.task.status === 'DONE' ? 'var(--color-done)' : 'var(--color-todo)' }}>
+              {s.task.status}
+            </div>
+          </div>
+        </Link>
+      </div>
+
+      <div className="flex flex-col items-center justify-center px-4 py-8 bg-bg-secondary/50 border-x border-border-notion relative">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 px-3 py-1 bg-white border border-border-notion rounded-full shadow-sm">
+           <span className="text-[9px] font-black uppercase tracking-[0.2em] text-text-notion" style={{ color }}>{edge.label}</span>
+        </div>
+        <ArrowRightLeft size={20} style={{ color }} className="opacity-40" />
+      </div>
+
+      <div className="flex-1 flex flex-col p-6 hover:bg-bg-secondary transition-colors group text-right items-end">
+        <Link 
+          to="/projects/$projectId/tasks/$taskId" 
+           params={{ projectId: t.task.projectId, taskId: t.task.id }}
+           className="flex flex-col gap-1 items-end"
+        >
+          <span className="text-[10px] font-bold text-text-dim uppercase tracking-widest opacity-60">Target Task</span>
+          <span className="text-[15px] font-bold text-text-notion group-hover:text-focus-blue transition-colors line-clamp-1">{t.task.title}</span>
+          <div className="flex items-center gap-2 mt-2">
+            <div className="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider text-white" style={{ backgroundColor: t.task.status === 'DONE' ? 'var(--color-done)' : 'var(--color-todo)' }}>
+              {t.task.status}
+            </div>
+          </div>
+        </Link>
+      </div>
+
+      <button 
+        onClick={onClose}
+        className="absolute top-3 right-3 p-1.5 rounded-full hover:bg-bg-secondary text-text-dim opacity-30 hover:opacity-100 transition-all"
+      >
+        <X size={14} />
+      </button>
+    </motion.div>
   );
 };
