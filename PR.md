@@ -1,27 +1,61 @@
-# Pull Request: Frontend Performance & UX Optimizations
+# PR: Hyper-Scale Mutation Refactor & Task Lattice Enhancements
 
-## 🚀 Overview
-This PR introduces several critical optimizations to the "Perception Engine" (frontend) to ensure a fluid, high-performance experience when exploring complex task graphs. 
+## Summary
+This PR completes the transition of the Taskinator modular monolith to a high-performance, 100% connection-based architecture and introduces the "Dependency Lattice" navigation system. We have refactored all remaining "Raw Array" mutations and implemented a virtualized, paginated task link viewer with persistent map preferences.
 
-We have focused on maintaining a stable **60fps** interaction rate and improving the visual consistency of the graph layout during data expansion.
+---
 
-## 🏗 Key Changes
+## 1. Hyper-Scale Mutation Refactor (100% Core Cleanup)
+We have eliminated all "Raw Array" return types from the GraphQL mutation layer to ensure the system can handle hyper-scale project and team management without performance degradation.
 
-### ⚙️ Asynchronous Layout (Web Worker)
-Offloaded the graph ranking and positioning logic to a background Web Worker ([layoutWorker.ts](file:///Users/kuchukboromdebbarma/Documents/projects/Taskinator-v2/ui-v1/src/components/Graph/layoutWorker.ts)). This prevents the main thread from blocking during neighborhood discovery, ensuring smooth panning and zooming.
+- **Standardized Payloads**: All mutations now return structured `Payload` objects containing:
+    - `success: Boolean!`
+    - `deletedCount: Int` (for deletions)
+    - Parent entity references (e.g., `project`, `team`) for efficient frontend cache updates.
+- **Affected Domains**: Project memberships, Team memberships, Project/Team deletions, and Batch creations.
+- **Frontend Sync**: Updated all GraphQL adapters and TypeScript interfaces to support the new structured responses.
 
-### 📍 Stability-First "Pinning"
-Implemented a coordinate caching system in `TaskMap.tsx`. 
-- **Goal**: Prevent nodes from jumping or re-centering when "Loading More" tasks.
-- **Result**: Existing nodes remain static while new nodes are added to the periphery, providing a much more grounded navigation experience.
-- **Manual Reset**: Added a "Reset Pins" button to the UI to allow for a full layout refresh on demand.
+---
 
-### 📦 Code Splitting & Lazy Loading
-Configured the [router.tsx](file:///Users/kuchukboromdebbarma/Documents/projects/Taskinator-v2/ui-v1/src/router.tsx) to lazily load heavy segments:
-- `TaskDetailView` and `ProjectTasksIndex` are now separate chunks.
-- This reduces the initial bundle size and speeds up the first "Time to Interactive" for the dashboard.
+## 2. Dependency Lattice: Dual-Column Task Link Viewer
+Implemented a high-performance dependency viewer on the Task Detail page to handle complex task relationships.
 
-## 🧪 Verification
-- **Performance**: Verified zero main-thread jank during layout recalculation.
-- **UX**: Confirmed that "Loading Next Layer" preserves the coordinates of already visible tasks.
-- **Bundle**: Confirmed lazy-loaded chunks are requested correctly in the network tab.
+- **Virtualized Columns**: Uses `@tanstack/react-virtual` and cursor-based pagination to handle thousands of incoming/outgoing links with 60fps performance.
+- **Smart Grouping**: Links are automatically organized by relationship label (e.g., "Blocks", "Depends On").
+- **Deterministic Color Coding**: relationship groups are color-coded using a specialized string-hashing algorithm for visual consistency.
+- **Interactive Stubs**: Each link provides a status-aware preview and instantaneous navigation to the related task.
+
+---
+
+## 3. Task Map: Interactive Portal & Persistence
+Upgraded the Task Map from a static visualization into a dynamic navigation engine.
+
+- **Edge Navigation Portal**: Clicking a relationship edge now opens a "Link Portal" card, allowing users to jump directly to either the Source or Target task.
+- **Persistent Preferences**: Implemented a cookie-based preference utility (`cookies.ts`) to remember user settings across sessions:
+    - **Input Mode**: Remembers Mouse vs. Trackpad preference.
+    - **Control Settings**: Remembers Keyboard navigation toggle.
+- **Stability Refactor**: Event listeners moved to a stable, Ref-based pattern, eliminating control loss when toggling modes.
+
+---
+
+## Key Files & Changes
+
+### Backend (`modular-monolith`)
+- `src/graphql/schema/project.graphql` & `team.graphql`: Refactored mutation return types.
+- `src/graphql/resolvers/project.ts` & `team.ts`: Implemented Payload-based return logic.
+- `src/modules/task/internal/TaskQueries.ts`: Added paginated `incomingLinks` and `outgoingLinks` connections.
+
+### Frontend (`ui-v1`)
+- `src/api/adapters/graphql/GraphQLTaskAPI.ts`: Implemented paginated link fetching.
+- `src/components/Tasks/TaskDetailView.tsx`: Integrated dual-column link section.
+- `src/components/Tasks/TaskLinkColumn.tsx`: [NEW] Virtualized list component for grouped links.
+- `src/components/Graph/TaskMap.tsx`: Implemented interactive Edge Portal and persistent settings.
+- `src/utils/cookies.ts`: [NEW] Cookie utility for preference persistence.
+
+---
+
+## Verification Results
+- **build**: `bun build` and `bun codegen` succeed without errors.
+- **Performance**: Verified 60fps scrolling on tasks with 100+ dependencies.
+- **Persistence**: Verified that Input Mode is remembered after cache clears/page refreshes.
+- **Navigation**: Verified bi-directional link traversal from both the Detail view and the Task Map.
