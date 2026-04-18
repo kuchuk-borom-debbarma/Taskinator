@@ -260,16 +260,16 @@ export const getProjects = async (
             version,
             last_event_id AS "lastEventId",
             created_at AS "createdAt",
-            (EXTRACT(EPOCH FROM created_at) * 1000000)::bigint::text as "epochPrecision",
+            created_at::text as "epochPrecision",
             updated_at AS "updatedAt",
             is_owner AS "isOwner"
         FROM combined_projects
         WHERE (
-            ${cursorEpoch}::bigint IS NULL 
+            ${cursorEpoch}::text IS NULL 
             OR (
                 CASE 
-                  WHEN ${isBackward} THEN ((EXTRACT(EPOCH FROM created_at) * 1000000)::bigint > ${cursorEpoch}::bigint OR ((EXTRACT(EPOCH FROM created_at) * 1000000)::bigint = ${cursorEpoch}::bigint AND id > ${cursorId}::uuid))
-                  ELSE ((EXTRACT(EPOCH FROM created_at) * 1000000)::bigint < ${cursorEpoch}::bigint OR ((EXTRACT(EPOCH FROM created_at) * 1000000)::bigint = ${cursorEpoch}::bigint AND id < ${cursorId}::uuid))
+                  WHEN ${isBackward} THEN (created_at > ${cursorEpoch}::timestamptz OR (created_at = ${cursorEpoch}::timestamptz AND id > ${cursorId}::uuid))
+                  ELSE (created_at < ${cursorEpoch}::timestamptz OR (created_at = ${cursorEpoch}::timestamptz AND id < ${cursorId}::uuid))
                 END
             )
         )
@@ -371,17 +371,17 @@ export const getProjectMembers = async (
             version, 
             last_event_id AS "lastEventId", 
             created_at AS "createdAt", 
-            (EXTRACT(EPOCH FROM created_at) * 1000000)::bigint::text as "epochPrecision",
+            created_at::text as "epochPrecision",
             updated_at AS "updatedAt"
         FROM project_member
         WHERE fk_project_id = ${projectId}::uuid
           AND EXISTS (SELECT 1 FROM auth_check)
           AND (
-              ${cursorEpoch}::bigint IS NULL
+              ${cursorEpoch}::text IS NULL
               OR (
                   CASE 
-                    WHEN ${isBackward} THEN ((EXTRACT(EPOCH FROM created_at) * 1000000)::bigint > ${cursorEpoch}::bigint OR ((EXTRACT(EPOCH FROM created_at) * 1000000)::bigint = ${cursorEpoch}::bigint AND id > ${cursorId}::uuid))
-                    ELSE ((EXTRACT(EPOCH FROM created_at) * 1000000)::bigint < ${cursorEpoch}::bigint OR ((EXTRACT(EPOCH FROM created_at) * 1000000)::bigint = ${cursorEpoch}::bigint AND id < ${cursorId}::uuid))
+                    WHEN ${isBackward} THEN (created_at > ${cursorEpoch}::timestamptz OR (created_at = ${cursorEpoch}::timestamptz AND id > ${cursorId}::uuid))
+                    ELSE (created_at < ${cursorEpoch}::timestamptz OR (created_at = ${cursorEpoch}::timestamptz AND id < ${cursorId}::uuid))
                   END
               )
           )
@@ -485,7 +485,7 @@ export const searchProjectMembers = async (params: {
         )
         SELECT 
             id, username, email,
-            (EXTRACT(EPOCH FROM created_at) * 1000000)::bigint::text as "epochPrecision"
+            created_at::text as "epochPrecision"
         FROM all_eligible_users
         WHERE EXISTS (SELECT 1 FROM auth_check)
           AND (
@@ -494,11 +494,11 @@ export const searchProjectMembers = async (params: {
             OR id::text = ${search}
           )
           AND (
-            ${cursorEpoch}::bigint IS NULL
+            ${cursorEpoch}::text IS NULL
             OR (
                 CASE 
-                  WHEN ${isBackward} THEN ((EXTRACT(EPOCH FROM created_at) * 1000000)::bigint > ${cursorEpoch}::bigint OR ((EXTRACT(EPOCH FROM created_at) * 1000000)::bigint = ${cursorEpoch}::bigint AND id > ${cursorId}::uuid))
-                  ELSE ((EXTRACT(EPOCH FROM created_at) * 1000000)::bigint < ${cursorEpoch}::bigint OR ((EXTRACT(EPOCH FROM created_at) * 1000000)::bigint = ${cursorEpoch}::bigint AND id < ${cursorId}::uuid))
+                  WHEN ${isBackward} THEN (created_at > ${cursorEpoch}::timestamptz OR (created_at = ${cursorEpoch}::timestamptz AND id > ${cursorId}::uuid))
+                  ELSE (created_at < ${cursorEpoch}::timestamptz OR (created_at = ${cursorEpoch}::timestamptz AND id < ${cursorId}::uuid))
                 END
             )
           )

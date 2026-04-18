@@ -30,6 +30,7 @@ export default function ProjectTasksIndex() {
   } = useInfiniteQuery({
     queryKey: ['tasks', projectId, cursor, direction],
     queryFn: ({ pageParam }: { pageParam: CursorParam }) => {
+      // Use the pageParam if provided (e.g. by fetchNextPage), otherwise fall back to URL cursor
       const activeParam = pageParam || (cursor ? { direction: direction || 'forward', cursor } : undefined);
       
       if (activeParam?.direction === 'backward') {

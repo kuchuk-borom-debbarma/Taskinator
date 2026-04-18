@@ -80,8 +80,8 @@ export const getNotifications = async (
 
     if (cursor) {
         const decoded = decodeCursor(cursor);
-        cursorEpoch = decoded.timeValue;
-        cursorId = decoded.id;
+        cursorEpoch = decoded.timeValue || null;
+        cursorId = decoded.id || null;
     }
 
     const result = await sql<InternalNotification & { epochPrecision: string }>`
@@ -94,16 +94,16 @@ export const getNotifications = async (
             metadata,
             is_read AS "isRead",
             created_at AS "createdAt",
-            (EXTRACT(EPOCH FROM created_at) * 1000000)::bigint::text as "epochPrecision",
+            created_at::text as "epochPrecision",
             read_at AS "readAt"
         FROM internal_notification
         WHERE fk_user_id = ${userId}::text
           AND (
-              ${cursorEpoch}::bigint IS NULL
+              ${cursorEpoch}::text IS NULL
               OR (
                   CASE 
-                    WHEN ${isBackward} THEN ((EXTRACT(EPOCH FROM created_at) * 1000000)::bigint > ${cursorEpoch}::bigint OR ((EXTRACT(EPOCH FROM created_at) * 1000000)::bigint = ${cursorEpoch}::bigint AND id > ${cursorId}::uuid))
-                    ELSE ((EXTRACT(EPOCH FROM created_at) * 1000000)::bigint < ${cursorEpoch}::bigint OR ((EXTRACT(EPOCH FROM created_at) * 1000000)::bigint = ${cursorEpoch}::bigint AND id < ${cursorId}::uuid))
+                    WHEN ${isBackward} THEN (created_at > ${cursorEpoch}::timestamptz OR (created_at = ${cursorEpoch}::timestamptz AND id > ${cursorId}::uuid))
+                    ELSE (created_at < ${cursorEpoch}::timestamptz OR (created_at = ${cursorEpoch}::timestamptz AND id < ${cursorId}::uuid))
                   END
               )
           )

@@ -411,17 +411,17 @@ export const getTasksPage = async (
             created_by AS "createdBy",
             updated_by AS "updatedBy",
             created_at AS "createdAt",
-            (EXTRACT(EPOCH FROM created_at) * 1000000)::bigint::text as "epochPrecision",
+            created_at::text as "epochPrecision",
             updated_at AS "updatedAt"
         FROM project_task
         WHERE fk_project_id = ${projectId}::uuid
           AND EXISTS (SELECT 1 FROM auth_check)
           AND (
-            ${cursorEpoch}::bigint IS NULL 
+            ${cursorEpoch}::text IS NULL 
             OR (
                 CASE 
-                  WHEN ${isBackward} THEN ((EXTRACT(EPOCH FROM created_at) * 1000000)::bigint > ${cursorEpoch}::bigint OR ((EXTRACT(EPOCH FROM created_at) * 1000000)::bigint = ${cursorEpoch}::bigint AND id > ${cursorId}::uuid))
-                  ELSE ((EXTRACT(EPOCH FROM created_at) * 1000000)::bigint < ${cursorEpoch}::bigint OR ((EXTRACT(EPOCH FROM created_at) * 1000000)::bigint = ${cursorEpoch}::bigint AND id < ${cursorId}::uuid))
+                  WHEN ${isBackward} THEN (created_at > ${cursorEpoch}::timestamptz OR (created_at = ${cursorEpoch}::timestamptz AND id > ${cursorId}::uuid))
+                  ELSE (created_at < ${cursorEpoch}::timestamptz OR (created_at = ${cursorEpoch}::timestamptz AND id < ${cursorId}::uuid))
                 END
             )
           )
@@ -531,17 +531,17 @@ export const getTaskLinksPage = async (
             label,
             created_by AS "createdBy",
             created_at AS "createdAt",
-            (EXTRACT(EPOCH FROM created_at) * 1000000)::bigint::text as "epochPrecision"
+            created_at::text as "epochPrecision"
         FROM task_link
         WHERE fk_project_id = ${projectId}::uuid
           AND ${sql.raw(filterCol)} = ${taskId}::uuid
           AND EXISTS (SELECT 1 FROM auth_check)
           AND (
-            ${cursorEpoch}::bigint IS NULL
+            ${cursorEpoch}::text IS NULL
             OR (
                 CASE
-                  WHEN ${isBackward} THEN ((EXTRACT(EPOCH FROM created_at) * 1000000)::bigint > ${cursorEpoch}::bigint OR ((EXTRACT(EPOCH FROM created_at) * 1000000)::bigint = ${cursorEpoch}::bigint AND id > ${cursorId}::uuid))
-                  ELSE ((EXTRACT(EPOCH FROM created_at) * 1000000)::bigint < ${cursorEpoch}::bigint OR ((EXTRACT(EPOCH FROM created_at) * 1000000)::bigint = ${cursorEpoch}::bigint AND id < ${cursorId}::uuid))
+                  WHEN ${isBackward} THEN (created_at > ${cursorEpoch}::timestamptz OR (created_at = ${cursorEpoch}::timestamptz AND id > ${cursorId}::uuid))
+                  ELSE (created_at < ${cursorEpoch}::timestamptz OR (created_at = ${cursorEpoch}::timestamptz AND id < ${cursorId}::uuid))
                 END
             )
           )
@@ -592,9 +592,9 @@ export const getNeighbourhood = async (
         const parts = decoded.timeValue.split('|');
         if (parts.length === 2) {
             cursorDepth = parseInt(parts[0]!, 10);
-            cursorEpoch = parts[1]!;
+            cursorEpoch = parts[1]! || null;
         }
-        cursorId = decoded.id;
+        cursorId = decoded.id || null;
     }
 
     // ── Step 1: Paginate neighbours from task_reachability ──────────────────
@@ -679,7 +679,7 @@ export const getNeighbourhood = async (
                 t.created_by AS "createdBy",
                 t.updated_by AS "updatedBy",
                 t.created_at AS "createdAt",
-                (EXTRACT(EPOCH FROM t.created_at) * 1000000)::bigint::text as "epochPrecision",
+                t.created_at::text as "epochPrecision",
                 t.updated_at AS "updatedAt",
                 t.direct_incoming_count AS "directIncomingCount",
                 t.direct_outgoing_count AS "directOutgoingCount",
@@ -698,18 +698,18 @@ export const getNeighbourhood = async (
                 CASE
                   WHEN ${isBackward} THEN
                     (min_depth < ${cursorDepth}::int 
-                      OR (min_depth = ${cursorDepth}::int AND "epochPrecision"::bigint > ${cursorEpoch}::bigint)
-                      OR (min_depth = ${cursorDepth}::int AND "epochPrecision"::bigint = ${cursorEpoch}::bigint AND neighbour_id > ${cursorId}::uuid))
+                      OR (min_depth = ${cursorDepth}::int AND createdAt > ${cursorEpoch}::timestamptz)
+                      OR (min_depth = ${cursorDepth}::int AND createdAt = ${cursorEpoch}::timestamptz AND neighbour_id > ${cursorId}::uuid))
                   ELSE
                     (min_depth > ${cursorDepth}::int 
-                      OR (min_depth = ${cursorDepth}::int AND "epochPrecision"::bigint < ${cursorEpoch}::bigint)
-                      OR (min_depth = ${cursorDepth}::int AND "epochPrecision"::bigint = ${cursorEpoch}::bigint AND neighbour_id < ${cursorId}::uuid))
+                      OR (min_depth = ${cursorDepth}::int AND createdAt < ${cursorEpoch}::timestamptz)
+                      OR (min_depth = ${cursorDepth}::int AND createdAt = ${cursorEpoch}::timestamptz AND neighbour_id < ${cursorId}::uuid))
                 END
             )
         )
         ORDER BY 
             min_depth ${sql.raw(isBackward ? 'DESC' : 'ASC')}, 
-            "epochPrecision" ${sql.raw(isBackward ? 'ASC' : 'DESC')}, 
+            createdAt ${sql.raw(isBackward ? 'ASC' : 'DESC')}, 
             neighbour_id ${sql.raw(isBackward ? 'ASC' : 'DESC')}
         LIMIT ${limit + 1}
     `.execute(db);
