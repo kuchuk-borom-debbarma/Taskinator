@@ -92,8 +92,6 @@ export const taskResolvers = {
         },
         priority: (t: any) => t.priority || 3,
         dueDate: (t: any) => t.dueDate || null,
-        parentRef: (t: any) => t.parentRef || null,
-        order: (t: any) => t.order || 0,
         project: async (t: any, _: any, context: GraphQLContext) => {
             let projectId = t.projectId;
             if (!projectId) {

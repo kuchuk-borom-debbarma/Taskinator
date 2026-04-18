@@ -78,8 +78,6 @@ type ProjectTask {
   updatedBy: ID! # Needs to resolve to user
   createdAt: String!
   updatedAt: String!
-  parentRef: String
-  order: Int
 
   incomingLinksCount: Int!
   outgoingLinksCount: Int!

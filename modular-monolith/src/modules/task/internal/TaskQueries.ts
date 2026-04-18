@@ -415,8 +415,6 @@ export const getTasksPage = async (
             updated_by AS "updatedBy",
             created_at AS "createdAt",
             updated_at AS "updatedAt",
-            parent_ref AS "parentRef",
-            "order",
             (SELECT count(*) FROM auth_check) as "hasAccess"
         FROM project_task
         WHERE fk_project_id = ${projectId}::uuid
