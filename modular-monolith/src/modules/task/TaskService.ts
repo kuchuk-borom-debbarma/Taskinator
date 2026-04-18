@@ -14,6 +14,7 @@ export type ProjectTask = {
     lastEventId: string | null;
     createdBy: string;
     updatedBy: string;
+    priority: number;
     createdAt: Date;
     updatedAt: Date;
     directIncomingCount: number;

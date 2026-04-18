@@ -148,35 +148,17 @@ export const taskResolvers = {
         directOutgoingLinksCount: (t: any) => t.directOutgoingCount || 0,
         incomingLabelCounts: (t: any) => {
             const counts = t.incomingLabelCounts || {};
-            const edges = Object.entries(counts).map(([label, count]) => ({
-                node: { label, count: Number(count) },
-                cursor: label,
+            return Object.entries(counts).map(([label, count]) => ({
+                label,
+                count: Number(count),
             }));
-            return {
-                edges,
-                pageInfo: {
-                    hasNextPage: false,
-                    hasPreviousPage: false,
-                    startCursor: edges.length > 0 ? edges[0]?.cursor : null,
-                    endCursor: edges.length > 0 ? edges[edges.length - 1]?.cursor : null,
-                },
-            };
         },
         outgoingLabelCounts: (t: any) => {
             const counts = t.outgoingLabelCounts || {};
-            const edges = Object.entries(counts).map(([label, count]) => ({
-                node: { label, count: Number(count) },
-                cursor: label,
+            return Object.entries(counts).map(([label, count]) => ({
+                label,
+                count: Number(count),
             }));
-            return {
-                edges,
-                pageInfo: {
-                    hasNextPage: false,
-                    hasPreviousPage: false,
-                    startCursor: edges.length > 0 ? edges[0]?.cursor : null,
-                    endCursor: edges.length > 0 ? edges[edges.length - 1]?.cursor : null,
-                },
-            };
         },
 
         incomingLinks: async (

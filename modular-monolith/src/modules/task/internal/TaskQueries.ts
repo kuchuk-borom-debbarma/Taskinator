@@ -57,13 +57,17 @@ export const insertTask = async (data: CreateTaskParam): Promise<ProjectTask> =>
             fk_member_id AS "memberId",
             title,
             description,
-            status,
-            version,
-            last_event_id AS "lastEventId",
+            priority,
             created_by AS "createdBy",
             updated_by AS "updatedBy",
             created_at AS "createdAt",
-            updated_at AS "updatedAt"
+            updated_at AS "updatedAt",
+            direct_incoming_count AS "directIncomingCount",
+            direct_outgoing_count AS "directOutgoingCount",
+            total_incoming_count AS "totalIncomingCount",
+            total_outgoing_count AS "totalOutgoingCount",
+            incoming_label_counts AS "incomingLabelCounts",
+            outgoing_label_counts AS "outgoingLabelCounts"
         FROM inserted_task
     `.execute(db);
 
@@ -406,13 +410,20 @@ export const getTasksPage = async (
             title,
             description,
             status,
+            priority,
             version,
             last_event_id AS "lastEventId",
             created_by AS "createdBy",
             updated_by AS "updatedBy",
             created_at AS "createdAt",
             created_at::text as "epochPrecision",
-            updated_at AS "updatedAt"
+            updated_at AS "updatedAt",
+            direct_incoming_count AS "directIncomingCount",
+            direct_outgoing_count AS "directOutgoingCount",
+            total_incoming_count AS "totalIncomingCount",
+            total_outgoing_count AS "totalOutgoingCount",
+            incoming_label_counts AS "incomingLabelCounts",
+            outgoing_label_counts AS "outgoingLabelCounts"
         FROM project_task
         WHERE fk_project_id = ${projectId}::uuid
           AND EXISTS (SELECT 1 FROM auth_check)
@@ -614,6 +625,7 @@ export const getNeighbourhood = async (
         title: string;
         description: string;
         status: TaskStatus;
+        priority: number;
         version: number;
         lastEventId: string | null;
         createdBy: string;
@@ -674,6 +686,7 @@ export const getNeighbourhood = async (
                 t.title,
                 t.description,
                 t.status,
+                t.priority,
                 t.version,
                 t.last_event_id AS "lastEventId",
                 t.created_by AS "createdBy",
@@ -748,6 +761,7 @@ export const getNeighbourhood = async (
             title: r.title,
             description: r.description,
             status: r.status,
+            priority: r.priority,
             version: r.version,
             lastEventId: r.lastEventId,
             createdBy: r.createdBy,
@@ -820,6 +834,7 @@ export const updateTaskQuery = async (data: UpdateTaskParam): Promise<ProjectTas
                 title = COALESCE(${data.title}, title),
                 description = COALESCE(${data.description}, description),
                 status = COALESCE(${data.status}, status),
+                priority = COALESCE(${data.priority}, priority),
                 updated_by = ${data.userId},
                 updated_at = NOW(),
                 version = version + 1
@@ -848,6 +863,7 @@ export const updateTaskQuery = async (data: UpdateTaskParam): Promise<ProjectTas
             title,
             description,
             status,
+            priority,
             version,
             last_event_id AS "lastEventId",
             created_by AS "createdBy",
