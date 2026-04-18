@@ -20,7 +20,7 @@ function InnerApp() {
   // This triggers a re-evaluation of beforeLoad guards (e.g., redirecting to /auth after logout)
   useEffect(() => {
     router.invalidate();
-  }, [auth.isAuthenticated]);
+  }, [auth.isAuthenticated, auth.isLoading]);
 
   return <RouterProvider router={router} context={{ auth }} />;
 }

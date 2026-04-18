@@ -25,6 +25,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
 
   const fetchMe = async (authToken: string) => {
+    setIsLoading(true);
     try {
       const response = await fetch(GRAPHQL_URL, {
         method: 'POST',
@@ -37,11 +38,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }),
       });
 
+      if (!response.ok) {
+        const text = await response.text();
+        console.error(`[Auth] fetchMe failed with status ${response.status}:`, text);
+        logout();
+        return;
+      }
+
       const result = await response.json();
       if (result.data?.me) {
         setUser(result.data.me);
       } else {
-        // Token might be invalid
+        if (result.errors?.[0]?.extensions?.code === 'UNAUTHENTICATED') {
+          console.warn('[Auth] Session invalid or expired');
+        }
         logout();
       }
     } catch (error) {

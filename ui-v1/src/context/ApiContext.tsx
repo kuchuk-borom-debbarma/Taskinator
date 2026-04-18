@@ -16,13 +16,13 @@ interface ApiContextType {
 const ApiContext = createContext<ApiContextType | null>(null);
 
 export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { token } = useAuth();
+  const { token, logout } = useAuth();
   
   const apis = useMemo(() => ({
-    projectApi: new GraphQLProjectAPI(token),
-    taskApi: new GraphQLTaskAPI(token),
-    teamApi: new GraphQLTeamAPI(token),
-  }), [token]);
+    projectApi: new GraphQLProjectAPI(token, { onUnauthorized: logout }),
+    taskApi: new GraphQLTaskAPI(token, { onUnauthorized: logout }),
+    teamApi: new GraphQLTeamAPI(token, { onUnauthorized: logout }),
+  }), [token, logout]);
 
   return (
     <ApiContext.Provider value={apis}>

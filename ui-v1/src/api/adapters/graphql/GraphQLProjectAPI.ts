@@ -3,15 +3,18 @@ import type { Project } from '../../types';
 import { graphql } from '../../../gql';
 import { print } from 'graphql';
 import type { GetProjectsQuery, GetProjectQuery, CreateProjectMutation } from '../../../gql/graphql';
+import { AuthenticationError } from '../../errors';
 
 const GRAPHQL_URL = 'http://localhost:3000/graphql';
 
 export class GraphQLProjectAPI implements ProjectAPI {
   private token: string | null;
+  private onUnauthorized?: () => void;
   private static queryCache = new Map<any, string>();
 
-  constructor(token: string | null) {
+  constructor(token: string | null, options?: { onUnauthorized?: () => void }) {
     this.token = token;
+    this.onUnauthorized = options?.onUnauthorized;
   }
 
   private async query<T>(query: any, variables: any = {}): Promise<T> {
@@ -40,7 +43,12 @@ export class GraphQLProjectAPI implements ProjectAPI {
     const result = await response.json();
     if (result.errors) {
       console.error('GraphQL Errors:', JSON.stringify(result.errors, null, 2));
-      throw new Error(result.errors[0].message);
+      const firstError = result.errors[0];
+      if (firstError.extensions?.code === 'UNAUTHENTICATED') {
+        this.onUnauthorized?.();
+        throw new AuthenticationError();
+      }
+      throw new Error(firstError.message);
     }
     return result.data as T;
   }

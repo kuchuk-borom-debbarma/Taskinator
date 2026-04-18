@@ -1,6 +1,7 @@
 import type { GraphQLContext } from '../context.ts';
 import { teamService } from '../../modules/team';
 import { resolveTeam, buildRef } from './helpers.ts';
+import { UnauthorizedError } from '../errors';
 
 export const teamResolvers = {
     Team: {
@@ -41,7 +42,7 @@ export const teamResolvers = {
             { projectId, first, after, last, before }: any,
             context: GraphQLContext,
         ) => {
-            if (!context.userId) throw new Error('Unauthorized');
+            if (!context.userId) throw new UnauthorizedError();
             const { teams, nextCursor, prevCursor } = await teamService.getTeams(
                 context.userId,
                 projectId,
@@ -62,7 +63,7 @@ export const teamResolvers = {
             { projectId, teamId, first, after, last, before }: any,
             context: GraphQLContext,
         ) => {
-            if (!context.userId) throw new Error('Unauthorized');
+            if (!context.userId) throw new UnauthorizedError();
             const { members, nextCursor, prevCursor } = await teamService.getTeamMembers(
                 context.userId,
                 projectId,
@@ -111,7 +112,7 @@ export const teamResolvers = {
             { projectId, name }: any,
             context: GraphQLContext,
         ) => {
-            if (!context.userId) throw new Error('Unauthorized');
+            if (!context.userId) throw new UnauthorizedError();
             const teams = await teamService.createTeams({
                 userId: context.userId,
                 projectId,
@@ -124,7 +125,7 @@ export const teamResolvers = {
             { projectId, teamIds }: any,
             context: GraphQLContext,
         ) => {
-            if (!context.userId) throw new Error('Unauthorized');
+            if (!context.userId) throw new UnauthorizedError();
             return teamService.deleteTeams({
                 userId: context.userId,
                 projectId,
@@ -136,7 +137,7 @@ export const teamResolvers = {
             { projectId, teamId, userIds }: any,
             context: GraphQLContext,
         ) => {
-            if (!context.userId) throw new Error('Unauthorized');
+            if (!context.userId) throw new UnauthorizedError();
             return teamService.addTeamMembers({
                 userId: context.userId,
                 projectId,
@@ -149,7 +150,7 @@ export const teamResolvers = {
             { projectId, teamId, userIds }: any,
             context: GraphQLContext,
         ) => {
-            if (!context.userId) throw new Error('Unauthorized');
+            if (!context.userId) throw new UnauthorizedError();
             return teamService.deleteTeamMembers({
                 userId: context.userId,
                 projectId,

@@ -1,7 +1,7 @@
-import type { GraphQLContext } from '../context.ts';
 import { pubsub } from '../pubsub';
 import { logger } from '../../logger';
 import { redisPublisher, INSTANCE_ID } from '../../redis/index.ts';
+import { UnauthorizedError } from '../errors';
 
 /**
  * realtimeResolvers handles the unified event stream for Notification events.
@@ -22,7 +22,7 @@ export const realtimeResolvers = {
                 context: GraphQLContext,
             ) => {
                 const userId = context.userId;
-                if (!userId) throw new Error('Unauthorized');
+                if (!userId) throw new UnauthorizedError();
 
                 logger.info(
                     `[Realtime] Unified stream connection established for user: ${userId}, project: ${projectId || 'all'} on node: ${INSTANCE_ID}`,

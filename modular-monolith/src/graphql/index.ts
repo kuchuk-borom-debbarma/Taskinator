@@ -36,15 +36,19 @@ export const yoga = createYoga<GraphQLContext>({
     },
     plugins: [
         {
-            onExecute({ args }) {
-                console.log(`[GQL] Executing: ${args.operationName ?? 'Anonymous'}`);
+            onExecute({ args }: any) {
+                const operationName = args.operationName ?? 'Anonymous';
+                console.log(`[GQL] Executing: ${operationName}`);
+                return {
+                    onNext({ result }: any) {
+                        if (result.errors) {
+                            console.error(`[GQL] Execution Errors in ${operationName}:`, JSON.stringify(result.errors, null, 2));
+                        }
+                    }
+                };
             },
-            onResponse({ result }) {
-                if (result.errors) {
-                    console.error(`[GQL] Execution Errors:`, JSON.stringify(result.errors, null, 2));
-                }
-            }
         }
     ],
+    maskedErrors: false,
     graphiql: true,
 });
