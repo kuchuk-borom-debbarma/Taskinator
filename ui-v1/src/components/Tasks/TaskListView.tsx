@@ -57,18 +57,18 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
           <button
             onClick={onLoadPrev}
             disabled={!hasPreviousPage || isFetchingPreviousPage}
-            className="p-2 rounded-xl bg-white/5 border border-white/10 text-white disabled:opacity-20 hover:bg-white/10 transition-all active:scale-95 flex items-center gap-2 text-xs font-bold"
+            className="p-2.5 rounded-xl bg-white/5 border border-white/10 text-white disabled:opacity-20 hover:bg-white/10 transition-all active:scale-95 flex items-center justify-center transition-all"
+            title="Previous Page"
           >
-            <ChevronLeft size={16} />
-            Prev
+            <ChevronLeft size={18} />
           </button>
           <button
             onClick={onLoadMore}
             disabled={!hasNextPage || isFetchingNextPage}
-            className="p-2 rounded-xl bg-white/5 border border-white/10 text-white disabled:opacity-20 hover:bg-white/10 transition-all active:scale-95 flex items-center gap-2 text-xs font-bold"
+            className="p-2.5 rounded-xl bg-white/5 border border-white/10 text-white disabled:opacity-20 hover:bg-white/10 transition-all active:scale-95 flex items-center justify-center transition-all"
+            title="Next Page"
           >
-            Next
-            <ChevronRight size={16} />
+            <ChevronRight size={18} />
           </button>
         </div>
       </header>

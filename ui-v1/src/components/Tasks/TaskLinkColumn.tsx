@@ -37,8 +37,8 @@ export const TaskLinkColumn: React.FC<TaskLinkColumnProps> = ({ taskId, directio
       const c = activeParam?.cursor;
 
       return direction === 'incoming'
-        ? taskApi.getTaskIncomingLinks(taskId, 15, isBackward ? undefined : c, isBackward ? c : undefined)
-        : taskApi.getTaskOutgoingLinks(taskId, 15, isBackward ? undefined : c, isBackward ? c : undefined);
+        ? taskApi.getTaskIncomingLinks(taskId, 2, isBackward ? undefined : c, isBackward ? c : undefined)
+        : taskApi.getTaskOutgoingLinks(taskId, 2, isBackward ? undefined : c, isBackward ? c : undefined);
     },
     initialPageParam: (cursor ? { direction: dir || 'forward', cursor } : undefined) as { direction: 'forward' | 'backward', cursor: string } | undefined,
     getNextPageParam: (lastPage) => lastPage.hasNextPage ? { direction: 'forward' as const, cursor: lastPage.endCursor! } : undefined,
@@ -97,7 +97,7 @@ export const TaskLinkColumn: React.FC<TaskLinkColumnProps> = ({ taskId, directio
                const firstPage = data?.pages[0];
                if (firstPage?.hasPreviousPage) {
                  navigate({
-                   search: (prev) => ({ 
+                   search: (prev: any) => ({ 
                      ...prev, 
                      [isIncoming ? 'inCursor' : 'outCursor']: firstPage.startCursor!,
                      [isIncoming ? 'inDir' : 'outDir']: 'backward' as const
@@ -106,17 +106,17 @@ export const TaskLinkColumn: React.FC<TaskLinkColumnProps> = ({ taskId, directio
                }
             }}
             disabled={!hasPreviousPage || isFetchingPreviousPage}
-            className="p-1 px-2 rounded-lg bg-bg-secondary border border-border-notion text-text-notion disabled:opacity-20 hover:bg-bg-notion transition-all active:scale-95 flex items-center gap-1.5 text-[10px] font-bold"
+            className="p-1.5 rounded-lg bg-bg-secondary border border-border-notion text-text-notion disabled:opacity-20 hover:bg-bg-notion transition-all active:scale-95 flex items-center justify-center transition-all"
+            title="Previous"
           >
-            <ChevronLeft size={12} />
-            Prev
+            <ChevronLeft size={14} />
           </button>
           <button
             onClick={() => {
               const lastPage = data?.pages[data.pages.length - 1];
               if (lastPage?.hasNextPage) {
                 navigate({
-                  search: (prev) => ({ 
+                  search: (prev: any) => ({ 
                     ...prev, 
                     [isIncoming ? 'inCursor' : 'outCursor']: lastPage.endCursor!,
                     [isIncoming ? 'inDir' : 'outDir']: 'forward' as const
@@ -125,10 +125,10 @@ export const TaskLinkColumn: React.FC<TaskLinkColumnProps> = ({ taskId, directio
               }
             }}
             disabled={!hasNextPage || isFetchingNextPage}
-            className="p-1 px-2 rounded-lg bg-bg-secondary border border-border-notion text-text-notion disabled:opacity-20 hover:bg-bg-notion transition-all active:scale-95 flex items-center gap-1.5 text-[10px] font-bold"
+            className="p-1.5 rounded-lg bg-bg-secondary border border-border-notion text-text-notion disabled:opacity-20 hover:bg-bg-notion transition-all active:scale-95 flex items-center justify-center transition-all"
+            title="Next"
           >
-            Next
-            <ChevronRight size={12} />
+            <ChevronRight size={14} />
           </button>
         </div>
       </div>
