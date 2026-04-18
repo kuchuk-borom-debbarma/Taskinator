@@ -66,6 +66,8 @@ export class GraphQLTaskAPI implements TaskAPI {
     return {
       ...t,
       createdById: t.createdBy,
+      incomingLabelCounts: typeof t.incomingLabelCounts === 'string' ? JSON.parse(t.incomingLabelCounts) : t.incomingLabelCounts,
+      outgoingLabelCounts: typeof t.outgoingLabelCounts === 'string' ? JSON.parse(t.outgoingLabelCounts) : t.outgoingLabelCounts,
       team: t.team ? { id: t.team.id, name: t.team.name, projectId: t.projectId } : undefined,
       assignee: t.assignee ? { id: t.assignee.id, username: t.assignee.username, email: '' } : undefined,
     };
@@ -78,6 +80,7 @@ export class GraphQLTaskAPI implements TaskAPI {
           edges {
             node {
               id projectId teamId memberId title description status priority dueDate version createdAt updatedAt createdBy
+      incomingLinksCount outgoingLinksCount directIncomingLinksCount directOutgoingLinksCount incomingLabelCounts outgoingLabelCounts
               team { id name }
               assignee { id username }
             }
@@ -97,16 +100,28 @@ export class GraphQLTaskAPI implements TaskAPI {
     };
   }
 
-  async getProjectLinks(projectId: string): Promise<TaskLink[]> {
-    const data = await this.query<{ projectTaskLinks: TaskLink[] }>(
-      `query GetProjectTaskLinks($projectId: ID!) {
-        projectTaskLinks(projectId: $projectId) {
-          id projectId sourceTaskId targetTaskId label createdAt
+  async getProjectLinks(projectId: string, first?: number, after?: string): Promise<{ links: TaskLink[], hasNextPage: boolean, endCursor: string | null }> {
+    const data = await this.query<{ projectTaskLinks: { edges: { node: TaskLink }[], pageInfo: { hasNextPage: boolean, endCursor: string | null } } }>(
+      `query GetProjectTaskLinks($projectId: ID!, $first: Int, $after: String) {
+        projectTaskLinks(projectId: $projectId, first: $first, after: $after) {
+          edges {
+            node {
+              id projectId sourceTaskId targetTaskId label createdAt
+            }
+          }
+          pageInfo {
+            hasNextPage
+            endCursor
+          }
         }
       }`,
-      { projectId }
+      { projectId, first, after }
     );
-    return data.projectTaskLinks || [];
+    return {
+      links: data.projectTaskLinks.edges.map(e => e.node),
+      hasNextPage: data.projectTaskLinks.pageInfo.hasNextPage,
+      endCursor: data.projectTaskLinks.pageInfo.endCursor
+    };
   }
 
   async getTask(id: string): Promise<ProjectTask | null> {
@@ -114,6 +129,7 @@ export class GraphQLTaskAPI implements TaskAPI {
       query GetTask($id: ID!) {
         task(id: $id) {
           id projectId teamId memberId title description status priority dueDate version createdAt updatedAt createdBy
+      incomingLinksCount outgoingLinksCount directIncomingLinksCount directOutgoingLinksCount incomingLabelCounts outgoingLabelCounts
           team { id name }
           assignee { id username }
         }
@@ -128,20 +144,30 @@ export class GraphQLTaskAPI implements TaskAPI {
         taskNeighbourhood(projectId: $projectId, taskId: $taskId, maxDepth: $maxDepth, first: $first, after: $after) {
           focusedTask {
             id projectId teamId memberId title description status priority dueDate version createdAt updatedAt createdBy
+            incomingLinksCount outgoingLinksCount directIncomingLinksCount directOutgoingLinksCount incomingLabelCounts outgoingLabelCounts
             team { id name }
             assignee { id username }
           }
           nodes {
-            task {
-              id projectId teamId memberId title description status priority dueDate version createdAt updatedAt createdBy
-              team { id name }
-              assignee { id username }
+            edges {
+              node {
+                task {
+                  id projectId teamId memberId title description status priority dueDate version createdAt updatedAt createdBy
+                  incomingLinksCount outgoingLinksCount directIncomingLinksCount directOutgoingLinksCount incomingLabelCounts outgoingLabelCounts
+                  team { id name }
+                  assignee { id username }
+                }
+                depth
+                direction
+              }
             }
-            depth
-            direction
           }
           edges {
-            id projectId sourceTaskId targetTaskId label createdAt
+            edges {
+              node {
+                id projectId sourceTaskId targetTaskId label createdAt
+              }
+            }
           }
           pageInfo {
             hasNextPage
@@ -158,11 +184,11 @@ export class GraphQLTaskAPI implements TaskAPI {
 
     return {
       focusedTask: this.mapTask(n.focusedTask),
-      nodes: (n.nodes || []).map((node: any) => ({
-        ...node,
-        task: this.mapTask(node.task)
+      nodes: (n.nodes?.edges || []).map((e: any) => ({
+        ...e.node,
+        task: this.mapTask(e.node.task)
       })),
-      edges: n.edges || [],
+      edges: (n.edges?.edges || []).map((e: any) => e.node),
       incomingStories: [],
       outgoingStories: [],
       hasNextPage: n.pageInfo?.hasNextPage || false,
@@ -175,6 +201,7 @@ export class GraphQLTaskAPI implements TaskAPI {
       mutation CreateTask($projectId: ID!, $title: String!, $description: String) {
         createTask(projectId: $projectId, title: $title, description: $description) {
           id projectId teamId memberId title description status priority dueDate version createdAt updatedAt createdBy
+      incomingLinksCount outgoingLinksCount directIncomingLinksCount directOutgoingLinksCount incomingLabelCounts outgoingLabelCounts
           team { id name }
           assignee { id username }
         }
@@ -188,6 +215,7 @@ export class GraphQLTaskAPI implements TaskAPI {
       mutation UpdateTask($taskId: ID!, $title: String, $description: String, $status: String) {
         updateTask(taskId: $taskId, title: $title, description: $description, status: $status) {
           id projectId teamId memberId title description status priority dueDate version createdAt updatedAt createdBy
+      incomingLinksCount outgoingLinksCount directIncomingLinksCount directOutgoingLinksCount incomingLabelCounts outgoingLabelCounts
           team { id name }
           assignee { id username }
         }

@@ -112,6 +112,22 @@ export const insertLink = async (data: CreateLinkParam): Promise<TaskLink> => {
                        'userId', created_by
                    )
             FROM inserted_link
+        ),
+        update_source AS (
+            UPDATE project_task
+            SET 
+                direct_outgoing_count = direct_outgoing_count + 1,
+                outgoing_label_counts = outgoing_label_counts || jsonb_build_object(${data.label}, (COALESCE(outgoing_label_counts->>${data.label}, '0')::int + 1))
+            FROM inserted_link
+            WHERE project_task.id = inserted_link.source_task_id
+        ),
+        update_target AS (
+            UPDATE project_task
+            SET 
+                direct_incoming_count = direct_incoming_count + 1,
+                incoming_label_counts = incoming_label_counts || jsonb_build_object(${data.label}, (COALESCE(incoming_label_counts->>${data.label}, '0')::int + 1))
+            FROM inserted_link
+            WHERE project_task.id = inserted_link.target_task_id
         )
         SELECT 
             id,
@@ -180,6 +196,21 @@ export const incrementLinkReachability = async (params: {
         ON CONFLICT (fk_project_id, ancestor_task_id, descendant_task_id) DO UPDATE SET
             min_depth = LEAST(task_reachability.min_depth, EXCLUDED.min_depth),
             path_count = task_reachability.path_count + EXCLUDED.path_count;
+    `.execute(db);
+    
+    // 5. Update denormalized total counts for all affected tasks
+    await sql`
+        UPDATE project_task pt
+        SET 
+            total_outgoing_count = (SELECT count(*) FROM task_reachability WHERE ancestor_task_id = pt.id),
+            total_incoming_count = (SELECT count(*) FROM task_reachability WHERE descendant_task_id = pt.id)
+        WHERE id IN (
+            SELECT ancestor_task_id FROM task_reachability WHERE descendant_task_id = ${params.sourceTaskId}::uuid
+            UNION SELECT ${params.sourceTaskId}::uuid
+            UNION
+            SELECT descendant_task_id FROM task_reachability WHERE ancestor_task_id = ${params.targetTaskId}::uuid
+            UNION SELECT ${params.targetTaskId}::uuid
+        )
     `.execute(db);
 };
 
@@ -260,6 +291,22 @@ export const deleteLinkQuery = async (userId: string, linkId: string): Promise<v
                        'userId', ${userId}
                    )
             FROM deleted_link
+        ),
+        update_source AS (
+            UPDATE project_task
+            SET 
+                direct_outgoing_count = GREATEST(0, direct_outgoing_count - 1),
+                outgoing_label_counts = outgoing_label_counts || jsonb_build_object(deleted_link.label, GREATEST(0, (COALESCE(outgoing_label_counts->>deleted_link.label, '0')::int - 1)))
+            FROM deleted_link
+            WHERE project_task.id = deleted_link.source_task_id
+        ),
+        update_target AS (
+            UPDATE project_task
+            SET 
+                direct_incoming_count = GREATEST(0, direct_incoming_count - 1),
+                incoming_label_counts = incoming_label_counts || jsonb_build_object(deleted_link.label, GREATEST(0, (COALESCE(incoming_label_counts->>deleted_link.label, '0')::int - 1)))
+            FROM deleted_link
+            WHERE project_task.id = deleted_link.target_task_id
         )
         SELECT 1 FROM deleted_link
     `.execute(db);
@@ -304,6 +351,21 @@ export const decrementLinkReachability = async (params: {
             DELETE FROM task_reachability 
             WHERE path_count <= 0 
               AND fk_project_id = ${params.projectId}::uuid
+        `.execute(trx);
+
+        // 3. Update denormalized total counts for all affected tasks
+        await sql`
+            UPDATE project_task pt
+            SET 
+                total_outgoing_count = (SELECT count(*) FROM task_reachability WHERE ancestor_task_id = pt.id),
+                total_incoming_count = (SELECT count(*) FROM task_reachability WHERE descendant_task_id = pt.id)
+            WHERE id IN (
+                SELECT ancestor_task_id FROM task_reachability WHERE descendant_task_id = ${params.sourceTaskId}::uuid
+                UNION SELECT ${params.sourceTaskId}::uuid
+                UNION
+                SELECT descendant_task_id FROM task_reachability WHERE ancestor_task_id = ${params.targetTaskId}::uuid
+                UNION SELECT ${params.targetTaskId}::uuid
+            )
         `.execute(trx);
     });
 };
@@ -797,10 +859,25 @@ export const updateTaskQuery = async (data: UpdateTaskParam): Promise<ProjectTas
     return task;
 };
 
-export const getProjectTaskLinks = async (
+export const getProjectTaskLinksPage = async (
     userId: string,
     projectId: string,
-): Promise<TaskLink[]> => {
+    params: PaginationParams,
+): Promise<{ links: TaskLink[]; nextCursor: string | null; prevCursor: string | null }> => {
+    const limit = Math.min(params.first || params.last || 20, 100);
+    const { after, before } = params;
+    const isBackward = !!before;
+    const cursor = before || after;
+
+    let cursorDate: string | null = null;
+    let cursorId: string | null = null;
+
+    if (cursor && cursor.includes('|')) {
+        const [date, id] = cursor.split('|');
+        cursorDate = date!;
+        cursorId = id!;
+    }
+
     const result = await sql<TaskLink>`
         WITH auth_check AS (
             SELECT 1 FROM project WHERE id = ${projectId}::uuid AND fk_user_id = ${userId}::text
@@ -819,9 +896,46 @@ export const getProjectTaskLinks = async (
         FROM task_link
         WHERE fk_project_id = ${projectId}::uuid
           AND EXISTS (SELECT 1 FROM auth_check)
-        ORDER BY created_at ASC
+          AND (
+            ${cursorId}::uuid IS NULL
+            OR (
+                CASE
+                  WHEN ${isBackward} THEN
+                    (created_at > ${cursorDate}::timestamp OR (created_at = ${cursorDate}::timestamp AND id < ${cursorId}::uuid))
+                  ELSE
+                    (created_at < ${cursorDate}::timestamp OR (created_at = ${cursorDate}::timestamp AND id > ${cursorId}::uuid))
+                END
+            )
+          )
+        ORDER BY 
+            created_at ${sql.raw(isBackward ? 'ASC' : 'DESC')}, 
+            id ${sql.raw(isBackward ? 'ASC' : 'DESC')}
+        LIMIT ${limit + 1}
     `.execute(db);
 
-    return result.rows;
+    let rows = result.rows;
+    const hasMore = rows.length > limit;
+    if (hasMore) rows = rows.slice(0, limit);
+    if (isBackward) rows.reverse();
+
+    let nextCursor: string | null = null;
+    let prevCursor: string | null = null;
+
+    if (rows.length > 0) {
+        const first = rows[0]!;
+        const last = rows[rows.length - 1]!;
+        const firstDateStr = first.createdAt instanceof Date ? first.createdAt.toISOString() : first.createdAt;
+        const lastDateStr = last.createdAt instanceof Date ? last.createdAt.toISOString() : last.createdAt;
+
+        if (isBackward) {
+            nextCursor = hasMore ? `${firstDateStr}|${first.id}` : null;
+            prevCursor = `${lastDateStr}|${last.id}`;
+        } else {
+            nextCursor = hasMore ? `${lastDateStr}|${last.id}` : null;
+            prevCursor = after ? `${firstDateStr}|${first.id}` : null;
+        }
+    }
+
+    return { links: rows, nextCursor, prevCursor };
 };
 

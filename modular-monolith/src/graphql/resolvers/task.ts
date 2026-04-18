@@ -143,6 +143,13 @@ export const taskResolvers = {
             return buildRef(updatedBy, 'User');
         },
 
+        incomingLinksCount: (t: any) => t.totalIncomingCount || 0,
+        outgoingLinksCount: (t: any) => t.totalOutgoingCount || 0,
+        directIncomingLinksCount: (t: any) => t.directIncomingCount || 0,
+        directOutgoingLinksCount: (t: any) => t.directOutgoingCount || 0,
+        incomingLabelCounts: (t: any) => JSON.stringify(t.incomingLabelCounts || {}),
+        outgoingLabelCounts: (t: any) => JSON.stringify(t.outgoingLabelCounts || {}),
+
         incomingLinks: async (
             t: any,
             { first, after, last, before }: any,
@@ -234,8 +241,30 @@ export const taskResolvers = {
 
             return {
                 focusedTask,
-                nodes: result.neighbours,
-                edges: result.edges,
+                nodes: {
+                    edges: result.neighbours.map(n => ({
+                        node: n,
+                        cursor: `${n.depth}|${n.task?.createdAt.toISOString()}|${n.taskId}`
+                    })),
+                    pageInfo: {
+                        hasNextPage: !!result.nextCursor,
+                        hasPreviousPage: !!result.prevCursor,
+                        startCursor: result.prevCursor,
+                        endCursor: result.nextCursor,
+                    }
+                },
+                edges: {
+                    edges: result.edges.map(e => ({
+                        node: e,
+                        cursor: e.id
+                    })),
+                    pageInfo: {
+                        hasNextPage: false,
+                        hasPreviousPage: false,
+                        startCursor: null,
+                        endCursor: null,
+                    }
+                },
                 pageInfo: {
                     hasNextPage: !!result.nextCursor,
                     hasPreviousPage: !!result.prevCursor,
@@ -247,14 +276,18 @@ export const taskResolvers = {
 
         projectTaskLinks: async (
             _: any,
-            { projectId }: any,
+            { projectId, first, after, last, before }: any,
             context: GraphQLContext,
         ) => {
             console.log(`[RESOLVER CRITICAL] projectTaskLinks - projectId: ${projectId}, userId: ${context.userId}`);
             if (!context.userId) throw new UnauthorizedError();
-            const links = await taskService.getProjectLinks(context.userId, projectId);
+            const { links, nextCursor, prevCursor } = await taskService.getProjectLinks(
+                context.userId, 
+                projectId, 
+                { first, after, last, before }
+            );
             console.log(`[RESOLVER CRITICAL] found ${links.length} links`);
-            return links;
+            return buildLinkConnection(links, nextCursor, prevCursor);
         },
     },
 

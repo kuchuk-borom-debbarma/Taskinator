@@ -26,8 +26,6 @@ export const projectResolvers = {
             return date instanceof Date ? date.toISOString() : date;
         },
         creator: (p: any) => buildRef(p.userId, 'User'),
-        automations: (p: any, _: any, context: GraphQLContext) =>
-            context.loaders.projectAutomations.load(p.id),
     },
     ProjectMember: {
         id: (m: any) => m.id,

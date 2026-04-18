@@ -6,7 +6,6 @@ import { useVirtualizer } from '@tanstack/react-virtual';
 
 interface TaskListViewProps {
   tasks: ProjectTask[];
-  links: TaskLink[];
   hasNextPage?: boolean;
   isFetchingNextPage?: boolean;
   onLoadMore?: () => void;
@@ -14,7 +13,6 @@ interface TaskListViewProps {
 
 export const TaskListView: React.FC<TaskListViewProps> = ({ 
   tasks, 
-  links, 
   hasNextPage, 
   isFetchingNextPage, 
   onLoadMore 
@@ -84,7 +82,7 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
                   transform: `translateY(${virtualRow.start}px)`,
                 }}
               >
-                <TaskListItem task={task} links={links} allTasks={tasks} />
+                <TaskListItem task={task} allTasks={tasks} />
               </div>
             );
           })}
@@ -102,27 +100,10 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
 
 const TaskListItem: React.FC<{
   task: ProjectTask;
-  links: TaskLink[];
   allTasks: ProjectTask[];
-}> = ({ task, links, allTasks }) => {
-  const incomingLinks = links.filter(l => l.targetTaskId === task.id);
-  const outgoingLinks = links.filter(l => l.sourceTaskId === task.id);
-
-  const groupLabel = (linksArr: TaskLink[], type: 'source' | 'target') => {
-    const grouped: Record<string, ProjectTask[]> = {};
-    linksArr.forEach(link => {
-      const taskId = type === 'source' ? link.sourceTaskId : link.targetTaskId;
-      const t = allTasks.find(at => at.id === taskId);
-      if (t) {
-        if (!grouped[link.label]) grouped[link.label] = [];
-        grouped[link.label].push(t);
-      }
-    });
-    return grouped;
-  };
-
-  const incomingByLabel = groupLabel(incomingLinks, 'source');
-  const outgoingByLabel = groupLabel(outgoingLinks, 'target');
+}> = ({ task, allTasks }) => {
+  const incomingCount = task.directIncomingLinksCount || 0;
+  const outgoingCount = task.directOutgoingLinksCount || 0;
 
   return (
     <Link 
@@ -137,16 +118,16 @@ const TaskListItem: React.FC<{
           <span className="font-bold text-white group-hover:text-blue-300 text-base leading-tight truncate">{task.title}</span>
           
           <div className="flex items-center gap-4 opacity-40">
-             {Object.keys(incomingByLabel).length > 0 && (
+             {incomingCount > 0 && (
                <div className="flex items-center gap-1">
                  <ArrowDownLeft size={10} />
-                 <span className="text-[10px] font-bold uppercase tracking-tighter">{Object.values(incomingByLabel).flat().length} Deps</span>
+                 <span className="text-[10px] font-bold uppercase tracking-tighter">{incomingCount} Deps</span>
                </div>
              )}
-             {Object.keys(outgoingByLabel).length > 0 && (
+             {outgoingCount > 0 && (
                <div className="flex items-center gap-1">
                  <ArrowUpRight size={10} />
-                 <span className="text-[10px] font-bold uppercase tracking-tighter">{Object.values(outgoingByLabel).flat().length} Impacts</span>
+                 <span className="text-[10px] font-bold uppercase tracking-tighter">{outgoingCount} Impacts</span>
                </div>
              )}
              <span className="text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 bg-white/5 rounded-md border border-white/5">{task.status}</span>

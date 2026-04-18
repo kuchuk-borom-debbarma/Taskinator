@@ -22,6 +22,12 @@ export interface ProjectTask {
   version: number;
   createdAt: string;
   updatedAt: string;
+  incomingLinksCount: number;
+  outgoingLinksCount: number;
+  directIncomingLinksCount: number;
+  directOutgoingLinksCount: number;
+  incomingLabelCounts: Record<string, number>;
+  outgoingLabelCounts: Record<string, number>;
   team?: Team;
   assignee?: Member;
 }

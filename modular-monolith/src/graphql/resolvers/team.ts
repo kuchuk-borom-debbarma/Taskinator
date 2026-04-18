@@ -24,8 +24,6 @@ export const teamResolvers = {
         },
         creator: (t: any) => buildRef(t.createdBy, 'User'),
         project: (t: any) => buildRef(t.projectId, 'Project'),
-        automations: (t: any, _: any, context: GraphQLContext) =>
-            context.loaders.teamAutomations.load(t.id),
     },
     TeamMember: {
         id: (m: any) => m.id,

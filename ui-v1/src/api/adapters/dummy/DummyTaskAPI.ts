@@ -68,12 +68,14 @@ export class DummyTaskAPI implements TaskAPI {
     { id: 'l25', projectId: 'p2', sourceTaskId: 'r4', targetTaskId: 'r23', label: 'Requires', createdAt: '2026-01-21T00:00:00Z' },
   ];
 
-  async getProjectTasks(projectId: string): Promise<ProjectTask[]> {
-    return this.tasks.filter((t) => t.projectId === projectId);
+  async getProjectTasks(projectId: string, first?: number, after?: string): Promise<{ tasks: ProjectTask[], hasNextPage: boolean, endCursor: string | null }> {
+    const filtered = this.tasks.filter((t) => t.projectId === projectId);
+    return { tasks: filtered, hasNextPage: false, endCursor: null };
   }
 
-  async getProjectLinks(projectId: string): Promise<TaskLink[]> {
-    return this.links.filter((l) => l.projectId === projectId);
+  async getProjectLinks(projectId: string, first?: number, after?: string): Promise<{ links: TaskLink[], hasNextPage: boolean, endCursor: string | null }> {
+    const filtered = this.links.filter((l) => l.projectId === projectId);
+    return { links: filtered, hasNextPage: false, endCursor: null };
   }
 
   async getTask(id: string): Promise<ProjectTask | null> {

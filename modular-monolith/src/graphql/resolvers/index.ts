@@ -4,7 +4,6 @@ import { projectResolvers } from './project';
 import { teamResolvers } from './team';
 import { notificationResolvers } from './notification';
 import { realtimeResolvers } from './realtime';
-import { automationResolvers } from './automation';
 import { taskResolvers } from './task.ts';
 
 export const resolvers = mergeResolvers([
@@ -13,6 +12,5 @@ export const resolvers = mergeResolvers([
     teamResolvers,
     notificationResolvers,
     realtimeResolvers,
-    automationResolvers,
     taskResolvers,
 ]);

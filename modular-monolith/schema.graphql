@@ -19,11 +19,10 @@ type Query {
   searchUsers(search: String, first: Int, after: String, last: Int, before: String): UserSearchResultConnection!
   searchTeamUsers(projectId: ID!, teamId: ID!, search: String, first: Int, after: String, last: Int, before: String): UserSearchResultConnection!
   _empty: String
-  automations(projectId: ID, actorId: ID, teamId: ID, targetScope: String, first: Int, after: String): AutomationRuleConnection!
   projectTasks(projectId: ID!, first: Int, after: String, last: Int, before: String): ProjectTaskConnection!
   task(id: ID!): ProjectTask
   taskNeighbourhood(projectId: ID!, taskId: ID!, maxDepth: Int, first: Int, after: String, last: Int, before: String): TaskNeighbourhood!
-  projectTaskLinks(projectId: ID!): [TaskLink!]!
+  projectTaskLinks(projectId: ID!, first: Int, after: String, last: Int, before: String): TaskLinkConnection!
   projects(first: Int, after: String, last: Int, before: String): ProjectConnection!
   project(id: ID!): Project
   projectMembers(projectId: ID!, first: Int, after: String, last: Int, before: String): ProjectMemberConnection!
@@ -53,9 +52,6 @@ type PageInfo {
 
 type Mutation {
   _empty: String
-  addAutomation(projectId: ID!, name: String!, targetScope: String!, teamId: ID, rules: String!, isActive: Boolean): AutomationRule
-  updateAutomation(automationId: ID!, name: String, targetScope: String, teamId: ID, rules: String, isActive: Boolean): AutomationRule
-  deleteAutomation(automationId: ID!): Boolean
   createTask(projectId: ID!, teamId: ID, memberId: ID, title: String!, description: String, status: String): ProjectTask!
   updateTask(taskId: ID!, title: String, description: String, status: String): ProjectTask!
   deleteTask(taskId: ID!): ID!
@@ -74,28 +70,6 @@ type Mutation {
   removeTeamMembers(projectId: ID!, teamId: ID!, userIds: [String!]!): [String]
 }
 
-type AutomationRule {
-  id: ID!
-  projectId: ID!
-  actorId: String!
-  name: String!
-  targetScope: String!
-  teamId: ID
-  rules: String!
-  isActive: Boolean!
-  createdAt: String!
-  updatedAt: String
-}
-
-type AutomationRuleEdge {
-  node: AutomationRule!
-  cursor: String!
-}
-
-type AutomationRuleConnection {
-  edges: [AutomationRuleEdge!]!
-  pageInfo: PageInfo!
-}
 
 type TaskLink {
   id: ID!
@@ -131,10 +105,20 @@ type NeighbourhoodNode {
   direction: NeighbourDirection!
 }
 
+type NeighbourhoodNodeEdge {
+  node: NeighbourhoodNode!
+  cursor: String!
+}
+
+type NeighbourhoodNodeConnection {
+  edges: [NeighbourhoodNodeEdge!]!
+  pageInfo: PageInfo!
+}
+
 type TaskNeighbourhood {
   focusedTask: ProjectTask!
-  nodes: [NeighbourhoodNode!]!
-  edges: [TaskLink!]!
+  nodes(first: Int, after: String, last: Int, before: String): NeighbourhoodNodeConnection!
+  edges(first: Int, after: String, last: Int, before: String): TaskLinkConnection!
   pageInfo: PageInfo!
 }
 
@@ -160,6 +144,12 @@ type ProjectTask {
   assignee: User
   creator: User
   updater: User
+  incomingLinksCount: Int!
+  outgoingLinksCount: Int!
+  directIncomingLinksCount: Int!
+  directOutgoingLinksCount: Int!
+  incomingLabelCounts: String!
+  outgoingLabelCounts: String!
   incomingLinks(first: Int, after: String, last: Int, before: String): TaskLinkConnection!
   outgoingLinks(first: Int, after: String, last: Int, before: String): TaskLinkConnection!
 }
@@ -184,7 +174,6 @@ type Project {
   createdAt: String!
   updatedAt: String
   version: Int!
-  automations: [AutomationRule!]!
 }
 
 type ProjectEdge {
@@ -249,7 +238,6 @@ type Team {
   createdAt: String!
   updatedAt: String
   version: Int!
-  automations: [AutomationRule!]!
   project: Project
 }
 

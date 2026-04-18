@@ -16,6 +16,12 @@ export type ProjectTask = {
     updatedBy: string;
     createdAt: Date;
     updatedAt: Date;
+    directIncomingCount: number;
+    directOutgoingCount: number;
+    totalIncomingCount: number;
+    totalOutgoingCount: number;
+    incomingLabelCounts: Record<string, number>;
+    outgoingLabelCounts: Record<string, number>;
 };
 
 export type TaskLink = {
@@ -101,7 +107,11 @@ export interface TaskService extends BaseService {
         pagination: PaginationParams,
     ): Promise<LinkConnection>;
 
-    getProjectLinks(userId: string, projectId: string): Promise<TaskLink[]>;
+    getProjectLinks(
+        userId: string, 
+        projectId: string,
+        pagination: PaginationParams
+    ): Promise<LinkConnection>;
 
     getTaskNeighbourhood(params: GetNeighbourhoodParam): Promise<TaskNeighbourhoodResult>;
 }

@@ -5,7 +5,6 @@ import type {
     ProjectTeamTable,
     ProjectTeamMemberTable,
 } from './tables/ProjectTeam.ts';
-import type { AutomationsTable } from './tables/Automation.ts';
 import type { ProcessedEventTable } from './tables/ProcessedEvent.ts';
 import type { UserTable, PendingUserTable } from './tables/User.ts';
 import type { OutboxEventTable } from './tables/OutboxEvent.ts';
@@ -21,7 +20,6 @@ export interface Database {
     project_task: ProjectTaskTable;
     task_link: TaskLinkTable;
     task_reachability: TaskReachabilityTable;
-    automations: AutomationsTable;
     processed_event: ProcessedEventTable;
     users: UserTable;
     pending_users: PendingUserTable;

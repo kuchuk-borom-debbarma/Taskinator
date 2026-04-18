@@ -31,12 +31,6 @@ export default function ProjectTasksIndex() {
 
   const allTasks = (tasksData?.pages.flatMap(page => page.tasks) || []);
 
-  const { data: links } = useQuery({
-    queryKey: ['links', projectId],
-    queryFn: () => taskApi.getProjectLinks(projectId!),
-    enabled: !!projectId,
-  });
-
   const createMutation = useMutation({
     mutationFn: () => taskApi.createTask(projectId!, newTitle.trim(), newDesc.trim() || undefined),
     onSuccess: (task) => {
@@ -61,7 +55,6 @@ export default function ProjectTasksIndex() {
     <div className="relative">
       <TaskListView 
         tasks={allTasks} 
-        links={links || []} 
         hasNextPage={hasNextPage}
         isFetchingNextPage={isFetchingNextPage}
         onLoadMore={() => fetchNextPage()}
