@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useApi } from '../../context/ApiContext';
+import { useApi } from '../../hooks/useApi';
 import { Link, useLocation, useNavigate } from '@tanstack/react-router';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import {
@@ -15,6 +15,8 @@ import {
   X,
   Check,
   Loader2,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
@@ -118,6 +120,7 @@ export const Sidebar: React.FC = () => {
     queryFn: ({ pageParam }) => projectApi.getProjects(5, pageParam),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (lastPage) => lastPage.hasNextPage ? lastPage.endCursor : undefined,
+    maxPages: 1,
   });
 
   const allProjects = useMemo(() =>
@@ -126,49 +129,6 @@ export const Sidebar: React.FC = () => {
   );
 
   const parentRef = useRef<HTMLElement>(null);
-
-  const rowVirtualizer = useVirtualizer({
-    count: allProjects.length,
-    getScrollElement: () => parentRef.current,
-    estimateSize: () => 48,
-    overscan: 10,
-  });
-
-  const isTriggeringRef = useRef(false);
-
-  // Reset the trigger guard when fetching finishes
-  useEffect(() => {
-    if (!isFetchingNextPage) {
-      isTriggeringRef.current = false;
-    }
-  }, [isFetchingNextPage]);
-
-  // Stable ref for scroll handler
-  const scrollPropsRef = useRef({ hasNextPage, isFetchingNextPage, allProjects, fetchNextPage });
-  useEffect(() => {
-    scrollPropsRef.current = { hasNextPage, isFetchingNextPage, allProjects, fetchNextPage };
-  });
-
-  useEffect(() => {
-    const el = parentRef.current;
-    if (!el) return;
-
-    const handleScroll = () => {
-      if (isTriggeringRef.current) return;
-      const { hasNextPage, isFetchingNextPage, allProjects, fetchNextPage } = scrollPropsRef.current;
-      const virtualItems = rowVirtualizer.getVirtualItems();
-      if (virtualItems.length === 0) return;
-
-      const lastItem = virtualItems[virtualItems.length - 1];
-      if (lastItem.index >= allProjects.length - 1 && hasNextPage && !isFetchingNextPage) {
-        isTriggeringRef.current = true;
-        fetchNextPage();
-      }
-    };
-
-    el.addEventListener('scroll', handleScroll, { passive: true });
-    return () => el.removeEventListener('scroll', handleScroll);
-  }, [rowVirtualizer]);
 
   return (
     <>
@@ -235,45 +195,43 @@ export const Sidebar: React.FC = () => {
             </button>
           </div>
 
-          <div
-            style={{
-              height: `${rowVirtualizer.getTotalSize()}px`,
-              width: '100%',
-              position: 'relative',
-            }}
-          >
-            {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-              const p = allProjects[virtualRow.index];
-              return (
-                <div
-                  key={virtualRow.key}
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    height: `${virtualRow.size}px`,
-                    transform: `translateY(${virtualRow.start}px)`,
-                  }}
-                  className="py-0.5"
-                >
-                  <SidebarItem
-                    to="/projects/$projectId"
-                    params={{ projectId: p.id }}
-                    label={p.name}
-                    icon={<Hash size={14} className="text-white/20 group-hover:text-white/40 transition-colors" />}
-                    active={location.pathname.startsWith(`/projects/${p.id}`)}
-                  />
-                </div>
-              );
-            })}
+          <div className="flex-1 overflow-y-auto custom-scrollbar px-3 space-y-1">
+            {allProjects.map((p) => (
+              <SidebarItem
+                key={p.id}
+                to="/projects/$projectId"
+                params={{ projectId: p.id }}
+                label={p.name}
+                icon={<Hash size={14} className="text-white/20 group-hover:text-white/40 transition-colors" />}
+                active={location.pathname.startsWith(`/projects/${p.id}`)}
+              />
+            ))}
+
+            {allProjects.length === 0 && !isFetchingNextPage && (
+              <div className="px-3 py-3 text-[11px] text-white/15 font-medium italic">
+                No projects found.
+              </div>
+            )}
           </div>
 
-          {isFetchingNextPage && (
-            <div className="flex items-center justify-center py-4 opacity-20">
-              <Loader2 size={14} className="animate-spin" />
-            </div>
-          )}
+          <div className="p-3 border-t border-white/5 flex items-center justify-between gap-2">
+             <button
+              onClick={() => { /* Not implemented for projects yet, but standard pattern below */ }}
+              disabled={true}
+              className="flex-1 py-2 px-3 rounded-lg bg-white/5 border border-white/10 text-[10px] font-black uppercase tracking-widest text-white/30 disabled:opacity-20 flex items-center justify-center gap-1.5"
+            >
+              <ChevronLeft size={12} />
+              Prev
+            </button>
+            <button
+              onClick={() => fetchNextPage()}
+              disabled={!hasNextPage || isFetchingNextPage}
+              className="flex-1 py-2 px-3 rounded-lg bg-white/5 border border-white/10 text-[10px] font-black uppercase tracking-widest text-white/80 hover:bg-white/10 transition-all disabled:opacity-20 flex items-center justify-center gap-1.5"
+            >
+              {isFetchingNextPage ? <Loader2 size={12} className="animate-spin" /> : <span>Next</span>}
+              <ChevronRight size={12} />
+            </button>
+          </div>
 
           {allProjects.length === 0 && !isFetchingNextPage && (
             <div className="px-3 py-3">

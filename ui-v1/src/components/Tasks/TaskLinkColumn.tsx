@@ -1,9 +1,9 @@
 import React, { useMemo, useRef, useEffect } from 'react';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { useApi } from '../../context/ApiContext';
+import { useApi } from '../../hooks/useApi';
 import { getLinkLabelColor } from '../../utils/color';
-import { Loader2, ArrowRight } from 'lucide-react';
+import { Loader2, ArrowRight, ChevronRight } from 'lucide-react';
 import { Link } from '@tanstack/react-router';
 
 interface TaskLinkColumnProps {
@@ -30,6 +30,7 @@ export const TaskLinkColumn: React.FC<TaskLinkColumnProps> = ({ taskId, directio
         : taskApi.getTaskOutgoingLinks(taskId, 15, pageParam),
     initialPageParam: undefined as string | undefined,
     getNextPageParam: (lastPage) => lastPage.hasNextPage ? lastPage.endCursor : undefined,
+    maxPages: 1,
   });
 
   // Flatten and Group
@@ -62,51 +63,6 @@ export const TaskLinkColumn: React.FC<TaskLinkColumnProps> = ({ taskId, directio
     return items;
   }, [data]);
 
-  const rowVirtualizer = useVirtualizer({
-    count: virtualData.length,
-    getScrollElement: () => parentRef.current,
-    estimateSize: (index) => virtualData[index].type === 'header' ? 40 : 85,
-    overscan: 10,
-  });
-
-  const isTriggeringRef = useRef(false);
-
-  // Reset the trigger guard when fetching finishes
-  useEffect(() => {
-    if (!isFetchingNextPage) {
-      isTriggeringRef.current = false;
-    }
-  }, [isFetchingNextPage]);
-
-  // Stable ref for scroll handler props
-  const scrollPropsRef = useRef({ hasNextPage, isFetchingNextPage, virtualData, fetchNextPage });
-  useEffect(() => {
-    scrollPropsRef.current = { hasNextPage, isFetchingNextPage, virtualData, fetchNextPage };
-  });
-
-  // Infinite Scroll Trigger — uses scroll listener instead of virtualItems dep
-  // to avoid the double-fetch caused by getVirtualItems() returning a new array
-  // reference each render and re-running the effect on every paint.
-  useEffect(() => {
-    const el = parentRef.current;
-    if (!el) return;
-
-    const handleScroll = () => {
-      if (isTriggeringRef.current) return;
-      const { hasNextPage, isFetchingNextPage, virtualData, fetchNextPage } = scrollPropsRef.current;
-      const virtualItems = rowVirtualizer.getVirtualItems();
-      if (virtualItems.length === 0) return;
-
-      const lastItem = virtualItems[virtualItems.length - 1];
-      if (lastItem.index >= virtualData.length - 5 && hasNextPage && !isFetchingNextPage) {
-        isTriggeringRef.current = true;
-        fetchNextPage();
-      }
-    };
-
-    el.addEventListener('scroll', handleScroll, { passive: true });
-    return () => el.removeEventListener('scroll', handleScroll);
-  }, [rowVirtualizer]);
 
   if (isLoading) {
     return (
@@ -123,82 +79,70 @@ export const TaskLinkColumn: React.FC<TaskLinkColumnProps> = ({ taskId, directio
 
       <div
         ref={parentRef}
-        className="flex-1 w-full overflow-y-auto custom-scrollbar pr-2 min-h-[400px]"
+        className="flex-1 w-full overflow-y-auto custom-scrollbar pr-2 min-h-[400px] flex flex-col gap-2"
       >
         {virtualData.length === 0 ? (
           <div className="py-12 border-2 border-dashed border-border-notion rounded-2xl flex items-center justify-center text-text-dim/40 text-[13px] font-medium italic">
             No {direction} links found
           </div>
         ) : (
-          <div
-            style={{
-              height: `${rowVirtualizer.getTotalSize()}px`,
-              width: '100%',
-              position: 'relative',
-            }}
-          >
-            {rowVirtualizer.getVirtualItems().map((virtualRow) => {
-              const item = virtualData[virtualRow.index];
+          <>
+            {virtualData.map((item, idx) => {
               const isHeader = item.type === 'header';
 
+              if (isHeader) {
+                return (
+                  <div key={idx} className="flex items-center gap-2 pt-4 pb-2 px-1">
+                    <div
+                      className="w-1.5 h-1.5 rounded-full"
+                      style={{ backgroundColor: getLinkLabelColor(item.label) }}
+                    />
+                    <span className="text-[10px] font-black uppercase tracking-widest text-text-notion/60">{item.label}</span>
+                    <div className="flex-1 h-px bg-border-notion opacity-50" />
+                  </div>
+                );
+              }
+
               return (
-                <div
-                  key={virtualRow.key}
-                  style={{
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '100%',
-                    height: `${virtualRow.size}px`,
-                    transform: `translateY(${virtualRow.start}px)`,
+                <Link
+                  key={idx}
+                  to="/projects/$projectId/tasks/$taskId"
+                  params={{
+                    projectId: item.link.projectId,
+                    taskId: direction === 'incoming' ? item.link.sourceTask.id : item.link.targetTask.id
                   }}
-                  className="px-1"
+                  className="group flex flex-col justify-center px-4 min-h-[75px] bg-white border border-border-notion rounded-xl hover:border-focus-blue/30 hover:shadow-md transition-all mb-1"
                 >
-                  {isHeader ? (
-                    <div className="flex items-center gap-2 h-full pt-4 pb-2">
-                      <div
-                        className="w-1.5 h-1.5 rounded-full"
-                        style={{ backgroundColor: getLinkLabelColor(item.label) }}
-                      />
-                      <span className="text-[10px] font-black uppercase tracking-widest text-text-notion/60">{item.label}</span>
-                      <div className="flex-1 h-px bg-border-notion opacity-50" />
-                    </div>
-                  ) : (
-                    <Link
-                      to="/projects/$projectId/tasks/$taskId"
-                      params={{
-                        projectId: item.link.projectId,
-                        taskId: direction === 'incoming' ? item.link.sourceTask.id : item.link.targetTask.id
-                      }}
-                      className="group flex flex-col justify-center px-4 h-[75px] bg-white border border-border-notion rounded-xl hover:border-focus-blue/30 hover:shadow-md transition-all mb-2"
-                    >
-                      <div className="flex items-start justify-between">
-                        <span className="text-[14px] font-bold text-text-notion group-hover:text-focus-blue transition-colors line-clamp-1">
-                          {(direction === 'incoming' ? item.link.sourceTask.title : item.link.targetTask.title) || 'Untitled Task'}
-                        </span>
-                        <ArrowRight size={14} className="opacity-0 group-hover:opacity-40 transition-all -translate-x-2 group-hover:translate-x-0" />
-                      </div>
-                      <div className="flex items-center gap-2 mt-1">
-                        <span className="text-[9px] font-bold uppercase tracking-tighter opacity-40">
-                          {direction === 'incoming' ? item.link.sourceTask.status : item.link.targetTask.status}
-                        </span>
-                        <div className="w-1 h-1 rounded-full bg-border-notion" />
-                        <span className="text-[9px] font-medium text-text-dim">
-                          {new Date(item.link.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-                        </span>
-                      </div>
-                    </Link>
-                  )}
-                </div>
+                  <div className="flex items-start justify-between">
+                    <span className="text-[14px] font-bold text-text-notion group-hover:text-focus-blue transition-colors line-clamp-1">
+                      {(direction === 'incoming' ? item.link.sourceTask.title : item.link.targetTask.title) || 'Untitled Task'}
+                    </span>
+                    <ArrowRight size={14} className="opacity-0 group-hover:opacity-40 transition-all -translate-x-2 group-hover:translate-x-0" />
+                  </div>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-[9px] font-bold uppercase tracking-tighter opacity-40">
+                      {direction === 'incoming' ? item.link.sourceTask.status : item.link.targetTask.status}
+                    </span>
+                    <div className="w-1 h-1 rounded-full bg-border-notion" />
+                    <span className="text-[9px] font-medium text-text-dim">
+                      {new Date(item.link.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+                    </span>
+                  </div>
+                </Link>
               );
             })}
-          </div>
-        )}
 
-        {isFetchingNextPage && (
-          <div className="py-4 flex justify-center opacity-30">
-            <Loader2 size={16} className="animate-spin" />
-          </div>
+            {hasNextPage && (
+              <button
+                onClick={() => fetchNextPage()}
+                disabled={isFetchingNextPage}
+                className="mt-4 p-3 rounded-xl border border-dashed border-border-notion text-[11px] font-bold uppercase tracking-widest text-text-dim hover:text-focus-blue hover:border-focus-blue/30 transition-all flex items-center justify-center gap-2"
+              >
+                {isFetchingNextPage ? <Loader2 size={14} className="animate-spin" /> : <ChevronRight size={14} />}
+                {isFetchingNextPage ? 'Loading...' : 'Load More'}
+              </button>
+            )}
+          </>
         )}
       </div>
     </div>

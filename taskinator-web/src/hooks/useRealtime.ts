@@ -1,15 +1,12 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { logger } from '../utils/logger.ts';
 
 const API_GQL_URL = 'http://127.0.0.1:3000/graphql';
 
-/**
- * useRealtime hook establishes a SINGLE Unified GraphQL Subscription over SSE
- * and triggers React Query invalidations based on the event type (__typename).
- */
 export const useRealtime = (userId: string | undefined, projectId: string | undefined) => {
     const queryClient = useQueryClient();
+    const taskInvalidationTimer = useRef<NodeJS.Timeout>();
 
     const handleMessage = useCallback((event: MessageEvent) => {
         try {
@@ -23,16 +20,22 @@ export const useRealtime = (userId: string | undefined, projectId: string | unde
                 case 'TaskCreated':
                 case 'TaskUpdated':
                 case 'TaskDeleted':
-                    logger.info(`[Realtime] Task event: ${type}`);
-                    queryClient.invalidateQueries({ queryKey: ['workspace', projectId, userId] });
+                    logger.info(`[Realtime] Task event: ${type} - Queuing Invalidations`);
+
+                    // Debounce rapid bulk updates into a single network call
+                    if (taskInvalidationTimer.current) clearTimeout(taskInvalidationTimer.current);
+
+                    taskInvalidationTimer.current = setTimeout(() => {
+                        queryClient.invalidateQueries({ queryKey: ['workspace', projectId, userId] });
+                    }, 300); // 300ms pooling window
                     break;
-                
+
                 case 'InternalNotification':
                     logger.info('[Realtime] New notification received');
                     queryClient.invalidateQueries({ queryKey: ['notifications-unread', userId] });
                     queryClient.invalidateQueries({ queryKey: ['notifications', userId] });
                     break;
-                
+
                 default:
                     logger.warn(`[Realtime] Unknown event type: ${type}`);
             }
@@ -45,8 +48,6 @@ export const useRealtime = (userId: string | undefined, projectId: string | unde
         const token = localStorage.getItem('token');
         if (!token || !userId) return;
 
-        // Unified Subscription for EVERYTHING
-        // We pass projectId to filter task events, but notifications are global for the user.
         const query = `
             subscription {
                 realtimeStream(projectId: "${projectId || ''}") {
@@ -61,13 +62,14 @@ export const useRealtime = (userId: string | undefined, projectId: string | unde
 
         const url = `${API_GQL_URL}?query=${encodeURIComponent(query)}&token=${encodeURIComponent(token)}`;
         const es = new EventSource(url);
-        
+
         es.onopen = () => logger.info('[Realtime] Unified Stream connection opened');
         es.onerror = (e) => logger.error('[Realtime] Unified Stream connection error', e);
         es.onmessage = handleMessage;
-        
+
         return () => {
             logger.info('[Realtime] Closing Unified Stream connection');
+            if (taskInvalidationTimer.current) clearTimeout(taskInvalidationTimer.current);
             es.close();
         };
     }, [userId, projectId, handleMessage]);

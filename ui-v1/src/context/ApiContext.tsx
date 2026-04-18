@@ -13,7 +13,7 @@ interface ApiContextType {
   teamApi: TeamAPI;
 }
 
-const ApiContext = createContext<ApiContextType | null>(null);
+export const ApiContext = createContext<ApiContextType | null>(null);
 
 export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { token, logout } = useAuth();
@@ -31,10 +31,3 @@ export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   );
 };
 
-export const useApi = () => {
-  const context = useContext(ApiContext);
-  if (!context) {
-    throw new Error('useApi must be used within an ApiProvider');
-  }
-  return context;
-};

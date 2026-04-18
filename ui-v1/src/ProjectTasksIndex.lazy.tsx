@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from '@tanstack/react-router';
-import { useApi } from './context/ApiContext';
+import { useApi } from './hooks/useApi';
 import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { TaskListView } from './components/Tasks/TaskListView';
 import { useState } from 'react';
@@ -56,7 +56,7 @@ export default function ProjectTasksIndex() {
         ? { direction: 'backward' as const, cursor: firstPage.startCursor }
         : undefined,
     enabled: !!projectId,
-    maxPages: 10, // Sliding window: keep max 50 tasks (10 pages × 5) in memory
+    maxPages: 1, // Traditional pagination: replace list on page change
   });
 
   const allTasks = tasksData?.pages.flatMap((page) => page.tasks) ?? [];
