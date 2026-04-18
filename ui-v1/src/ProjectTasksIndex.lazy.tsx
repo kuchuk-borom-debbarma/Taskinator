@@ -1,4 +1,4 @@
-import { useParams, useNavigate } from '@tanstack/react-router';
+import { useParams, useNavigate, useSearch } from '@tanstack/react-router';
 import { useApi } from './hooks/useApi';
 import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { TaskListView } from './components/Tasks/TaskListView';
@@ -12,6 +12,7 @@ type CursorParam =
 
 export default function ProjectTasksIndex() {
   const { projectId } = useParams({ strict: false });
+  const { cursor, direction } = useSearch({ from: '/authenticated-layout/projects/$projectId/' });
   const { taskApi } = useApi();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
@@ -22,31 +23,31 @@ export default function ProjectTasksIndex() {
   const {
     data: tasksData,
     isLoading,
-    fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
-    fetchPreviousPage,
     hasPreviousPage,
     isFetchingPreviousPage,
   } = useInfiniteQuery({
-    queryKey: ['tasks', projectId],
+    queryKey: ['tasks', projectId, cursor, direction],
     queryFn: ({ pageParam }: { pageParam: CursorParam }) => {
-      if (pageParam?.direction === 'backward') {
+      const activeParam = pageParam || (cursor ? { direction: direction || 'forward', cursor } : undefined);
+      
+      if (activeParam?.direction === 'backward') {
         return taskApi.getProjectTasks(
           projectId!,
           undefined,
           undefined,
           5,
-          pageParam.cursor,
+          activeParam.cursor,
         );
       }
       return taskApi.getProjectTasks(
         projectId!,
         5,
-        pageParam?.direction === 'forward' ? pageParam.cursor : undefined,
+        activeParam?.direction === 'forward' ? activeParam.cursor : undefined,
       );
     },
-    initialPageParam: undefined as CursorParam,
+    initialPageParam: (cursor ? { direction: direction || 'forward', cursor } : undefined) as CursorParam,
     getNextPageParam: (lastPage) =>
       lastPage.hasNextPage
         ? { direction: 'forward' as const, cursor: lastPage.endCursor }
@@ -56,7 +57,7 @@ export default function ProjectTasksIndex() {
         ? { direction: 'backward' as const, cursor: firstPage.startCursor }
         : undefined,
     enabled: !!projectId,
-    maxPages: 1, // Traditional pagination: replace list on page change
+    maxPages: 1, 
   });
 
   const allTasks = tasksData?.pages.flatMap((page) => page.tasks) ?? [];
@@ -99,8 +100,30 @@ export default function ProjectTasksIndex() {
         hasPreviousPage={hasPreviousPage}
         isFetchingNextPage={isFetchingNextPage}
         isFetchingPreviousPage={isFetchingPreviousPage}
-        onLoadMore={() => fetchNextPage()}
-        onLoadPrev={() => fetchPreviousPage()}
+        onLoadMore={() => {
+          const lastPage = tasksData?.pages[tasksData.pages.length - 1];
+          if (lastPage?.hasNextPage) {
+            navigate({
+              search: (prev) => ({ 
+                ...prev, 
+                cursor: lastPage.endCursor!, 
+                direction: 'forward' as const 
+              }),
+            });
+          }
+        }}
+        onLoadPrev={() => {
+          const firstPage = tasksData?.pages[0];
+          if (firstPage?.hasPreviousPage) {
+            navigate({
+              search: (prev) => ({ 
+                ...prev, 
+                cursor: firstPage.startCursor!, 
+                direction: 'backward' as const 
+              }),
+            });
+          }
+        }}
       />
 
       {/* Floating Create Task Button */}
