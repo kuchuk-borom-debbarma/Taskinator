@@ -1,8 +1,8 @@
-import type { BaseService } from './index.ts';
+import type {BaseService} from './index.ts';
 
 export type TaskStatus = string;
 
-export type ProjectTask = {
+export type Task = {
     id: string;
     projectId: string;
     teamId: string | null;
@@ -34,7 +34,8 @@ export type TaskLink = {
     label: string;
     createdBy: string;
     createdAt: Date;
-    createdAtPrecision?: string;
+    updatedBy?: string;
+    updatedAt?: string;
 };
 
 export interface CreateTaskParam {
@@ -74,7 +75,7 @@ export interface PaginationParams {
 }
 
 export interface TaskConnection {
-    tasks: ProjectTask[];
+    tasks: Task[];
     nextCursor: string | null;
     prevCursor: string | null;
 }
@@ -93,10 +94,14 @@ export interface GetTaskLinksParam {
 }
 
 export interface TaskService extends BaseService {
-    createTask(data: CreateTaskParam): Promise<ProjectTask>;
+    createTask(data: CreateTaskParam): Promise<Task>;
+
     createLink(data: CreateLinkParam): Promise<TaskLink>;
-    updateTask(data: UpdateTaskParam): Promise<ProjectTask>;
+
+    updateTask(data: UpdateTaskParam): Promise<Task>;
+
     deleteTask(userId: string, taskId: string): Promise<void>;
+
     deleteLink(userId: string, linkId: string): Promise<void>;
 
     // Read Operations
@@ -106,7 +111,7 @@ export interface TaskService extends BaseService {
         params: PaginationParams,
     ): Promise<TaskConnection>;
 
-    getTasksByIds(userId: string, ids: string[]): Promise<ProjectTask[]>;
+    getTasksByIds(userId: string, ids: string[]): Promise<Task[]>;
 
     getTaskLinks(
         params: GetTaskLinksParam,
@@ -133,7 +138,7 @@ export interface NeighbourRecord {
     taskId: string;
     depth: number;
     direction: NeighbourDirection;
-    task?: ProjectTask;
+    task?: Task;
 }
 
 export interface TaskNeighbourhoodResult {

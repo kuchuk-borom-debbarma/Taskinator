@@ -20,12 +20,20 @@ export const authResolvers = {
             if (!context.userId) return null;
             return context.loaders.user.byId.load(context.userId);
         },
-        user: (_parent: any, { id }: { id: string }, context: GraphQLContext) => {
+        user: (
+            _parent: any,
+            { id }: { id: string },
+            context: GraphQLContext,
+        ) => {
             return context.loaders.user.byId.load(id);
         },
-        users: async (_parent: any, { ids }: { ids: string[] }, context: GraphQLContext) => {
+        users: async (
+            _parent: any,
+            { ids }: { ids: string[] },
+            context: GraphQLContext,
+        ) => {
             const results = await context.loaders.user.byId.loadMany(ids);
-            return results.filter(res => res && !(res instanceof Error));
+            return results.filter((res) => res && !(res instanceof Error));
         },
     },
 };

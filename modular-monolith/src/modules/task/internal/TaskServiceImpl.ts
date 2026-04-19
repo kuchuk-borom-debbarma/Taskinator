@@ -5,7 +5,7 @@ import type {
     GetTaskLinksParam,
     LinkConnection,
     PaginationParams,
-    ProjectTask,
+    Task,
     TaskConnection,
     TaskLink,
     TaskNeighbourhoodResult,
@@ -26,7 +26,7 @@ import {
 } from './TaskQueries.ts';
 
 export class TaskServiceImpl implements TaskService {
-    async createTask(data: CreateTaskParam): Promise<ProjectTask> {
+    async createTask(data: CreateTaskParam): Promise<Task> {
         return await insertTask(data);
     }
 
@@ -34,7 +34,7 @@ export class TaskServiceImpl implements TaskService {
         return await insertLink(data);
     }
 
-    async updateTask(data: UpdateTaskParam): Promise<ProjectTask> {
+    async updateTask(data: UpdateTaskParam): Promise<Task> {
         return await updateTaskQuery(data);
     }
 
@@ -54,7 +54,7 @@ export class TaskServiceImpl implements TaskService {
         return getTasksPage(userId, projectId || null, params);
     }
 
-    async getTasksByIds(userId: string, ids: string[]): Promise<ProjectTask[]> {
+    async getTasksByIds(userId: string, ids: string[]): Promise<Task[]> {
         return await getTasksByIdsQuery(userId, ids);
     }
 

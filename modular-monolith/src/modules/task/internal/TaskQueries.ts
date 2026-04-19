@@ -8,7 +8,7 @@ import type {
     GetNeighbourhoodParam,
     NeighbourRecord,
     PaginationParams,
-    ProjectTask,
+    Task,
     TaskLink,
     TaskNeighbourhoodResult,
 } from '../TaskService.ts';
@@ -20,8 +20,8 @@ import {
 
 export const insertTask = async (
     data: CreateTaskParam,
-): Promise<ProjectTask> => {
-    const result = await sql<ProjectTask>`
+): Promise<Task> => {
+    const result = await sql<Task>`
         WITH auth_check AS (
             SELECT 1 FROM project WHERE id = ${data.projectId}::uuid AND fk_user_id = ${data.userId}
             UNION ALL
@@ -391,7 +391,7 @@ export const getTasksPage = async (
     projectId: string,
     params: PaginationParams,
 ): Promise<{
-    tasks: ProjectTask[];
+    tasks: Task[];
     nextCursor: string | null;
     prevCursor: string | null;
 }> => {
@@ -413,7 +413,7 @@ export const getTasksPage = async (
         `[TaskQueries] getTasksPage - User: ${userId}, Project: ${projectId}, cursor: ${cursor}, isBackward: ${isBackward}, limit: ${limit}`,
     );
 
-    const result = await sql<ProjectTask & { epochPrecision: string }>`
+    const result = await sql<Task & { epochPrecision: string }>`
         WITH auth_check AS (
             SELECT 1 WHERE ${projectId}::uuid IS NULL AND ${params.memberId ?? null}::text IS NOT NULL
             UNION ALL
@@ -505,10 +505,10 @@ export const getTasksPage = async (
 export const getTasksByIds = async (
     userId: string,
     ids: string[],
-): Promise<ProjectTask[]> => {
+): Promise<Task[]> => {
     if (ids.length === 0) return [];
 
-    const result = await sql<ProjectTask>`
+    const result = await sql<Task>`
         SELECT 
             id,
             fk_project_id AS "projectId",
@@ -876,8 +876,8 @@ export const getNeighbourhood = async (
 
 export const updateTaskQuery = async (
     data: UpdateTaskParam,
-): Promise<ProjectTask> => {
-    const result = await sql<ProjectTask>`
+): Promise<Task> => {
+    const result = await sql<Task>`
         WITH auth_check AS (
             SELECT p.id FROM project_task t
             JOIN project p ON t.fk_project_id = p.id

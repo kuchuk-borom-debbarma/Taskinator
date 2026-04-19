@@ -1,6 +1,7 @@
 import type { GraphQLContext } from '../context.ts';
-import type { Team, TeamMember } from '../../modules/team/TeamService.ts';
+import type { Team, TeamMember } from '../../modules/team';
 import type { Project } from '../../modules/project/ProjectService.ts';
+import { NotFoundError } from '../errors.ts';
 
 interface PaginationArgs {
   first?: number;
@@ -18,8 +19,12 @@ export const teamResolvers = {
         },
         members: (parent: Team, _args: PaginationArgs, _context: GraphQLContext) => null,
         tasks: (parent: Team, _args: PaginationArgs, _context: GraphQLContext) => null,
-        createdBy: (parent: Team, _args: any, context: GraphQLContext) => {
-            return context.loaders.user.byId.load(parent.createdBy);
+        createdBy: async (parent: Team, _args: any, context: GraphQLContext) => {
+            const user = await context.loaders.user.byId.load(parent.createdBy);
+            if (!user) {
+                throw new NotFoundError(`Creator User with ID ${parent.createdBy} not found for team ${parent.id}`);
+            }
+            return user;
         },
         createdAt: (parent: Team) => parent.createdAt.toISOString(),
         updatedAt: (parent: Team) => parent.updatedAt?.toISOString() || null,
@@ -29,12 +34,22 @@ export const teamResolvers = {
 
     TeamMember: {
         id: (parent: TeamMember) => parent.id,
-        user: (parent: TeamMember, _args: any, context: GraphQLContext) => {
-            return context.loaders.user.byId.load(parent.userId);
+        user: async (parent: TeamMember, _args: any, context: GraphQLContext) => {
+            const user = await context.loaders.user.byId.load(parent.userId);
+            if (!user) {
+                throw new NotFoundError(`User with ID ${parent.userId} not found for team member ${parent.id}`);
+            }
+            return user;
         },
-        team: (parent: TeamMember, _args: any, _context: GraphQLContext) => {
-            // Need team loader
-            return null;
+        team: async (parent: TeamMember, _args: any, context: GraphQLContext) => {
+            const team = await context.loaders.team.byId.load({
+                actorId: context.userId || '',
+                teamId: parent.teamId
+            });
+            if (!team) {
+                throw new NotFoundError(`Team with ID ${parent.teamId} not found for member ${parent.id}`);
+            }
+            return team;
         },
         createdAt: (parent: TeamMember) => parent.createdAt.toISOString(),
         version: (parent: TeamMember) => parent.version,
@@ -45,11 +60,19 @@ export const teamResolvers = {
     },
 
     Query: {
-        team: (_parent: any, { id }: { id: string }, _context: GraphQLContext) => {
-            return null;
+        team: (_parent: any, { id }: { id: string }, context: GraphQLContext) => {
+            return context.loaders.team.byId.load({
+                actorId: context.userId || '',
+                teamId: id
+            });
         },
-        teams: (_parent: any, { ids }: { ids?: string[] }, _context: GraphQLContext) => {
-            return [];
+        teams: async (_parent: any, { ids }: { ids?: string[] }, context: GraphQLContext) => {
+            if (!ids || ids.length === 0) return [];
+            const actorId = context.userId || '';
+            const results = await context.loaders.team.byId.loadMany(
+                ids.map(teamId => ({ actorId, teamId }))
+            );
+            return results.filter((res): res is Team => res !== null && !(res instanceof Error));
         },
         teamMembers: (_parent: any, { teamId, first, after, last, before }: any, _context: GraphQLContext) => {
             return null;

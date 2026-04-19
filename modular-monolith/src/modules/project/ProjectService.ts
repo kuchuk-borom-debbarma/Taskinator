@@ -1,4 +1,4 @@
-import type {BaseService} from './index.ts';
+import type { BaseService } from './index.ts';
 
 export type Project = {
     id: string;
@@ -118,7 +118,10 @@ export interface ProjectService extends BaseService {
     /**
      * Batch fetch projects by IDs. Used by DataLoaders.
      */
-    getProjectsByActorIdAndProjectIds(userId: string, projectIds: string[]): Promise<Project[]>;
+    getProjectsByActorIdAndProjectIds(
+        userId: string,
+        projectIds: string[],
+    ): Promise<Project[]>;
 
     searchProjectMembers(params: {
         actorId: string;

@@ -15,10 +15,13 @@ router.get('/', async (req: any, res: Response) => {
         const cursor = req.query.cursor as string | undefined;
         const limit = parseInt(req.query.limit as string) || 20;
 
-        const result = await projectService.getProjectsOfUser(userId as string, {
-            after: cursor,
-            first: limit,
-        });
+        const result = await projectService.getProjectsOfUser(
+            userId as string,
+            {
+                after: cursor,
+                first: limit,
+            },
+        );
         res.status(200).json(result);
     } catch (error: any) {
         console.error('[REST] Error fetching projects:', error);

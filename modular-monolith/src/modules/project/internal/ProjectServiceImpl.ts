@@ -26,7 +26,7 @@ import eventBus from '../../../utils/EventBus.ts';
 
 export class ProjectServiceImpl implements ProjectService {
     getProjectsByIds(ids: string[]): Promise<Project[]> {
-        throw new Error("Method not implemented.");
+        throw new Error('Method not implemented.');
     }
     async getProjectsOfUser(
         userId: string,

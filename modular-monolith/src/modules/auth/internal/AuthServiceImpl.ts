@@ -116,9 +116,7 @@ export class AuthServiceImpl implements AuthService {
         return { token };
     }
 
-    async searchUsers(
-        params: SearchUsersParam,
-    ): Promise<{
+    async searchUsers(params: SearchUsersParam): Promise<{
         users: User[];
         nextCursor: string | null;
         prevCursor: string | null;
