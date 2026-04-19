@@ -52,7 +52,7 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
             </span>
           </h1>
           <p className="text-text-dim text-sm font-medium">
-            Perspective: High-performance task orchestration.
+            Project: High-performance task orchestration.
           </p>
         </div>
 
