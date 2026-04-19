@@ -1,13 +1,23 @@
+# ─────────────────────────────────────────────
+# User
+# ─────────────────────────────────────────────
+
+"""An authenticated user of the application."""
 type User {
-    id: ID!
-    username: String!
+  """Unique identifier for the user."""
+  id: ID!
+
+  """The user's unique username."""
+  username: String!
 }
 
-type UserSearchResultEdge {
-    node: User!
+"""Relay-style paginated list of users."""
+type UserConnection {
+  edges: [UserEdge!]!
+  pageInfo: PageInfo!
 }
 
-type UserSearchResultConnection {
-    edges: [UserSearchResultEdge!]!
-    pageInfo: PageInfo!
+type UserEdge {
+  node: User!
+  cursor: String!
 }

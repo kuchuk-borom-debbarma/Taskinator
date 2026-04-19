@@ -1,62 +1,115 @@
-# Project types
+# ─────────────────────────────────────────────
+# Project
+# ─────────────────────────────────────────────
+
+"""A workspace that groups tasks, teams, and members together."""
 type Project {
-    """ID of the project"""
-    id: ID!
-    """Name of the project"""
-    name: String!
-    """Desc of the project """
-    description: String
-    """User who created the project"""
-    creator: User!
-    """Members of the project"""
-    projectMembers: ProjectConnection!
-    createdAt: String!
-    updatedAt: String
-    version: Int!
+  """Unique identifier for the project."""
+  id: ID!
+
+  """Display name of the project."""
+  name: String!
+
+  """Optional description of the project's purpose or scope."""
+  description: String
+
+  """User who created this project."""
+  creator: User!
+
+  """Paginated list of members belonging to this project."""
+  projectMembers(
+    """Forward pagination — return the first N members."""
+    first: Int
+    """Forward pagination — return members after this cursor."""
+    after: String
+    """Backward pagination — return the last N members."""
+    last: Int
+    """Backward pagination — return members before this cursor."""
+    before: String
+  ): ProjectMemberConnection!
+
+  """ISO 8601 creation timestamp."""
+  createdAt: String!
+
+  """ISO 8601 last-updated timestamp."""
+  updatedAt: String
+
+  """
+  Optimistic-concurrency version counter.
+  Incremented on every write. Use to detect stale updates.
+  """
+  version: Int!
+
+  """
+  ID of the most recent event applied to this project.
+  Useful for event-sourcing consumers.
+  """
+  lastEventId: ID
 }
 
+"""A membership record joining a user to a project."""
 type ProjectMember {
-    id: ID!
-    project: Project!
-    user: User
-    createdAt: String!
-    version: Int!
+  """Unique identifier for this membership record."""
+  id: ID!
+
+  """The project this membership belongs to."""
+  project: Project!
+
+  """The user who is a member of the project."""
+  user: User
+
+  """ISO 8601 timestamp of when the user joined the project."""
+  createdAt: String!
+
+  """
+  Optimistic-concurrency version counter.
+  Incremented on every write. Use to detect stale updates.
+  """
+  version: Int!
 }
 
+"""Relay-style paginated list of projects."""
 type ProjectConnection {
-    edges: [ProjectEdge!]!
-    pageInfo: PageInfo!
-    totalCount: Int
+  edges: [ProjectEdge!]!
+  pageInfo: PageInfo!
+  """Total number of projects matching the query, regardless of pagination."""
+  totalCount: Int
 }
 
 type ProjectEdge {
-    node: Project!
-    cursor: String!
+  node: Project!
+  cursor: String!
+}
+
+"""Relay-style paginated list of project members."""
+type ProjectMemberConnection {
+  edges: [ProjectMemberEdge!]!
+  pageInfo: PageInfo!
 }
 
 type ProjectMemberEdge {
-    node: ProjectMember!
-    cursor: String!
+  node: ProjectMember!
+  cursor: String!
 }
 
-type ProjectMemberConnection {
-    edges: [ProjectMemberEdge!]!
-    pageInfo: PageInfo!
-}
-
+# Mutation payloads
 
 type AddProjectMembersPayload {
-    success: Boolean!
-    project: Project
+  success: Boolean!
+  """The updated project after members were added."""
+  project: Project
 }
 
 type RemoveProjectMembersPayload {
-    success: Boolean!
-    removedCount: Int!
-    project: Project
+  success: Boolean!
+  """Number of members successfully removed."""
+  removedCount: Int!
+  """The updated project after members were removed."""
+  project: Project
 }
 
 type DeleteProjectsPayload {
-    success: Boolean!
-    deletedCount: Int!
+  success: Boolean!
+  """Number of projects successfully deleted."""
+  deletedCount: Int!
 }
