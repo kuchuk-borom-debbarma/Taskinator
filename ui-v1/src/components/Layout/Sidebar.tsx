@@ -17,6 +17,7 @@ import {
   Loader2,
   ChevronLeft,
   ChevronRight,
+  Activity,
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 
@@ -182,7 +183,7 @@ export const Sidebar: React.FC = () => {
           className="flex-1 px-3 pt-6 space-y-1 overflow-y-auto custom-scrollbar"
         >
           <div className="mb-1">
-            <SidebarItem to="/" icon={<LayoutDashboard size={14} />} label="Dashboard" active={location.pathname === '/'} />
+            <SidebarItem to="/" icon={<Activity size={14} />} label="Perspective Explorer" active={location.pathname === '/'} />
           </div>
 
           <div className="px-3 pt-8 pb-2 flex items-center justify-between group">

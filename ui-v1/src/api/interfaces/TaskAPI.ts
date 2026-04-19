@@ -3,6 +3,7 @@ import type { ProjectTask, TaskLink, TaskNeighbourhood } from '../types';
 export interface TaskAPI {
   getProjectTasks(
     projectId: string, 
+    teamId?: string,
     first?: number, 
     after?: string, 
     last?: number, 

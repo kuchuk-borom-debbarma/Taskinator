@@ -42,4 +42,29 @@ export class DummyProjectAPI implements ProjectAPI {
     this.projects.push(newProject);
     return newProject;
   }
+
+  async addProjectMembers(_projectId: string, _userIds: string[]): Promise<{ success: boolean }> {
+    return { success: true };
+  }
+
+  async removeProjectMembers(_projectId: string, _memberIds: string[]): Promise<{ success: boolean; removedCount: number }> {
+    return { success: true, removedCount: _memberIds.length };
+  }
+
+  async getProjectStats(projectId: string): Promise<{ teamCount: number; taskCount: number }> {
+    const counts: Record<string, { t: number, sc: number }> = {
+      p1: { t: 2, sc: 15 },
+      p2: { t: 4, sc: 23 },
+    };
+    const c = counts[projectId] || { t: 0, sc: 0 };
+    return { teamCount: c.t, taskCount: c.sc };
+  }
+
+  async getWorkspaceStats(): Promise<{ projectCount: number; teamCount: number; assignedTaskCount: number }> {
+    return {
+      projectCount: this.projects.length,
+      teamCount: 6,
+      assignedTaskCount: 38
+    };
+  }
 }

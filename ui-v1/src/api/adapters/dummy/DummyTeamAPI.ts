@@ -12,8 +12,9 @@ export class DummyTeamAPI implements TeamAPI {
     { id: 'm2', username: 'borom', email: 'borom@taskinator.io' },
   ];
 
-  async getTeams(projectId: string): Promise<Team[]> {
-    return this.teams.filter((t) => t.projectId === projectId);
+  async getTeams(projectId: string, _first?: number, _after?: string): Promise<{ teams: Team[], hasNextPage: boolean, endCursor: string | null }> {
+    const filtered = this.teams.filter((t) => t.projectId === projectId);
+    return { teams: filtered, hasNextPage: false, endCursor: null };
   }
 
   async getTeamMembers(projectId: string, _teamId: string): Promise<Member[]> {

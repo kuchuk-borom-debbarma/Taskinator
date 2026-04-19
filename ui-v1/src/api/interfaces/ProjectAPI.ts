@@ -7,4 +7,6 @@ export interface ProjectAPI {
   deleteProjects(projectIds: string[]): Promise<{ success: boolean; deletedCount: number }>;
   addProjectMembers(projectId: string, userIds: string[]): Promise<{ success: boolean }>;
   removeProjectMembers(projectId: string, memberIds: string[]): Promise<{ success: boolean; removedCount: number }>;
+  getProjectStats(projectId: string): Promise<{ teamCount: number; taskCount: number }>;
+  getWorkspaceStats(): Promise<{ projectCount: number; teamCount: number; assignedTaskCount: number }>;
 }

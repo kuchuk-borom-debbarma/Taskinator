@@ -70,12 +70,16 @@ export class DummyTaskAPI implements TaskAPI {
 
   async getProjectTasks(
     _projectId: string, 
+    _teamId?: string,
     _first?: number, 
     _after?: string, 
     _last?: number, 
     _before?: string
   ): Promise<{ tasks: ProjectTask[], hasNextPage: boolean, hasPreviousPage: boolean, endCursor: string | null, startCursor: string | null }> {
-    const filtered = this.tasks.filter((t) => t.projectId === _projectId);
+    let filtered = this.tasks.filter((t) => t.projectId === _projectId);
+    if (_teamId) {
+      filtered = filtered.filter(t => t.teamId === _teamId);
+    }
     return { tasks: filtered, hasNextPage: false, hasPreviousPage: false, endCursor: null, startCursor: null };
   }
 
