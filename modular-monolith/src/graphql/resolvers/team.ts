@@ -1,207 +1,62 @@
 import type { GraphQLContext } from '../context.ts';
-import { teamService } from '../../modules/team';
-import { resolveTeam, buildRef } from './helpers.ts';
-import { UnauthorizedError } from '../errors';
-import { encodeCursor } from '../../utils/utils.ts';
+
+interface PaginationArgs {
+  first?: number;
+  after?: string;
+  last?: number;
+  before?: string;
+}
 
 export const teamResolvers = {
     Team: {
         id: (t: any) => t.id,
-        projectId: (t: any) => t.projectId,
-        createdBy: (t: any) => t.createdBy,
-        name: async (t: any, _: any, context: GraphQLContext) => {
-            const team = await resolveTeam(t, context);
-            return team?.name;
-        },
-        createdAt: async (t: any) => {
-            const team = await resolveTeam(t, null as any);
-            const date = team?.createdAt ?? t.createdAt;
-            return date instanceof Date ? date.toISOString() : date;
-        },
-        updatedAt: async (t: any) => {
-            const team = await resolveTeam(t, null as any);
-            const date = team?.updatedAt ?? t.updatedAt;
-            return date instanceof Date ? date.toISOString() : date;
-        },
-        creator: (t: any) => buildRef(t.createdBy, 'User'),
-        project: (t: any) => buildRef(t.projectId, 'Project'),
-
-        // Connections
-        members: async (t: any, args: any, context: GraphQLContext) => {
-            const { members, nextCursor, prevCursor } = await teamService.getTeamMembers(
-                context.userId!,
-                t.projectId,
-                t.id,
-                args
-            );
-            return {
-                edges: members.map((m) => ({ node: m, cursor: m.id })),
-                pageInfo: {
-                    hasNextPage: !!nextCursor,
-                    hasPreviousPage: !!prevCursor,
-                    startCursor: prevCursor,
-                    endCursor: nextCursor,
-                },
-            };
-        },
-        tasks: async (t: any, args: any, context: GraphQLContext) => {
-            const { tasks, nextCursor, prevCursor } = await (await import('../../modules/task')).taskService.getTasks(
-                context.userId!,
-                t.projectId,
-                { ...args, teamId: t.id }
-            );
-            return {
-                edges: tasks.map((tk: any) => ({
-                    node: tk,
-                    cursor: encodeCursor(tk.epochPrecision, tk.id),
-                })),
-                pageInfo: {
-                    hasNextPage: !!nextCursor,
-                    hasPreviousPage: !!prevCursor,
-                    startCursor: prevCursor,
-                    endCursor: nextCursor,
-                },
-            };
-        },
+        name: (t: any) => t.name,
+        project: (t: any) => null,
+        members: (t: any, args: PaginationArgs, context: GraphQLContext) => null,
+        tasks: (t: any, args: PaginationArgs, context: GraphQLContext) => null,
+        createdBy: (t: any) => null,
+        createdAt: (t: any) => t.createdAt,
+        updatedAt: (t: any) => t.updatedAt,
+        version: (t: any) => t.version,
+        lastEventId: (t: any) => t.lastEventId,
     },
+
     TeamMember: {
         id: (m: any) => m.id,
-        teamId: (m: any) => m.teamId,
-        userId: (m: any) => m.userId,
-        createdAt: (m: any) =>
-            m.createdAt instanceof Date ? m.createdAt.toISOString() : m.createdAt,
-        user: (m: any) => buildRef(m.userId, 'User'),
-        team: (m: any) => buildRef(m.teamId, 'Team'),
+        user: (m: any) => null,
+        team: (m: any) => null,
+        createdAt: (m: any) => m.createdAt,
+        version: (m: any) => m.version,
     },
+
+    Project: {
+        teams: (p: any, args: PaginationArgs, context: GraphQLContext) => null,
+    },
+
     Query: {
-        teams: async (_: any, { projectId, memberId, ...args }: any, context: GraphQLContext) => {
-            if (!context.userId) throw new UnauthorizedError();
-            const { teams, nextCursor, prevCursor } = await teamService.getTeams(
-                context.userId,
-                projectId,
-                { ...args, memberId },
-            );
-            return {
-                edges: teams.map((t) => ({ node: t, cursor: t.id })),
-                pageInfo: {
-                    hasNextPage: !!nextCursor,
-                    hasPreviousPage: !!prevCursor,
-                    startCursor: prevCursor,
-                    endCursor: nextCursor,
-                },
-            };
+        team: (_: any, { id }: { id: string }, context: GraphQLContext) => {
+            return null;
         },
-        teamMembers: async (
-            _: any,
-            { projectId, teamId, first, after, last, before }: any,
-            context: GraphQLContext,
-        ) => {
-            if (!context.userId) throw new UnauthorizedError();
-            const { members, nextCursor, prevCursor } = await teamService.getTeamMembers(
-                context.userId,
-                projectId,
-                teamId,
-                { first, after, last, before },
-            );
-            return {
-                edges: members.map((m) => ({ node: m, cursor: m.id })),
-                pageInfo: {
-                    hasNextPage: !!nextCursor,
-                    hasPreviousPage: !!prevCursor,
-                    startCursor: prevCursor,
-                    endCursor: nextCursor,
-                },
-            };
+        teams: (_: any, { ids }: { ids?: string[] }, context: GraphQLContext) => {
+            return [];
         },
-        searchTeamUsers: async (
-            _: any,
-            { projectId, teamId, search, first, after, last, before }: any,
-            context: GraphQLContext,
-        ) => {
-            const { users, nextCursor, prevCursor } = await teamService.searchTeamUsers({
-                actorId: context.userId!,
-                projectId,
-                teamId,
-                search,
-                first,
-                after,
-                last,
-                before,
-            });
-            return {
-                edges: users.map((u) => ({ node: u, cursor: u.id })),
-                pageInfo: {
-                    hasNextPage: !!nextCursor,
-                    hasPreviousPage: !!prevCursor,
-                    startCursor: prevCursor,
-                    endCursor: nextCursor,
-                },
-            };
+        teamMembers: (_: any, { teamId, first, after, last, before }: any, context: GraphQLContext) => {
+            return null;
         },
     },
+
     Mutation: {
-        createTeam: async (
-            _: any,
-            { projectId, name }: any,
-            context: GraphQLContext,
-        ) => {
-            if (!context.userId) throw new UnauthorizedError();
-            const team = await teamService.createTeams({
-                userId: context.userId,
-                projectId,
-                teams: [name],
-            });
-            return {
-                success: true,
-                team: team[0],
-            };
+        createTeam: (_: any, { projectId, name }: { projectId: string; name: string }, context: GraphQLContext) => {
+            return { success: true, team: null };
         },
-        deleteTeams: async (
-            _: any,
-            { projectId, teamIds }: any,
-            context: GraphQLContext,
-        ) => {
-            if (!context.userId) throw new UnauthorizedError();
-            await teamService.deleteTeams({
-                projectId,
-                teamIds,
-                userId: context.userId,
-            });
-            return {
-                success: true,
-                deletedCount: teamIds.length,
-                project: { id: projectId },
-            };
+        deleteTeams: (_: any, { projectId, teamIds }: { projectId: string; teamIds: string[] }, context: GraphQLContext) => {
+            return { success: true, deletedCount: 0, project: null };
         },
-        addTeamMembers: async (
-            _: any,
-            { projectId, teamId, userIds }: any,
-            context: GraphQLContext,
-        ) => {
-            if (!context.userId) throw new UnauthorizedError();
-            await teamService.addTeamMembers({
-                projectId,
-                teamId,
-                members: userIds,
-                userId: context.userId,
-            });
-            return {
-                success: true,
-                team: { id: teamId },
-            };
+        addTeamMembers: (_: any, { projectId, teamId, userIds }: { projectId: string; teamId: string; userIds: string[] }, context: GraphQLContext) => {
+            return { success: true, team: null };
         },
-        removeTeamMembers: async (
-            _: any,
-            { projectId, teamId, userIds }: any,
-            context: GraphQLContext,
-        ) => {
-            if (!context.userId) throw new UnauthorizedError();
-            return teamService.deleteTeamMembers({
-                userId: context.userId,
-                projectId,
-                teamId,
-                members: userIds,
-            });
+        removeTeamMembers: (_: any, { projectId, teamId, userIds }: { projectId: string; teamId: string; userIds: string[] }, context: GraphQLContext) => {
+            return { success: true, team: null };
         },
     },
 };
