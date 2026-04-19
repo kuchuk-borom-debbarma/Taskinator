@@ -25,9 +25,9 @@ export class TeamServiceImpl implements TeamService {
     async getTeams(
         userId: string,
         projectId: string,
-        params?: { first?: number; after?: string; last?: number; before?: string },
+        params?: { first?: number; after?: string; last?: number; before?: string; memberId?: string },
     ): Promise<{ teams: Team[]; nextCursor: string | null; prevCursor: string | null }> {
-        return getTeams(userId, projectId, params);
+        return getTeams(userId, projectId || null, params);
     }
 
     async getTeamsByIds(userId: string, teamIds: string[]): Promise<Team[]> {

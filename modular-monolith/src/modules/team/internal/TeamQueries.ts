@@ -212,42 +212,51 @@ export const deleteAllTeamMembers = async (
 export const getTeams = async (
     userId: string,
     projectId: string,
-    params: { first?: number; after?: string; last?: number; before?: string } = {},
+    params: { first?: number; after?: string; last?: number; before?: string; memberId?: string } = {},
 ): Promise<{ teams: Team[]; nextCursor: string | null; prevCursor: string | null }> => {
     const limit = Math.min(params.first || params.last || 10, 50);
-    const { after, before } = params;
+    const { after, before, memberId } = params;
     const isBackward = !!before;
     const cursor = before || after;
 
     const result = await sql<Team>`
         WITH auth_check AS (
+            SELECT 1 WHERE ${projectId}::text IS NULL AND ${memberId ?? null}::text IS NOT NULL
+            UNION ALL
             SELECT 1 FROM project WHERE id = ${projectId}::uuid AND fk_user_id = ${userId}::text
             UNION ALL
             SELECT 1 FROM project_member WHERE fk_project_id = ${projectId}::uuid AND fk_user_id = ${userId}::text
             LIMIT 1
         )
         SELECT 
-            id, 
-            name, 
-            fk_project_id AS "projectId", 
-            fk_user_id AS "createdBy", 
-            version, 
-            last_event_id AS "lastEventId", 
-            created_at AS "createdAt", 
-            updated_at AS "updatedAt"
-        FROM project_team
-        WHERE fk_project_id = ${projectId}::uuid
+            t.id, 
+            t.name, 
+            t.fk_project_id AS "projectId", 
+            t.fk_user_id AS "createdBy", 
+            t.version, 
+            t.last_event_id AS "lastEventId", 
+            t.created_at AS "createdAt", 
+            t.updated_at AS "updatedAt"
+        FROM project_team t
+        WHERE (${projectId}::uuid IS NULL OR t.fk_project_id = ${projectId}::uuid)
           AND EXISTS (SELECT 1 FROM auth_check)
+          AND (
+              ${memberId ?? null}::text IS NULL
+              OR EXISTS (
+                  SELECT 1 FROM project_team_member ptm 
+                  WHERE ptm.fk_team_id = t.id AND ptm.fk_user_id = ${memberId}
+              )
+          )
           AND (
               ${cursor ?? null}::uuid IS NULL
               OR (
                   CASE 
-                    WHEN ${isBackward} THEN id < ${cursor ?? null}::uuid
-                    ELSE id > ${cursor ?? null}::uuid
+                    WHEN ${isBackward} THEN t.id < ${cursor}::uuid
+                    ELSE t.id > ${cursor}::uuid
                   END
               )
           )
-        ORDER BY id ${sql.raw(isBackward ? 'DESC' : 'ASC')}
+        ORDER BY t.id ${sql.raw(isBackward ? 'DESC' : 'ASC')}
         LIMIT ${limit + 1}
     `.execute(db);
 

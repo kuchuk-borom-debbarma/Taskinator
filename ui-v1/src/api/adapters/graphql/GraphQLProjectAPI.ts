@@ -41,7 +41,7 @@ export class GraphQLProjectAPI implements ProjectAPI {
         'Content-Type': 'application/json',
         ...(this.token ? { 'Authorization': `Bearer ${this.token}` } : {}),
       },
-      body: JSON.stringify({ query: queryStr, variables }),
+      body: JSON.stringify({ query: queryStr, variables, operationName: opName }),
     });
 
     const result = await response.json();
@@ -124,13 +124,44 @@ export class GraphQLProjectAPI implements ProjectAPI {
             label
             count
           }
+          myTeams {
+            edges {
+              node {
+                id
+                name
+              }
+            }
+          }
+          myTasks(first: 10) {
+            edges {
+              node {
+                id
+                projectId
+                title
+                description
+                status
+                priority
+                createdAt
+                updatedAt
+                totalIncomingLinksCount
+                totalOutgoingLinksCount
+              }
+            }
+          }
         }
       }
     `), { id });
     if (!data.project) return null;
     return {
       ...data.project,
-      description: data.project.description ?? undefined
+      description: data.project.description ?? undefined,
+      myTeams: data.project.myTeams?.edges?.map((e: any) => e.node) || [],
+      myTasks: data.project.myTasks?.edges?.map((e: any) => ({
+        ...e.node,
+        description: e.node.description ?? '',
+        status: e.node.status as TaskStatus,
+        createdById: '', // Not in query
+      })) || []
     } as Project;
   }
 

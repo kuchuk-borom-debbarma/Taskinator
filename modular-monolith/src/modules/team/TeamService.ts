@@ -76,7 +76,7 @@ export interface TeamService extends BaseService {
     getTeams(
         userId: string,
         projectId: string,
-        params?: { first?: number; after?: string; last?: number; before?: string },
+        params?: { first?: number; after?: string; last?: number; before?: string; memberId?: string },
     ): Promise<{ teams: Team[]; nextCursor: string | null; prevCursor: string | null }>;
 
     getTeamMembers(

@@ -11,14 +11,17 @@ import {
 } from 'lucide-react';
 
 export default function ProjectDashboardView() {
-  const { projectId } = useParams({ from: '/authenticated-layout/projects/$projectId/' });
+  const { projectId } = useParams({ strict: false }) as any;
+  console.log('[ProjectDashboardView] Rendering for ID:', projectId);
   const { projectApi, taskApi } = useApi();
 
   // Fetch Core Project Stats
-  const { data: project, isLoading } = useQuery({
+  const { data: project, isLoading, error } = useQuery({
     queryKey: ['project-dashboard', projectId],
     queryFn: () => projectApi.getProject(projectId),
   });
+
+  console.log('[ProjectDashboardView] Query result:', { project, isLoading, error: error?.message });
 
   // Fetch My Personal Context (could be optimized into one GraphQL query later)
   // For now we'll simulate or use what we updated in ProjectAPI if ready.
@@ -102,8 +105,7 @@ export default function ProjectDashboardView() {
         <div className="flex flex-col gap-6">
           <SectionHeader icon={Network} title="Assigned Teams" />
           <div className="flex flex-col gap-3 min-h-[200px]">
-             {/* Fetching my teams for the current user in this project */}
-             <PersonalTeamsList projectId={projectId} />
+             <PersonalTeamsList projectId={projectId} teams={project.myTeams || []} />
           </div>
         </div>
 
@@ -111,7 +113,7 @@ export default function ProjectDashboardView() {
         <div className="flex flex-col gap-6 lg:col-span-2">
           <SectionHeader icon={Kanban} title="Assigned Tasks" />
           <div className="min-h-[200px]">
-             <PersonalTasksList projectId={projectId} />
+             <PersonalTasksList projectId={projectId} tasks={project.myTasks || []} />
           </div>
         </div>
       </div>
@@ -119,20 +121,12 @@ export default function ProjectDashboardView() {
   );
 }
 
-function PersonalTeamsList({ projectId }: { projectId: string }) {
-  const { teamApi } = useApi();
-  const { data, isLoading } = useQuery({
-    queryKey: ['my-teams', projectId],
-    queryFn: () => teamApi.getTeams(projectId), // In real usage, this would filter by membership
-  });
-
-  if (isLoading) return <div className="p-4 bg-white/5 rounded-2xl animate-pulse h-20" />;
-
-  const teams = data?.teams.slice(0, 3) || [];
+function PersonalTeamsList({ projectId, teams }: { projectId: string; teams: any[] }) {
+  const displayTeams = teams.slice(0, 3);
 
   return (
     <div className="flex flex-col gap-2">
-      {teams.map(t => (
+      {displayTeams.map(t => (
         <Link 
           key={t.id} 
           to={`/projects/${projectId}/teams`} 
@@ -147,7 +141,7 @@ function PersonalTeamsList({ projectId }: { projectId: string }) {
           <ArrowRight size={14} className="text-slate-600 group-hover:text-white transition-all" />
         </Link>
       ))}
-      {teams.length === 0 && <div className="p-10 text-center text-xs text-slate-600 italic">No assigned teams detected.</div>}
+      {displayTeams.length === 0 && <div className="p-10 text-center text-xs text-slate-600 italic">No assigned teams detected.</div>}
       {teams.length > 0 && (
         <Link to={`/projects/${projectId}/teams`} className="text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-blue-400 mt-2 text-center">
           Manage Project Teams
@@ -157,18 +151,7 @@ function PersonalTeamsList({ projectId }: { projectId: string }) {
   );
 }
 
-function PersonalTasksList({ projectId }: { projectId: string }) {
-  const { taskApi } = useApi();
-  // Simplified fetch for assigned tasks - would need proper member filter in API
-  const { data, isLoading } = useQuery({
-    queryKey: ['my-tasks-dashboard', projectId],
-    queryFn: () => taskApi.getTasks(projectId, { first: 5 }),
-  });
-
-  if (isLoading) return <div className="p-4 bg-white/5 rounded-2xl animate-pulse h-20" />;
-
-  const tasks = data?.tasks || [];
-
+function PersonalTasksList({ projectId, tasks }: { projectId: string; tasks: any[] }) {
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
       {tasks.map(tk => (

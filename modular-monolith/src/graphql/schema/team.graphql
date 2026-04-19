@@ -45,7 +45,7 @@ type TeamMemberConnection {
 }
 
 extend type Query {
-    teams(projectId: ID!, first: Int, after: String, last: Int, before: String): TeamConnection!
+    teams(projectId: ID!, memberId: ID, first: Int, after: String, last: Int, before: String): TeamConnection!
     teamMembers(
         projectId: ID!
         teamId: ID!

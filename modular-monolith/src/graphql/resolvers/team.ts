@@ -74,16 +74,12 @@ export const teamResolvers = {
         team: (m: any) => buildRef(m.teamId, 'Team'),
     },
     Query: {
-        teams: async (
-            _: any,
-            { projectId, first, after, last, before }: any,
-            context: GraphQLContext,
-        ) => {
+        teams: async (_: any, { projectId, memberId, ...args }: any, context: GraphQLContext) => {
             if (!context.userId) throw new UnauthorizedError();
             const { teams, nextCursor, prevCursor } = await teamService.getTeams(
                 context.userId,
                 projectId,
-                { first, after, last, before },
+                { ...args, memberId },
             );
             return {
                 edges: teams.map((t) => ({ node: t, cursor: t.id })),

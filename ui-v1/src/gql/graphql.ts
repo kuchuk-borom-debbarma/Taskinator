@@ -236,6 +236,7 @@ export type Project = {
   name: Scalars['String']['output'];
   taskCount: Scalars['Int']['output'];
   taskLabelCounts: Array<TaskLabelCount>;
+  tasks: ProjectTaskConnection;
   teamCount: Scalars['Int']['output'];
   teams: TeamConnection;
   updatedAt?: Maybe<Scalars['String']['output']>;
@@ -261,6 +262,14 @@ export type ProjectMyTasksArgs = {
 
 
 export type ProjectMyTeamsArgs = {
+  after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
+};
+
+
+export type ProjectTasksArgs = {
   after?: InputMaybe<Scalars['String']['input']>;
   before?: InputMaybe<Scalars['String']['input']>;
   first?: InputMaybe<Scalars['Int']['input']>;
@@ -503,6 +512,7 @@ export type QueryTeamsArgs = {
   before?: InputMaybe<Scalars['String']['input']>;
   first?: InputMaybe<Scalars['Int']['input']>;
   last?: InputMaybe<Scalars['Int']['input']>;
+  memberId?: InputMaybe<Scalars['ID']['input']>;
   projectId: Scalars['ID']['input'];
 };
 
@@ -659,9 +669,36 @@ export type TeamMemberEdge = {
 
 export type User = {
   __typename?: 'User';
+  assignedTasks: ProjectTaskConnection;
   email: Scalars['String']['output'];
   id: Scalars['ID']['output'];
+  projects: ProjectConnection;
+  teams: TeamConnection;
   username: Scalars['String']['output'];
+};
+
+
+export type UserAssignedTasksArgs = {
+  after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
+};
+
+
+export type UserProjectsArgs = {
+  after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
+};
+
+
+export type UserTeamsArgs = {
+  after?: InputMaybe<Scalars['String']['input']>;
+  before?: InputMaybe<Scalars['String']['input']>;
+  first?: InputMaybe<Scalars['Int']['input']>;
+  last?: InputMaybe<Scalars['Int']['input']>;
 };
 
 export type UserSearchResultConnection = {

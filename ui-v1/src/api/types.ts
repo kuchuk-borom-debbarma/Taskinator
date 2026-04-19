@@ -12,6 +12,10 @@ export interface Project {
   taskCount?: number;
   memberCount?: number;
   taskLabelCounts?: { label: string; count: number }[];
+
+  // Connections
+  myTeams?: Team[];
+  myTasks?: ProjectTask[];
 }
 
 export interface ProjectTask {

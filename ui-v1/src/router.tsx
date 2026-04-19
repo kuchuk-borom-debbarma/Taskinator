@@ -104,10 +104,12 @@ const projectLayoutRoute = createRoute({
   component: lazyRouteComponent(() => import('./components/Project/ProjectLayout').then(m => ({ default: m.ProjectLayout }))),
 });
 
+import ProjectDashboardView from './components/Project/ProjectDashboardView';
+
 const projectDashboardRoute = createRoute({
   getParentRoute: () => projectLayoutRoute,
   path: '/',
-  component: lazyRouteComponent(() => import('./ProjectDashboardView.lazy.tsx')),
+  component: ProjectDashboardView,
 });
 
 type TaskSearch = {

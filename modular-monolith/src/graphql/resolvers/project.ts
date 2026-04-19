@@ -48,6 +48,7 @@ export const projectResolvers = {
 
         // Connections
         teams: async (p: any, args: any, context: GraphQLContext) => {
+            console.log(`[ProjectResolver] teams for project: ${p.id}`);
             const { teams, nextCursor, prevCursor } = await (await import('../../modules/team')).teamService.getTeams(
                 context.userId!,
                 p.id,
@@ -63,7 +64,28 @@ export const projectResolvers = {
                 },
             };
         },
+        tasks: async (p: any, args: any, context: GraphQLContext) => {
+            console.log(`[ProjectResolver] tasks for project: ${p.id}`);
+            const { tasks, nextCursor, prevCursor } = await (await import('../../modules/task')).taskService.getTasks(
+                context.userId!,
+                p.id,
+                args
+            );
+            return {
+                edges: tasks.map((t: any) => ({
+                    node: t,
+                    cursor: encodeCursor(t.epochPrecision, t.id),
+                })),
+                pageInfo: {
+                    hasNextPage: !!nextCursor,
+                    hasPreviousPage: !!prevCursor,
+                    startCursor: prevCursor,
+                    endCursor: nextCursor,
+                },
+            };
+        },
         members: async (p: any, args: any, context: GraphQLContext) => {
+            console.log(`[ProjectResolver] members for project: ${p.id}`);
             const { members, nextCursor, prevCursor } = await projectService.getProjectMembers(
                 context.userId!,
                 p.id,
@@ -83,10 +105,11 @@ export const projectResolvers = {
             };
         },
         myTeams: async (p: any, args: any, context: GraphQLContext) => {
+            console.log(`[ProjectResolver] myTeams for user: ${context.userId} in project: ${p.id}`);
             const { teams, nextCursor, prevCursor } = await (await import('../../modules/team')).teamService.getTeams(
                 context.userId!,
                 p.id,
-                args
+                { ...args, memberId: context.userId! }
             );
             return {
                 edges: teams.map((t: any) => ({ node: t, cursor: t.id })),

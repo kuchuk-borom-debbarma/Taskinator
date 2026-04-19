@@ -2,6 +2,11 @@ type User {
     id: ID!
     username: String!
     email: String!
+
+    # Relational Connections (Universal Expansion)
+    projects(first: Int, after: String, last: Int, before: String): ProjectConnection!
+    teams(first: Int, after: String, last: Int, before: String): TeamConnection!
+    assignedTasks(first: Int, after: String, last: Int, before: String): ProjectTaskConnection!
 }
 
 type UserSearchResultEdge {

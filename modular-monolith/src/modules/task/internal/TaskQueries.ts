@@ -397,6 +397,8 @@ export const getTasksPage = async (
 
     const result = await sql<ProjectTask & { epochPrecision: string }>`
         WITH auth_check AS (
+            SELECT 1 WHERE ${projectId}::uuid IS NULL AND ${params.memberId ?? null}::text IS NOT NULL
+            UNION ALL
             SELECT 1 FROM project WHERE id = ${projectId}::uuid AND fk_user_id = ${userId}::text
             UNION ALL
             SELECT 1 FROM project_member WHERE fk_project_id = ${projectId}::uuid AND fk_user_id = ${userId}::text
@@ -425,8 +427,12 @@ export const getTasksPage = async (
             incoming_label_counts AS "incomingLabelCounts",
             outgoing_label_counts AS "outgoingLabelCounts"
         FROM project_task
-        WHERE fk_project_id = ${projectId}::uuid
-          AND EXISTS (SELECT 1 FROM auth_check)
+        WHERE 
+          EXISTS (SELECT 1 FROM auth_check)
+          AND (
+              ${projectId}::uuid IS NULL
+              OR fk_project_id = ${projectId}::uuid
+          )
           AND (
               ${params.teamId ?? null}::uuid IS NULL 
               OR fk_team_id = ${params.teamId ?? null}::uuid

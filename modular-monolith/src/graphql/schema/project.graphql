@@ -17,6 +17,7 @@ type Project {
 
     # Connections
     teams(first: Int, after: String, last: Int, before: String): TeamConnection!
+    tasks(first: Int, after: String, last: Int, before: String): ProjectTaskConnection!
     members(first: Int, after: String, last: Int, before: String): ProjectMemberConnection!
     
     # Personal Context

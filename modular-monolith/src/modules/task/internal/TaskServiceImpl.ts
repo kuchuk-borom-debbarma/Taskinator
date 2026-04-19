@@ -48,10 +48,10 @@ export class TaskServiceImpl implements TaskService {
 
     async getTasks(
         userId: string,
-        projectId: string,
+        projectId: string | null,
         params: PaginationParams,
     ): Promise<TaskConnection> {
-        return await getTasksPage(userId, projectId, params);
+        return getTasksPage(userId, projectId || null, params);
     }
 
     async getTasksByIds(userId: string, ids: string[]): Promise<ProjectTask[]> {

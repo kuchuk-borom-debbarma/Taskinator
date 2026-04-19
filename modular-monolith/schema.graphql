@@ -2,6 +2,9 @@ type User {
   id: ID!
   username: String!
   email: String!
+  projects(first: Int, after: String, last: Int, before: String): ProjectConnection!
+  teams(first: Int, after: String, last: Int, before: String): TeamConnection!
+  assignedTasks(first: Int, after: String, last: Int, before: String): ProjectTaskConnection!
 }
 
 type UserSearchResultEdge {
@@ -29,7 +32,7 @@ type Query {
   workspaceStats: WorkspaceStats!
   notifications(first: Int, after: String, last: Int, before: String): NotificationConnection!
   unreadNotificationsCount: Int!
-  teams(projectId: ID!, first: Int, after: String, last: Int, before: String): TeamConnection!
+  teams(projectId: ID!, memberId: ID, first: Int, after: String, last: Int, before: String): TeamConnection!
   teamMembers(projectId: ID!, teamId: ID!, first: Int, after: String, last: Int, before: String): TeamMemberConnection!
 }
 
@@ -184,6 +187,7 @@ type Project {
   memberCount: Int!
   taskLabelCounts: [TaskLabelCount!]!
   teams(first: Int, after: String, last: Int, before: String): TeamConnection!
+  tasks(first: Int, after: String, last: Int, before: String): ProjectTaskConnection!
   members(first: Int, after: String, last: Int, before: String): ProjectMemberConnection!
   myTeams(first: Int, after: String, last: Int, before: String): TeamConnection!
   myTasks(first: Int, after: String, last: Int, before: String): ProjectTaskConnection!

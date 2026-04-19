@@ -102,7 +102,7 @@ export interface TaskService extends BaseService {
     // Read Operations
     getTasks(
         userId: string,
-        projectId: string,
+        projectId: string | null,
         params: PaginationParams,
     ): Promise<TaskConnection>;
 
