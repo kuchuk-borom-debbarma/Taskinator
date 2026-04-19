@@ -68,13 +68,19 @@ export class DummyTaskAPI implements TaskAPI {
     { id: 'l25', projectId: 'p2', sourceTaskId: 'r4', targetTaskId: 'r23', label: 'Requires', createdAt: '2026-01-21T00:00:00Z' },
   ];
 
-  async getProjectTasks(projectId: string, first?: number, after?: string): Promise<{ tasks: ProjectTask[], hasNextPage: boolean, endCursor: string | null }> {
-    const filtered = this.tasks.filter((t) => t.projectId === projectId);
-    return { tasks: filtered, hasNextPage: false, endCursor: null };
+  async getProjectTasks(
+    _projectId: string, 
+    _first?: number, 
+    _after?: string, 
+    _last?: number, 
+    _before?: string
+  ): Promise<{ tasks: ProjectTask[], hasNextPage: boolean, hasPreviousPage: boolean, endCursor: string | null, startCursor: string | null }> {
+    const filtered = this.tasks.filter((t) => t.projectId === _projectId);
+    return { tasks: filtered, hasNextPage: false, hasPreviousPage: false, endCursor: null, startCursor: null };
   }
 
-  async getProjectLinks(projectId: string, first?: number, after?: string): Promise<{ links: TaskLink[], hasNextPage: boolean, endCursor: string | null }> {
-    const filtered = this.links.filter((l) => l.projectId === projectId);
+  async getProjectLinks(_projectId: string, _first?: number, _after?: string): Promise<{ links: TaskLink[], hasNextPage: boolean, endCursor: string | null }> {
+    const filtered = this.links.filter((l) => l.projectId === _projectId);
     return { links: filtered, hasNextPage: false, endCursor: null };
   }
 
@@ -82,7 +88,7 @@ export class DummyTaskAPI implements TaskAPI {
     return this.tasks.find((t) => t.id === id) || null;
   }
 
-  async getTaskNeighbourhood(projectId: string, taskId: string, maxDepth: number = 2, limit: number = 50, after?: string): Promise<TaskNeighbourhood> {
+  async getTaskNeighbourhood(_projectId: string, taskId: string, maxDepth: number = 2, limit: number = 50, after?: string): Promise<TaskNeighbourhood> {
     const focusedTask = this.tasks.find((t) => t.id === taskId);
     if (!focusedTask) throw new Error('Task not found');
 
@@ -179,11 +185,11 @@ export class DummyTaskAPI implements TaskAPI {
     return link;
   }
 
-  async getTaskIncomingLinks(taskId: string, first?: number, after?: string, last?: number, before?: string): Promise<{ links: TaskLink[], hasNextPage: boolean, hasPreviousPage: boolean, endCursor: string | null, startCursor: string | null }> {
+  async getTaskIncomingLinks(_taskId: string, _first?: number, _after?: string, _last?: number, _before?: string): Promise<{ links: TaskLink[], hasNextPage: boolean, hasPreviousPage: boolean, endCursor: string | null, startCursor: string | null }> {
     return { links: [], hasNextPage: false, hasPreviousPage: false, endCursor: null, startCursor: null };
   }
 
-  async getTaskOutgoingLinks(taskId: string, first?: number, after?: string, last?: number, before?: string): Promise<{ links: TaskLink[], hasNextPage: boolean, hasPreviousPage: boolean, endCursor: string | null, startCursor: string | null }> {
+  async getTaskOutgoingLinks(_taskId: string, _first?: number, _after?: string, _last?: number, _before?: string): Promise<{ links: TaskLink[], hasNextPage: boolean, hasPreviousPage: boolean, endCursor: string | null, startCursor: string | null }> {
     return { links: [], hasNextPage: false, hasPreviousPage: false, endCursor: null, startCursor: null };
   }
 }

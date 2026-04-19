@@ -61,6 +61,7 @@ export interface UpdateTaskParam {
     title?: string;
     description?: string;
     status?: TaskStatus;
+    priority?: number;
 }
 
 export interface PaginationParams {

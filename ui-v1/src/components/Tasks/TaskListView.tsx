@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useLayoutEffect } from 'react';
+import React, { useRef } from 'react';
 import type { ProjectTask } from '../../api/types';
 import { Link } from '@tanstack/react-router';
 import {
@@ -17,7 +17,7 @@ import {
 
 interface TaskListViewProps {
   tasks: ProjectTask[];
-  projectId: string;
+  _projectId: string;
   hasNextPage?: boolean;
   hasPreviousPage?: boolean;
   isFetchingNextPage?: boolean;
@@ -28,7 +28,7 @@ interface TaskListViewProps {
 
 export const TaskListView: React.FC<TaskListViewProps> = ({
   tasks,
-  projectId,
+  _projectId,
   hasNextPage,
   hasPreviousPage,
   isFetchingNextPage,
@@ -118,7 +118,7 @@ const TaskListItem: React.FC<{ task: ProjectTask }> = ({ task }) => {
   return (
     <Link
       to="/projects/$projectId/tasks/$taskId"
-      params={{ projectId: task.projectId, taskId: task.id }}
+      params={{ projectId: task.projectId, taskId: task.id } as any}
       className="group flex flex-col gap-6 p-7 mb-6 bg-white/[0.03] border border-white/5 rounded-2xl transition-all duration-300 hover:bg-white/[0.05] hover:border-focus-blue/30 hover:shadow-[0_20px_50px_rgba(0,0,0,0.3)] relative overflow-hidden"
     >
       {/* Selection Glow Effect */}

@@ -1,6 +1,5 @@
-import React, { useMemo, useRef, useEffect } from 'react';
+import React, { useRef, useMemo } from 'react';
 import { useInfiniteQuery } from '@tanstack/react-query';
-import { useVirtualizer } from '@tanstack/react-virtual';
 import { useApi } from '../../hooks/useApi';
 import { getLinkLabelColor } from '../../utils/color';
 import { Loader2, ArrowRight, ChevronRight, ChevronLeft } from 'lucide-react';
@@ -15,7 +14,7 @@ interface TaskLinkColumnProps {
 export const TaskLinkColumn: React.FC<TaskLinkColumnProps> = ({ taskId, direction, title }) => {
   const { taskApi } = useApi();
   const parentRef = useRef<HTMLDivElement>(null);
-  const search = useSearch({ from: '/authenticated-layout/projects/$projectId/tasks/$taskId' });
+  const search = useSearch({ from: '/authenticated-layout/projects/$projectId/tasks/$taskId' }) as any;
   const navigate = useNavigate();
 
   const isIncoming = direction === 'incoming';
@@ -24,9 +23,9 @@ export const TaskLinkColumn: React.FC<TaskLinkColumnProps> = ({ taskId, directio
 
   const {
     data,
-    hasNextPage,
+    hasNextPage: _hasNextPage,
     isFetchingNextPage,
-    hasPreviousPage,
+    hasPreviousPage: _hasPreviousPage,
     isFetchingPreviousPage,
     isLoading
   } = useInfiniteQuery({
@@ -51,17 +50,15 @@ export const TaskLinkColumn: React.FC<TaskLinkColumnProps> = ({ taskId, directio
     const allLinks = data?.pages.flatMap(p => p.links) || [];
 
     // Grouping logic
-    const groups: Record<string, typeof allLinks> = {};
+    const groups: Record<string, { label: string; items: any[] }> = {};
     allLinks.forEach(link => {
-      // Normalize: Trim and handle nulls, but keep casing for display if preferred
-      // However, for grouping consistency, we use lowercase keys
       const displayLabel = (link.label || 'Related').trim();
       const groupKey = displayLabel.toLowerCase();
 
       if (!groups[groupKey]) {
         groups[groupKey] = { label: displayLabel, items: [] };
       }
-      groups[groupKey].items.push(link);
+      groups[groupKey]!.items.push(link);
     });
 
     const items: Array<{ type: 'header'; label: string } | { type: 'link'; link: any }> = [];
@@ -99,13 +96,13 @@ export const TaskLinkColumn: React.FC<TaskLinkColumnProps> = ({ taskId, directio
           <button
             onClick={() => {
                if (firstPage?.hasPreviousPage) {
-                 navigate({
-                   search: (prev: any) => ({ 
-                     ...prev, 
-                     [isIncoming ? 'inCursor' : 'outCursor']: firstPage.startCursor!,
-                     [isIncoming ? 'inDir' : 'outDir']: 'backward' as const
-                   }),
-                 });
+                  (navigate as any)({
+                    search: (prev: any) => ({ 
+                      ...prev, 
+                      [isIncoming ? 'inCursor' : 'outCursor']: firstPage.startCursor!,
+                      [isIncoming ? 'inDir' : 'outDir']: 'backward' as const
+                    }),
+                  });
                }
             }}
             disabled={!firstPage?.hasPreviousPage || isFetchingPreviousPage}
@@ -117,13 +114,13 @@ export const TaskLinkColumn: React.FC<TaskLinkColumnProps> = ({ taskId, directio
           <button
             onClick={() => {
                if (lastPage?.hasNextPage) {
-                 navigate({
-                   search: (prev: any) => ({ 
-                     ...prev, 
-                     [isIncoming ? 'inCursor' : 'outCursor']: lastPage.endCursor!,
-                     [isIncoming ? 'inDir' : 'outDir']: 'forward' as const
-                   }),
-                 });
+                  (navigate as any)({
+                    search: (prev: any) => ({ 
+                      ...prev, 
+                      [isIncoming ? 'inCursor' : 'outCursor']: lastPage.endCursor!,
+                      [isIncoming ? 'inDir' : 'outDir']: 'forward' as const
+                    }),
+                  });
                }
             }}
             disabled={!lastPage?.hasNextPage || isFetchingNextPage}
@@ -177,19 +174,19 @@ export const TaskLinkColumn: React.FC<TaskLinkColumnProps> = ({ taskId, directio
                   to="/projects/$projectId/tasks/$taskId"
                   params={{
                     projectId: item.link.projectId,
-                    taskId: direction === 'incoming' ? item.link.sourceTask.id : item.link.targetTask.id
+                    taskId: direction === 'incoming' ? (item.link as any).sourceTask?.id || item.link.sourceTaskId : (item.link as any).targetTask?.id || item.link.targetTaskId
                   }}
                   className="group flex flex-col justify-center px-4 min-h-[75px] bg-white border border-border-notion rounded-xl hover:border-focus-blue/30 hover:shadow-md transition-all mb-1"
                 >
                   <div className="flex items-start justify-between">
                     <span className="text-[14px] font-bold text-text-notion group-hover:text-focus-blue transition-colors line-clamp-1">
-                      {(direction === 'incoming' ? item.link.sourceTask.title : item.link.targetTask.title) || 'Untitled Task'}
+                      {((direction === 'incoming' ? (item.link as any).sourceTask?.title : (item.link as any).targetTask?.title)) || 'Untitled Task'}
                     </span>
                     <ArrowRight size={14} className="opacity-0 group-hover:opacity-40 transition-all -translate-x-2 group-hover:translate-x-0" />
                   </div>
                   <div className="flex items-center gap-2 mt-1">
                     <span className="text-[9px] font-bold uppercase tracking-tighter opacity-40">
-                      {direction === 'incoming' ? item.link.sourceTask.status : item.link.targetTask.status}
+                      {direction === 'incoming' ? (item.link as any).sourceTask?.status : (item.link as any).targetTask?.status}
                     </span>
                     <div className="w-1 h-1 rounded-full bg-border-notion" />
                     <span className="text-[9px] font-medium text-text-dim">

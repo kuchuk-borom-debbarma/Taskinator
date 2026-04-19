@@ -1,6 +1,6 @@
 import { useParams, useNavigate, useSearch } from '@tanstack/react-router';
 import { useApi } from './hooks/useApi';
-import { useQuery, useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { TaskListView } from './components/Tasks/TaskListView';
 import { useState } from 'react';
 import { Plus, Loader2, X, Check } from 'lucide-react';
@@ -23,9 +23,9 @@ export default function ProjectTasksIndex() {
   const {
     data: tasksData,
     isLoading,
-    hasNextPage,
+    hasNextPage: _hasNextPage,
     isFetchingNextPage,
-    hasPreviousPage,
+    hasPreviousPage: _hasPreviousPage,
     isFetchingPreviousPage,
   } = useInfiniteQuery({
     queryKey: ['tasks', projectId, cursor, direction],
@@ -75,7 +75,7 @@ export default function ProjectTasksIndex() {
       setShowCreate(false);
       navigate({
         to: '/projects/$projectId/tasks/$taskId',
-        params: { projectId: projectId!, taskId: task.id },
+        params: { projectId: projectId!, taskId: task.id } as any,
       });
     },
   });
@@ -101,24 +101,24 @@ export default function ProjectTasksIndex() {
         onLoadMore={() => {
           const lastPage = tasksData?.pages[tasksData.pages.length - 1];
           if (lastPage?.hasNextPage) {
-            navigate({
-              search: (prev) => ({ 
+            (navigate as any)({
+              search: (prev: any) => ({ 
                 ...prev, 
                 cursor: lastPage.endCursor!, 
                 direction: 'forward' as const 
-              }),
+              }) as any,
             });
           }
         }}
         onLoadPrev={() => {
           const firstPage = tasksData?.pages[0];
           if (firstPage?.hasPreviousPage) {
-            navigate({
-              search: (prev) => ({ 
+            (navigate as any)({
+              search: (prev: any) => ({ 
                 ...prev, 
                 cursor: firstPage.startCursor!, 
                 direction: 'backward' as const 
-              }),
+              }) as any,
             });
           }
         }}
