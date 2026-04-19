@@ -696,7 +696,6 @@ export const getProjectStats = async (
 };
 
 export const getWorkspaceStats = async (
-    db: Kysely<any>,
     userId: string,
 ): Promise<{
     projectCount: number;
@@ -714,7 +713,7 @@ export const getWorkspaceStats = async (
         ),
         team_count AS (
             SELECT COUNT(*) as count 
-            FROM team 
+            FROM project_team 
             WHERE fk_project_id IN (SELECT id FROM relevant_projects)
         ),
         assigned_task_count AS (

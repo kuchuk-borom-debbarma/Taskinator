@@ -36,7 +36,7 @@ export default function ProjectDashboardView() {
   }
 
   const stats = [
-    { label: 'Calculated Teams', value: project.teamCount || 0, icon: Layers, color: 'blue', sub: 'Cluster nodes' },
+    { label: 'Calculated Teams', value: project.teamCount || 0, icon: Layers, color: 'blue', sub: 'Active teams' },
     { label: 'Network Tasks', value: project.taskCount || 0, icon: Kanban, color: 'purple', sub: 'Active DAG nodes' },
     { label: 'Collaborators', value: project.memberCount || 0, icon: Users, color: 'emerald', sub: 'Authorized agents' },
   ];
@@ -100,7 +100,7 @@ export default function ProjectDashboardView() {
 
         {/* My Teams */}
         <div className="flex flex-col gap-6">
-          <SectionHeader icon={Network} title="My Participation Clusters" />
+          <SectionHeader icon={Network} title="Assigned Teams" />
           <div className="flex flex-col gap-3 min-h-[200px]">
              {/* Fetching my teams for the current user in this project */}
              <PersonalTeamsList projectId={projectId} />
@@ -109,7 +109,7 @@ export default function ProjectDashboardView() {
 
         {/* My Tasks */}
         <div className="flex flex-col gap-6 lg:col-span-2">
-          <SectionHeader icon={Kanban} title="Nodes Requiring Consensus (Assigned to Me)" />
+          <SectionHeader icon={Kanban} title="Assigned Tasks" />
           <div className="min-h-[200px]">
              <PersonalTasksList projectId={projectId} />
           </div>
@@ -147,10 +147,10 @@ function PersonalTeamsList({ projectId }: { projectId: string }) {
           <ArrowRight size={14} className="text-slate-600 group-hover:text-white transition-all" />
         </Link>
       ))}
-      {teams.length === 0 && <div className="p-10 text-center text-xs text-slate-600 italic">No clusters found.</div>}
+      {teams.length === 0 && <div className="p-10 text-center text-xs text-slate-600 italic">No assigned teams detected.</div>}
       {teams.length > 0 && (
         <Link to={`/projects/${projectId}/teams`} className="text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-blue-400 mt-2 text-center">
-          Evaluate All Clusters
+          Manage Project Teams
         </Link>
       )}
     </div>
