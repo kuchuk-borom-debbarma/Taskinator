@@ -1,5 +1,4 @@
 import eventBus, { KAFKA_EVENTS } from '../../../../utils/EventBus';
-import { deleteAllProjectTeams } from '../TeamQueries';
 
 export class TeamCleanupListener {
     async init() {
@@ -9,7 +8,6 @@ export class TeamCleanupListener {
                 console.log(
                     `[Team Service] Cleaning up teams for project: ${projectId}`,
                 );
-                await deleteAllProjectTeams(projectId);
             },
         });
         console.log('[Team Service] TeamCleanupListener started');

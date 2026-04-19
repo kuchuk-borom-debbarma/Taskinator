@@ -1,4 +1,4 @@
-import type {BaseService} from './index.ts';
+import type { BaseService } from './index.ts';
 
 export type TaskStatus = string;
 
@@ -38,33 +38,6 @@ export type TaskLink = {
     updatedAt?: string;
 };
 
-export interface CreateTaskParam {
-    userId: string;
-    projectId: string;
-    teamId?: string | null;
-    memberId?: string | null;
-    title: string;
-    description?: string;
-    status?: TaskStatus;
-}
-
-export interface CreateLinkParam {
-    userId: string;
-    projectId: string;
-    sourceTaskId: string;
-    targetTaskId: string;
-    label: string;
-}
-
-export interface UpdateTaskParam {
-    userId: string;
-    taskId: string;
-    title?: string;
-    description?: string;
-    status?: TaskStatus;
-    priority?: number;
-}
-
 export interface PaginationParams {
     first?: number;
     after?: string;
@@ -94,16 +67,6 @@ export interface GetTaskLinksParam {
 }
 
 export interface TaskService extends BaseService {
-    createTask(data: CreateTaskParam): Promise<Task>;
-
-    createLink(data: CreateLinkParam): Promise<TaskLink>;
-
-    updateTask(data: UpdateTaskParam): Promise<Task>;
-
-    deleteTask(userId: string, taskId: string): Promise<void>;
-
-    deleteLink(userId: string, linkId: string): Promise<void>;
-
     // Read Operations
     getTasks(
         userId: string,

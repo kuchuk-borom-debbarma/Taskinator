@@ -1,57 +1,28 @@
 import type {
-    CreateLinkParam,
-    CreateTaskParam,
     GetNeighbourhoodParam,
     GetTaskLinksParam,
     LinkConnection,
     PaginationParams,
     Task,
     TaskConnection,
-    TaskLink,
     TaskNeighbourhoodResult,
     TaskService,
-    UpdateTaskParam,
 } from '../TaskService.ts';
 import {
-    deleteLinkQuery,
-    deleteTaskQuery,
     getNeighbourhood,
     getProjectTaskLinksPage,
     getTaskLinksPage,
     getTasksByIds as getTasksByIdsQuery,
     getTasksPage,
-    insertLink,
-    insertTask,
-    updateTaskQuery,
 } from './TaskQueries.ts';
 
 export class TaskServiceImpl implements TaskService {
-    async createTask(data: CreateTaskParam): Promise<Task> {
-        return await insertTask(data);
-    }
-
-    async createLink(data: CreateLinkParam): Promise<TaskLink> {
-        return await insertLink(data);
-    }
-
-    async updateTask(data: UpdateTaskParam): Promise<Task> {
-        return await updateTaskQuery(data);
-    }
-
-    async deleteTask(userId: string, taskId: string): Promise<void> {
-        await deleteTaskQuery(userId, taskId);
-    }
-
-    async deleteLink(userId: string, linkId: string): Promise<void> {
-        await deleteLinkQuery(userId, linkId);
-    }
-
     async getTasks(
         userId: string,
         projectId: string | null,
         params: PaginationParams,
     ): Promise<TaskConnection> {
-        return getTasksPage(userId, projectId || null, params);
+        return getTasksPage(userId, projectId, params);
     }
 
     async getTasksByIds(userId: string, ids: string[]): Promise<Task[]> {

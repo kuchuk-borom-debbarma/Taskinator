@@ -1,33 +1,21 @@
 import type {
-    AddProjectMembersParam,
-    CreateProjectParam,
-    DeleteProjectMembersParam,
-    DeleteProjectsParam,
     Project,
     ProjectMember,
     ProjectService,
 } from '../ProjectService.ts';
 import {
-    deleteProjectMembers,
-    deleteProjects,
     getProject,
     getProjectMembers,
+    getProjectMembersByIds,
     getProjects,
     getProjectsByIds,
     getUserProjectIds,
-    insertProject,
-    insertProjectMembers,
-    insertProjects,
     searchProjectMembers,
-    updateProject,
 } from './ProjectQueries.ts';
 
 import eventBus from '../../../utils/EventBus.ts';
 
 export class ProjectServiceImpl implements ProjectService {
-    getProjectsByIds(ids: string[]): Promise<Project[]> {
-        throw new Error('Method not implemented.');
-    }
     async getProjectsOfUser(
         userId: string,
         params?: {
@@ -69,6 +57,13 @@ export class ProjectServiceImpl implements ProjectService {
         return getProjectMembers(userId, projectId, params);
     }
 
+    async getProjectMembersByIds(
+        userId: string,
+        memberIds: string[],
+    ): Promise<ProjectMember[]> {
+        return getProjectMembersByIds(userId, memberIds);
+    }
+
     async getUserProjectIds(userId: string): Promise<string[]> {
         return getUserProjectIds(userId);
     }
@@ -90,54 +85,6 @@ export class ProjectServiceImpl implements ProjectService {
         await eventBus.init();
     }
 
-    async deleteProjectMembers(data: DeleteProjectMembersParam): Promise<void> {
-        const deleted = await deleteProjectMembers(data);
-
-        if (!deleted.length) {
-            throw new Error('Failed to delete any project members');
-        }
-    }
-
-    async deleteProjects(data: DeleteProjectsParam): Promise<void> {
-        const deleted = await deleteProjects(data);
-
-        if (!deleted.length) {
-            throw new Error('Failed to delete any project');
-        }
-    }
-
-    async addProjectMembers(
-        data: AddProjectMembersParam,
-    ): Promise<ProjectMember[]> {
-        const added = await insertProjectMembers(data);
-
-        if (!added.length) {
-            throw new Error('Failed to add any project members');
-        }
-
-        return added;
-    }
-
-    async createProject(data: CreateProjectParam): Promise<Project | null> {
-        const project = await insertProject(data);
-
-        if (!project) {
-            throw new Error('Failed to create project');
-        }
-
-        return project;
-    }
-
-    async createProjects(data: CreateProjectParam[]): Promise<Project[]> {
-        const projects = await insertProjects(data);
-
-        if (!projects.length) {
-            throw new Error('Failed to create projects');
-        }
-
-        return projects;
-    }
-
     async searchProjectMembers(params: {
         actorId: string;
         projectId: string;
@@ -152,18 +99,6 @@ export class ProjectServiceImpl implements ProjectService {
         prevCursor: string | null;
     }> {
         return searchProjectMembers(params);
-    }
-
-    async updateProject(data: {
-        userId: string;
-        projectId: string;
-        name?: string;
-        description?: string | null;
-    }): Promise<Project | null> {
-        const project = await updateProject(data);
-        if (!project)
-            throw new Error('Failed to update project or unauthorized');
-        return project;
     }
 
     async getProjectStats(

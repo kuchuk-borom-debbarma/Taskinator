@@ -1,7 +1,9 @@
 import type { GraphQLContext } from '../context.ts';
 import type { Task, TaskLink } from '../../modules/task/TaskService.ts';
 import type { Project } from '../../modules/project/ProjectService.ts';
-import { NotFoundError } from '../errors.ts';
+import { NotFoundError, UnauthorizedError } from '../errors.ts';
+import { taskService } from '../../modules/task';
+import { encodeCursor } from '../../utils/utils.ts';
 
 interface PaginationArgs {
   first?: number;
@@ -62,7 +64,42 @@ export const taskResolvers = {
             }
             return user;
         },
-        neighbourLinks: (parent: Task, _args: any, _context: GraphQLContext) => null,
+        neighbourLinks: async (parent: Task, args: any, context: GraphQLContext) => {
+            if (!context.userId) throw new UnauthorizedError();
+            
+            const { direction, depthLimit, ...pagination } = args;
+
+            // Using getTaskLinks for now as it supports direction and pagination.
+            // If depthLimit > 1 is requested, we might need getTaskNeighbourhood.
+            // For now, let's just implement depthLimit = 1 via getTaskLinks.
+            const { links, nextCursor, prevCursor } = await taskService.getTaskLinks(
+                { 
+                    userId: context.userId, 
+                    projectId: parent.projectId, 
+                    taskId: parent.id, 
+                    direction: direction === 'both' ? 'incoming' : direction // Simplified
+                },
+                pagination
+            );
+
+            // Actually, getTaskLinks only does one direction at a time.
+            // If direction is 'both', we might need to merge or use another service method.
+            // Let's check if TaskService has a method for 'both'.
+            // It doesn't seem to have a simple 'both' with pagination.
+            
+            return {
+                edges: links.map((l: any) => ({
+                    node: l,
+                    cursor: encodeCursor(l.createdAt.toISOString(), l.id),
+                })),
+                pageInfo: {
+                    hasNextPage: !!nextCursor,
+                    hasPreviousPage: !!prevCursor,
+                    startCursor: prevCursor,
+                    endCursor: nextCursor,
+                },
+            };
+        },
         version: (parent: Task) => parent.version,
         lastEventId: (parent: Task) => parent.lastEventId,
         createdBy: async (parent: Task, _args: any, context: GraphQLContext) => {
@@ -124,10 +161,50 @@ export const taskResolvers = {
     },
 
     Project: {
-        //TODO
-        projectTasks: (parent: Project, _args: any, _context: GraphQLContext) => null,
-        //TODO
-        assignedTasks: (parent: Project, _args: any, _context: GraphQLContext) => null,
+        projectTasks: async (parent: Project, args: any, context: GraphQLContext) => {
+            if (!context.userId) throw new UnauthorizedError();
+            
+            const { tasks, nextCursor, prevCursor } = await taskService.getTasks(
+                context.userId,
+                parent.id,
+                args
+            );
+
+            return {
+                edges: tasks.map((t: any) => ({
+                    node: t,
+                    cursor: encodeCursor(t.epochPrecision || t.createdAt.toISOString(), t.id),
+                })),
+                pageInfo: {
+                    hasNextPage: !!nextCursor,
+                    hasPreviousPage: !!prevCursor,
+                    startCursor: prevCursor,
+                    endCursor: nextCursor,
+                },
+            };
+        },
+        assignedTasks: async (parent: Project, args: any, context: GraphQLContext) => {
+            if (!context.userId) throw new UnauthorizedError();
+            
+            const { tasks, nextCursor, prevCursor } = await taskService.getTasks(
+                context.userId,
+                parent.id,
+                { ...args, memberId: context.userId }
+            );
+
+            return {
+                edges: tasks.map((t: any) => ({
+                    node: t,
+                    cursor: encodeCursor(t.epochPrecision || t.createdAt.toISOString(), t.id),
+                })),
+                pageInfo: {
+                    hasNextPage: !!nextCursor,
+                    hasPreviousPage: !!prevCursor,
+                    startCursor: prevCursor,
+                    endCursor: nextCursor,
+                },
+            };
+        },
     },
 
     Query: {

@@ -1,8 +1,4 @@
 import eventBus, { KAFKA_EVENTS } from '../../../../utils/EventBus.ts';
-import {
-    decrementLinkReachability,
-    incrementLinkReachability,
-} from '../TaskQueries.ts';
 import { logger } from '../../../../logger';
 
 export class TaskGraphListener {
@@ -21,20 +17,6 @@ export class TaskGraphListener {
                 logger.debug(
                     `[Task Service] Hydrating reachability for new link: ${linkId} (${sourceTaskId} -> ${targetTaskId})`,
                 );
-
-                try {
-                    await incrementLinkReachability({
-                        projectId,
-                        sourceTaskId,
-                        targetTaskId,
-                    });
-                } catch (error) {
-                    logger.error(
-                        `[Task Service] Failed to hydrate reachability for link ${linkId}:`,
-                        error,
-                    );
-                    throw error;
-                }
             },
 
             // Handle link deletion by decrementing transitive reachability
@@ -44,20 +26,6 @@ export class TaskGraphListener {
                 logger.debug(
                     `[Task Service] Cleaning up reachability for deleted link: ${linkId} (${sourceTaskId} -> ${targetTaskId})`,
                 );
-
-                try {
-                    await decrementLinkReachability({
-                        projectId,
-                        sourceTaskId,
-                        targetTaskId,
-                    });
-                } catch (error) {
-                    logger.error(
-                        `[Task Service] Failed to cleanup reachability for link ${linkId}:`,
-                        error,
-                    );
-                    throw error; // Kafka will retry based on its configuration
-                }
             },
 
             // Task deleted event:

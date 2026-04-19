@@ -1,5 +1,4 @@
 import eventBus, { KAFKA_EVENTS } from '../../../../utils/EventBus';
-import { deleteAllProjectMembers } from '../ProjectQueries';
 
 export class MemberCleanupListener {
     async init() {
@@ -9,7 +8,6 @@ export class MemberCleanupListener {
                 console.log(
                     `[Project Service] Cleaning up members for project: ${projectId}`,
                 );
-                await deleteAllProjectMembers(projectId);
             },
         });
         console.log('[Project Service] MemberCleanupListener started');

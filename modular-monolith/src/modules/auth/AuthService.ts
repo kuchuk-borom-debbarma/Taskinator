@@ -37,6 +37,12 @@ export interface AuthService {
 
     signIn(data: SignInParam): Promise<{ token: string } | null>;
 
+    searchUsers(params: SearchUsersParam): Promise<{
+        users: User[];
+        nextCursor: string | null;
+        prevCursor: string | null;
+    }>;
+
     /**
      * Batch fetch users by IDs.
      */

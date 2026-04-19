@@ -7,7 +7,6 @@ export type Project = {
     description: string | null;
     version: number;
     lastEventId: string | null;
-    createdBy: string;
     createdAt: Date;
     createdAtPrecision?: string;
     updatedAt?: Date;
@@ -15,65 +14,15 @@ export type Project = {
 
 export type ProjectMember = {
     id: string;
-    projectId: string;
     userId: string;
+    projectId: string;
     version: number;
     lastEventId: string | null;
     createdAt: Date;
     updatedAt: Date;
 };
 
-export interface CreateProjectParam {
-    name: string;
-    description?: string;
-    userId: string;
-}
-
-export interface DeleteProjectsParam {
-    userId: string;
-    projectIds: string[];
-    // Version is omitted for bulk deletes but could be added for single project updates in future.
-}
-
-export interface AddProjectMembersParam {
-    userId: string;
-    projectId: string;
-    usersToAdd: string[];
-}
-
-export interface DeleteProjectMembersParam {
-    userId: string;
-    projectId: string;
-    memberIds: string[];
-}
-
 export interface ProjectService extends BaseService {
-    /**
-     * Create single project
-     */
-    createProject(data: CreateProjectParam): Promise<Project | null>;
-
-    /**
-     * Create Multiple project
-     */
-    createProjects(data: CreateProjectParam[]): Promise<Project[]>;
-
-    updateProject(data: {
-        userId: string;
-        projectId: string;
-        name?: string;
-        description?: string | null;
-    }): Promise<Project | null>;
-
-    deleteProjects(data: DeleteProjectsParam): Promise<void>;
-
-    /**
-     * Add members to a project
-     */
-    addProjectMembers(data: AddProjectMembersParam): Promise<ProjectMember[]>;
-
-    deleteProjectMembers(data: DeleteProjectMembersParam): Promise<void>;
-
     /**
      * Get projects for a user (owned and joined)
      */
@@ -93,8 +42,6 @@ export interface ProjectService extends BaseService {
 
     getProject(userId: string, projectId: string): Promise<Project | null>;
 
-    getProjectsByIds(ids: string[]): Promise<Project[]>;
-
     getProjectMembers(
         userId: string,
         projectId: string,
@@ -109,6 +56,11 @@ export interface ProjectService extends BaseService {
         nextCursor: string | null;
         prevCursor: string | null;
     }>;
+
+    getProjectMembersByIds(
+        userId: string,
+        memberIds: string[],
+    ): Promise<ProjectMember[]>;
 
     /**
      * Get all project IDs where user is owner or member.

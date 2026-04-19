@@ -1,7 +1,10 @@
 import type { GraphQLContext } from '../context.ts';
-import type { Team, TeamMember } from '../../modules/team';
+import type { Team, TeamMember } from '../../modules/team/TeamService.ts';
 import type { Project } from '../../modules/project/ProjectService.ts';
-import { NotFoundError } from '../errors.ts';
+import { NotFoundError, UnauthorizedError } from '../errors.ts';
+import { teamService } from '../../modules/team';
+import { taskService } from '../../modules/task';
+import { encodeCursor } from '../../utils/utils.ts';
 
 interface PaginationArgs {
   first?: number;
@@ -17,8 +20,51 @@ export const teamResolvers = {
         project: (parent: Team, _args: any, context: GraphQLContext) => {
             return context.loaders.project.byId.load(parent.projectId);
         },
-        members: (parent: Team, _args: PaginationArgs, _context: GraphQLContext) => null,
-        tasks: (parent: Team, _args: PaginationArgs, _context: GraphQLContext) => null,
+        members: async (parent: Team, args: PaginationArgs, context: GraphQLContext) => {
+            if (!context.userId) throw new UnauthorizedError();
+            
+            const { members, nextCursor, prevCursor } = await teamService.getTeamMembers(
+                context.userId,
+                parent.projectId,
+                parent.id,
+                args
+            );
+
+            return {
+                edges: members.map((m: any) => ({
+                    node: m,
+                    cursor: m.id,
+                })),
+                pageInfo: {
+                    hasNextPage: !!nextCursor,
+                    hasPreviousPage: !!prevCursor,
+                    startCursor: prevCursor,
+                    endCursor: nextCursor,
+                },
+            };
+        },
+        tasks: async (parent: Team, args: PaginationArgs, context: GraphQLContext) => {
+            if (!context.userId) throw new UnauthorizedError();
+            
+            const { tasks, nextCursor, prevCursor } = await taskService.getTasks(
+                context.userId,
+                parent.projectId,
+                { ...args, teamId: parent.id }
+            );
+
+            return {
+                edges: tasks.map((t: any) => ({
+                    node: t,
+                    cursor: encodeCursor(t.epochPrecision || t.createdAt.toISOString(), t.id),
+                })),
+                pageInfo: {
+                    hasNextPage: !!nextCursor,
+                    hasPreviousPage: !!prevCursor,
+                    startCursor: prevCursor,
+                    endCursor: nextCursor,
+                },
+            };
+        },
         createdBy: async (parent: Team, _args: any, context: GraphQLContext) => {
             const user = await context.loaders.user.byId.load(parent.createdBy);
             if (!user) {
@@ -56,7 +102,28 @@ export const teamResolvers = {
     },
 
     Project: {
-        teams: (parent: Project, _args: PaginationArgs, _context: GraphQLContext) => null,
+        teams: async (parent: Project, args: PaginationArgs, context: GraphQLContext) => {
+            if (!context.userId) throw new UnauthorizedError();
+            
+            const { teams, nextCursor, prevCursor } = await teamService.getTeams(
+                context.userId,
+                parent.id,
+                args
+            );
+
+            return {
+                edges: teams.map((t: any) => ({
+                    node: t,
+                    cursor: t.id,
+                })),
+                pageInfo: {
+                    hasNextPage: !!nextCursor,
+                    hasPreviousPage: !!prevCursor,
+                    startCursor: prevCursor,
+                    endCursor: nextCursor,
+                },
+            };
+        },
     },
 
     Query: {
@@ -74,8 +141,28 @@ export const teamResolvers = {
             );
             return results.filter((res): res is Team => res !== null && !(res instanceof Error));
         },
-        teamMembers: (_parent: any, { teamId, first, after, last, before }: any, _context: GraphQLContext) => {
-            return null;
+        teamMembers: async (_parent: any, { projectId, teamId, first, after, last, before }: any, context: GraphQLContext) => {
+            if (!context.userId) throw new UnauthorizedError();
+            
+            const { members, nextCursor, prevCursor } = await teamService.getTeamMembers(
+                context.userId,
+                projectId,
+                teamId,
+                { first, after, last, before }
+            );
+
+            return {
+                edges: members.map((m: any) => ({
+                    node: m,
+                    cursor: m.id,
+                })),
+                pageInfo: {
+                    hasNextPage: !!nextCursor,
+                    hasPreviousPage: !!prevCursor,
+                    startCursor: prevCursor,
+                    endCursor: nextCursor,
+                },
+            };
         },
     },
 

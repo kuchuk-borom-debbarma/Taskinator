@@ -1,5 +1,4 @@
 import eventBus, { KAFKA_EVENTS } from '../../../../utils/EventBus';
-import { removeUserFromAllTeams } from '../TeamQueries';
 
 export class ProjectMemberDeletedListener {
     async init() {
@@ -9,7 +8,6 @@ export class ProjectMemberDeletedListener {
                 console.log(
                     `[Team Service] Removing user ${userId} from all teams in project ${projectId}`,
                 );
-                await removeUserFromAllTeams(projectId, userId);
             },
         });
         console.log('[Team Service] ProjectMemberDeletedListener started');
