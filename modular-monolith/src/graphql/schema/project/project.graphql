@@ -1,0 +1,62 @@
+# Project types
+type Project {
+    """ID of the project"""
+    id: ID!
+    """Name of the project"""
+    name: String!
+    """Desc of the project """
+    description: String
+    """User who created the project"""
+    creator: User!
+    """Members of the project"""
+    projectMembers: ProjectConnection!
+    createdAt: String!
+    updatedAt: String
+    version: Int!
+}
+
+type ProjectMember {
+    id: ID!
+    project: Project!
+    user: User
+    createdAt: String!
+    version: Int!
+}
+
+type ProjectConnection {
+    edges: [ProjectEdge!]!
+    pageInfo: PageInfo!
+    totalCount: Int
+}
+
+type ProjectEdge {
+    node: Project!
+    cursor: String!
+}
+
+type ProjectMemberEdge {
+    node: ProjectMember!
+    cursor: String!
+}
+
+type ProjectMemberConnection {
+    edges: [ProjectMemberEdge!]!
+    pageInfo: PageInfo!
+}
+
+
+type AddProjectMembersPayload {
+    success: Boolean!
+    project: Project
+}
+
+type RemoveProjectMembersPayload {
+    success: Boolean!
+    removedCount: Int!
+    project: Project
+}
+
+type DeleteProjectsPayload {
+    success: Boolean!
+    deletedCount: Int!
+}

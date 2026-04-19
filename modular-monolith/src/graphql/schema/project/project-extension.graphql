@@ -1,0 +1,23 @@
+extend type User{
+    """Projects of the user"""
+    projects: ProjectConnection!
+}
+
+extend type Mutation {
+    """Create project"""
+    createProject(name: String!, description: String): Project
+    """Update project if authorized"""
+    updateProject(id: ID!, name: String, description: String): Project
+    """Delete project if authorized"""
+    deleteProjects(projectIds: [ID!]!): DeleteProjectsPayload
+    """Add members to a project if authorized"""
+    addProjectMembers(projectId: ID!, userIds: [String!]!): AddProjectMembersPayload
+    """Remove members from project if authorized"""
+    removeProjectMembers(projectId: ID!, memberIds: [ID!]!): RemoveProjectMembersPayload
+}
+
+extend type Query {
+    """Get project by ID if authorized"""
+    project(id: String!): Project
+}
+

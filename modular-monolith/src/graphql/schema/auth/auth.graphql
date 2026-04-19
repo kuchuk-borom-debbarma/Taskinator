@@ -1,0 +1,13 @@
+type User {
+    id: ID!
+    username: String!
+}
+
+type UserSearchResultEdge {
+    node: User!
+}
+
+type UserSearchResultConnection {
+    edges: [UserSearchResultEdge!]!
+    pageInfo: PageInfo!
+}

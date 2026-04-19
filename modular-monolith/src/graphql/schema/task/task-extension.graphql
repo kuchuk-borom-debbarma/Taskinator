@@ -1,0 +1,65 @@
+extend type Project {
+    """Tasks assigned to the requesting user for the given project"""
+    assignedTasks: TaskConnection!
+    """
+    Returns a paginated list of tasks belonging to the project.
+    Optionally filtered by team or assigned member.
+    """
+    projectTasks(
+        teamId: ID
+        memberId: String
+        first: Int
+        after: String
+        last: Int
+        before: String
+    ): TaskConnection!
+}
+
+extend type Query {
+    """Fetches a single task by ID. Returns null if not found or not authorized"""
+    task(id: ID!): Task
+    tasks(id: [ID!]!): [Task!]!
+}
+
+input CreateTaskInput {
+    projectId: ID!
+    title: String!
+    description: String
+    status: String
+    teamId: ID
+    memberId: ID
+}
+
+input UpdateTaskInput {
+    title: String
+    description: String
+    status: String
+}
+
+input CreateTaskLinkInput {
+    projectId: ID!
+    sourceTaskId: ID!
+    targetTaskId: ID!
+    label: String!
+}
+
+type TaskMutation {
+    """Creates a new task in the given project. Returns the created task."""
+    create(input: CreateTaskInput!): Task!
+
+    """Partially updates a task. Only supplied fields are changed; omitted fields are left as-is."""
+    update(taskId: ID!, input: UpdateTaskInput!): Task!
+
+    """Permanently deletes a task. Returns the ID of the deleted task."""
+    delete(taskId: ID!): ID!
+
+    """Creates a directed, labelled link between two tasks. Returns the created link."""
+    createLink(input: CreateTaskLinkInput!): TaskLink!
+
+    """Removes a task link by ID. Returns the ID of the deleted link."""
+    deleteLink(linkId: ID!): ID!
+}
+
+extend type Mutation {
+    task: TaskMutation!
+}

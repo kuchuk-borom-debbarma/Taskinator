@@ -1,0 +1,45 @@
+type Team {
+    id: ID!
+    name: String!
+    projectId: ID!
+    createdBy: String!
+    creator: User
+    createdAt: String!
+    updatedAt: String
+    version: Int!
+    project: Project
+
+    # Connections
+    members(first: Int, after: String, last: Int, before: String): TeamMemberConnection!
+    tasks(first: Int, after: String, last: Int, before: String): TaskConnection!
+}
+
+type TeamMember {
+    id: ID!
+    teamId: ID!
+    userId: String!
+    user: User
+    team: Team
+    createdAt: String!
+    version: Int!
+}
+
+type TeamEdge {
+    node: Team!
+    cursor: String!
+}
+
+type TeamConnection {
+    edges: [TeamEdge!]!
+    pageInfo: PageInfo!
+}
+
+type TeamMemberEdge {
+    node: TeamMember!
+    cursor: String!
+}
+
+type TeamMemberConnection {
+    edges: [TeamMemberEdge!]!
+    pageInfo: PageInfo!
+}
