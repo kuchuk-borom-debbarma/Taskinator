@@ -113,4 +113,17 @@ export interface ProjectService extends BaseService {
         nextCursor: string | null;
         prevCursor: string | null;
     }>;
+
+    getProjectStats(userId: string, projectId: string): Promise<{
+        teamCount: number;
+        taskCount: number;
+        memberCount: number;
+        taskLabelCounts: { label: string; count: number }[];
+    }>;
+
+    getWorkspaceStats(userId: string): Promise<{
+        projectCount: number;
+        teamCount: number;
+        assignedTaskCount: number;
+    }>;
 }

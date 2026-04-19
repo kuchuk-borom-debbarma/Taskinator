@@ -9,4 +9,5 @@ export interface ProjectAPI {
   removeProjectMembers(projectId: string, memberIds: string[]): Promise<{ success: boolean; removedCount: number }>;
   getProjectStats(projectId: string): Promise<{ teamCount: number; taskCount: number }>;
   getWorkspaceStats(): Promise<{ projectCount: number; teamCount: number; assignedTaskCount: number }>;
+  getProjectMembers(projectId: string, first?: number, after?: string): Promise<{ members: any[], hasNextPage: boolean, endCursor: string | null }>;
 }

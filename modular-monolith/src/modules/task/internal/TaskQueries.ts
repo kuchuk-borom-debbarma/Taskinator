@@ -428,7 +428,15 @@ export const getTasksPage = async (
         WHERE fk_project_id = ${projectId}::uuid
           AND EXISTS (SELECT 1 FROM auth_check)
           AND (
-            ${cursorEpoch}::text IS NULL 
+              ${params.teamId ?? null}::uuid IS NULL 
+              OR fk_team_id = ${params.teamId ?? null}::uuid
+          )
+          AND (
+              ${params.memberId ?? null}::text IS NULL 
+              OR fk_member_id = ${params.memberId ?? null}::text
+          )
+          AND (
+              ${cursorEpoch}::text IS NULL 
             OR (
                 CASE 
                   WHEN ${isBackward} THEN (created_at > ${cursorEpoch}::timestamptz OR (created_at = ${cursorEpoch}::timestamptz AND id > ${cursorId}::uuid))

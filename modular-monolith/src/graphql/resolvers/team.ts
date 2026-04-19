@@ -2,6 +2,7 @@ import type { GraphQLContext } from '../context.ts';
 import { teamService } from '../../modules/team';
 import { resolveTeam, buildRef } from './helpers.ts';
 import { UnauthorizedError } from '../errors';
+import { encodeCursor } from '../../utils/utils.ts';
 
 export const teamResolvers = {
     Team: {
@@ -24,6 +25,44 @@ export const teamResolvers = {
         },
         creator: (t: any) => buildRef(t.createdBy, 'User'),
         project: (t: any) => buildRef(t.projectId, 'Project'),
+
+        // Connections
+        members: async (t: any, args: any, context: GraphQLContext) => {
+            const { members, nextCursor, prevCursor } = await teamService.getTeamMembers(
+                context.userId!,
+                t.projectId,
+                t.id,
+                args
+            );
+            return {
+                edges: members.map((m) => ({ node: m, cursor: m.id })),
+                pageInfo: {
+                    hasNextPage: !!nextCursor,
+                    hasPreviousPage: !!prevCursor,
+                    startCursor: prevCursor,
+                    endCursor: nextCursor,
+                },
+            };
+        },
+        tasks: async (t: any, args: any, context: GraphQLContext) => {
+            const { tasks, nextCursor, prevCursor } = await (await import('../../modules/task')).taskService.getTasks(
+                context.userId!,
+                t.projectId,
+                { ...args, teamId: t.id }
+            );
+            return {
+                edges: tasks.map((tk: any) => ({
+                    node: tk,
+                    cursor: encodeCursor(tk.epochPrecision, tk.id),
+                })),
+                pageInfo: {
+                    hasNextPage: !!nextCursor,
+                    hasPreviousPage: !!prevCursor,
+                    startCursor: prevCursor,
+                    endCursor: nextCursor,
+                },
+            };
+        },
     },
     TeamMember: {
         id: (m: any) => m.id,

@@ -69,6 +69,8 @@ export interface PaginationParams {
     after?: string;
     last?: number;
     before?: string;
+    teamId?: string;
+    memberId?: string;
 }
 
 export interface TaskConnection {

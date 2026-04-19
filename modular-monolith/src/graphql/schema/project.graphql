@@ -8,6 +8,20 @@ type Project {
     createdAt: String!
     updatedAt: String
     version: Int!
+
+    # Aggregate Data
+    teamCount: Int!
+    taskCount: Int!
+    memberCount: Int!
+    taskLabelCounts: [TaskLabelCount!]!
+
+    # Connections
+    teams(first: Int, after: String, last: Int, before: String): TeamConnection!
+    members(first: Int, after: String, last: Int, before: String): ProjectMemberConnection!
+    
+    # Personal Context
+    myTeams(first: Int, after: String, last: Int, before: String): TeamConnection!
+    myTasks(first: Int, after: String, last: Int, before: String): ProjectTaskConnection!
 }
 
 type ProjectEdge {
@@ -29,6 +43,9 @@ type ProjectMember {
     project: Project
     createdAt: String!
     version: Int!
+
+    # Personal Backlog
+    assignedTasks(first: Int, after: String, last: Int, before: String): ProjectTaskConnection!
 }
 
 type ProjectMemberEdge {
@@ -51,6 +68,13 @@ extend type Query {
         last: Int
         before: String
     ): ProjectMemberConnection!
+    workspaceStats: WorkspaceStats!
+}
+
+type WorkspaceStats {
+    projectCount: Int!
+    teamCount: Int!
+    assignedTaskCount: Int!
 }
 
 extend type Mutation {

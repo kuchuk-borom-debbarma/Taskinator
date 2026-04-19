@@ -1,13 +1,16 @@
 import type { ProjectTask, TaskLink, TaskNeighbourhood } from '../types';
 
 export interface TaskAPI {
-  getProjectTasks(
+  getTasks(
     projectId: string, 
-    teamId?: string,
-    first?: number, 
-    after?: string, 
-    last?: number, 
-    before?: string
+    params?: {
+      teamId?: string,
+      memberId?: string,
+      first?: number, 
+      after?: string, 
+      last?: number, 
+      before?: string
+    }
   ): Promise<{ tasks: ProjectTask[], hasNextPage: boolean, hasPreviousPage: boolean, endCursor: string | null, startCursor: string | null }>;
   getProjectLinks(projectId: string, first?: number, after?: string): Promise<{ links: TaskLink[], hasNextPage: boolean, endCursor: string | null }>;
   getTask(id: string): Promise<ProjectTask | null>;

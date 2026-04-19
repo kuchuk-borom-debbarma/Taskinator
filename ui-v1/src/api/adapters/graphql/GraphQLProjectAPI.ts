@@ -90,6 +90,13 @@ export class GraphQLProjectAPI implements ProjectAPI {
           description
           createdAt
           version
+          teamCount
+          taskCount
+          memberCount
+          taskLabelCounts {
+            label
+            count
+          }
         }
       }
     `), { id });
@@ -148,5 +155,68 @@ export class GraphQLProjectAPI implements ProjectAPI {
       }
     `, { projectId, memberIds });
     return data.removeProjectMembers;
+  }
+
+  async getProjectStats(projectId: string): Promise<{ teamCount: number; taskCount: number }> {
+    const data = await this.query<any>(graphql(`
+      query GetProjectStats($projectId: ID!) {
+        project(id: $projectId) {
+          teamCount
+          taskCount
+        }
+      }
+    `), { projectId });
+    return {
+      teamCount: data.project.teamCount,
+      taskCount: data.project.taskCount,
+    };
+  }
+
+  async getWorkspaceStats(): Promise<{ projectCount: number; teamCount: number; assignedTaskCount: number }> {
+    const data = await this.query<any>(`
+      query GetWorkspaceStats {
+        workspaceStats {
+          projectCount
+          teamCount
+          assignedTaskCount
+        }
+      }
+    `, {});
+    return data.workspaceStats;
+  }
+
+  async getProjectMembers(projectId: string, first?: number, after?: string): Promise<{ members: any[], hasNextPage: boolean, endCursor: string | null }> {
+    const data = await this.query<any>(graphql(`
+      query GetProjectMembers($projectId: ID!, $first: Int, $after: String) {
+        project(id: $projectId) {
+          members(first: $first, after: $after) {
+            edges {
+              node {
+                id
+                user {
+                  id
+                  username
+                  email
+                }
+                createdAt
+              }
+              cursor
+            }
+            pageInfo {
+              hasNextPage
+              endCursor
+            }
+          }
+        }
+      }
+    `), { projectId, first, after });
+
+    if (!data.project) return { members: [], hasNextPage: false, endCursor: null };
+
+    return {
+      members: data.project.members.edges.map((e: any) => e.node),
+      hasNextPage: data.project.members.pageInfo.hasNextPage,
+      endCursor: data.project.members.pageInfo.endCursor ?? null,
+    };
   }
 }

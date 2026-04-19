@@ -75,17 +75,21 @@ export class GraphQLTaskAPI implements TaskAPI {
     } as unknown as ProjectTask;
   }
 
-  async getProjectTasks(
+  async getTasks(
     projectId: string, 
-    teamId?: string,
-    first?: number, 
-    after?: string, 
-    last?: number, 
-    before?: string
+    params: {
+      teamId?: string,
+      memberId?: string,
+      first?: number, 
+      after?: string, 
+      last?: number, 
+      before?: string
+    } = {}
   ): Promise<{ tasks: ProjectTask[], hasNextPage: boolean, hasPreviousPage: boolean, endCursor: string | null, startCursor: string | null }> {
+    const { teamId, memberId, first, after, last, before } = params;
     const data = await this.query<GetProjectTasksQuery>(graphql(`
-      query GetProjectTasks($projectId: ID!, $first: Int, $after: String, $last: Int, $before: String) {
-        projectTasks(projectId: $projectId, first: $first, after: $after, last: $last, before: $before) {
+      query GetProjectTasks($projectId: ID!, $teamId: ID, $memberId: String, $first: Int, $after: String, $last: Int, $before: String) {
+        projectTasks(projectId: $projectId, teamId: $teamId, memberId: $memberId, first: $first, after: $after, last: $last, before: $before) {
           edges {
             node {
               id projectId teamId memberId title description status priority dueDate version createdAt updatedAt createdBy
@@ -104,7 +108,7 @@ export class GraphQLTaskAPI implements TaskAPI {
           }
         }
       }
-    `), { projectId, first, after, last, before });
+    `), { projectId, teamId, memberId, first, after, last, before });
     
     return {
       tasks: data.projectTasks.edges.map(e => this.mapTask(e.node)),

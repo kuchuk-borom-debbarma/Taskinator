@@ -144,4 +144,21 @@ export class ProjectServiceImpl implements ProjectService {
             throw new Error('Failed to update project or unauthorized');
         return project;
     }
+
+    async getProjectStats(userId: string, projectId: string): Promise<{
+        teamCount: number;
+        taskCount: number;
+        memberCount: number;
+        taskLabelCounts: { label: string; count: number }[];
+    }> {
+        return (await import('./ProjectQueries.ts')).getProjectStats(userId, projectId);
+    }
+
+    async getWorkspaceStats(userId: string): Promise<{
+        projectCount: number;
+        teamCount: number;
+        assignedTaskCount: number;
+    }> {
+        return (await import('./ProjectQueries.ts')).getWorkspaceStats(userId);
+    }
 }

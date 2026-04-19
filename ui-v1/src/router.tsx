@@ -101,6 +101,13 @@ const indexRoute = createRoute({
 const projectLayoutRoute = createRoute({
   getParentRoute: () => authLayoutRoute,
   path: 'projects/$projectId',
+  component: lazyRouteComponent(() => import('./components/Project/ProjectLayout').then(m => ({ default: m.ProjectLayout }))),
+});
+
+const projectDashboardRoute = createRoute({
+  getParentRoute: () => projectLayoutRoute,
+  path: '/',
+  component: lazyRouteComponent(() => import('./ProjectDashboardView.lazy.tsx')),
 });
 
 type TaskSearch = {
@@ -108,9 +115,9 @@ type TaskSearch = {
   direction?: 'forward' | 'backward';
 };
 
-const projectListRoute = createRoute({
+const projectTasksRoute = createRoute({
   getParentRoute: () => projectLayoutRoute,
-  path: '/',
+  path: 'tasks',
   validateSearch: (search: Record<string, unknown>): TaskSearch => {
     return {
       cursor: (search.cursor as string) || undefined,
@@ -118,6 +125,18 @@ const projectListRoute = createRoute({
     };
   },
   component: lazyRouteComponent(() => import('./ProjectTasksIndex.lazy.tsx')),
+});
+
+const projectTeamsRoute = createRoute({
+  getParentRoute: () => projectLayoutRoute,
+  path: 'teams',
+  component: lazyRouteComponent(() => import('./ProjectTeamsView.lazy.tsx')),
+});
+
+const projectMembersRoute = createRoute({
+  getParentRoute: () => projectLayoutRoute,
+  path: 'members',
+  component: lazyRouteComponent(() => import('./ProjectMembersView.lazy.tsx')),
 });
 
 type LinkSearch = {
@@ -150,7 +169,10 @@ export const routeTree = rootRoute.addChildren([
   authLayoutRoute.addChildren([
     indexRoute,
     projectLayoutRoute.addChildren([
-      projectListRoute,
+      projectDashboardRoute,
+      projectTasksRoute,
+      projectTeamsRoute,
+      projectMembersRoute,
       taskDetailRoute,
     ]),
   ]),

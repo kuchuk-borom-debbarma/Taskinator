@@ -27,6 +27,96 @@ export const projectResolvers = {
             return date instanceof Date ? date.toISOString() : date;
         },
         creator: (p: any) => buildRef(p.userId, 'User'),
+
+        // Stats
+        teamCount: async (p: any, _: any, context: GraphQLContext) => {
+            const stats = await projectService.getProjectStats(context.userId!, p.id);
+            return stats.teamCount;
+        },
+        taskCount: async (p: any, _: any, context: GraphQLContext) => {
+            const stats = await projectService.getProjectStats(context.userId!, p.id);
+            return stats.taskCount;
+        },
+        memberCount: async (p: any, _: any, context: GraphQLContext) => {
+            const stats = await projectService.getProjectStats(context.userId!, p.id);
+            return stats.memberCount;
+        },
+        taskLabelCounts: async (p: any, _: any, context: GraphQLContext) => {
+            const stats = await projectService.getProjectStats(context.userId!, p.id);
+            return stats.taskLabelCounts;
+        },
+
+        // Connections
+        teams: async (p: any, args: any, context: GraphQLContext) => {
+            const { teams, nextCursor, prevCursor } = await (await import('../../modules/team')).teamService.getTeams(
+                context.userId!,
+                p.id,
+                args
+            );
+            return {
+                edges: teams.map((t: any) => ({ node: t, cursor: t.id })),
+                pageInfo: {
+                    hasNextPage: !!nextCursor,
+                    hasPreviousPage: !!prevCursor,
+                    startCursor: prevCursor,
+                    endCursor: nextCursor,
+                },
+            };
+        },
+        members: async (p: any, args: any, context: GraphQLContext) => {
+            const { members, nextCursor, prevCursor } = await projectService.getProjectMembers(
+                context.userId!,
+                p.id,
+                args
+            );
+            return {
+                edges: members.map((m: any) => ({ 
+                    node: m, 
+                    cursor: encodeCursor(m.epochPrecision, m.id) 
+                })),
+                pageInfo: {
+                    hasNextPage: !!nextCursor,
+                    hasPreviousPage: !!prevCursor,
+                    startCursor: prevCursor,
+                    endCursor: nextCursor,
+                },
+            };
+        },
+        myTeams: async (p: any, args: any, context: GraphQLContext) => {
+            const { teams, nextCursor, prevCursor } = await (await import('../../modules/team')).teamService.getTeams(
+                context.userId!,
+                p.id,
+                args
+            );
+            return {
+                edges: teams.map((t: any) => ({ node: t, cursor: t.id })),
+                pageInfo: {
+                    hasNextPage: !!nextCursor,
+                    hasPreviousPage: !!prevCursor,
+                    startCursor: prevCursor,
+                    endCursor: nextCursor,
+                },
+            };
+        },
+        myTasks: async (p: any, args: any, context: GraphQLContext) => {
+            const { tasks, nextCursor, prevCursor } = await (await import('../../modules/task')).taskService.getTasks(
+                context.userId!,
+                p.id,
+                { ...args, memberId: context.userId! }
+            );
+            return {
+                edges: tasks.map((t: any) => ({
+                    node: t,
+                    cursor: encodeCursor(t.epochPrecision, t.id),
+                })),
+                pageInfo: {
+                    hasNextPage: !!nextCursor,
+                    hasPreviousPage: !!prevCursor,
+                    startCursor: prevCursor,
+                    endCursor: nextCursor,
+                },
+            };
+        },
     },
     ProjectMember: {
         id: (m: any) => m.id,
@@ -36,6 +126,25 @@ export const projectResolvers = {
             m.createdAt instanceof Date ? m.createdAt.toISOString() : m.createdAt,
         user: (m: any) => buildRef(m.userId, 'User'),
         project: (m: any) => buildRef(m.projectId, 'Project'),
+        assignedTasks: async (m: any, args: any, context: GraphQLContext) => {
+            const { tasks, nextCursor, prevCursor } = await (await import('../../modules/task')).taskService.getTasks(
+                context.userId!,
+                m.projectId,
+                { ...args, memberId: m.userId }
+            );
+            return {
+                edges: tasks.map((t: any) => ({
+                    node: t,
+                    cursor: encodeCursor(t.epochPrecision, t.id),
+                })),
+                pageInfo: {
+                    hasNextPage: !!nextCursor,
+                    hasPreviousPage: !!prevCursor,
+                    startCursor: prevCursor,
+                    endCursor: nextCursor,
+                },
+            };
+        },
     },
     Query: {
         projects: async (
@@ -90,6 +199,10 @@ export const projectResolvers = {
                     endCursor: nextCursor,
                 },
             };
+        },
+        workspaceStats: async (_: any, __: any, context: GraphQLContext) => {
+            if (!context.userId) throw new UnauthorizedError();
+            return projectService.getWorkspaceStats(context.userId);
         },
     },
     Mutation: {

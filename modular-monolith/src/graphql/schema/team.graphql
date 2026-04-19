@@ -8,6 +8,10 @@ type Team {
     updatedAt: String
     version: Int!
     project: Project
+
+    # Connections
+    members(first: Int, after: String, last: Int, before: String): TeamMemberConnection!
+    tasks(first: Int, after: String, last: Int, before: String): ProjectTaskConnection!
 }
 
 type TeamMember {

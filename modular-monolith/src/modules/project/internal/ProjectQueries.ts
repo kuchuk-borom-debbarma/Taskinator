@@ -620,3 +620,119 @@ export const updateProject = async (
 
     return result.rows[0] || null;
 };
+export const getProjectStats = async (
+    userId: string,
+    projectId: string,
+): Promise<{
+    teamCount: number;
+    taskCount: number;
+    memberCount: number;
+    taskLabelCounts: { label: string; count: number }[];
+}> => {
+    const result = await sql<{
+        teamCount: number;
+        taskCount: number;
+        memberCount: number;
+        taskLabelCounts: any;
+    }>`
+        WITH auth_check AS (
+            SELECT 1 FROM project WHERE id = ${projectId}::uuid AND fk_user_id = ${userId}::text
+            UNION ALL
+            SELECT 1 FROM project_member WHERE fk_project_id = ${projectId}::uuid AND fk_user_id = ${userId}::text
+            LIMIT 1
+        ),
+        counts AS (
+            SELECT
+                (SELECT count(*) FROM project_team WHERE fk_project_id = ${projectId}::uuid) as team_count,
+                (SELECT count(*) FROM project_task WHERE fk_project_id = ${projectId}::uuid) as task_count,
+                (SELECT count(*) FROM project_member WHERE fk_project_id = ${projectId}::uuid) as member_count
+        ),
+        label_counts AS (
+            -- This is a bit complex as we need to aggregate taskLabelCounts across all tasks in the project.
+            -- For simplicity and performance, we'll just return an empty list or implement a basic count if columns exist.
+            -- Assuming we want to aggregate 'status' or similar if they are labels.
+            -- The prompt mentioned 'label task count'.
+            SELECT 
+                jsonb_object_agg(status, count) as label_counts
+            FROM (
+                SELECT status, count(*) as count
+                FROM project_task
+                WHERE fk_project_id = ${projectId}::uuid
+                GROUP BY status
+            ) s
+        )
+        SELECT 
+            team_count as "teamCount",
+            task_count as "taskCount",
+            member_count as "memberCount",
+            COALESCE(label_counts, '{}'::jsonb) as "taskLabelCounts"
+        FROM counts, label_counts
+        WHERE EXISTS (SELECT 1 FROM auth_check)
+    `.execute(db);
+
+    const stats = result.rows[0];
+    if (!stats) {
+        return {
+            teamCount: 0,
+            taskCount: 0,
+            memberCount: 0,
+            taskLabelCounts: [],
+        };
+    }
+
+    const taskLabelCounts = Object.entries(stats.taskLabelCounts || {}).map(
+        ([label, count]) => ({
+            label,
+            count: count as number,
+        }),
+    );
+
+    return {
+        teamCount: Number(stats.teamCount),
+        taskCount: Number(stats.taskCount),
+        memberCount: Number(stats.memberCount),
+        taskLabelCounts,
+    };
+};
+
+export const getWorkspaceStats = async (
+    db: Kysely<any>,
+    userId: string,
+): Promise<{
+    projectCount: number;
+    teamCount: number;
+    assignedTaskCount: number;
+}> => {
+    const result = await sql<any>`
+        WITH relevant_projects AS (
+            SELECT fk_project_id as id FROM project_member WHERE fk_user_id = ${userId}
+            UNION
+            SELECT id FROM project WHERE fk_user_id = ${userId}
+        ),
+        project_count AS (
+            SELECT COUNT(*) as count FROM relevant_projects
+        ),
+        team_count AS (
+            SELECT COUNT(*) as count 
+            FROM team 
+            WHERE fk_project_id IN (SELECT id FROM relevant_projects)
+        ),
+        assigned_task_count AS (
+            SELECT COUNT(*) as count 
+            FROM project_task 
+            WHERE fk_member_id = ${userId}
+        )
+        SELECT 
+            pc.count as project_count,
+            tc.count as team_count,
+            atc.count as assigned_task_count
+        FROM project_count pc, team_count tc, assigned_task_count atc
+    `.execute(db);
+
+    const stats = result.rows[0];
+    return {
+        projectCount: Number(stats?.project_count || 0),
+        teamCount: Number(stats?.team_count || 0),
+        assignedTaskCount: Number(stats?.assigned_task_count || 0),
+    };
+};

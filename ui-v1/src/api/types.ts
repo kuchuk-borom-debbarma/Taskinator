@@ -6,6 +6,12 @@ export interface Project {
   description?: string;
   createdAt: string;
   version: number;
+  
+  // Dashboard fields
+  teamCount?: number;
+  taskCount?: number;
+  memberCount?: number;
+  taskLabelCounts?: { label: string; count: number }[];
 }
 
 export interface ProjectTask {
@@ -77,6 +83,8 @@ export interface Team {
   id: string;
   name: string;
   projectId: string;
+  memberCount?: number;
+  taskCount?: number;
 }
 
 export interface Member {
