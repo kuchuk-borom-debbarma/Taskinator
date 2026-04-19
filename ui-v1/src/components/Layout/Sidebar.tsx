@@ -1,7 +1,7 @@
-import React, { useState, useMemo } from 'react';
-import { useInfiniteQuery } from '@tanstack/react-query';
+import React, { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useApi } from '../../hooks/useApi';
-import { Link, useLocation } from '@tanstack/react-router';
+import { Link, useLocation, useNavigate } from '@tanstack/react-router';
 import {
   LayoutDashboard,
   Settings,
@@ -13,9 +13,99 @@ import {
   Loader2,
   ChevronLeft,
   ChevronRight,
-  Activity,
+  X,
+  Check
 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
+
+// ─── Create Project Modal ────────────────────────────────────────────────────
+
+interface CreateProjectModalProps {
+  onClose: () => void;
+}
+
+export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ onClose }) => {
+  const { projectApi } = useApi();
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+
+  const mutation = useMutation({
+    mutationFn: () => projectApi.createProject(name.trim(), description.trim() || undefined),
+    onSuccess: (project) => {
+      queryClient.invalidateQueries({ queryKey: ['sidebar-projects'] });
+      queryClient.invalidateQueries({ queryKey: ['workspace-projects-list'] });
+      queryClient.invalidateQueries({ queryKey: ['workspace-stats'] });
+      onClose();
+      navigate({ to: '/projects/$projectId', params: { projectId: project.id } });
+    },
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+    mutation.mutate();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative z-10 w-full max-w-md bg-[#09090b] border border-white/10 rounded-2xl shadow-2xl p-6 animate-in slide-in-from-bottom-4 duration-300">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-white font-bold text-[15px] tracking-tight">Create New Project</h3>
+          <button onClick={onClose} className="p-1.5 rounded-lg text-white/30 hover:text-white hover:bg-white/5 transition-all">
+            <X size={14} />
+          </button>
+        </div>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <div>
+            <label className="block text-[10px] font-black text-white/30 uppercase tracking-[0.2em] mb-2">Project Name</label>
+            <input
+              autoFocus
+              type="text"
+              value={name}
+              onChange={e => setName(e.target.value)}
+              placeholder="e.g. Q3 Roadmap"
+              className="w-full px-4 py-3 bg-white/[0.03] border border-white/5 rounded-xl text-[14px] text-white font-medium focus:outline-none focus:border-focus-blue/40 placeholder:text-white/10 transition-all"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-[10px] font-black text-white/30 uppercase tracking-[0.2em] mb-2">Description</label>
+            <textarea
+              value={description}
+              onChange={e => setDescription(e.target.value)}
+              placeholder="Strategic goals and objectives..."
+              rows={3}
+              className="w-full px-4 py-3 bg-white/[0.03] border border-white/5 rounded-xl text-[14px] text-white font-medium focus:outline-none focus:border-focus-blue/40 placeholder:text-white/10 transition-all resize-none"
+            />
+          </div>
+          {mutation.isError && (
+             <p className="text-red-400 text-[11px] font-bold">{(mutation.error as Error).message}</p>
+          )}
+          <div className="flex gap-3 mt-2">
+            <button type="button" onClick={onClose} className="flex-1 py-3 border border-white/10 rounded-xl text-white/40 hover:text-white font-bold text-[13px] transition-all hover:bg-white/5">
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={mutation.isPending || !name.trim()}
+              className="flex-1 py-3 bg-focus-blue text-white rounded-xl font-bold text-[13px] flex items-center justify-center gap-2 hover:bg-focus-blue/90 transition-all disabled:opacity-50"
+            >
+              {mutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
+              {mutation.isPending ? 'Creating...' : 'Launch Project'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
+// ─── Sidebar ─────────────────────────────────────────────────────────────────
+
+const PAGE_SIZE = 8;
 
 export const Sidebar: React.FC = () => {
   const { projectApi } = useApi();
@@ -23,23 +113,38 @@ export const Sidebar: React.FC = () => {
   const location = useLocation();
   const [showCreateProject, setShowCreateProject] = useState(false);
 
+  // Pagination State
+  const [currentCursor, setCurrentCursor] = useState<string | undefined>(undefined);
+  const [cursorHistory, setCursorHistory] = useState<string[]>([]);
+
   const {
-    data: projectsData,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-    isLoading
-  } = useInfiniteQuery({
-    queryKey: ['sidebar-projects-list'],
-    queryFn: ({ pageParam }) => projectApi.getProjects(10, pageParam),
-    initialPageParam: undefined as string | undefined,
-    getNextPageParam: (lastPage) => lastPage.hasNextPage ? lastPage.endCursor : undefined,
+    data,
+    isLoading,
+    isFetching
+  } = useQuery({
+    queryKey: ['sidebar-projects', currentCursor],
+    queryFn: () => projectApi.getProjects(PAGE_SIZE, currentCursor),
   });
 
-  const projects = useMemo(() =>
-    projectsData?.pages.flatMap(page => page.projects) || [],
-    [projectsData]
-  );
+  const projects = data?.projects || [];
+  const hasNextPage = data?.hasNextPage || false;
+  const nextCursor = data?.endCursor;
+
+  const handleNextPage = () => {
+    if (nextCursor && hasNextPage) {
+      setCursorHistory([...cursorHistory, currentCursor as string]);
+      setCurrentCursor(nextCursor);
+    }
+  };
+
+  const handlePrevPage = () => {
+    if (cursorHistory.length > 0) {
+      const prevHistory = [...cursorHistory];
+      const prevCursor = prevHistory.pop();
+      setCursorHistory(prevHistory);
+      setCurrentCursor(prevCursor);
+    }
+  };
 
   return (
     <>
@@ -89,19 +194,39 @@ export const Sidebar: React.FC = () => {
           </div>
 
           <div className="px-3 pt-8 pb-2 flex items-center justify-between group">
-            <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-text-dim opacity-40 text-white/20">Projects</h3>
-            <button 
-              onClick={() => setShowCreateProject(true)}
-              className="p-1 rounded-md hover:bg-white/5 text-text-dim opacity-0 group-hover:opacity-100 transition-all text-white/20"
-            >
-              <Plus size={12} />
-            </button>
+            <div className="flex items-center gap-2">
+              <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-text-dim opacity-40 text-white/20">Projects</h3>
+              <button 
+                onClick={() => setShowCreateProject(true)}
+                className="p-1 rounded-md hover:bg-white/5 text-text-dim opacity-0 group-hover:opacity-100 transition-all text-white/20"
+              >
+                <Plus size={12} />
+              </button>
+            </div>
+
+            {/* Pagination Controls in Header */}
+            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
+              <button
+                onClick={handlePrevPage}
+                disabled={cursorHistory.length === 0}
+                className="p-1 rounded-md hover:bg-white/5 text-white/20 hover:text-white/60 disabled:opacity-0 transition-all"
+              >
+                <ChevronLeft size={14} />
+              </button>
+              <button
+                onClick={handleNextPage}
+                disabled={!hasNextPage || isFetching}
+                className="p-1 rounded-md hover:bg-white/5 text-white/20 hover:text-white/60 disabled:opacity-0 transition-all"
+              >
+                {isFetching ? <Loader2 size={12} className="animate-spin text-focus-blue" /> : <ChevronRight size={14} />}
+              </button>
+            </div>
           </div>
 
-          <div className="flex-1 overflow-y-auto custom-scrollbar space-y-0.5">
+          <div className="flex-1 overflow-hidden space-y-0.5 pb-2">
             {isLoading ? (
                <div className="flex items-center gap-2 px-3 py-2 text-xs text-white/20 italic">
-                 <Loader2 size={12} className="animate-spin" /> Loading...
+                 <Loader2 size={12} className="animate-spin" /> Syncing projects...
                </div>
             ) : (
               projects.map(p => (
@@ -116,18 +241,8 @@ export const Sidebar: React.FC = () => {
               ))
             )}
             
-            {hasNextPage && (
-              <button 
-                onClick={() => fetchNextPage()}
-                disabled={isFetchingNextPage}
-                className="w-full py-2 px-3 flex items-center gap-2 text-[10px] font-bold text-focus-blue hover:text-focus-blue/80 transition-all opacity-60 hover:opacity-100"
-              >
-                {isFetchingNextPage ? '...' : '+ Show more'}
-              </button>
-            )}
-            
             {!isLoading && projects.length === 0 && (
-              <div className="px-3 py-2 text-[10px] text-white/15 italic">No projects yet.</div>
+              <div className="px-3 py-2 text-[10px] text-white/15 italic">No projects found.</div>
             )}
           </div>
         </nav>
@@ -140,8 +255,12 @@ export const Sidebar: React.FC = () => {
                 <User size={18} strokeWidth={2.5} />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-[13px] font-bold text-white/80 leading-none mb-1 truncate">{user?.username || 'Administrator'}</p>
-                <p className="text-[10px] font-medium text-white/20 truncate tracking-wide">{user?.email || ''}</p>
+                <p className="text-[13px] font-bold text-white/80 leading-none mb-1 truncate">
+                  {user?.username || 'Administrator'}
+                </p>
+                <p className="text-[10px] font-medium text-white/20 truncate tracking-wide">
+                  {user?.email || ''}
+                </p>
               </div>
               <Settings size={14} className="text-white/10 group-hover:text-white/40 cursor-pointer transition-colors" />
             </div>
@@ -159,7 +278,7 @@ export const Sidebar: React.FC = () => {
         </div>
       </aside>
 
-      {/* Placeholder for project modal trigger if needed */}
+      {showCreateProject && <CreateProjectModal onClose={() => setShowCreateProject(false)} />}
     </>
   );
 };
@@ -180,6 +299,6 @@ const SidebarItem: React.FC<{
       }`}
   >
     {icon && <span className={`shrink-0 ${active ? 'text-focus-blue' : 'opacity-45 group-hover:opacity-75'} transition-opacity`}>{icon}</span>}
-    <span className="truncate tracking-tight">{label}</span>
+    <span className="truncate tracking-tight uppercase tracking-widest text-[11px] font-bold">{label}</span>
   </Link>
 );

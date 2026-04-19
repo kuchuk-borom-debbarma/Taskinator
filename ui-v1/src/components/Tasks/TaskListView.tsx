@@ -83,7 +83,7 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
           <div className="w-16 h-16 rounded-3xl bg-white/5 border border-white/10 flex items-center justify-center mb-6 text-white/20">
             <Archive size={32} />
           </div>
-          <p className="text-lg font-bold text-white mb-1">No tasks in this perspective</p>
+          <p className="text-lg font-bold text-white mb-1">No tasks in this project</p>
           <p className="text-sm text-text-dim">Your workspace is currently quiet. Try a different range.</p>
         </div>
       ) : (

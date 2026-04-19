@@ -12,7 +12,7 @@ export const NotFoundComponent: React.FC = () => {
       </div>
       
       <h1 className="text-4xl font-bold tracking-tight text-text-notion mb-4">
-        Perspective Not Found
+        Project Not Found
       </h1>
       
       <p className="text-lg text-text-dim max-w-md mb-10 leading-relaxed font-medium">
@@ -65,7 +65,7 @@ export const GlobalErrorComponent: React.FC<{ error: any; reset: () => void }> =
           className="px-8 py-3 bg-red-500 text-white rounded-xl font-bold hover:bg-red-600 transition-all flex items-center gap-2 active:scale-95 shadow-md"
         >
           <RefreshCw size={18} />
-          Retry Perspective
+          Retry Dashboard
         </button>
         
         <Link

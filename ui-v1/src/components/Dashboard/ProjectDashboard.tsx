@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { useApi } from '../../hooks/useApi';
 import { useAuth } from '../../context/AuthContext';
+import { CreateProjectModal } from '../Layout/Sidebar';
 import { 
   Folder, 
   Zap, 
@@ -17,6 +18,7 @@ export function ProjectDashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { projectApi } = useApi();
+  const [showCreate, setShowCreate] = useState(false);
 
   // ─── Workspace Stats ───────────────────────────────────────────────────────
   const { data: workspaceStats } = useQuery({
@@ -86,7 +88,7 @@ export function ProjectDashboard() {
              <h2 className="text-[14px] font-bold text-text-notion">Your Projects</h2>
           </div>
           <button 
-            onClick={() => {/* Trigger global project create if needed */}}
+            onClick={() => setShowCreate(true)}
             className="p-2 rounded-xl bg-focus-blue/10 text-focus-blue hover:bg-focus-blue hover:text-white transition-all active:scale-95"
           >
             <Plus size={16} />
@@ -136,13 +138,15 @@ export function ProjectDashboard() {
 
               {projects.length === 0 && (
                 <div className="flex flex-col items-center justify-center h-48 py-10 opacity-30 italic text-sm text-text-dim">
-                  <p>No projects found in this workspace perspective.</p>
+                  <p>No projects found in this workspace context.</p>
                 </div>
               )}
             </div>
           )}
         </div>
       </div>
+
+      {showCreate && <CreateProjectModal onClose={() => setShowCreate(false)} />}
     </div>
   );
 }
