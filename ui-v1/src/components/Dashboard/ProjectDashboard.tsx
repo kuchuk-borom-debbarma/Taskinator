@@ -11,13 +11,16 @@ import {
   Plus, 
   Loader2,
   ArrowRight,
-  Layout
+  Layout,
+  PanelLeft
 } from 'lucide-react';
+import { useLayout } from '../../context/LayoutContext';
 
 export function ProjectDashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { projectApi } = useApi();
+  const { isSidebarCollapsed, toggleSidebar } = useLayout();
   const [showCreate, setShowCreate] = useState(false);
 
   // ─── Workspace Stats ───────────────────────────────────────────────────────
@@ -46,7 +49,18 @@ export function ProjectDashboard() {
     <div className="p-8 md:p-10 animate-in fade-in slide-in-from-bottom-2 duration-500 max-w-5xl mx-auto">
       {/* Header Section */}
       <div className="flex flex-col gap-2 mb-12">
-        <p className="text-[11px] font-black uppercase tracking-[0.3em] text-focus-blue">Workspace Dashboard</p>
+        <div className="flex items-center gap-4 mb-2">
+          {isSidebarCollapsed && (
+            <button 
+              onClick={toggleSidebar}
+              className="p-2 rounded-xl bg-white/5 border border-white/10 text-white/40 hover:text-white hover:bg-white/10 transition-all active:scale-95"
+              title="Expand Sidebar"
+            >
+              <PanelLeft size={20} />
+            </button>
+          )}
+          <p className="text-[11px] font-black uppercase tracking-[0.3em] text-focus-blue">Workspace Dashboard</p>
+        </div>
         <h1 className="text-4xl font-black tracking-tight text-text-notion">
           Welcome, <span className="text-focus-blue">{user?.username || 'Architect'}</span>
         </h1>

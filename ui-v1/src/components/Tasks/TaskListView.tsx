@@ -13,7 +13,9 @@ import {
   Archive,
   ChevronLeft,
   ChevronRight,
+  PanelLeft
 } from 'lucide-react';
+import { useLayout } from '../../context/LayoutContext';
 
 interface TaskListViewProps {
   tasks: ProjectTask[];
@@ -37,6 +39,7 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
   onLoadPrev,
 }) => {
   const parentRef = useRef<HTMLDivElement>(null);
+  const { isSidebarCollapsed, toggleSidebar } = useLayout();
 
   return (
     <div
@@ -46,6 +49,15 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
       <header className="mb-10 flex items-center justify-between border-b border-white/5 pb-8">
         <div className="flex flex-col gap-1.5">
           <h1 className="text-3xl font-bold tracking-tight text-white flex items-center gap-3">
+            {isSidebarCollapsed && (
+              <button 
+                onClick={toggleSidebar}
+                className="p-2 mr-2 rounded-xl bg-white/5 border border-white/10 text-white/40 hover:text-white hover:bg-white/10 transition-all active:scale-95"
+                title="Expand Sidebar"
+              >
+                <PanelLeft size={20} />
+              </button>
+            )}
             Navigation
             <span className="text-[11px] font-black uppercase tracking-[0.2em] px-2 py-0.5 bg-focus-blue/20 text-focus-blue border border-focus-blue/30 rounded-full">
               {tasks.length} Current

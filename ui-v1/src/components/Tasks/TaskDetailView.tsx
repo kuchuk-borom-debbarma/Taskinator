@@ -3,8 +3,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useApi } from '../../hooks/useApi';
 import { TaskMap } from '../Graph/TaskMap';
 import { TaskMapModal } from '../Graph/TaskMapModal';
-import { ChevronLeft, Calendar, Map as MapIcon, Layers, Users, User, Clock, CheckCircle2, Type, Copy, Circle, Edit3, Check, X } from 'lucide-react';
+import { ChevronLeft, Calendar, Map as MapIcon, Layers, Users, User, Clock, CheckCircle2, Type, Copy, Circle, Edit3, Check, X, PanelLeft } from 'lucide-react';
 import { TaskLinkColumn } from './TaskLinkColumn';
+import { useLayout } from '../../context/LayoutContext';
 
 interface TaskDetailViewProps {
   taskId: string;
@@ -25,6 +26,7 @@ const getStatusInfo = (s: string) => {
 export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose }) => {
   const { taskApi } = useApi();
   const queryClient = useQueryClient();
+  const { isSidebarCollapsed, toggleSidebar } = useLayout();
   const [isMapOpen, setIsMapOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [editingStatus, setEditingStatus] = useState(false);
@@ -81,6 +83,15 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
         
         {/* Breadcrumbs */}
         <nav className="flex items-center gap-2">
+          {isSidebarCollapsed && (
+            <button 
+              onClick={toggleSidebar}
+              className="p-1.5 mr-2 rounded-lg bg-bg-secondary border border-border-notion text-text-dim hover:text-text-notion hover:bg-bg-secondary transition-all active:scale-95"
+              title="Expand Sidebar"
+            >
+              <PanelLeft size={16} />
+            </button>
+          )}
           <button 
             onClick={onClose} 
             className="flex items-center gap-1.5 text-text-dim text-[13px] font-semibold py-1 px-2 rounded-md -ml-2 hover:bg-bg-secondary hover:text-text-notion transition-colors"

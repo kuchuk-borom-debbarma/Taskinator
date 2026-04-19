@@ -38,12 +38,14 @@ export default function ProjectTasksIndex() {
           projectId!,
           undefined,
           undefined,
+          undefined,
           5,
           activeParam.cursor,
         );
       }
       return taskApi.getProjectTasks(
         projectId!,
+        undefined,
         5,
         activeParam?.direction === 'forward' ? activeParam.cursor : undefined,
       );
@@ -93,7 +95,7 @@ export default function ProjectTasksIndex() {
     <div className="relative">
       <TaskListView
         tasks={allTasks}
-        projectId={projectId!}
+        _projectId={projectId!}
         hasNextPage={lastPage?.hasNextPage}
         hasPreviousPage={firstPage?.hasPreviousPage}
         isFetchingNextPage={isFetchingNextPage}

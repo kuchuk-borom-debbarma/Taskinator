@@ -12,6 +12,7 @@ import { AuthScreen } from './components/Auth/AuthScreen';
 import { NotFoundComponent, GlobalErrorComponent } from './components/Layout/RouterFeedback';
 import { RootComponent } from './components/Layout/RootComponent';
 import { ProjectDashboard } from './components/Dashboard/ProjectDashboard';
+import { LayoutProvider, useLayout } from './context/LayoutContext';
 
 interface MyRouterContext {
   auth: AuthContextType;
@@ -26,7 +27,21 @@ export const rootRoute = createRootRouteWithContext<MyRouterContext>()({
 
 // --- Layout Routes ---
 
-// Authenticated Layout (Sidebar + Protected Content)
+const AuthenticatedLayout = () => {
+  const { isSidebarCollapsed } = useLayout();
+  return (
+    <div className="flex h-screen overflow-hidden bg-bg-notion">
+      <Sidebar />
+      <main className={`flex-1 h-screen overflow-y-auto p-3 transition-all duration-300 ${isSidebarCollapsed ? 'pl-3' : 'pl-0'}`}>
+        <div className="glass-panel-dark rounded-[32px] min-h-full overflow-hidden text-slate-100 flex flex-col">
+          <Outlet />
+        </div>
+      </main>
+    </div>
+  );
+};
+
+// Authenticated Layout Shell
 const authLayoutRoute = createRoute({
   getParentRoute: () => rootRoute,
   id: 'authenticated-layout',
@@ -37,14 +52,9 @@ const authLayoutRoute = createRoute({
     }
   },
   component: () => (
-    <div className="flex h-screen overflow-hidden bg-bg-notion">
-      <Sidebar />
-      <main className="flex-1 h-screen overflow-y-auto p-3 pl-3">
-        <div className="glass-panel-dark rounded-[32px] min-h-full overflow-hidden text-slate-100">
-          <Outlet />
-        </div>
-      </main>
-    </div>
+    <LayoutProvider>
+      <AuthenticatedLayout />
+    </LayoutProvider>
   ),
 });
 

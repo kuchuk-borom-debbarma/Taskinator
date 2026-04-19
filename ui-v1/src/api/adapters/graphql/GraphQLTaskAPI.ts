@@ -77,6 +77,7 @@ export class GraphQLTaskAPI implements TaskAPI {
 
   async getProjectTasks(
     projectId: string, 
+    teamId?: string,
     first?: number, 
     after?: string, 
     last?: number, 
