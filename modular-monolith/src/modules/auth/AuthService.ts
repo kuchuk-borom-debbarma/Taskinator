@@ -9,7 +9,7 @@ export interface SignInParam {
     password_raw: string;
 }
 
-export interface UserResult {
+export interface User {
     id: string;
     username: string;
     email: string;
@@ -38,15 +38,7 @@ export interface AuthService {
     signIn(data: SignInParam): Promise<{ token: string } | null>;
 
     /**
-     * Cursor-paginated user search.
-     * Matches username exactly OR id exactly.
+     * Batch fetch users by IDs.
      */
-    searchUsers(
-        params: SearchUsersParam,
-    ): Promise<{ users: UserResult[]; nextCursor: string | null; prevCursor: string | null }>;
-
-    /**
-     * Batch fetch users by IDs. Used by DataLoaders.
-     */
-    getUsersByIds(ids: string[]): Promise<UserResult[]>;
+    getUsersByIds(ids: string[]): Promise<User[]>;
 }

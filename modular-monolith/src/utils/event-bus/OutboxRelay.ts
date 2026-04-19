@@ -68,14 +68,17 @@ const setupListener = async () => {
 
     try {
         listenClient = await pool.connect();
-        
+
         // Listen for new events
         await listenClient.query('LISTEN outbox_event_notification');
-        
+
         listenClient.on('notification', (msg) => {
             if (msg.channel === 'outbox_event_notification' && isRunning) {
-                processOutboxBatch().catch(err => 
-                    console.error('[Outbox Relay] Notification processing error:', err)
+                processOutboxBatch().catch((err) =>
+                    console.error(
+                        '[Outbox Relay] Notification processing error:',
+                        err,
+                    ),
                 );
             }
         });
@@ -108,7 +111,10 @@ const poll = async () => {
     try {
         await processOutboxBatch();
     } catch (err) {
-        console.error('[Outbox Relay] Error processing events during poll:', err);
+        console.error(
+            '[Outbox Relay] Error processing events during poll:',
+            err,
+        );
     } finally {
         if (isRunning) {
             // Safety poll every 10 seconds in case NOTIFY was missed or during reconnects
@@ -121,7 +127,9 @@ export const startOutboxRelay = () => {
     if (isRunning) return;
     isRunning = true;
 
-    console.log('[Outbox Relay] Starting Reactive Relay (LISTEN + Safety Polling)');
+    console.log(
+        '[Outbox Relay] Starting Reactive Relay (LISTEN + Safety Polling)',
+    );
     processOutboxBatch().then(() => {
         setupListener();
         poll();

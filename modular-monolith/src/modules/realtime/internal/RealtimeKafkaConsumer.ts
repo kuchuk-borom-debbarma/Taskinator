@@ -37,7 +37,6 @@ export class RealtimeRouterConsumer {
         );
 
         await eventBus.subscribe(this.groupId, {
-
             // 2. Notifications: Route directly to the targeted user
             [KAFKA_EVENTS.NOTIFICATION.CREATED]: async (data: any) => {
                 await this.routeEvent(

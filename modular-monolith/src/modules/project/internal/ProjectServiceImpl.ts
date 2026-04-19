@@ -22,13 +22,25 @@ import {
     updateProject,
 } from './ProjectQueries.ts';
 
-import eventBus, { KAFKA_EVENTS } from '../../../utils/EventBus.ts';
+import eventBus from '../../../utils/EventBus.ts';
 
 export class ProjectServiceImpl implements ProjectService {
-    async getProjects(
+    getProjectsByIds(ids: string[]): Promise<Project[]> {
+        throw new Error("Method not implemented.");
+    }
+    async getProjectsOfUser(
         userId: string,
-        params?: { first?: number; after?: string; last?: number; before?: string },
-    ): Promise<{ projects: Project[]; nextCursor: string | null; prevCursor: string | null }> {
+        params?: {
+            first?: number;
+            after?: string;
+            last?: number;
+            before?: string;
+        },
+    ): Promise<{
+        projects: Project[];
+        nextCursor: string | null;
+        prevCursor: string | null;
+    }> {
         console.log(`[Project Service] Getting projects for userId: ${userId}`);
         return getProjects(userId, params);
     }
@@ -43,8 +55,17 @@ export class ProjectServiceImpl implements ProjectService {
     async getProjectMembers(
         userId: string,
         projectId: string,
-        params?: { first?: number; after?: string; last?: number; before?: string },
-    ): Promise<{ members: ProjectMember[]; nextCursor: string | null; prevCursor: string | null }> {
+        params?: {
+            first?: number;
+            after?: string;
+            last?: number;
+            before?: string;
+        },
+    ): Promise<{
+        members: ProjectMember[];
+        nextCursor: string | null;
+        prevCursor: string | null;
+    }> {
         return getProjectMembers(userId, projectId, params);
     }
 
@@ -52,7 +73,7 @@ export class ProjectServiceImpl implements ProjectService {
         return getUserProjectIds(userId);
     }
 
-    async getProjectsByIds(
+    async getProjectsByActorIdAndProjectIds(
         userId: string,
         projectIds: string[],
     ): Promise<Project[]> {
@@ -145,13 +166,19 @@ export class ProjectServiceImpl implements ProjectService {
         return project;
     }
 
-    async getProjectStats(userId: string, projectId: string): Promise<{
+    async getProjectStats(
+        userId: string,
+        projectId: string,
+    ): Promise<{
         teamCount: number;
         taskCount: number;
         memberCount: number;
         taskLabelCounts: { label: string; count: number }[];
     }> {
-        return (await import('./ProjectQueries.ts')).getProjectStats(userId, projectId);
+        return (await import('./ProjectQueries.ts')).getProjectStats(
+            userId,
+            projectId,
+        );
     }
 
     async getWorkspaceStats(userId: string): Promise<{

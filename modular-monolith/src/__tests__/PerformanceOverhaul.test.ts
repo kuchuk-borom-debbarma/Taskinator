@@ -1,24 +1,23 @@
 /**
  * PERFORMANCE OVERHAUL VERIFICATION TEST
- * 
+ *
  * Verifies:
  * 1. Background Graph Hydration (TaskGraphListener handles PROJECT_TASK_LINK.CREATED)
  * 2. Reactive Outbox Relay (Postgres LISTEN/NOTIFY)
  */
-import {
-    afterAll,
-    beforeAll,
-    describe,
-    expect,
-    it,
-    jest,
-} from '@jest/globals';
+import { afterAll, beforeAll, describe, expect, it, jest } from '@jest/globals';
 import { db, pool } from '../database/index.ts';
 import { cleanupDb, destroyDb } from './helpers/db.ts';
 import { sql } from 'kysely';
-import { insertTask, insertLink } from '../modules/task/internal/TaskQueries.ts';
+import {
+    insertTask,
+    insertLink,
+} from '../modules/task/internal/TaskQueries.ts';
 import { taskGraphListener } from '../modules/task/internal/listeners/TaskGraphListener.ts';
-import { startOutboxRelay, stopOutboxRelay } from '../utils/event-bus/OutboxRelay.ts';
+import {
+    startOutboxRelay,
+    stopOutboxRelay,
+} from '../utils/event-bus/OutboxRelay.ts';
 import eventBus from '../utils/EventBus.ts';
 
 async function robustCleanup() {
@@ -35,12 +34,16 @@ async function robustCleanup() {
         'task_reachability',
         'project',
         'pending_users',
-        'users'
+        'users',
     ];
-    
+
     console.log('[Test] Truncating all tables at once...');
     try {
-        await sql.raw(`TRUNCATE TABLE ${tables.map(t => `"${t}"`).join(', ')} RESTART IDENTITY CASCADE`).execute(db);
+        await sql
+            .raw(
+                `TRUNCATE TABLE ${tables.map((t) => `"${t}"`).join(', ')} RESTART IDENTITY CASCADE`,
+            )
+            .execute(db);
     } catch (err) {
         console.warn('[Test] Warning: Failed to truncate all tables:', err);
     }
@@ -79,7 +82,8 @@ describe('Performance Overhaul — Integration Tests', () => {
             await robustCleanup();
 
             // 2. Create a test project
-            const projResult = await db.insertInto('project')
+            const projResult = await db
+                .insertInto('project')
                 .values({
                     id: sql`gen_random_uuid()`,
                     name: 'Perf Test Project',
@@ -105,15 +109,15 @@ describe('Performance Overhaul — Integration Tests', () => {
         console.log('[Test] Outbox relay stopped.');
         await taskGraphListener.stop();
         console.log('[Test] Task graph listener stopped.');
-        
+
         console.log('[Test] Cleaning up DB...');
         await robustCleanup();
         console.log('[Test] DB Cleanup finished.');
-        
+
         console.log('[Test] Destroying DB connection...');
         await destroyDb();
         console.log('[Test] DB Connection destroyed.');
-        
+
         console.log('[Test] afterAll cleanup finished.');
     }, 60000); // Very generous timeout for cleanup
 
@@ -127,10 +131,11 @@ describe('Performance Overhaul — Integration Tests', () => {
         });
 
         // Wait for the relay to process it
-        await new Promise(resolve => setTimeout(resolve, 500));
+        await new Promise((resolve) => setTimeout(resolve, 500));
 
         // Check if event is GONE (relayed) from outbox_events
-        const pendingEvents = await db.selectFrom('outbox_events')
+        const pendingEvents = await db
+            .selectFrom('outbox_events')
             .select('id')
             .where('kafka_key', '=', task.id as any)
             .execute();
@@ -162,23 +167,25 @@ describe('Performance Overhaul — Integration Tests', () => {
         });
 
         // 3. Immediately check reachability (should be empty for this link)
-        const reachBefore = await db.selectFrom('task_reachability')
+        const reachBefore = await db
+            .selectFrom('task_reachability')
             .selectAll()
             .where('ancestor_task_id', '=', taskA.id as any)
             .where('descendant_task_id', '=', taskB.id as any)
             .execute();
-        
-        // Note: It MIGHT be populated if the listener is super fast, 
+
+        // Note: It MIGHT be populated if the listener is super fast,
         // but typically we can catch it before hydration if we are quick.
         // Actually, the test code is synchronous here, so it should be empty.
         // Wait, insertLink finished, event published to memory bus.
         // MemoryBus has a 10ms delay.
-        
+
         // 4. Wait for Background Hydration
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise((resolve) => setTimeout(resolve, 1000));
 
         // 5. Verify Hydration
-        const reachAfter = await db.selectFrom('task_reachability')
+        const reachAfter = await db
+            .selectFrom('task_reachability')
             .selectAll()
             .where('ancestor_task_id', '=', taskA.id as any)
             .where('descendant_task_id', '=', taskB.id as any)
@@ -186,7 +193,9 @@ describe('Performance Overhaul — Integration Tests', () => {
 
         expect(reachAfter).toHaveLength(1);
         expect(reachAfter[0]!.min_depth).toBe(1);
-        console.log('   -> Verified: Reachability was hydrated in the background.');
+        console.log(
+            '   -> Verified: Reachability was hydrated in the background.',
+        );
     });
 
     it('✅ Cycle Detection: Still works synchronously (Safety First)', async () => {
@@ -194,20 +203,30 @@ describe('Performance Overhaul — Integration Tests', () => {
         const taskB = await insertTask({ userId, projectId, title: 'Cycle B' });
 
         // A -> B
-        await insertLink({ userId, projectId, sourceTaskId: taskA.id, targetTaskId: taskB.id, label: 'L1' });
-        
-        // Wait for hydration
-        await new Promise(resolve => setTimeout(resolve, 500));
-
-        // Attempt B -> A (should fail synchronously even if hydration is async)
-        await expect(insertLink({
+        await insertLink({
             userId,
             projectId,
-            sourceTaskId: taskB.id,
-            targetTaskId: taskA.id,
-            label: 'L2',
-        })).rejects.toThrow('Circular dependency detected');
-        
-        console.log('   -> Verified: Synchronous cycle detection remains robust.');
+            sourceTaskId: taskA.id,
+            targetTaskId: taskB.id,
+            label: 'L1',
+        });
+
+        // Wait for hydration
+        await new Promise((resolve) => setTimeout(resolve, 500));
+
+        // Attempt B -> A (should fail synchronously even if hydration is async)
+        await expect(
+            insertLink({
+                userId,
+                projectId,
+                sourceTaskId: taskB.id,
+                targetTaskId: taskA.id,
+                label: 'L2',
+            }),
+        ).rejects.toThrow('Circular dependency detected');
+
+        console.log(
+            '   -> Verified: Synchronous cycle detection remains robust.',
+        );
     });
 });

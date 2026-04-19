@@ -1,4 +1,5 @@
 import type { GraphQLContext } from '../context.ts';
+import type { InternalNotification } from '../../modules/internal-notification/InternalNotificationService.ts';
 
 interface PaginationArgs {
   first?: number;
@@ -9,31 +10,32 @@ interface PaginationArgs {
 
 export const notificationResolvers = {
     InternalNotification: {
-        id: (n: any) => n.id,
-        userId: (n: any) => n.userId,
-        title: (n: any) => n.title,
-        message: (n: any) => n.message,
-        type: (n: any) => n.type,
-        metadata: (n: any) => n.metadata,
-        isRead: (n: any) => n.isRead,
-        createdAt: (n: any) => n.createdAt,
-        readAt: (n: any) => n.readAt,
+        id: (parent: InternalNotification) => parent.id,
+        userId: (parent: InternalNotification) => parent.userId,
+        title: (parent: InternalNotification) => parent.title,
+        message: (parent: InternalNotification) => parent.message,
+        type: (parent: InternalNotification) => parent.type,
+        metadata: (parent: InternalNotification) => 
+            typeof parent.metadata === 'string' ? parent.metadata : JSON.stringify(parent.metadata),
+        isRead: (parent: InternalNotification) => parent.isRead,
+        createdAt: (parent: InternalNotification) => parent.createdAt.toISOString(),
+        readAt: (parent: InternalNotification) => parent.readAt?.toISOString() || null,
     },
 
     Query: {
-        notifications: (_: any, args: PaginationArgs, context: GraphQLContext) => {
+        notifications: (_parent: any, _args: PaginationArgs, _context: GraphQLContext) => {
             return null;
         },
-        unreadNotificationsCount: (_: any, __: any, context: GraphQLContext) => {
+        unreadNotificationsCount: (_parent: any, _args: any, _context: GraphQLContext) => {
             return 0;
         },
     },
 
     Mutation: {
-        markNotificationAsRead: (_: any, { id }: { id: string }, context: GraphQLContext) => {
+        markNotificationAsRead: (_parent: any, { id }: { id: string }, _context: GraphQLContext) => {
             return true;
         },
-        markAllNotificationsAsRead: (_: any, __: any, context: GraphQLContext) => {
+        markAllNotificationsAsRead: (_parent: any, _args: any, _context: GraphQLContext) => {
             return true;
         },
     },

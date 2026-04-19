@@ -96,7 +96,6 @@ export async function addProjectMember(
     return result.rows[0]!;
 }
 
-
 /**
  * Creates a team directly via INSERT (no auth check, no outbox).
  */

@@ -4,7 +4,11 @@ import type {
     CreateNotificationParam,
     InternalNotification,
 } from '../InternalNotificationService.ts';
-import { decodeCursor, encodeCursor, getTimeString } from '../../../utils/utils.ts';
+import {
+    decodeCursor,
+    encodeCursor,
+    getTimeString,
+} from '../../../utils/utils.ts';
 
 export const insertNotificationsBatch = async (
     rows: CreateNotificationParam[],
@@ -64,7 +68,12 @@ export const insertNotification = async (
 
 export const getNotifications = async (
     userId: string,
-    params: { first?: number; after?: string; last?: number; before?: string } = {},
+    params: {
+        first?: number;
+        after?: string;
+        last?: number;
+        before?: string;
+    } = {},
 ): Promise<{
     notifications: InternalNotification[];
     nextCursor: string | null;

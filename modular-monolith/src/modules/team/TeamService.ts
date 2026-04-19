@@ -1,5 +1,5 @@
 import type { BaseService } from '../project';
-import type { UserResult } from '../auth/AuthService.ts';
+import type { User } from '../auth/AuthService.ts';
 
 export type Team = {
     id: string;
@@ -76,15 +76,34 @@ export interface TeamService extends BaseService {
     getTeams(
         userId: string,
         projectId: string,
-        params?: { first?: number; after?: string; last?: number; before?: string; memberId?: string },
-    ): Promise<{ teams: Team[]; nextCursor: string | null; prevCursor: string | null }>;
+        params?: {
+            first?: number;
+            after?: string;
+            last?: number;
+            before?: string;
+            memberId?: string;
+        },
+    ): Promise<{
+        teams: Team[];
+        nextCursor: string | null;
+        prevCursor: string | null;
+    }>;
 
     getTeamMembers(
         userId: string,
         projectId: string,
         teamId: string,
-        params?: { first?: number; after?: string; last?: number; before?: string },
-    ): Promise<{ members: TeamMember[]; nextCursor: string | null; prevCursor: string | null }>;
+        params?: {
+            first?: number;
+            after?: string;
+            last?: number;
+            before?: string;
+        },
+    ): Promise<{
+        members: TeamMember[];
+        nextCursor: string | null;
+        prevCursor: string | null;
+    }>;
 
     /**
      * Search users who are members of a specific team.
@@ -99,7 +118,11 @@ export interface TeamService extends BaseService {
         after?: string;
         last?: number;
         before?: string;
-    }): Promise<{ users: UserResult[]; nextCursor: string | null; prevCursor: string | null }>;
+    }): Promise<{
+        users: User[];
+        nextCursor: string | null;
+        prevCursor: string | null;
+    }>;
 
     /**
      * Batch fetch teams by IDs. Used by DataLoaders.
@@ -107,4 +130,4 @@ export interface TeamService extends BaseService {
     getTeamsByIds(userId: string, teamIds: string[]): Promise<Team[]>;
 }
 
-export type { UserResult };
+export type { User };

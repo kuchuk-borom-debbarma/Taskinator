@@ -1,4 +1,4 @@
-import type { BaseService } from './index.ts';
+import type {BaseService} from './index.ts';
 
 export type Project = {
     id: string;
@@ -7,7 +7,7 @@ export type Project = {
     description: string | null;
     version: number;
     lastEventId: string | null;
-    isOwner?: boolean;
+    createdBy: string;
     createdAt: Date;
     createdAtPrecision?: string;
     updatedAt?: Date;
@@ -77,18 +77,38 @@ export interface ProjectService extends BaseService {
     /**
      * Get projects for a user (owned and joined)
      */
-    getProjects(
+    getProjectsOfUser(
         userId: string,
-        params?: { first?: number; after?: string; last?: number; before?: string },
-    ): Promise<{ projects: Project[]; nextCursor: string | null; prevCursor: string | null }>;
+        params?: {
+            first?: number;
+            after?: string;
+            last?: number;
+            before?: string;
+        },
+    ): Promise<{
+        projects: Project[];
+        nextCursor: string | null;
+        prevCursor: string | null;
+    }>;
 
     getProject(userId: string, projectId: string): Promise<Project | null>;
+
+    getProjectsByIds(ids: string[]): Promise<Project[]>;
 
     getProjectMembers(
         userId: string,
         projectId: string,
-        params?: { first?: number; after?: string; last?: number; before?: string },
-    ): Promise<{ members: ProjectMember[]; nextCursor: string | null; prevCursor: string | null }>;
+        params?: {
+            first?: number;
+            after?: string;
+            last?: number;
+            before?: string;
+        },
+    ): Promise<{
+        members: ProjectMember[];
+        nextCursor: string | null;
+        prevCursor: string | null;
+    }>;
 
     /**
      * Get all project IDs where user is owner or member.
@@ -98,7 +118,7 @@ export interface ProjectService extends BaseService {
     /**
      * Batch fetch projects by IDs. Used by DataLoaders.
      */
-    getProjectsByIds(userId: string, projectIds: string[]): Promise<Project[]>;
+    getProjectsByActorIdAndProjectIds(userId: string, projectIds: string[]): Promise<Project[]>;
 
     searchProjectMembers(params: {
         actorId: string;
@@ -114,7 +134,10 @@ export interface ProjectService extends BaseService {
         prevCursor: string | null;
     }>;
 
-    getProjectStats(userId: string, projectId: string): Promise<{
+    getProjectStats(
+        userId: string,
+        projectId: string,
+    ): Promise<{
         teamCount: number;
         taskCount: number;
         memberCount: number;

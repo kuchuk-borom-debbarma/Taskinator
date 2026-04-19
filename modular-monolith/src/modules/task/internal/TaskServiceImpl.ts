@@ -78,9 +78,9 @@ export class TaskServiceImpl implements TaskService {
     }
 
     async getProjectLinks(
-        userId: string, 
+        userId: string,
         projectId: string,
-        pagination: PaginationParams
+        pagination: PaginationParams,
     ): Promise<LinkConnection> {
         return await getProjectTaskLinksPage(userId, projectId, pagination);
     }

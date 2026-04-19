@@ -1,4 +1,6 @@
 import type { GraphQLContext } from '../context.ts';
+import type { ProjectTask, TaskLink } from '../../modules/task/TaskService.ts';
+import type { Project } from '../../modules/project/ProjectService.ts';
 
 interface PaginationArgs {
   first?: number;
@@ -31,46 +33,83 @@ interface CreateTaskLinkInput {
 
 export const taskResolvers = {
     Task: {
-        id: (t: any) => t.id,
-        title: (t: any) => t.title,
-        description: (t: any) => t.description,
-        status: (t: any) => t.status,
-        priority: (t: any) => t.priority,
-        dueDate: (t: any) => t.dueDate,
-        project: (t: any) => null,
-        team: (t: any) => null,
-        assignedMember: (t: any) => null,
-        neighbourLinks: (t: any, args: any, context: GraphQLContext) => null,
-        version: (t: any) => t.version,
-        lastEventId: (t: any) => t.lastEventId,
-        createdBy: (t: any) => null,
-        updatedBy: (t: any) => null,
-        createdAt: (t: any) => t.createdAt,
-        updatedAt: (t: any) => t.updatedAt,
+        id: (parent: ProjectTask) => parent.id,
+        title: (parent: ProjectTask) => parent.title,
+        description: (parent: ProjectTask) => parent.description,
+        status: (parent: ProjectTask) => parent.status,
+        priority: (parent: ProjectTask) => parent.priority,
+        dueDate: (parent: ProjectTask) => (parent as any).dueDate || null,
+        project: (parent: ProjectTask, _args: any, context: GraphQLContext) => {
+            //TODO safety throw not found
+            return context.loaders.project.byId.load(parent.projectId);
+        },
+        team: (parent: ProjectTask, _args: any, _context: GraphQLContext) => {
+            // Need team loader
+            return null;
+        },
+        assignedMember: (parent: ProjectTask, _args: any, context: GraphQLContext) => {
+            if (!parent.memberId) return null;
+            //TODO throw safety not found although assigned error
+            return context.loaders.user.byId.load(parent.memberId);
+        },
+        //TODO
+        neighbourLinks: (parent: ProjectTask, _args: any, _context: GraphQLContext) => null,
+        version: (parent: ProjectTask) => parent.version,
+        lastEventId: (parent: ProjectTask) => parent.lastEventId,
+        createdBy: (parent: ProjectTask, _args: any, context: GraphQLContext) => {
+            //TODO safety throw not found
+            return context.loaders.user.byId.load(parent.createdBy);
+        },
+        updatedBy: (parent: ProjectTask, _args: any, context: GraphQLContext) => {
+            //TODO safety throw not found
+            return context.loaders.user.byId.load(parent.updatedBy);
+        },
+        createdAt: (parent: ProjectTask) => parent.createdAt.toISOString(),
+        updatedAt: (parent: ProjectTask) => parent.updatedAt.toISOString(),
     },
 
     TaskLink: {
-        id: (l: any) => l.id,
-        project: (l: any) => null,
-        source: (l: any) => null,
-        target: (l: any) => null,
-        label: (l: any) => l.label,
-        createdBy: (l: any) => null,
-        createdAt: (l: any) => l.createdAt,
-        updatedBy: (l: any) => null,
-        updatedAt: (l: any) => l.updatedAt,
+        id: (parent: TaskLink) => parent.id,
+        project: (parent: TaskLink, _args: any, context: GraphQLContext) => {
+            //TODO safety throw not found
+            return context.loaders.project.byId.load(parent.projectId);
+        },
+        source: (parent: TaskLink, _args: any, _context: GraphQLContext) => {
+            // Need task loader
+            return null;
+        },
+        target: (parent: TaskLink, _args: any, _context: GraphQLContext) => {
+            // Need task loader
+            return null;
+        },
+        label: (parent: TaskLink) => parent.label,
+        createdBy: (parent: TaskLink, _args: any, context: GraphQLContext) => {
+            //TODO safety throw not found
+            return context.loaders.user.byId.load(parent.createdBy);
+        },
+        createdAt: (parent: TaskLink) => parent.createdAt.toISOString(),
+        updatedBy: (parent: TaskLink, _args: any, _context: GraphQLContext) => {
+            // TaskLink in service doesn't have updatedBy? Let's check.
+            // Based on TaskService.ts, it doesn't.
+            return null;
+        },
+        updatedAt: (parent: TaskLink) => (parent as any).updatedAt?.toISOString() || null,
     },
 
     Project: {
-        projectTasks: (p: any, args: any, context: GraphQLContext) => null,
-        assignedTasks: (p: any, args: any, context: GraphQLContext) => null,
+        //TODO define args type properly
+        projectTasks: (parent: Project, _args: any, _context: GraphQLContext) => null,
+        //TODO define args type properly
+        assignedTasks: (parent: Project, _args: any, _context: GraphQLContext) => null,
     },
 
     Query: {
-        task: (_: any, { id }: { id: string }, context: GraphQLContext) => {
+        //TODO use dataloader no safety required
+        task: (_parent: any, { id }: { id: string }, _context: GraphQLContext) => {
             return null;
         },
-        tasks: (_: any, { ids }: { ids: string[] }, context: GraphQLContext) => {
+        //TODO use dataloaders
+        tasks: (_parent: any, { ids }: { ids: string[] }, _context: GraphQLContext) => {
             return [];
         },
     },
@@ -80,19 +119,19 @@ export const taskResolvers = {
     },
 
     TaskMutation: {
-        create: (_: any, { input }: { input: CreateTaskInput }, context: GraphQLContext) => {
+        create: (_parent: any, { input }: { input: CreateTaskInput }, _context: GraphQLContext) => {
             return null;
         },
-        update: (_: any, { taskId, input }: { taskId: string; input: UpdateTaskInput }, context: GraphQLContext) => {
+        update: (_parent: any, { taskId, input }: { taskId: string; input: UpdateTaskInput }, _context: GraphQLContext) => {
             return null;
         },
-        delete: (_: any, { taskId }: { taskId: string }, context: GraphQLContext) => {
+        delete: (_parent: any, { taskId }: { taskId: string }, _context: GraphQLContext) => {
             return taskId;
         },
-        createLink: (_: any, { input }: { input: CreateTaskLinkInput }, context: GraphQLContext) => {
+        createLink: (_parent: any, { input }: { input: CreateTaskLinkInput }, _context: GraphQLContext) => {
             return null;
         },
-        deleteLink: (_: any, { linkId }: { linkId: string }, context: GraphQLContext) => {
+        deleteLink: (_parent: any, { linkId }: { linkId: string }, _context: GraphQLContext) => {
             return linkId;
         },
     },

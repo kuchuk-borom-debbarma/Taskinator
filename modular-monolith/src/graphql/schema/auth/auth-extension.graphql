@@ -1,10 +1,16 @@
 extend type Query {
-  """Returns the currently authenticated user. Returns null if unauthenticated."""
-  me: User
+    """
+    Returns the currently authenticated user. Returns null if unauthenticated.
+    """
+    me: User
 
-  """Fetches a single user by ID."""
-  user(id: ID!): User
+    """
+    Fetches a single user by ID.
+    """
+    user(id: ID!): User
 
-  """Fetches multiple users by ID."""
-  users(ids: [ID!]!): [User!]!
+    """
+    Fetches multiple users by ID.
+    """
+    users(ids: [ID!]!): [User!]!
 }

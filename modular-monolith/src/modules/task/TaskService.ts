@@ -114,12 +114,14 @@ export interface TaskService extends BaseService {
     ): Promise<LinkConnection>;
 
     getProjectLinks(
-        userId: string, 
+        userId: string,
         projectId: string,
-        pagination: PaginationParams
+        pagination: PaginationParams,
     ): Promise<LinkConnection>;
 
-    getTaskNeighbourhood(params: GetNeighbourhoodParam): Promise<TaskNeighbourhoodResult>;
+    getTaskNeighbourhood(
+        params: GetNeighbourhoodParam,
+    ): Promise<TaskNeighbourhoodResult>;
 }
 
 // ─── Neighbourhood (Radial Graph View) ──────────────────────────────────────
@@ -147,7 +149,7 @@ export interface GetNeighbourhoodParam {
     userId: string;
     projectId: string;
     taskId: string;
-    maxDepth?: number;   // default 3, hard cap 5
+    maxDepth?: number; // default 3, hard cap 5
     first?: number;
     last?: number;
     after?: string;

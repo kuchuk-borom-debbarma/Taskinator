@@ -1,4 +1,6 @@
 import type { GraphQLContext } from '../context.ts';
+import type { Team, TeamMember } from '../../modules/team/TeamService.ts';
+import type { Project } from '../../modules/project/ProjectService.ts';
 
 interface PaginationArgs {
   first?: number;
@@ -9,53 +11,62 @@ interface PaginationArgs {
 
 export const teamResolvers = {
     Team: {
-        id: (t: any) => t.id,
-        name: (t: any) => t.name,
-        project: (t: any) => null,
-        members: (t: any, args: PaginationArgs, context: GraphQLContext) => null,
-        tasks: (t: any, args: PaginationArgs, context: GraphQLContext) => null,
-        createdBy: (t: any) => null,
-        createdAt: (t: any) => t.createdAt,
-        updatedAt: (t: any) => t.updatedAt,
-        version: (t: any) => t.version,
-        lastEventId: (t: any) => t.lastEventId,
+        id: (parent: Team) => parent.id,
+        name: (parent: Team) => parent.name,
+        project: (parent: Team, _args: any, context: GraphQLContext) => {
+            return context.loaders.project.byId.load(parent.projectId);
+        },
+        members: (parent: Team, _args: PaginationArgs, _context: GraphQLContext) => null,
+        tasks: (parent: Team, _args: PaginationArgs, _context: GraphQLContext) => null,
+        createdBy: (parent: Team, _args: any, context: GraphQLContext) => {
+            return context.loaders.user.byId.load(parent.createdBy);
+        },
+        createdAt: (parent: Team) => parent.createdAt.toISOString(),
+        updatedAt: (parent: Team) => parent.updatedAt?.toISOString() || null,
+        version: (parent: Team) => parent.version,
+        lastEventId: (parent: Team) => parent.lastEventId,
     },
 
     TeamMember: {
-        id: (m: any) => m.id,
-        user: (m: any) => null,
-        team: (m: any) => null,
-        createdAt: (m: any) => m.createdAt,
-        version: (m: any) => m.version,
+        id: (parent: TeamMember) => parent.id,
+        user: (parent: TeamMember, _args: any, context: GraphQLContext) => {
+            return context.loaders.user.byId.load(parent.userId);
+        },
+        team: (parent: TeamMember, _args: any, _context: GraphQLContext) => {
+            // Need team loader
+            return null;
+        },
+        createdAt: (parent: TeamMember) => parent.createdAt.toISOString(),
+        version: (parent: TeamMember) => parent.version,
     },
 
     Project: {
-        teams: (p: any, args: PaginationArgs, context: GraphQLContext) => null,
+        teams: (parent: Project, _args: PaginationArgs, _context: GraphQLContext) => null,
     },
 
     Query: {
-        team: (_: any, { id }: { id: string }, context: GraphQLContext) => {
+        team: (_parent: any, { id }: { id: string }, _context: GraphQLContext) => {
             return null;
         },
-        teams: (_: any, { ids }: { ids?: string[] }, context: GraphQLContext) => {
+        teams: (_parent: any, { ids }: { ids?: string[] }, _context: GraphQLContext) => {
             return [];
         },
-        teamMembers: (_: any, { teamId, first, after, last, before }: any, context: GraphQLContext) => {
+        teamMembers: (_parent: any, { teamId, first, after, last, before }: any, _context: GraphQLContext) => {
             return null;
         },
     },
 
     Mutation: {
-        createTeam: (_: any, { projectId, name }: { projectId: string; name: string }, context: GraphQLContext) => {
+        createTeam: (_parent: any, { projectId, name }: { projectId: string; name: string }, _context: GraphQLContext) => {
             return { success: true, team: null };
         },
-        deleteTeams: (_: any, { projectId, teamIds }: { projectId: string; teamIds: string[] }, context: GraphQLContext) => {
+        deleteTeams: (_parent: any, { projectId, teamIds }: { projectId: string; teamIds: string[] }, _context: GraphQLContext) => {
             return { success: true, deletedCount: 0, project: null };
         },
-        addTeamMembers: (_: any, { projectId, teamId, userIds }: { projectId: string; teamId: string; userIds: string[] }, context: GraphQLContext) => {
+        addTeamMembers: (_parent: any, { projectId, teamId, userIds }: { projectId: string; teamId: string; userIds: string[] }, _context: GraphQLContext) => {
             return { success: true, team: null };
         },
-        removeTeamMembers: (_: any, { projectId, teamId, userIds }: { projectId: string; teamId: string; userIds: string[] }, context: GraphQLContext) => {
+        removeTeamMembers: (_parent: any, { projectId, teamId, userIds }: { projectId: string; teamId: string; userIds: string[] }, _context: GraphQLContext) => {
             return { success: true, team: null };
         },
     },

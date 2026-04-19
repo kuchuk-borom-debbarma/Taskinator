@@ -21,7 +21,12 @@ type NotificationConnection {
 }
 
 extend type Query {
-    notifications(first: Int, after: String, last: Int, before: String): NotificationConnection!
+    notifications(
+        first: Int
+        after: String
+        last: Int
+        before: String
+    ): NotificationConnection!
     unreadNotificationsCount: Int!
 }
 

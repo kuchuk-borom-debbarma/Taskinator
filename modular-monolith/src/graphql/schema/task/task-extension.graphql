@@ -1,97 +1,155 @@
 extend type Project {
-  """
-  Paginated list of all tasks in this project.
-  Optionally filtered by team or assigned member.
-  """
-  projectTasks(
-    teamId: ID
-    memberId: ID
-    """Forward pagination — return the first N tasks."""
-    first: Int
-    """Forward pagination — return tasks after this cursor."""
-    after: String
-    """Backward pagination — return the last N tasks."""
-    last: Int
-    """Backward pagination — return results before this cursor."""
-    before: String
-  ): TaskConnection!
+    """
+    Paginated list of all tasks in this project.
+    Optionally filtered by team or assigned member.
+    """
+    projectTasks(
+        teamId: ID
+        memberId: ID
+        """
+        Forward pagination — return the first N tasks.
+        """
+        first: Int
+        """
+        Forward pagination — return tasks after this cursor.
+        """
+        after: String
+        """
+        Backward pagination — return the last N tasks.
+        """
+        last: Int
+        """
+        Backward pagination — return results before this cursor.
+        """
+        before: String
+    ): TaskConnection!
 
-  """
-  Tasks assigned to the currently authenticated user within this project.
-  """
-  assignedTasks(
-    """Forward pagination — return the first N tasks."""
-    first: Int
-    """Forward pagination — return tasks after this cursor."""
-    after: String
-    """Backward pagination — return the last N tasks."""
-    last: Int
-    """Backward pagination — return results before this cursor."""
-    before: String
-  ): TaskConnection!
+    """
+    Tasks assigned to the currently authenticated user within this project.
+    """
+    assignedTasks(
+        """
+        Forward pagination — return the first N tasks.
+        """
+        first: Int
+        """
+        Forward pagination — return tasks after this cursor.
+        """
+        after: String
+        """
+        Backward pagination — return the last N tasks.
+        """
+        last: Int
+        """
+        Backward pagination — return results before this cursor.
+        """
+        before: String
+    ): TaskConnection!
 }
 
 input CreateTaskInput {
-  """Project to create the task in."""
-  projectId: ID!
-  """Short, human-readable title."""
-  title: String!
-  """Full description of the task's goal or acceptance criteria."""
-  description: String
-  """Initial lifecycle status. Defaults to server-defined value if omitted."""
-  status: String
-  """Team to assign this task to."""
-  teamId: ID
-  """Member to assign this task to."""
-  memberId: ID
+    """
+    Project to create the task in.
+    """
+    projectId: ID!
+    """
+    Short, human-readable title.
+    """
+    title: String!
+    """
+    Full description of the task's goal or acceptance criteria.
+    """
+    description: String
+    """
+    Initial lifecycle status. Defaults to server-defined value if omitted.
+    """
+    status: String
+    """
+    Team to assign this task to.
+    """
+    teamId: ID
+    """
+    Member to assign this task to.
+    """
+    memberId: ID
 }
 
 input UpdateTaskInput {
-  """Updated title. Omit to leave unchanged."""
-  title: String
-  """Updated description. Omit to leave unchanged."""
-  description: String
-  """Updated status. Omit to leave unchanged."""
-  status: String
+    """
+    Updated title. Omit to leave unchanged.
+    """
+    title: String
+    """
+    Updated description. Omit to leave unchanged.
+    """
+    description: String
+    """
+    Updated status. Omit to leave unchanged.
+    """
+    status: String
 }
 
 input CreateTaskLinkInput {
-  """Project both tasks belong to."""
-  projectId: ID!
-  """The originating task (dependency source)."""
-  sourceTaskId: ID!
-  """The destination task (dependency target)."""
-  targetTaskId: ID!
-  """Semantic label for the relationship (e.g. "blocks", "relates to")."""
-  label: String!
+    """
+    Project both tasks belong to.
+    """
+    projectId: ID!
+    """
+    The originating task (dependency source).
+    """
+    sourceTaskId: ID!
+    """
+    The destination task (dependency target).
+    """
+    targetTaskId: ID!
+    """
+    Semantic label for the relationship (e.g. "blocks", "relates to").
+    """
+    label: String!
 }
 
-"""Namespaced task mutations."""
+"""
+Namespaced task mutations.
+"""
 type TaskMutation {
-  """Creates a new task in the given project."""
-  create(input: CreateTaskInput!): Task!
+    """
+    Creates a new task in the given project.
+    """
+    create(input: CreateTaskInput!): Task!
 
-  """Partially updates a task. Only supplied fields are changed; omitted fields are left as-is."""
-  update(taskId: ID!, input: UpdateTaskInput!): Task!
+    """
+    Partially updates a task. Only supplied fields are changed; omitted fields are left as-is.
+    """
+    update(taskId: ID!, input: UpdateTaskInput!): Task!
 
-  """Permanently deletes a task. Returns the ID of the deleted task."""
-  delete(taskId: ID!): ID!
+    """
+    Permanently deletes a task. Returns the ID of the deleted task.
+    """
+    delete(taskId: ID!): ID!
 
-  """Creates a directed, labelled link between two tasks."""
-  createLink(input: CreateTaskLinkInput!): TaskLink!
+    """
+    Creates a directed, labelled link between two tasks.
+    """
+    createLink(input: CreateTaskLinkInput!): TaskLink!
 
-  """Removes a task link by ID. Returns the ID of the deleted link."""
-  deleteLink(linkId: ID!): ID!
+    """
+    Removes a task link by ID. Returns the ID of the deleted link.
+    """
+    deleteLink(linkId: ID!): ID!
 }
 
 extend type Query {
-  """Fetches a single task by ID. Returns null if not found or not authorized."""
-  task(id: ID!): Task
+    """
+    Fetches a single task by ID. Returns null if not found or not authorized.
+    """
+    task(id: ID!): Task
 
-  """Fetches multiple tasks by ID. Returns only those the user is authorized to view."""
-  tasks(ids: [ID!]!): [Task!]!
+    """
+    Fetches multiple tasks by ID. Returns only those the user is authorized to view.
+    """
+    tasks(ids: [ID!]!): [Task!]!
 }
 
 extend type Mutation {
-  task: TaskMutation!
+    task: TaskMutation!
 }

@@ -212,8 +212,18 @@ export const deleteAllTeamMembers = async (
 export const getTeams = async (
     userId: string,
     projectId: string,
-    params: { first?: number; after?: string; last?: number; before?: string; memberId?: string } = {},
-): Promise<{ teams: Team[]; nextCursor: string | null; prevCursor: string | null }> => {
+    params: {
+        first?: number;
+        after?: string;
+        last?: number;
+        before?: string;
+        memberId?: string;
+    } = {},
+): Promise<{
+    teams: Team[];
+    nextCursor: string | null;
+    prevCursor: string | null;
+}> => {
     const limit = Math.min(params.first || params.last || 10, 50);
     const { after, before, memberId } = params;
     const isBackward = !!before;
@@ -293,8 +303,17 @@ export const getTeamMembers = async (
     userId: string,
     projectId: string,
     teamId: string,
-    params: { first?: number; after?: string; last?: number; before?: string } = {},
-): Promise<{ members: TeamMember[]; nextCursor: string | null; prevCursor: string | null }> => {
+    params: {
+        first?: number;
+        after?: string;
+        last?: number;
+        before?: string;
+    } = {},
+): Promise<{
+    members: TeamMember[];
+    nextCursor: string | null;
+    prevCursor: string | null;
+}> => {
     const limit = Math.min(params.first || params.last || 10, 50);
     const { after, before } = params;
     const isBackward = !!before;

@@ -1,5 +1,4 @@
-union RealtimeEvent =
-    | InternalNotification
+union RealtimeEvent = InternalNotification
 
 extend type Subscription {
     """

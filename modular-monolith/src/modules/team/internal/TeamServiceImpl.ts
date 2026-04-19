@@ -6,7 +6,7 @@ import type {
     Team,
     TeamMember,
     TeamService,
-    UserResult,
+    User,
 } from '../TeamService.ts';
 import eventBus, { KAFKA_EVENTS } from '../../../utils/EventBus.ts';
 import {
@@ -25,8 +25,18 @@ export class TeamServiceImpl implements TeamService {
     async getTeams(
         userId: string,
         projectId: string,
-        params?: { first?: number; after?: string; last?: number; before?: string; memberId?: string },
-    ): Promise<{ teams: Team[]; nextCursor: string | null; prevCursor: string | null }> {
+        params?: {
+            first?: number;
+            after?: string;
+            last?: number;
+            before?: string;
+            memberId?: string;
+        },
+    ): Promise<{
+        teams: Team[];
+        nextCursor: string | null;
+        prevCursor: string | null;
+    }> {
         return getTeams(userId, projectId || null, params);
     }
 
@@ -38,8 +48,17 @@ export class TeamServiceImpl implements TeamService {
         userId: string,
         projectId: string,
         teamId: string,
-        params?: { first?: number; after?: string; last?: number; before?: string },
-    ): Promise<{ members: TeamMember[]; nextCursor: string | null; prevCursor: string | null }> {
+        params?: {
+            first?: number;
+            after?: string;
+            last?: number;
+            before?: string;
+        },
+    ): Promise<{
+        members: TeamMember[];
+        nextCursor: string | null;
+        prevCursor: string | null;
+    }> {
         return getTeamMembers(userId, projectId, teamId, params);
     }
 
@@ -52,7 +71,11 @@ export class TeamServiceImpl implements TeamService {
         after?: string;
         last?: number;
         before?: string;
-    }): Promise<{ users: UserResult[]; nextCursor: string | null; prevCursor: string | null }> {
+    }): Promise<{
+        users: User[];
+        nextCursor: string | null;
+        prevCursor: string | null;
+    }> {
         return searchTeamUsers(params);
     }
 

@@ -7,7 +7,11 @@ import type {
     ProjectMember,
 } from '../ProjectService.ts';
 import { db } from '../../../database';
-import { decodeCursor, encodeCursor, getTimeString } from '../../../utils/utils.ts';
+import {
+    decodeCursor,
+    encodeCursor,
+    getTimeString,
+} from '../../../utils/utils.ts';
 import { sql } from 'kysely';
 
 export const insertProject = async (
@@ -224,8 +228,17 @@ export const deleteAllProjectMembers = async (projectId: string) => {
 };
 export const getProjects = async (
     userId: string,
-    params: { first?: number; after?: string; last?: number; before?: string } = {},
-): Promise<{ projects: Project[]; nextCursor: string | null; prevCursor: string | null }> => {
+    params: {
+        first?: number;
+        after?: string;
+        last?: number;
+        before?: string;
+    } = {},
+): Promise<{
+    projects: Project[];
+    nextCursor: string | null;
+    prevCursor: string | null;
+}> => {
     const limit = Math.min(params.first || params.last || 5, 50);
     const { after, before } = params;
     const isBackward = !!before;
@@ -240,7 +253,9 @@ export const getProjects = async (
         cursorId = decoded.id;
     }
 
-    const result = await sql<Project & { isOwner: boolean; epochPrecision: string }>`
+    const result = await sql<
+        Project & { isOwner: boolean; epochPrecision: string }
+    >`
         WITH combined_projects AS (
             SELECT p.*, true as is_owner
             FROM project p
@@ -341,8 +356,17 @@ export const getProject = async (
 export const getProjectMembers = async (
     userId: string,
     projectId: string,
-    params: { first?: number; after?: string; last?: number; before?: string } = {},
-): Promise<{ members: ProjectMember[]; nextCursor: string | null; prevCursor: string | null }> => {
+    params: {
+        first?: number;
+        after?: string;
+        last?: number;
+        before?: string;
+    } = {},
+): Promise<{
+    members: ProjectMember[];
+    nextCursor: string | null;
+    prevCursor: string | null;
+}> => {
     const limit = Math.min(params.first || params.last || 15, 50);
     const { after, before } = params;
     const isBackward = !!before;
@@ -440,7 +464,12 @@ export const searchProjectMembers = async (params: {
     last?: number;
     before?: string;
 }): Promise<{
-    users: { id: string; username: string; email: string; epochPrecision: string }[];
+    users: {
+        id: string;
+        username: string;
+        email: string;
+        epochPrecision: string;
+    }[];
     nextCursor: string | null;
     prevCursor: string | null;
 }> => {
@@ -459,7 +488,12 @@ export const searchProjectMembers = async (params: {
         cursorId = decoded.id;
     }
 
-    const rows = await sql<{ id: string; username: string; email: string; epochPrecision: string }>`
+    const rows = await sql<{
+        id: string;
+        username: string;
+        email: string;
+        epochPrecision: string;
+    }>`
         WITH auth_check AS (
             SELECT 1 FROM project WHERE id = ${params.projectId}::uuid AND fk_user_id = ${params.actorId}
             UNION ALL

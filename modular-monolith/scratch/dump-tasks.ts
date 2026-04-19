@@ -11,12 +11,14 @@ async function dump() {
         WHERE fk_project_id = ${projectId}::uuid 
         ORDER BY created_at DESC, id DESC
     `.execute(db);
-    
-    console.table(result.rows.map((r: any) => ({
-        id: r.id.substring(0, 8),
-        title: r.title,
-        createdAt: r.createdAtPrecision
-    })));
+
+    console.table(
+        result.rows.map((r: any) => ({
+            id: r.id.substring(0, 8),
+            title: r.title,
+            createdAt: r.createdAtPrecision,
+        })),
+    );
     process.exit(0);
 }
 

@@ -3,7 +3,7 @@ import type {
     StartSignUpParam,
     SignInParam,
     SearchUsersParam,
-    UserResult,
+    User,
 } from '../AuthService.ts';
 import { db } from '../../../database';
 import { v4 as uuidv4 } from 'uuid';
@@ -118,14 +118,18 @@ export class AuthServiceImpl implements AuthService {
 
     async searchUsers(
         params: SearchUsersParam,
-    ): Promise<{ users: UserResult[]; nextCursor: string | null; prevCursor: string | null }> {
+    ): Promise<{
+        users: User[];
+        nextCursor: string | null;
+        prevCursor: string | null;
+    }> {
         const search = params.search?.trim() ?? '';
         const { after, before } = params;
         const isBackward = !!before;
         const cursor = before || after;
         const limit = Math.min(params.first || params.last || 10, 50);
 
-        const rows = await sql<UserResult>`
+        const rows = await sql<User>`
             SELECT id, username, email
             FROM users
             WHERE
@@ -177,9 +181,9 @@ export class AuthServiceImpl implements AuthService {
         return { users, nextCursor, prevCursor };
     }
 
-    async getUsersByIds(ids: string[]): Promise<UserResult[]> {
+    async getUsersByIds(ids: string[]): Promise<User[]> {
         if (ids.length === 0) return [];
-        const rows = await sql<UserResult>`
+        const rows = await sql<User>`
             SELECT id, username, email
             FROM users
             WHERE id::text = ANY(${ids}::text[])

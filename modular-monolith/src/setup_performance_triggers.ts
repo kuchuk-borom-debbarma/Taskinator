@@ -24,7 +24,9 @@ async function setup() {
             FOR EACH ROW EXECUTE FUNCTION notify_outbox_event();
         `.execute(db);
 
-        console.log('[Setup] Successfully installed NOTIFY trigger on outbox_events table.');
+        console.log(
+            '[Setup] Successfully installed NOTIFY trigger on outbox_events table.',
+        );
     } catch (err) {
         console.error('[Setup] Failed to setup triggers:', err);
     } finally {

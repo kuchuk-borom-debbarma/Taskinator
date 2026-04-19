@@ -12,9 +12,15 @@ import type {
     TaskLink,
     TaskNeighbourhoodResult,
 } from '../TaskService.ts';
-import { decodeCursor, encodeCursor, getTimeString } from '../../../utils/utils.ts';
+import {
+    decodeCursor,
+    encodeCursor,
+    getTimeString,
+} from '../../../utils/utils.ts';
 
-export const insertTask = async (data: CreateTaskParam): Promise<ProjectTask> => {
+export const insertTask = async (
+    data: CreateTaskParam,
+): Promise<ProjectTask> => {
     const result = await sql<ProjectTask>`
         WITH auth_check AS (
             SELECT 1 FROM project WHERE id = ${data.projectId}::uuid AND fk_user_id = ${data.userId}
@@ -201,7 +207,7 @@ export const incrementLinkReachability = async (params: {
             min_depth = LEAST(task_reachability.min_depth, EXCLUDED.min_depth),
             path_count = task_reachability.path_count + EXCLUDED.path_count;
     `.execute(db);
-    
+
     // 5. Update denormalized total counts for all affected tasks
     await sql`
         UPDATE project_task pt
@@ -218,7 +224,10 @@ export const incrementLinkReachability = async (params: {
     `.execute(db);
 };
 
-export const deleteTaskQuery = async (userId: string, taskId: string): Promise<void> => {
+export const deleteTaskQuery = async (
+    userId: string,
+    taskId: string,
+): Promise<void> => {
     await sql`
         WITH auth_check AS (
             SELECT p.id FROM project_task t
@@ -268,7 +277,10 @@ export const deleteTaskQuery = async (userId: string, taskId: string): Promise<v
     `.execute(db);
 };
 
-export const deleteLinkQuery = async (userId: string, linkId: string): Promise<void> => {
+export const deleteLinkQuery = async (
+    userId: string,
+    linkId: string,
+): Promise<void> => {
     await sql`
         WITH auth_check AS (
             SELECT p.id FROM task_link l
@@ -378,7 +390,11 @@ export const getTasksPage = async (
     userId: string,
     projectId: string,
     params: PaginationParams,
-): Promise<{ tasks: ProjectTask[]; nextCursor: string | null; prevCursor: string | null }> => {
+): Promise<{
+    tasks: ProjectTask[];
+    nextCursor: string | null;
+    prevCursor: string | null;
+}> => {
     const limit = Math.min(params.first || params.last || 10, 50);
     const { after, before } = params;
     const isBackward = !!before;
@@ -393,7 +409,9 @@ export const getTasksPage = async (
         cursorId = decoded.id;
     }
 
-    console.log(`[TaskQueries] getTasksPage - User: ${userId}, Project: ${projectId}, cursor: ${cursor}, isBackward: ${isBackward}, limit: ${limit}`);
+    console.log(
+        `[TaskQueries] getTasksPage - User: ${userId}, Project: ${projectId}, cursor: ${cursor}, isBackward: ${isBackward}, limit: ${limit}`,
+    );
 
     const result = await sql<ProjectTask & { epochPrecision: string }>`
         WITH auth_check AS (
@@ -489,7 +507,7 @@ export const getTasksByIds = async (
     ids: string[],
 ): Promise<ProjectTask[]> => {
     if (ids.length === 0) return [];
-    
+
     const result = await sql<ProjectTask>`
         SELECT 
             id,
@@ -522,7 +540,11 @@ export const getTaskLinksPage = async (
     taskId: string,
     direction: 'incoming' | 'outgoing',
     params: PaginationParams,
-): Promise<{ links: TaskLink[]; nextCursor: string | null; prevCursor: string | null }> => {
+): Promise<{
+    links: TaskLink[];
+    nextCursor: string | null;
+    prevCursor: string | null;
+}> => {
     const limit = Math.min(params.first || params.last || 20, 50);
     const { after, before } = params;
     const isBackward = !!before;
@@ -539,7 +561,8 @@ export const getTaskLinksPage = async (
 
     // incoming: links pointing TO this task (target_task_id = taskId)
     // outgoing: links pointing FROM this task (source_task_id = taskId)
-    const filterCol = direction === 'incoming' ? 'target_task_id' : 'source_task_id';
+    const filterCol =
+        direction === 'incoming' ? 'target_task_id' : 'source_task_id';
 
     const result = await sql<TaskLink & { epochPrecision: string }>`
         WITH auth_check AS (
@@ -625,12 +648,12 @@ export const getNeighbourhood = async (
     // ── Step 1: Paginate neighbours from task_reachability ──────────────────
     // Union incoming ancestors + outgoing descendants, deduplicate by choosing
     // MIN depth and marking as 'both' if the same task appears on both sides.
-    type ReachRow = { 
-        neighbour_id: string; 
-        min_depth: number; 
-        direction: string; 
+    type ReachRow = {
+        neighbour_id: string;
+        min_depth: number;
+        direction: string;
         epochPrecision: string;
-        
+
         // Hydrated fields from project_task
         id: string;
         projectId: string;
@@ -755,11 +778,29 @@ export const getNeighbourhood = async (
         const last = reachRows[reachRows.length - 1]!;
 
         if (isBackward) {
-            nextCursor = encodeCursor(`${last.min_depth}|${(last as any).epochPrecision}`, last.neighbour_id);
-            prevCursor = hasMore ? encodeCursor(`${first.min_depth}|${(first as any).epochPrecision}`, first.neighbour_id) : null;
+            nextCursor = encodeCursor(
+                `${last.min_depth}|${(last as any).epochPrecision}`,
+                last.neighbour_id,
+            );
+            prevCursor = hasMore
+                ? encodeCursor(
+                      `${first.min_depth}|${(first as any).epochPrecision}`,
+                      first.neighbour_id,
+                  )
+                : null;
         } else {
-            nextCursor = hasMore ? encodeCursor(`${last.min_depth}|${(last as any).epochPrecision}`, last.neighbour_id) : null;
-            prevCursor = params.after ? encodeCursor(`${first.min_depth}|${(first as any).epochPrecision}`, first.neighbour_id) : null;
+            nextCursor = hasMore
+                ? encodeCursor(
+                      `${last.min_depth}|${(last as any).epochPrecision}`,
+                      last.neighbour_id,
+                  )
+                : null;
+            prevCursor = params.after
+                ? encodeCursor(
+                      `${first.min_depth}|${(first as any).epochPrecision}`,
+                      first.neighbour_id,
+                  )
+                : null;
         }
     }
 
@@ -787,8 +828,8 @@ export const getNeighbourhood = async (
             totalIncomingCount: r.totalIncomingCount,
             totalOutgoingCount: r.totalOutgoingCount,
             incomingLabelCounts: r.incomingLabelCounts,
-            outgoingLabelCounts: r.outgoingLabelCounts
-        }
+            outgoingLabelCounts: r.outgoingLabelCounts,
+        },
     }));
 
     if (neighbours.length === 0) {
@@ -833,7 +874,9 @@ export const getNeighbourhood = async (
     };
 };
 
-export const updateTaskQuery = async (data: UpdateTaskParam): Promise<ProjectTask> => {
+export const updateTaskQuery = async (
+    data: UpdateTaskParam,
+): Promise<ProjectTask> => {
     const result = await sql<ProjectTask>`
         WITH auth_check AS (
             SELECT p.id FROM project_task t
@@ -896,7 +939,11 @@ export const getProjectTaskLinksPage = async (
     userId: string,
     projectId: string,
     params: PaginationParams,
-): Promise<{ links: TaskLink[]; nextCursor: string | null; prevCursor: string | null }> => {
+): Promise<{
+    links: TaskLink[];
+    nextCursor: string | null;
+    prevCursor: string | null;
+}> => {
     const limit = Math.min(params.first || params.last || 20, 100);
     const { after, before } = params;
     const isBackward = !!before;
@@ -972,4 +1019,3 @@ export const getProjectTaskLinksPage = async (
 
     return { links: rows, nextCursor, prevCursor };
 };
-
