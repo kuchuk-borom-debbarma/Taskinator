@@ -6,32 +6,32 @@ import { taskService } from '../../modules/task';
 import { encodeCursor } from '../../utils/utils.ts';
 
 interface PaginationArgs {
-  first?: number;
-  after?: string;
-  last?: number;
-  before?: string;
+    first?: number;
+    after?: string;
+    last?: number;
+    before?: string;
 }
 
 interface CreateTaskInput {
-  projectId: string;
-  title: string;
-  description?: string;
-  status?: string;
-  teamId?: string;
-  memberId?: string;
+    projectId: string;
+    title: string;
+    description?: string;
+    status?: string;
+    teamId?: string;
+    memberId?: string;
 }
 
 interface UpdateTaskInput {
-  title?: string;
-  description?: string;
-  status?: string;
+    title?: string;
+    description?: string;
+    status?: string;
 }
 
 interface CreateTaskLinkInput {
-  projectId: string;
-  sourceTaskId: string;
-  targetTaskId: string;
-  label: string;
+    projectId: string;
+    sourceTaskId: string;
+    targetTaskId: string;
+    label: string;
 }
 
 export const taskResolvers = {
@@ -47,46 +47,44 @@ export const taskResolvers = {
         },
         team: async (parent: Task, _args: any, context: GraphQLContext) => {
             if (!parent.teamId) return null;
-            const team = await context.loaders.team.byId.load({
-                actorId: context.userId || '',
-                teamId: parent.teamId
-            });
+            // Internal hydration
+            const team = await context.loaders.team.byId.load(parent.teamId);
             if (!team) {
-                throw new NotFoundError(`Team with ID ${parent.teamId} not found for task ${parent.id}`);
+                throw new NotFoundError(
+                    `Team with ID ${parent.teamId} not found for task ${parent.id}`,
+                );
             }
             return team;
         },
-        assignedMember: async (parent: Task, _args: any, context: GraphQLContext) => {
+        assignedMember: async (
+            parent: Task,
+            _args: any,
+            context: GraphQLContext,
+        ) => {
             if (!parent.memberId) return null;
-            const user = await context.loaders.user.byId.load(parent.memberId);
-            if (!user) {
-                throw new NotFoundError(`Assigned User with ID ${parent.memberId} not found for task ${parent.id}`);
-            }
-            return user;
+            return context.loaders.user.byId.load(parent.memberId);
         },
-        neighbourLinks: async (parent: Task, args: any, context: GraphQLContext) => {
+        neighbourLinks: async (
+            parent: Task,
+            args: any,
+            context: GraphQLContext,
+        ) => {
             if (!context.userId) throw new UnauthorizedError();
-            
+
             const { direction, depthLimit, ...pagination } = args;
 
-            // Using getTaskLinks for now as it supports direction and pagination.
-            // If depthLimit > 1 is requested, we might need getTaskNeighbourhood.
-            // For now, let's just implement depthLimit = 1 via getTaskLinks.
-            const { links, nextCursor, prevCursor } = await taskService.getTaskLinks(
-                { 
-                    userId: context.userId, 
-                    projectId: parent.projectId, 
-                    taskId: parent.id, 
-                    direction: direction === 'both' ? 'incoming' : direction // Simplified
-                },
-                pagination
-            );
+            const { links, nextCursor, prevCursor } =
+                await taskService.getTaskLinks(
+                    {
+                        userId: context.userId,
+                        projectId: parent.projectId,
+                        taskId: parent.id,
+                        direction:
+                            direction === 'both' ? 'incoming' : direction,
+                    },
+                    pagination,
+                );
 
-            // Actually, getTaskLinks only does one direction at a time.
-            // If direction is 'both', we might need to merge or use another service method.
-            // Let's check if TaskService has a method for 'both'.
-            // It doesn't seem to have a simple 'both' with pagination.
-            
             return {
                 edges: links.map((l: any) => ({
                     node: l,
@@ -102,17 +100,29 @@ export const taskResolvers = {
         },
         version: (parent: Task) => parent.version,
         lastEventId: (parent: Task) => parent.lastEventId,
-        createdBy: async (parent: Task, _args: any, context: GraphQLContext) => {
+        createdBy: async (
+            parent: Task,
+            _args: any,
+            context: GraphQLContext,
+        ) => {
             const user = await context.loaders.user.byId.load(parent.createdBy);
             if (!user) {
-                throw new NotFoundError(`Creator User with ID ${parent.createdBy} not found for task ${parent.id}`);
+                throw new NotFoundError(
+                    `Creator User with ID ${parent.createdBy} not found for task ${parent.id}`,
+                );
             }
             return user;
         },
-        updatedBy: async (parent: Task, _args: any, context: GraphQLContext) => {
+        updatedBy: async (
+            parent: Task,
+            _args: any,
+            context: GraphQLContext,
+        ) => {
             const user = await context.loaders.user.byId.load(parent.updatedBy);
             if (!user) {
-                throw new NotFoundError(`Updater User with ID ${parent.updatedBy} not found for task ${parent.id}`);
+                throw new NotFoundError(
+                    `Updater User with ID ${parent.updatedBy} not found for task ${parent.id}`,
+                );
             }
             return user;
         },
@@ -125,31 +135,49 @@ export const taskResolvers = {
         project: (parent: TaskLink, _args: any, context: GraphQLContext) => {
             return context.loaders.project.byId.load(parent.projectId);
         },
-        source: async (parent: TaskLink, _args: any, context: GraphQLContext) => {
-            const task = await context.loaders.task.byId.load({
-                actorId: context.userId || '',
-                taskId: parent.sourceTaskId
-            });
+        source: async (
+            parent: TaskLink,
+            _args: any,
+            context: GraphQLContext,
+        ) => {
+            // Internal hydration
+            const task = await context.loaders.task.byId.load(
+                parent.sourceTaskId,
+            );
             if (!task) {
-                throw new NotFoundError(`Source Task with ID ${parent.sourceTaskId} not found for link ${parent.id}`);
+                throw new NotFoundError(
+                    `Source Task with ID ${parent.sourceTaskId} not found for link ${parent.id}`,
+                );
             }
             return task;
         },
-        target: async (parent: TaskLink, _args: any, context: GraphQLContext) => {
-            const task = await context.loaders.task.byId.load({
-                actorId: context.userId || '',
-                taskId: parent.targetTaskId
-            });
+        target: async (
+            parent: TaskLink,
+            _args: any,
+            context: GraphQLContext,
+        ) => {
+            // Internal hydration
+            const task = await context.loaders.task.byId.load(
+                parent.targetTaskId,
+            );
             if (!task) {
-                throw new NotFoundError(`Target Task with ID ${parent.targetTaskId} not found for link ${parent.id}`);
+                throw new NotFoundError(
+                    `Target Task with ID ${parent.targetTaskId} not found for link ${parent.id}`,
+                );
             }
             return task;
         },
         label: (parent: TaskLink) => parent.label,
-        createdBy: async (parent: TaskLink, _args: any, context: GraphQLContext) => {
+        createdBy: async (
+            parent: TaskLink,
+            _args: any,
+            context: GraphQLContext,
+        ) => {
             const user = await context.loaders.user.byId.load(parent.createdBy);
             if (!user) {
-                throw new NotFoundError(`Creator User with ID ${parent.createdBy} not found for task link ${parent.id}`);
+                throw new NotFoundError(
+                    `Creator User with ID ${parent.createdBy} not found for task link ${parent.id}`,
+                );
             }
             return user;
         },
@@ -157,23 +185,28 @@ export const taskResolvers = {
         updatedBy: (parent: TaskLink, _args: any, _context: GraphQLContext) => {
             return null;
         },
-        updatedAt: (parent: TaskLink) => (parent as any).updatedAt?.toISOString() || null,
+        updatedAt: (parent: TaskLink) =>
+            (parent as any).updatedAt?.toISOString() || null,
     },
 
     Project: {
-        projectTasks: async (parent: Project, args: any, context: GraphQLContext) => {
+        projectTasks: async (
+            parent: Project,
+            args: any,
+            context: GraphQLContext,
+        ) => {
             if (!context.userId) throw new UnauthorizedError();
-            
-            const { tasks, nextCursor, prevCursor } = await taskService.getTasks(
-                context.userId,
-                parent.id,
-                args
-            );
+
+            const { tasks, nextCursor, prevCursor } =
+                await taskService.getTasks(context.userId, parent.id, args);
 
             return {
                 edges: tasks.map((t: any) => ({
                     node: t,
-                    cursor: encodeCursor(t.epochPrecision || t.createdAt.toISOString(), t.id),
+                    cursor: encodeCursor(
+                        t.epochPrecision || t.createdAt.toISOString(),
+                        t.id,
+                    ),
                 })),
                 pageInfo: {
                     hasNextPage: !!nextCursor,
@@ -183,19 +216,26 @@ export const taskResolvers = {
                 },
             };
         },
-        assignedTasks: async (parent: Project, args: any, context: GraphQLContext) => {
+        assignedTasks: async (
+            parent: Project,
+            args: any,
+            context: GraphQLContext,
+        ) => {
             if (!context.userId) throw new UnauthorizedError();
-            
-            const { tasks, nextCursor, prevCursor } = await taskService.getTasks(
-                context.userId,
-                parent.id,
-                { ...args, memberId: context.userId }
-            );
+
+            const { tasks, nextCursor, prevCursor } =
+                await taskService.getTasks(context.userId, parent.id, {
+                    ...args,
+                    memberId: context.userId,
+                });
 
             return {
                 edges: tasks.map((t: any) => ({
                     node: t,
-                    cursor: encodeCursor(t.epochPrecision || t.createdAt.toISOString(), t.id),
+                    cursor: encodeCursor(
+                        t.epochPrecision || t.createdAt.toISOString(),
+                        t.id,
+                    ),
                 })),
                 pageInfo: {
                     hasNextPage: !!nextCursor,
@@ -208,19 +248,29 @@ export const taskResolvers = {
     },
 
     Query: {
-        task: (_parent: any, { id }: { id: string }, context: GraphQLContext) => {
-            return context.loaders.task.byId.load({
+        task: (
+            _parent: any,
+            { id }: { id: string },
+            context: GraphQLContext,
+        ) => {
+            return context.loaders.task.byActorIdAndId.load({
                 actorId: context.userId || '',
-                taskId: id
+                id: id,
             });
         },
-        tasks: async (_parent: any, { ids }: { ids: string[] }, context: GraphQLContext) => {
+        tasks: async (
+            _parent: any,
+            { ids }: { ids: string[] },
+            context: GraphQLContext,
+        ) => {
             if (!ids || ids.length === 0) return [];
             const actorId = context.userId || '';
-            const results = await context.loaders.task.byId.loadMany(
-                ids.map(taskId => ({ actorId, taskId }))
+            const results = await context.loaders.task.byActorIdAndId.loadMany(
+                ids.map((id) => ({ actorId, id })),
             );
-            return results.filter((res): res is Task => res !== null && !(res instanceof Error));
+            return results.filter(
+                (res): res is Task => res !== null && !(res instanceof Error),
+            );
         },
     },
 
@@ -229,19 +279,39 @@ export const taskResolvers = {
     },
 
     TaskMutation: {
-        create: (_parent: any, { input }: { input: CreateTaskInput }, _context: GraphQLContext) => {
+        create: (
+            _parent: any,
+            { input }: { input: CreateTaskInput },
+            _context: GraphQLContext,
+        ) => {
             return null;
         },
-        update: (_parent: any, { taskId, input }: { taskId: string; input: UpdateTaskInput }, _context: GraphQLContext) => {
+        update: (
+            _parent: any,
+            { taskId, input }: { taskId: string; input: UpdateTaskInput },
+            _context: GraphQLContext,
+        ) => {
             return null;
         },
-        delete: (_parent: any, { taskId }: { taskId: string }, _context: GraphQLContext) => {
+        delete: (
+            _parent: any,
+            { taskId }: { taskId: string },
+            _context: GraphQLContext,
+        ) => {
             return taskId;
         },
-        createLink: (_parent: any, { input }: { input: CreateTaskLinkInput }, _context: GraphQLContext) => {
+        createLink: (
+            _parent: any,
+            { input }: { input: CreateTaskLinkInput },
+            _context: GraphQLContext,
+        ) => {
             return null;
         },
-        deleteLink: (_parent: any, { linkId }: { linkId: string }, _context: GraphQLContext) => {
+        deleteLink: (
+            _parent: any,
+            { linkId }: { linkId: string },
+            _context: GraphQLContext,
+        ) => {
             return linkId;
         },
     },

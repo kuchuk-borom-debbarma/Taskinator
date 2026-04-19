@@ -17,10 +17,7 @@ import {
     createTeam,
     addTeamMember,
 } from '../../../../__tests__/helpers/factories.ts';
-import {
-    getTeams,
-    getTeamMembers,
-} from '../TeamQueries.ts';
+import { getTeams, getTeamMembers } from '../TeamQueries.ts';
 
 describe('TeamQueries — Integration (Real DB + wCTE)', () => {
     let ownerId: string;

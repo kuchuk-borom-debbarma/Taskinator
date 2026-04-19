@@ -14,16 +14,19 @@ export const createLoaders = (_userId?: string) => {
         },
         project: {
             byId: projectLoaders.byId(),
-            byActorIdAndProjectId: projectLoaders.byActorIdAndProjectId(),
+            byActorIdAndId: projectLoaders.byActorIdAndId(),
         },
         team: {
             byId: teamLoaders.byId(),
+            byActorIdAndId: teamLoaders.byActorIdAndId(),
         },
         task: {
             byId: taskLoaders.byId(),
+            byActorIdAndId: taskLoaders.byActorIdAndId(),
         },
         projectMember: {
             byId: projectMemberLoaders.byId(),
+            byActorIdAndId: projectMemberLoaders.byActorIdAndId(),
         },
     };
 };

@@ -2,6 +2,7 @@ import type { Team, TeamMember, TeamService } from '../TeamService.ts';
 import {
     getTeamMembers,
     getTeams,
+    getTeamsByActorIdAndIds,
     getTeamsByIds as getTeamsByIdsQuery,
     searchTeamUsers,
 } from './TeamQueries.ts';
@@ -61,8 +62,15 @@ export class TeamServiceImpl implements TeamService {
         return searchTeamUsers(params);
     }
 
-    async getTeamsByIds(userId: string, teamIds: string[]): Promise<Team[]> {
-        return await getTeamsByIdsQuery(userId, teamIds);
+    async getTeamsByIds(teamIds: string[]): Promise<Team[]> {
+        return await getTeamsByIdsQuery(teamIds);
+    }
+
+    async getTeamsByActorIdAndIds(
+        actorId: string,
+        teamIds: string[],
+    ): Promise<Team[]> {
+        return await getTeamsByActorIdAndIds(actorId, teamIds);
     }
 
     async init(): Promise<void> {

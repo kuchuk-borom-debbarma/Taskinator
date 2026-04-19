@@ -57,7 +57,15 @@ export interface ProjectService extends BaseService {
         prevCursor: string | null;
     }>;
 
-    getProjectMembersByIds(
+    /**
+     * Unauthorized batch fetch for internal use.
+     */
+    getProjectMembersByIds(memberIds: string[]): Promise<ProjectMember[]>;
+
+    /**
+     * Authorized batch fetch.
+     */
+    getProjectMembersByActorIdAndIds(
         userId: string,
         memberIds: string[],
     ): Promise<ProjectMember[]>;
@@ -68,7 +76,12 @@ export interface ProjectService extends BaseService {
     getUserProjectIds(userId: string): Promise<string[]>;
 
     /**
-     * Batch fetch projects by IDs. Used by DataLoaders.
+     * Unauthorized batch fetch for internal use.
+     */
+    getProjectsByIds(ids: string[]): Promise<Project[]>;
+
+    /**
+     * Authorized batch fetch.
      */
     getProjectsByActorIdAndProjectIds(
         userId: string,

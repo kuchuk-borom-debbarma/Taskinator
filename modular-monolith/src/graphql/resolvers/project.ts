@@ -1,15 +1,18 @@
 import type { GraphQLContext } from '../context.ts';
-import type { Project, ProjectMember } from '../../modules/project/ProjectService.ts';
+import type {
+    Project,
+    ProjectMember,
+} from '../../modules/project/ProjectService.ts';
 import type { User } from '../../modules/auth';
 import { NotFoundError, UnauthorizedError } from '../errors.ts';
 import { projectService } from '../../modules/project';
 import { encodeCursor } from '../../utils/utils.ts';
 
 interface PaginationArgs {
-  first?: number;
-  after?: string;
-  last?: number;
-  before?: string;
+    first?: number;
+    after?: string;
+    last?: number;
+    before?: string;
 }
 
 export const projectResolvers = {
@@ -20,19 +23,27 @@ export const projectResolvers = {
         creator: (parent: Project, _args: any, context: GraphQLContext) => {
             return context.loaders.user.byId.load(parent.userId);
         },
-        projectMembers: async (parent: Project, args: PaginationArgs, context: GraphQLContext) => {
+        projectMembers: async (
+            parent: Project,
+            args: PaginationArgs,
+            context: GraphQLContext,
+        ) => {
             if (!context.userId) throw new UnauthorizedError();
-            
-            const { members, nextCursor, prevCursor } = await projectService.getProjectMembers(
-                context.userId,
-                parent.id,
-                args
-            );
+
+            const { members, nextCursor, prevCursor } =
+                await projectService.getProjectMembers(
+                    context.userId,
+                    parent.id,
+                    args,
+                );
 
             return {
                 edges: members.map((m: any) => ({
                     node: m,
-                    cursor: encodeCursor(m.epochPrecision || m.createdAt.toISOString(), m.id),
+                    cursor: encodeCursor(
+                        m.epochPrecision || m.createdAt.toISOString(),
+                        m.id,
+                    ),
                 })),
                 pageInfo: {
                     hasNextPage: !!nextCursor,
@@ -50,17 +61,27 @@ export const projectResolvers = {
 
     ProjectMember: {
         id: (parent: ProjectMember) => parent.id,
-        project: (parent: ProjectMember, _args: any, context: GraphQLContext) => {
+        project: (
+            parent: ProjectMember,
+            _args: any,
+            context: GraphQLContext,
+        ) => {
             // Authorized lookup since we are navigating from a member record
-            return context.loaders.project.byActorIdAndProjectId.load({ 
-                actorId: context.userId || '', 
-                projectId: parent.projectId 
+            return context.loaders.project.byActorIdAndId.load({
+                actorId: context.userId || '',
+                id: parent.projectId,
             });
         },
-        user: async (parent: ProjectMember, _args: any, context: GraphQLContext) => {
+        user: async (
+            parent: ProjectMember,
+            _args: any,
+            context: GraphQLContext,
+        ) => {
             const user = await context.loaders.user.byId.load(parent.userId);
             if (!user) {
-                throw new NotFoundError(`User with ID ${parent.userId} not found for member ${parent.id}`);
+                throw new NotFoundError(
+                    `User with ID ${parent.userId} not found for member ${parent.id}`,
+                );
             }
             return user;
         },
@@ -69,18 +90,26 @@ export const projectResolvers = {
     },
 
     User: {
-        projects: async (parent: User, args: PaginationArgs, context: GraphQLContext) => {
+        projects: async (
+            parent: User,
+            args: PaginationArgs,
+            context: GraphQLContext,
+        ) => {
             if (!context.userId) throw new UnauthorizedError();
-            
-            const { projects, nextCursor, prevCursor } = await projectService.getProjectsOfUser(
-                parent.id, // Target user
-                args
-            );
+
+            const { projects, nextCursor, prevCursor } =
+                await projectService.getProjectsOfUser(
+                    parent.id, // Target user
+                    args,
+                );
 
             return {
                 edges: projects.map((p: any) => ({
                     node: p,
-                    cursor: encodeCursor(p.epochPrecision || p.createdAt.toISOString(), p.id),
+                    cursor: encodeCursor(
+                        p.epochPrecision || p.createdAt.toISOString(),
+                        p.id,
+                    ),
                 })),
                 pageInfo: {
                     hasNextPage: !!nextCursor,
@@ -93,38 +122,77 @@ export const projectResolvers = {
     },
 
     Query: {
-        project: (_parent: any, { id }: { id: string }, context: GraphQLContext) => {
-            return context.loaders.project.byActorIdAndProjectId.load({ 
-                actorId: context.userId || '', 
-                projectId: id 
+        project: (
+            _parent: any,
+            { id }: { id: string },
+            context: GraphQLContext,
+        ) => {
+            return context.loaders.project.byActorIdAndId.load({
+                actorId: context.userId || '',
+                id: id,
             });
         },
-        projects: async (_parent: any, { ids }: { ids?: string[] }, context: GraphQLContext) => {
+        projects: async (
+            _parent: any,
+            { ids }: { ids?: string[] },
+            context: GraphQLContext,
+        ) => {
             if (!ids || ids.length === 0) return [];
             const actorId = context.userId || '';
-            const results = await context.loaders.project.byActorIdAndProjectId.loadMany(
-                ids.map(projectId => ({ actorId, projectId }))
-            );
-            
+            const results =
+                await context.loaders.project.byActorIdAndId.loadMany(
+                    ids.map((id) => ({ actorId, id })),
+                );
+
             // Filter out Errors and nulls to return Project[]
-            return results.filter((res): res is Project => res !== null && !(res instanceof Error));
+            return results.filter(
+                (res): res is Project =>
+                    res !== null && !(res instanceof Error),
+            );
         },
     },
 
     Mutation: {
-        createProject: (_parent: any, { name, description }: { name: string; description?: string }, _context: GraphQLContext) => {
+        createProject: (
+            _parent: any,
+            { name, description }: { name: string; description?: string },
+            _context: GraphQLContext,
+        ) => {
             return null;
         },
-        updateProject: (_parent: any, { id, name, description }: { id: string; name?: string; description?: string }, _context: GraphQLContext) => {
+        updateProject: (
+            _parent: any,
+            {
+                id,
+                name,
+                description,
+            }: { id: string; name?: string; description?: string },
+            _context: GraphQLContext,
+        ) => {
             return null;
         },
-        deleteProjects: (_parent: any, { projectIds }: { projectIds: string[] }, _context: GraphQLContext) => {
+        deleteProjects: (
+            _parent: any,
+            { projectIds }: { projectIds: string[] },
+            _context: GraphQLContext,
+        ) => {
             return { success: true, deletedCount: 0 };
         },
-        addProjectMembers: (_parent: any, { projectId, userIds }: { projectId: string; userIds: string[] }, _context: GraphQLContext) => {
+        addProjectMembers: (
+            _parent: any,
+            { projectId, userIds }: { projectId: string; userIds: string[] },
+            _context: GraphQLContext,
+        ) => {
             return { success: true, project: null };
         },
-        removeProjectMembers: (_parent: any, { projectId, memberIds }: { projectId: string; memberIds: string[] }, _context: GraphQLContext) => {
+        removeProjectMembers: (
+            _parent: any,
+            {
+                projectId,
+                memberIds,
+            }: { projectId: string; memberIds: string[] },
+            _context: GraphQLContext,
+        ) => {
             return { success: true, removedCount: 0, project: null };
         },
     },

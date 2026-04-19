@@ -1,12 +1,6 @@
-import type {
-    Project,
-    ProjectMember,
-} from '../ProjectService.ts';
+import type { Project, ProjectMember } from '../ProjectService.ts';
 import { db } from '../../../database';
-import {
-    decodeCursor,
-    encodeCursor,
-} from '../../../utils/utils.ts';
+import { decodeCursor, encodeCursor } from '../../../utils/utils.ts';
 import { sql } from 'kysely';
 
 export const getProjects = async (
@@ -228,6 +222,27 @@ export const getProjectMembers = async (
 };
 
 export const getProjectMembersByIds = async (
+    memberIds: string[],
+): Promise<ProjectMember[]> => {
+    if (memberIds.length === 0) return [];
+
+    const result = await sql<ProjectMember>`
+        SELECT 
+            pm.id, 
+            pm.fk_user_id AS "userId", 
+            pm.fk_project_id AS "projectId", 
+            pm.version, 
+            pm.last_event_id AS "lastEventId", 
+            pm.created_at AS "createdAt", 
+            pm.updated_at AS "updatedAt"
+        FROM project_member pm
+        WHERE pm.id = ANY(${memberIds}::uuid[])
+    `.execute(db);
+
+    return result.rows;
+};
+
+export const getProjectMembersByActorIdAndIds = async (
     userId: string,
     memberIds: string[],
 ): Promise<ProjectMember[]> => {
@@ -245,8 +260,6 @@ export const getProjectMembersByIds = async (
         FROM project_member pm
         WHERE pm.id = ANY(${memberIds}::uuid[])
           AND EXISTS (
-              -- Authorization: actor must be a member of the projects they are requesting member info for
-              -- OR owner of the project
               SELECT 1 FROM project p 
               LEFT JOIN project_member pm2 ON pm2.fk_project_id = p.id
               WHERE p.id = pm.fk_project_id
@@ -386,6 +399,28 @@ export const searchProjectMembers = async (params: {
 };
 
 export const getProjectsByIds = async (
+    projectIds: string[],
+): Promise<Project[]> => {
+    if (projectIds.length === 0) return [];
+
+    const result = await sql<Project>`
+        SELECT 
+            id,
+            name,
+            description,
+            fk_user_id AS "userId",
+            version,
+            last_event_id AS "lastEventId",
+            created_at AS "createdAt",
+            updated_at AS "updatedAt"
+        FROM project
+        WHERE id = ANY(${projectIds}::uuid[])
+    `.execute(db);
+
+    return result.rows;
+};
+
+export const getProjectsByActorIdAndProjectIds = async (
     userId: string,
     projectIds: string[],
 ): Promise<Project[]> => {

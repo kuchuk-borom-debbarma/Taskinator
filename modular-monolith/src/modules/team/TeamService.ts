@@ -76,9 +76,17 @@ export interface TeamService extends BaseService {
     }>;
 
     /**
-     * Batch fetch teams by IDs. Used by DataLoaders.
+     * Unauthorized batch fetch for internal use.
      */
-    getTeamsByIds(userId: string, teamIds: string[]): Promise<Team[]>;
+    getTeamsByIds(teamIds: string[]): Promise<Team[]>;
+
+    /**
+     * Authorized batch fetch.
+     */
+    getTeamsByActorIdAndIds(
+        actorId: string,
+        teamIds: string[],
+    ): Promise<Team[]>;
 }
 
 export type { User };

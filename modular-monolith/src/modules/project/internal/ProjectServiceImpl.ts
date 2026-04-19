@@ -6,8 +6,10 @@ import type {
 import {
     getProject,
     getProjectMembers,
+    getProjectMembersByActorIdAndIds,
     getProjectMembersByIds,
     getProjects,
+    getProjectsByActorIdAndProjectIds,
     getProjectsByIds,
     getUserProjectIds,
     searchProjectMembers,
@@ -58,21 +60,31 @@ export class ProjectServiceImpl implements ProjectService {
     }
 
     async getProjectMembersByIds(
+        memberIds: string[],
+    ): Promise<ProjectMember[]> {
+        return getProjectMembersByIds(memberIds);
+    }
+
+    async getProjectMembersByActorIdAndIds(
         userId: string,
         memberIds: string[],
     ): Promise<ProjectMember[]> {
-        return getProjectMembersByIds(userId, memberIds);
+        return getProjectMembersByActorIdAndIds(userId, memberIds);
     }
 
     async getUserProjectIds(userId: string): Promise<string[]> {
         return getUserProjectIds(userId);
     }
 
+    async getProjectsByIds(ids: string[]): Promise<Project[]> {
+        return getProjectsByIds(ids);
+    }
+
     async getProjectsByActorIdAndProjectIds(
         userId: string,
         projectIds: string[],
     ): Promise<Project[]> {
-        return getProjectsByIds(userId, projectIds);
+        return getProjectsByActorIdAndProjectIds(userId, projectIds);
     }
 
     async destroy(): Promise<void> {

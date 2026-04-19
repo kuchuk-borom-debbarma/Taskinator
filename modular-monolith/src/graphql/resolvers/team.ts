@@ -7,10 +7,10 @@ import { taskService } from '../../modules/task';
 import { encodeCursor } from '../../utils/utils.ts';
 
 interface PaginationArgs {
-  first?: number;
-  after?: string;
-  last?: number;
-  before?: string;
+    first?: number;
+    after?: string;
+    last?: number;
+    before?: string;
 }
 
 export const teamResolvers = {
@@ -18,17 +18,23 @@ export const teamResolvers = {
         id: (parent: Team) => parent.id,
         name: (parent: Team) => parent.name,
         project: (parent: Team, _args: any, context: GraphQLContext) => {
+            // Internal hydration — using trust-based byId
             return context.loaders.project.byId.load(parent.projectId);
         },
-        members: async (parent: Team, args: PaginationArgs, context: GraphQLContext) => {
+        members: async (
+            parent: Team,
+            args: PaginationArgs,
+            context: GraphQLContext,
+        ) => {
             if (!context.userId) throw new UnauthorizedError();
-            
-            const { members, nextCursor, prevCursor } = await teamService.getTeamMembers(
-                context.userId,
-                parent.projectId,
-                parent.id,
-                args
-            );
+
+            const { members, nextCursor, prevCursor } =
+                await teamService.getTeamMembers(
+                    context.userId,
+                    parent.projectId,
+                    parent.id,
+                    args,
+                );
 
             return {
                 edges: members.map((m: any) => ({
@@ -43,19 +49,26 @@ export const teamResolvers = {
                 },
             };
         },
-        tasks: async (parent: Team, args: PaginationArgs, context: GraphQLContext) => {
+        tasks: async (
+            parent: Team,
+            args: PaginationArgs,
+            context: GraphQLContext,
+        ) => {
             if (!context.userId) throw new UnauthorizedError();
-            
-            const { tasks, nextCursor, prevCursor } = await taskService.getTasks(
-                context.userId,
-                parent.projectId,
-                { ...args, teamId: parent.id }
-            );
+
+            const { tasks, nextCursor, prevCursor } =
+                await taskService.getTasks(context.userId, parent.projectId, {
+                    ...args,
+                    teamId: parent.id,
+                });
 
             return {
                 edges: tasks.map((t: any) => ({
                     node: t,
-                    cursor: encodeCursor(t.epochPrecision || t.createdAt.toISOString(), t.id),
+                    cursor: encodeCursor(
+                        t.epochPrecision || t.createdAt.toISOString(),
+                        t.id,
+                    ),
                 })),
                 pageInfo: {
                     hasNextPage: !!nextCursor,
@@ -65,10 +78,16 @@ export const teamResolvers = {
                 },
             };
         },
-        createdBy: async (parent: Team, _args: any, context: GraphQLContext) => {
+        createdBy: async (
+            parent: Team,
+            _args: any,
+            context: GraphQLContext,
+        ) => {
             const user = await context.loaders.user.byId.load(parent.createdBy);
             if (!user) {
-                throw new NotFoundError(`Creator User with ID ${parent.createdBy} not found for team ${parent.id}`);
+                throw new NotFoundError(
+                    `Creator User with ID ${parent.createdBy} not found for team ${parent.id}`,
+                );
             }
             return user;
         },
@@ -80,20 +99,33 @@ export const teamResolvers = {
 
     TeamMember: {
         id: (parent: TeamMember) => parent.id,
-        user: async (parent: TeamMember, _args: any, context: GraphQLContext) => {
+        user: async (
+            parent: TeamMember,
+            _args: any,
+            context: GraphQLContext,
+        ) => {
             const user = await context.loaders.user.byId.load(parent.userId);
             if (!user) {
-                throw new NotFoundError(`User with ID ${parent.userId} not found for team member ${parent.id}`);
+                throw new NotFoundError(
+                    `User with ID ${parent.userId} not found for team member ${parent.id}`,
+                );
             }
             return user;
         },
-        team: async (parent: TeamMember, _args: any, context: GraphQLContext) => {
-            const team = await context.loaders.team.byId.load({
+        team: async (
+            parent: TeamMember,
+            _args: any,
+            context: GraphQLContext,
+        ) => {
+            // Authorized lookup for cross-domain link
+            const team = await context.loaders.team.byActorIdAndId.load({
                 actorId: context.userId || '',
-                teamId: parent.teamId
+                id: parent.teamId,
             });
             if (!team) {
-                throw new NotFoundError(`Team with ID ${parent.teamId} not found for member ${parent.id}`);
+                throw new NotFoundError(
+                    `Team with ID ${parent.teamId} not found for member ${parent.id}`,
+                );
             }
             return team;
         },
@@ -102,14 +134,15 @@ export const teamResolvers = {
     },
 
     Project: {
-        teams: async (parent: Project, args: PaginationArgs, context: GraphQLContext) => {
+        teams: async (
+            parent: Project,
+            args: PaginationArgs,
+            context: GraphQLContext,
+        ) => {
             if (!context.userId) throw new UnauthorizedError();
-            
-            const { teams, nextCursor, prevCursor } = await teamService.getTeams(
-                context.userId,
-                parent.id,
-                args
-            );
+
+            const { teams, nextCursor, prevCursor } =
+                await teamService.getTeams(context.userId, parent.id, args);
 
             return {
                 edges: teams.map((t: any) => ({
@@ -127,29 +160,44 @@ export const teamResolvers = {
     },
 
     Query: {
-        team: (_parent: any, { id }: { id: string }, context: GraphQLContext) => {
-            return context.loaders.team.byId.load({
+        team: (
+            _parent: any,
+            { id }: { id: string },
+            context: GraphQLContext,
+        ) => {
+            return context.loaders.team.byActorIdAndId.load({
                 actorId: context.userId || '',
-                teamId: id
+                id: id,
             });
         },
-        teams: async (_parent: any, { ids }: { ids?: string[] }, context: GraphQLContext) => {
+        teams: async (
+            _parent: any,
+            { ids }: { ids?: string[] },
+            context: GraphQLContext,
+        ) => {
             if (!ids || ids.length === 0) return [];
             const actorId = context.userId || '';
-            const results = await context.loaders.team.byId.loadMany(
-                ids.map(teamId => ({ actorId, teamId }))
+            const results = await context.loaders.team.byActorIdAndId.loadMany(
+                ids.map((id) => ({ actorId, id })),
             );
-            return results.filter((res): res is Team => res !== null && !(res instanceof Error));
+            return results.filter(
+                (res): res is Team => res !== null && !(res instanceof Error),
+            );
         },
-        teamMembers: async (_parent: any, { projectId, teamId, first, after, last, before }: any, context: GraphQLContext) => {
+        teamMembers: async (
+            _parent: any,
+            { projectId, teamId, first, after, last, before }: any,
+            context: GraphQLContext,
+        ) => {
             if (!context.userId) throw new UnauthorizedError();
-            
-            const { members, nextCursor, prevCursor } = await teamService.getTeamMembers(
-                context.userId,
-                projectId,
-                teamId,
-                { first, after, last, before }
-            );
+
+            const { members, nextCursor, prevCursor } =
+                await teamService.getTeamMembers(
+                    context.userId,
+                    projectId,
+                    teamId,
+                    { first, after, last, before },
+                );
 
             return {
                 edges: members.map((m: any) => ({
@@ -167,16 +215,40 @@ export const teamResolvers = {
     },
 
     Mutation: {
-        createTeam: (_parent: any, { projectId, name }: { projectId: string; name: string }, _context: GraphQLContext) => {
+        createTeam: (
+            _parent: any,
+            { projectId, name }: { projectId: string; name: string },
+            _context: GraphQLContext,
+        ) => {
             return { success: true, team: null };
         },
-        deleteTeams: (_parent: any, { projectId, teamIds }: { projectId: string; teamIds: string[] }, _context: GraphQLContext) => {
+        deleteTeams: (
+            _parent: any,
+            { projectId, teamIds }: { projectId: string; teamIds: string[] },
+            _context: GraphQLContext,
+        ) => {
             return { success: true, deletedCount: 0, project: null };
         },
-        addTeamMembers: (_parent: any, { projectId, teamId, userIds }: { projectId: string; teamId: string; userIds: string[] }, _context: GraphQLContext) => {
+        addTeamMembers: (
+            _parent: any,
+            {
+                projectId,
+                teamId,
+                userIds,
+            }: { projectId: string; teamId: string; userIds: string[] },
+            _context: GraphQLContext,
+        ) => {
             return { success: true, team: null };
         },
-        removeTeamMembers: (_parent: any, { projectId, teamId, userIds }: { projectId: string; teamId: string; userIds: string[] }, _context: GraphQLContext) => {
+        removeTeamMembers: (
+            _parent: any,
+            {
+                projectId,
+                teamId,
+                userIds,
+            }: { projectId: string; teamId: string; userIds: string[] },
+            _context: GraphQLContext,
+        ) => {
             return { success: true, team: null };
         },
     },

@@ -12,6 +12,7 @@ import {
     getNeighbourhood,
     getProjectTaskLinksPage,
     getTaskLinksPage,
+    getTasksByActorIdAndIds,
     getTasksByIds as getTasksByIdsQuery,
     getTasksPage,
 } from './TaskQueries.ts';
@@ -25,8 +26,15 @@ export class TaskServiceImpl implements TaskService {
         return getTasksPage(userId, projectId, params);
     }
 
-    async getTasksByIds(userId: string, ids: string[]): Promise<Task[]> {
-        return await getTasksByIdsQuery(userId, ids);
+    async getTasksByIds(ids: string[]): Promise<Task[]> {
+        return await getTasksByIdsQuery(ids);
+    }
+
+    async getTasksByActorIdAndIds(
+        actorId: string,
+        ids: string[],
+    ): Promise<Task[]> {
+        return await getTasksByActorIdAndIds(actorId, ids);
     }
 
     async getTaskLinks(

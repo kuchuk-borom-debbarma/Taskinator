@@ -114,7 +114,33 @@ export const getTasksPage = async (
     return { tasks, nextCursor, prevCursor };
 };
 
-export const getTasksByIds = async (
+export const getTasksByIds = async (ids: string[]): Promise<Task[]> => {
+    if (ids.length === 0) return [];
+
+    const result = await sql<Task>`
+        SELECT 
+            id,
+            fk_project_id AS "projectId",
+            fk_team_id AS "teamId",
+            fk_member_id AS "memberId",
+            title,
+            description,
+            status,
+            version,
+            last_event_id AS "lastEventId",
+            fk_created_by AS "createdBy",
+            fk_updated_by AS "updatedBy",
+            priority,
+            created_at AS "createdAt",
+            updated_at AS "updatedAt"
+        FROM project_task
+        WHERE id = ANY(${ids}::uuid[])
+    `.execute(db);
+
+    return result.rows;
+};
+
+export const getTasksByActorIdAndIds = async (
     userId: string,
     ids: string[],
 ): Promise<Task[]> => {
@@ -334,8 +360,17 @@ export const getNeighbourhood = async (
 ): Promise<TaskNeighbourhoodResult> => {
     // This is a complex query, we'll keep the existing implementation but wrap it in auth check if not already.
     // For now, let's just selection from existing implementation and ensure it uses Task type.
-    const { userId, projectId, taskId, maxDepth = 3, first, after, last, before } = params;
-    
+    const {
+        userId,
+        projectId,
+        taskId,
+        maxDepth = 3,
+        first,
+        after,
+        last,
+        before,
+    } = params;
+
     // Auth check
     const auth = await sql<{ 1: number }>`
         SELECT 1 FROM project WHERE id = ${projectId}::uuid AND fk_user_id = ${userId}::text
@@ -345,7 +380,12 @@ export const getNeighbourhood = async (
     `.execute(db);
 
     if (auth.rows.length === 0) {
-        return { neighbours: [], edges: [], nextCursor: null, prevCursor: null };
+        return {
+            neighbours: [],
+            edges: [],
+            nextCursor: null,
+            prevCursor: null,
+        };
     }
 
     // Simplified for now, should call a complex reachability query.
@@ -353,6 +393,6 @@ export const getNeighbourhood = async (
         neighbours: [],
         edges: [],
         nextCursor: null,
-        prevCursor: null
+        prevCursor: null,
     };
 };

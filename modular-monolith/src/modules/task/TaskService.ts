@@ -74,7 +74,15 @@ export interface TaskService extends BaseService {
         params: PaginationParams,
     ): Promise<TaskConnection>;
 
-    getTasksByIds(userId: string, ids: string[]): Promise<Task[]>;
+    /**
+     * Unauthorized batch fetch for internal use.
+     */
+    getTasksByIds(ids: string[]): Promise<Task[]>;
+
+    /**
+     * Authorized batch fetch.
+     */
+    getTasksByActorIdAndIds(actorId: string, ids: string[]): Promise<Task[]>;
 
     getTaskLinks(
         params: GetTaskLinksParam,
