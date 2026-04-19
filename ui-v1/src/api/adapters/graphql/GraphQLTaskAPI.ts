@@ -39,6 +39,10 @@ export class GraphQLTaskAPI implements TaskAPI {
       }
     }
 
+    const operationMatch = queryStr.match(/(query|mutation)\s+(\w+)/);
+    const opName = operationMatch?.[2] || 'Anonymous';
+    const start = performance.now();
+
     const response = await fetch(GRAPHQL_URL, {
       method: 'POST',
       headers: {
@@ -49,8 +53,20 @@ export class GraphQLTaskAPI implements TaskAPI {
     });
 
     const result = await response.json();
+    const duration = (performance.now() - start).toFixed(0);
+
     if (result.errors) {
-      console.error('GraphQL Errors:', JSON.stringify(result.errors, null, 2));
+      console.groupCollapsed(
+        `%c[GQL ERROR] %c${opName} %c(${duration}ms)`,
+        'color: #ef4444; font-size: 10px;',
+        'color: #ef4444; font-weight: bold;',
+        'color: #94a3b8; font-weight: normal;'
+      );
+      console.error('Errors:', result.errors);
+      console.log('Variables:', variables);
+      console.log('Query:', queryStr);
+      console.groupEnd();
+
       const firstError = result.errors[0];
       if (firstError.extensions?.code === 'UNAUTHENTICATED') {
         this.onUnauthorized?.();
@@ -58,6 +74,17 @@ export class GraphQLTaskAPI implements TaskAPI {
       }
       throw new Error(firstError.message);
     }
+
+    console.groupCollapsed(
+      `%c[GQL SUCCESS] %c${opName} %c(${duration}ms)`,
+      'color: #10b981; font-size: 10px;',
+      'color: #3b82f6; font-weight: bold;',
+      'color: #94a3b8; font-weight: normal;'
+    );
+    console.log('Data:', result.data);
+    console.log('Variables:', variables);
+    console.groupEnd();
+
     return result.data as T;
   }
 
