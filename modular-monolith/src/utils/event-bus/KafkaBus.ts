@@ -66,6 +66,7 @@ export class KafkaBus implements Bus {
     async subscribe(
         groupId: string,
         handlers: Record<string, (data: any) => Promise<void>>,
+        options?: { batch?: boolean },
     ) {
         // Group handlers by their Kafka topic, then spin up one consumer per topic.
         const byTopic: Record<
@@ -80,7 +81,7 @@ export class KafkaBus implements Bus {
         }
         await Promise.all(
             Object.entries(byTopic).map(([topic, topicHandlers]) =>
-                this.createConsumer(topic, groupId, topicHandlers),
+                this.createConsumer(topic, groupId, topicHandlers, options),
             ),
         );
     }
@@ -100,6 +101,7 @@ export class KafkaBus implements Bus {
         topic: string,
         groupId: string,
         handlers: Record<string, (data: any) => Promise<void>>,
+        options?: { batch?: boolean },
     ) {
         const consumer = this.kafka.consumer({ groupId });
         await consumer.connect();
@@ -170,8 +172,17 @@ export class KafkaBus implements Bus {
                                                     const handler =
                                                         handlers[type];
                                                     if (!handler) return;
-                                                    for (const e of events) {
-                                                        await handler(e.data);
+
+                                                    if (options?.batch) {
+                                                        // Pass the entire array of events to the batch handler
+                                                        await handler(events);
+                                                    } else {
+                                                        // Maintain standard serial execution for non-batch handlers
+                                                        for (const e of events) {
+                                                            await handler(
+                                                                e.data,
+                                                            );
+                                                        }
                                                     }
                                                 },
                                             ),

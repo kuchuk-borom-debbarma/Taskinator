@@ -6,6 +6,7 @@ import { internalNotificationService } from './modules/internal-notification/ind
 import { yoga } from './graphql';
 import { startOutboxRelay } from './utils/event-bus/OutboxRelay';
 import { startRedisBridge } from './redis/RealtimeRedisBridge';
+import { startConsumers } from './kafka/registry.ts';
 import eventBus from './utils/EventBus';
 
 /**
@@ -32,6 +33,7 @@ async function bootstrap() {
             authService.init(),
             externalNotificationService.init(),
             internalNotificationService.init(),
+            startConsumers(),
             startRedisBridge(),
         ]);
         console.log('[Boot] Phase 2: Domain modules and listeners ready');

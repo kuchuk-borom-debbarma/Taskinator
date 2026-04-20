@@ -24,6 +24,7 @@ export interface Bus {
     subscribe(
         groupId: string,
         handlers: Record<string, (data: any) => Promise<void>>,
+        options?: { batch?: boolean },
     ): Promise<void>;
 
     init(): Promise<void>;

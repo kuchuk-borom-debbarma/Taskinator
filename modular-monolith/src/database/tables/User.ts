@@ -13,7 +13,7 @@ export interface UserTable {
     password_hash: string;
     created_at: ColumnType<Date, string | undefined, never>;
     updated_at: ColumnType<Date, undefined>;
-    projects_count: number;
+    projects_count: Generated<number>;
 }
 
 export type User = Selectable<UserTable>;
