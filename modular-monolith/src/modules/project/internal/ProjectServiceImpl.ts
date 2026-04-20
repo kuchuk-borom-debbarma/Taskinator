@@ -116,4 +116,3 @@ export class ProjectServiceImpl implements ProjectService {
         return await queries.updateProject(param);
     }
 }
-

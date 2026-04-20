@@ -203,4 +203,3 @@ describe('ProjectQueries — Integration (Real DB + wCTE)', () => {
         });
     });
 });
-

@@ -90,7 +90,6 @@ export async function updateProject(param: {
     return result.rows[0] || null;
 }
 
-
 export const getProjects = async (
     userId: string,
     params: {

@@ -98,4 +98,3 @@ export interface ProjectService extends BaseService {
         description?: string;
     }): Promise<Project | null>;
 }
-
