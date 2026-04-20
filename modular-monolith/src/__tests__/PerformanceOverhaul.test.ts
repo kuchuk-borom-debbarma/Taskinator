@@ -9,7 +9,6 @@ import { afterAll, beforeAll, describe, expect, it, jest } from '@jest/globals';
 import { db, pool } from '../database/index.ts';
 import { cleanupDb, destroyDb } from './helpers/db.ts';
 import { sql } from 'kysely';
-import { taskGraphListener } from '../modules/task/internal/listeners/TaskGraphListener.ts';
 import {
     startOutboxRelay,
     stopOutboxRelay,
@@ -91,7 +90,7 @@ describe('Performance Overhaul — Integration Tests', () => {
 
             // 3. Initialize background services
             process.env.USE_MEMORY_BUS = 'true';
-            await taskGraphListener.init();
+            // await taskGraphListener.init(); // Listener removed
             startOutboxRelay();
         } catch (err) {
             console.error('[Test] Setup failed:', err);
@@ -103,7 +102,7 @@ describe('Performance Overhaul — Integration Tests', () => {
         console.log('[Test] afterAll cleanup starting...');
         stopOutboxRelay();
         console.log('[Test] Outbox relay stopped.');
-        await taskGraphListener.stop();
+        // await taskGraphListener.stop(); // Listener removed
         console.log('[Test] Task graph listener stopped.');
 
         console.log('[Test] Cleaning up DB...');
