@@ -8,10 +8,10 @@ import { logger } from '../../../../logger';
 import { unassignTasksByTeamIds } from '../TaskQueries.ts';
 
 /**
- * Execution Listener for Task Unassignment.
+ * Execution Listener for Team deletion.
  * Triggered when a team is deleted.
  */
-export class TeamAggregated_TaskUnassignmentListener {
+export class TeamAggregated_TeamCleanupListener {
     async init() {
         logger.info(
             '[TeamAggregated -> Task] Initializing Listener for team-task orphaning',

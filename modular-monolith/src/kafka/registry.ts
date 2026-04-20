@@ -7,7 +7,8 @@ import { ProjectAggregated_TaskCleanupListener } from '../modules/task/internal/
 import { ProjectAggregated_TaskLinkCleanupListener } from '../modules/task/internal/listeners/ProjectAggregated_TaskLinkCleanupListener.ts';
 import { TeamAggregated_ProjectTeamCountListener } from '../modules/project/internal/listeners/TeamAggregated_ProjectTeamCountListener.ts';
 import { TeamAggregated_TeamMemberCountListener } from '../modules/team/internal/listeners/TeamAggregated_TeamMemberCountListener.ts';
-import { TeamAggregated_TaskUnassignmentListener } from '../modules/task/internal/listeners/TeamAggregated_TaskUnassignmentListener.ts';
+import { TeamAggregated_TeamCleanupListener } from '../modules/task/internal/listeners/TeamAggregated_TeamCleanupListener.ts';
+import { TeamAggregated_MemberTaskUnassignmentListener } from '../modules/task/internal/listeners/TeamAggregated_MemberTaskUnassignmentListener.ts';
 import { ProjectAggregated_MemberCountListener } from '../modules/project/internal/listeners/ProjectAggregated_MemberCountListener.ts';
 import { ProjectAggregated_MemberTeamCleanupListener } from '../modules/team/internal/listeners/ProjectAggregated_MemberTeamCleanupListener.ts';
 import { ProjectAggregated_MemberTaskUnassignmentListener } from '../modules/task/internal/listeners/ProjectAggregated_MemberTaskUnassignmentListener.ts';
@@ -37,8 +38,9 @@ export async function startConsumers() {
         new TeamAggregated_ProjectTeamCountListener();
     const teamMemberCountListener =
         new TeamAggregated_TeamMemberCountListener();
-    const teamTaskOrphanListener =
-        new TeamAggregated_TaskUnassignmentListener();
+    const teamCleanupListener = new TeamAggregated_TeamCleanupListener();
+    const teamMemberTaskUnassignmentListener =
+        new TeamAggregated_MemberTaskUnassignmentListener();
 
     // Project Member Cascading Pipeline
     const p_memberCountListener = new ProjectAggregated_MemberCountListener();
@@ -57,7 +59,8 @@ export async function startConsumers() {
         p_taskLinkCleanup.init(),
         teamProjectCountListener.init(),
         teamMemberCountListener.init(),
-        teamTaskOrphanListener.init(),
+        teamCleanupListener.init(),
+        teamMemberTaskUnassignmentListener.init(),
         p_memberCountListener.init(),
         p_memberTeamCleanupListener.init(),
         p_memberTaskUnassignmentListener.init(),

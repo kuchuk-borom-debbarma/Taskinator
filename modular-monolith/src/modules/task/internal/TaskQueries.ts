@@ -904,3 +904,22 @@ export const unassignMembersFromProjectTasks = async (
 
     return { updatedCount: result.rows.length };
 };
+
+export const unassignTeamMembersFromTasks = async (
+    teamId: string,
+    userIds: string[],
+): Promise<{ updatedCount: number }> => {
+    if (userIds.length === 0) return { updatedCount: 0 };
+
+    const result = await sql<{ id: string }>`
+        UPDATE project_task
+        SET 
+            fk_member_id = NULL,
+            updated_at = NOW()
+        WHERE fk_team_id = ${teamId}::uuid
+          AND fk_member_id = ANY(${userIds}::text[])
+        RETURNING id
+    `.execute(db);
+
+    return { updatedCount: result.rows.length };
+};

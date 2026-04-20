@@ -7,6 +7,7 @@ import type { DomainEvent } from '../../../utils/event-bus/types.ts';
 import { logger } from '../../../logger';
 import { ProjectTeamCountHandler } from './handlers/ProjectTeamCountHandler.ts';
 import { TeamMemberCountHandler } from './handlers/TeamMemberCountHandler.ts';
+import { TeamMemberCleanupHandler } from './handlers/TeamMemberCleanupHandler.ts';
 import { TeamCleanupHandler } from './handlers/TeamCleanupHandler.ts';
 
 /**
@@ -18,6 +19,7 @@ import { TeamCleanupHandler } from './handlers/TeamCleanupHandler.ts';
 export class TeamEvents_BatchAggregator {
     private projectCountHandler = new ProjectTeamCountHandler();
     private memberCountHandler = new TeamMemberCountHandler();
+    private memberCleanupHandler = new TeamMemberCleanupHandler();
     private cleanupHandler = new TeamCleanupHandler();
 
     async init() {
@@ -55,6 +57,7 @@ export class TeamEvents_BatchAggregator {
                 projectId: string;
                 lifecycleBalance: number; // +1 created, -1 deleted
                 membershipBalance: number; // +N added, -M removed
+                removedUserIds: string[];
             }
         >();
 
@@ -65,6 +68,7 @@ export class TeamEvents_BatchAggregator {
                 projectId,
                 lifecycleBalance: 0,
                 membershipBalance: 0,
+                removedUserIds: [] as string[],
             };
 
             switch (event.type) {
@@ -79,8 +83,9 @@ export class TeamEvents_BatchAggregator {
                         event.data.addedUserIds?.length || 0;
                     break;
                 case KAFKA_EVENTS.TEAM.MEMBERS_REMOVED:
-                    current.membershipBalance -=
-                        event.data.removedUserIds?.length || 0;
+                    const removed = event.data.removedUserIds || [];
+                    current.membershipBalance -= removed.length;
+                    current.removedUserIds.push(...removed);
                     break;
             }
 
@@ -91,6 +96,7 @@ export class TeamEvents_BatchAggregator {
         const netProjectDeltas = new Map<string, number>();
         const netTeamMemberDeltas = new Map<string, number>();
         const deletedTeamIds: string[] = [];
+        const memberRemovals = new Map<string, string[]>();
 
         for (const state of teamStates.values()) {
             // Lifecycle Aggregation (Project Level)
@@ -115,23 +121,44 @@ export class TeamEvents_BatchAggregator {
             if (state.lifecycleBalance < 0) {
                 deletedTeamIds.push(state.teamId);
             }
+
+            // Member Cleanup
+            if (state.removedUserIds.length > 0) {
+                const existing = memberRemovals.get(state.teamId) || [];
+                memberRemovals.set(state.teamId, [
+                    ...existing,
+                    ...state.removedUserIds,
+                ]);
+            }
         }
 
         // 3. Delegate to Specialized Handlers
         await Promise.all([
-            this.projectCountHandler.handle(netProjectDeltas).catch((err) => {
-                logger.error(
-                    '[Team Aggregator] Project count handler failed:',
-                    err,
-                );
-            }),
-            this.memberCountHandler.handle(netTeamMemberDeltas).catch((err) => {
-                logger.error(
-                    '[Team Aggregator] Member count handler failed:',
-                    err,
-                );
-            }),
-            this.cleanupHandler.handle(deletedTeamIds).catch((err) => {
+            this.projectCountHandler
+                .handle(netProjectDeltas)
+                .catch((err: any) => {
+                    logger.error(
+                        '[Team Aggregator] Project count handler failed:',
+                        err,
+                    );
+                }),
+            this.memberCountHandler
+                .handle(netTeamMemberDeltas)
+                .catch((err: any) => {
+                    logger.error(
+                        '[Team Aggregator] Member count handler failed:',
+                        err,
+                    );
+                }),
+            this.memberCleanupHandler
+                .handle(memberRemovals)
+                .catch((err: any) => {
+                    logger.error(
+                        '[Team Aggregator] Member cleanup handler failed:',
+                        err,
+                    );
+                }),
+            this.cleanupHandler.handle(deletedTeamIds).catch((err: any) => {
                 logger.error('[Team Aggregator] Cleanup handler failed:', err);
             }),
         ]);

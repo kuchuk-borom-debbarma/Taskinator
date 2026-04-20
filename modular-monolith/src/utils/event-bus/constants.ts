@@ -37,5 +37,6 @@ export const KAFKA_EVENTS = {
         TEAM_MEMBER_COUNTS_CHANGED:
             'team.aggregated.team_member_counts_changed',
         DELETED: 'team.aggregated.deleted',
+        MEMBER_REMOVED: 'team.aggregated.member_removed',
     },
 } as const;
