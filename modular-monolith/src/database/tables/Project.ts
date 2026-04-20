@@ -15,6 +15,9 @@ export interface ProjectTable {
     version: Generated<number>;
     created_at: ColumnType<Date, string | undefined, never>;
     updated_at: ColumnType<Date, undefined>;
+    members_count: number;
+    tasks_count: number;
+    teams_count: number;
 }
 
 // You should not use the table schema interfaces directly. Instead, you should

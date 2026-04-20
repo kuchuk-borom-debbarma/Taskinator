@@ -11,6 +11,9 @@ export type Project = {
     createdAt: Date;
     epochPrecision?: string; // High-precision string for cursor pagination
     updatedAt?: Date;
+    membersCount: number;
+    tasksCount: number;
+    teamsCount: number;
 };
 
 export type ProjectMember = {

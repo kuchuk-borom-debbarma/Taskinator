@@ -11,6 +11,8 @@ export type Team = {
     lastEventId: string | null;
     createdAt: Date;
     updatedAt: Date;
+    membersCount: number;
+    tasksCount: number;
 };
 
 export type TeamMember = {

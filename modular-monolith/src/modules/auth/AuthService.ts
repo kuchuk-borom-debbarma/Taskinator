@@ -13,6 +13,7 @@ export interface User {
     id: string;
     username: string;
     email: string;
+    projectsCount: number;
 }
 
 import type { PaginationParams } from '../../types/pagination.ts';

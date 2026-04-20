@@ -13,6 +13,7 @@ export const authResolvers = {
             }
             return user.username;
         },
+        projectsCount: (parent: User) => parent.projectsCount || 0,
     },
 
     Query: {

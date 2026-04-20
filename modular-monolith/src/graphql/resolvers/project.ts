@@ -52,9 +52,9 @@ export const projectResolvers = {
         updatedAt: (parent: Project) => parent.updatedAt?.toISOString() || null,
         version: (parent: Project) => parent.version,
         lastEventId: (parent: Project) => parent.lastEventId,
-        projectMembersCount: () => 0,
-        tasksCount: () => 0,
-        teamsCount: () => 0,
+        projectMembersCount: (parent: Project) => parent.membersCount || 0,
+        tasksCount: (parent: Project) => parent.tasksCount || 0,
+        teamsCount: (parent: Project) => parent.teamsCount || 0,
     },
 
     ProjectMember: {
