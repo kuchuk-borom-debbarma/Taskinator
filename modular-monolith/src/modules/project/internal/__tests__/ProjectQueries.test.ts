@@ -19,6 +19,7 @@ import {
     getProjects,
     getProject,
     getProjectMembers,
+    insertProject,
 } from '../ProjectQueries.ts';
 
 describe('ProjectQueries — Integration (Real DB + wCTE)', () => {
@@ -87,6 +88,42 @@ describe('ProjectQueries — Integration (Real DB + wCTE)', () => {
                 project.id,
             );
             expect(members).toHaveLength(0);
+        });
+    });
+
+    // ─── Mutations ─────────────────────────────────────────────────────────────
+
+    describe('insertProject', () => {
+        it('atomically inserts a project and an outbox event', async () => {
+            const name = 'Mutation Project';
+            const description = 'Atomic check';
+
+            const project = await insertProject({
+                userId,
+                name,
+                description,
+            });
+
+            expect(project).not.toBeNull();
+            expect(project!.name).toBe(name);
+            expect(project!.userId).toBe(userId);
+
+            // Verify project exists in DB
+            const dbProject = await getProject(userId, project!.id);
+            expect(dbProject).not.toBeNull();
+
+            // Verify atomic outbox entry exists
+            const outboxEntries = await sql<any>`
+                SELECT * FROM outbox_events 
+                WHERE kafka_topic = 'project.created' 
+                  AND kafka_key = ${project!.id}::text
+            `.execute(db);
+
+            expect(outboxEntries.rows).toHaveLength(1);
+            const event = outboxEntries.rows[0];
+            expect(event.payload.projectId).toBe(project!.id);
+            expect(event.payload.userId).toBe(userId);
+            expect(event.payload.name).toBe(name);
         });
     });
 });

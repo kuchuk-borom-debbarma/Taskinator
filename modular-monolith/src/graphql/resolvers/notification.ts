@@ -1,5 +1,5 @@
 import type { GraphQLContext } from '../context.ts';
-import type { InternalNotification } from '../../modules/internal-notification/InternalNotificationService.ts';
+import type { InternalNotification } from '../../modules/internal-notification';
 
 interface PaginationArgs {
     first?: number;

@@ -8,7 +8,7 @@ export type Project = {
     version: number;
     lastEventId: string | null;
     createdAt: Date;
-    createdAtPrecision?: string;
+    epochPrecision?: string; // High-precision string for cursor pagination
     updatedAt?: Date;
 };
 
@@ -19,6 +19,7 @@ export type ProjectMember = {
     version: number;
     lastEventId: string | null;
     createdAt: Date;
+    epochPrecision?: string;
     updatedAt: Date;
 };
 
@@ -71,11 +72,6 @@ export interface ProjectService extends BaseService {
     ): Promise<ProjectMember[]>;
 
     /**
-     * Get all project IDs where user is owner or member.
-     */
-    getUserProjectIds(userId: string): Promise<string[]>;
-
-    /**
      * Unauthorized batch fetch for internal use.
      */
     getProjectsByIds(ids: string[]): Promise<Project[]>;
@@ -88,33 +84,9 @@ export interface ProjectService extends BaseService {
         projectIds: string[],
     ): Promise<Project[]>;
 
-    searchProjectMembers(params: {
+    createProject(param: {
         actorId: string;
-        projectId: string;
-        search?: string;
-        first?: number;
-        after?: string;
-        last?: number;
-        before?: string;
-    }): Promise<{
-        users: { id: string; username: string; email: string }[];
-        nextCursor: string | null;
-        prevCursor: string | null;
-    }>;
-
-    getProjectStats(
-        userId: string,
-        projectId: string,
-    ): Promise<{
-        teamCount: number;
-        taskCount: number;
-        memberCount: number;
-        taskLabelCounts: { label: string; count: number }[];
-    }>;
-
-    getWorkspaceStats(userId: string): Promise<{
-        projectCount: number;
-        teamCount: number;
-        assignedTaskCount: number;
-    }>;
+        name: string;
+        description?: string;
+    }): Promise<Project | null>;
 }

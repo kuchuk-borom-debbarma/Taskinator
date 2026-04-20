@@ -3,6 +3,44 @@ import { db } from '../../../database';
 import { decodeCursor, encodeCursor } from '../../../utils/utils.ts';
 import { sql } from 'kysely';
 
+export async function insertProject(param: {
+    userId: string;
+    name: string;
+    description: string | undefined;
+}): Promise<Project | null> {
+    const result = await sql<Project>`
+        WITH inserted_project AS (
+            INSERT INTO project (name, description, fk_user_id)
+            VALUES (${param.name}, ${param.description ?? null}, ${param.userId})
+            RETURNING 
+                id, 
+                name, 
+                description, 
+                fk_user_id AS "userId", 
+                version, 
+                last_event_id AS "lastEventId", 
+                created_at AS "createdAt", 
+                created_at::text AS "epochPrecision",
+                updated_at AS "updatedAt"
+        ),
+        inserted_outbox AS (
+            INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
+            SELECT 
+                'project.created',
+                id::text,
+                jsonb_build_object(
+                    'projectId', id,
+                    'userId', "userId",
+                    'name', name
+                )
+            FROM inserted_project
+        )
+        SELECT * FROM inserted_project
+    `.execute(db);
+
+    return result.rows[0] || null;
+}
+
 export const getProjects = async (
     userId: string,
     params: {
@@ -113,6 +151,7 @@ export const getProject = async (
             version,
             last_event_id AS "lastEventId",
             created_at AS "createdAt",
+            created_at::text AS "epochPrecision",
             updated_at AS "updatedAt",
             (fk_user_id = ${userId}) AS "isOwner"
         FROM project
@@ -234,6 +273,7 @@ export const getProjectMembersByIds = async (
             pm.version, 
             pm.last_event_id AS "lastEventId", 
             pm.created_at AS "createdAt", 
+            pm.created_at::text AS "epochPrecision",
             pm.updated_at AS "updatedAt"
         FROM project_member pm
         WHERE pm.id = ANY(${memberIds}::uuid[])
@@ -256,6 +296,7 @@ export const getProjectMembersByActorIdAndIds = async (
             pm.version, 
             pm.last_event_id AS "lastEventId", 
             pm.created_at AS "createdAt", 
+            pm.created_at::text AS "epochPrecision",
             pm.updated_at AS "updatedAt"
         FROM project_member pm
         WHERE pm.id = ANY(${memberIds}::uuid[])
@@ -412,6 +453,7 @@ export const getProjectsByIds = async (
             version,
             last_event_id AS "lastEventId",
             created_at AS "createdAt",
+            created_at::text AS "epochPrecision",
             updated_at AS "updatedAt"
         FROM project
         WHERE id = ANY(${projectIds}::uuid[])
@@ -435,6 +477,7 @@ export const getProjectsByActorIdAndProjectIds = async (
             version,
             last_event_id AS "lastEventId",
             created_at AS "createdAt",
+            created_at::text AS "epochPrecision",
             updated_at AS "updatedAt"
         FROM project
         WHERE id = ANY(${projectIds}::uuid[])

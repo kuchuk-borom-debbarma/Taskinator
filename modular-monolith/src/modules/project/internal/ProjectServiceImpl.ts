@@ -11,9 +11,9 @@ import {
     getProjects,
     getProjectsByActorIdAndProjectIds,
     getProjectsByIds,
-    getUserProjectIds,
-    searchProjectMembers,
 } from './ProjectQueries.ts';
+
+import * as queries from './ProjectQueries.ts';
 
 import eventBus from '../../../utils/EventBus.ts';
 
@@ -72,10 +72,6 @@ export class ProjectServiceImpl implements ProjectService {
         return getProjectMembersByActorIdAndIds(userId, memberIds);
     }
 
-    async getUserProjectIds(userId: string): Promise<string[]> {
-        return getUserProjectIds(userId);
-    }
-
     async getProjectsByIds(ids: string[]): Promise<Project[]> {
         return getProjectsByIds(ids);
     }
@@ -97,42 +93,16 @@ export class ProjectServiceImpl implements ProjectService {
         await eventBus.init();
     }
 
-    async searchProjectMembers(params: {
+    async createProject(param: {
         actorId: string;
-        projectId: string;
-        search?: string;
-        first?: number;
-        after?: string;
-        last?: number;
-        before?: string;
-    }): Promise<{
-        users: { id: string; username: string; email: string }[];
-        nextCursor: string | null;
-        prevCursor: string | null;
-    }> {
-        return searchProjectMembers(params);
-    }
-
-    async getProjectStats(
-        userId: string,
-        projectId: string,
-    ): Promise<{
-        teamCount: number;
-        taskCount: number;
-        memberCount: number;
-        taskLabelCounts: { label: string; count: number }[];
-    }> {
-        return (await import('./ProjectQueries.ts')).getProjectStats(
-            userId,
-            projectId,
-        );
-    }
-
-    async getWorkspaceStats(userId: string): Promise<{
-        projectCount: number;
-        teamCount: number;
-        assignedTaskCount: number;
-    }> {
-        return (await import('./ProjectQueries.ts')).getWorkspaceStats(userId);
+        name: string;
+        description?: string;
+    }): Promise<Project | null> {
+        const { actorId, name, description } = param;
+        return await queries.insertProject({
+            userId: actorId,
+            name,
+            description,
+        });
     }
 }

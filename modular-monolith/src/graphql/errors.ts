@@ -43,3 +43,14 @@ export class ValidationError extends GraphQLError {
         });
     }
 }
+
+export class MutationFailedError extends GraphQLError {
+    constructor(message: string) {
+        super(message, {
+            extensions: {
+                code: 'INTERNAL_SERVER_ERROR',
+                http: { status: 500 },
+            },
+        });
+    }
+}

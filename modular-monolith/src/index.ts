@@ -43,7 +43,9 @@ async function bootstrap() {
             fetch: yoga,
             port: 3000,
         });
-        console.log(`[Boot] Phase 3: GraphQL API layer available at ${server.url}`);
+        console.log(
+            `[Boot] Phase 3: GraphQL API layer available at ${server.url}`,
+        );
 
         // Phase 4: Background Processing
         startOutboxRelay();

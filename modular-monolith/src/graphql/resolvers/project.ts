@@ -1,10 +1,11 @@
 import type { GraphQLContext } from '../context.ts';
-import type {
-    Project,
-    ProjectMember,
-} from '../../modules/project/ProjectService.ts';
-import type { User } from '../../modules/auth';
-import { NotFoundError, UnauthorizedError } from '../errors.ts';
+import type { Project, ProjectMember } from '../../modules/project';
+import { authService, type User } from '../../modules/auth';
+import {
+    MutationFailedError,
+    NotFoundError,
+    UnauthorizedError,
+} from '../errors.ts';
 import { projectService } from '../../modules/project';
 import { encodeCursor } from '../../utils/utils.ts';
 
@@ -66,6 +67,8 @@ export const projectResolvers = {
             _args: any,
             context: GraphQLContext,
         ) => {
+            if (!context.userId)
+                throw new UnauthorizedError('UserId not found in context.');
             // Authorized lookup since we are navigating from a member record
             return context.loaders.project.byActorIdAndId.load({
                 actorId: context.userId || '',
@@ -153,12 +156,21 @@ export const projectResolvers = {
     },
 
     Mutation: {
-        createProject: (
+        createProject: async (
             _parent: any,
             { name, description }: { name: string; description?: string },
-            _context: GraphQLContext,
+            context: GraphQLContext,
         ) => {
-            return null;
+            if (!context.userId)
+                throw new UnauthorizedError('userId not found in context.');
+            const result = await projectService.createProject({
+                actorId: context.userId,
+                name,
+                description,
+            });
+            if (!result)
+                throw new MutationFailedError(`Failed to create project`);
+            return result;
         },
         updateProject: (
             _parent: any,
