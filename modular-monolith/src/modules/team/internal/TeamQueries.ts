@@ -633,3 +633,31 @@ export const updateTeamMemberCountsBulk = async (
         WHERE project_team.id = v.id
     `.execute(db);
 };
+
+export const removeMembersFromProjectTeams = async (
+    projectId: string,
+    userIds: string[],
+): Promise<{ affectedTeamCount: number }> => {
+    if (userIds.length === 0) return { affectedTeamCount: 0 };
+
+    // 1. Purge members and identify affected teams
+    const affectedTeams = await sql<{ teamId: string }>`
+        DELETE FROM project_team_member
+        WHERE fk_project_id = ${projectId}::uuid
+          AND fk_user_id = ANY(${userIds}::text[])
+        RETURNING fk_team_id AS "teamId"
+    `.execute(db);
+
+    if (affectedTeams.rows.length === 0) return { affectedTeamCount: 0 };
+
+    // 2. Aggregate deltas for Counter Repair
+    const teamDeltas = new Map<string, number>();
+    for (const row of affectedTeams.rows) {
+        teamDeltas.set(row.teamId, (teamDeltas.get(row.teamId) || 0) - 1);
+    }
+
+    // 3. Batch Update Counters
+    await updateTeamMemberCountsBulk(teamDeltas);
+
+    return { affectedTeamCount: teamDeltas.size };
+};

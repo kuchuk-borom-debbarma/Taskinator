@@ -12,6 +12,8 @@ export const KAFKA_EVENTS = {
     PROJECT: {
         CREATED: 'project.created',
         DELETED: 'project.deleted',
+        MEMBERS_ADDED: 'project.members_added',
+        MEMBERS_REMOVED: 'project.members_removed',
     },
     TEAM: {
         CREATED: 'team.created',
@@ -25,6 +27,8 @@ export const KAFKA_EVENTS = {
     },
     PROJECT_AGGREGATED: {
         COUNTS_CHANGED: 'project.aggregated.counts_changed',
+        MEMBER_COUNTS_CHANGED: 'project.aggregated.member_counts_changed',
+        MEMBER_REMOVED: 'project.aggregated.member_removed',
         DELETED: 'project.aggregated.deleted',
     },
     TEAM_AGGREGATED: {

@@ -4,9 +4,8 @@ import {
     KAFKA_TOPICS,
 } from '../../../../utils/event-bus/constants.ts';
 import type { DomainEvent } from '../../../../utils/event-bus/types.ts';
-import { db } from '../../../../database';
-import { sql } from 'kysely';
 import { logger } from '../../../../logger';
+import { updateUserProjectCountsBulk } from '../AuthQueries.ts';
 
 /**
  * Execution Listener
@@ -50,14 +49,7 @@ export class ProjectAggregated_AuthUserCountListener {
         );
 
         try {
-            await sql`
-                UPDATE users SET 
-                    projects_count = users.projects_count + v.delta
-                FROM (
-                    SELECT * FROM UNNEST(${entries.map((e) => e[0])}::uuid[], ${entries.map((e) => e[1])}::int[])
-                ) AS v(id, delta)
-                WHERE users.id = v.id
-            `.execute(db);
+            await updateUserProjectCountsBulk(consolidates);
 
             logger.info(
                 '[Auth Listener] Successfully updated projects_count for user batch',

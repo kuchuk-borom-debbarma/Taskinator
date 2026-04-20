@@ -8,6 +8,9 @@ import { ProjectAggregated_TaskLinkCleanupListener } from '../modules/task/inter
 import { TeamAggregated_ProjectTeamCountListener } from '../modules/project/internal/listeners/TeamAggregated_ProjectTeamCountListener.ts';
 import { TeamAggregated_TeamMemberCountListener } from '../modules/team/internal/listeners/TeamAggregated_TeamMemberCountListener.ts';
 import { TeamAggregated_TaskUnassignmentListener } from '../modules/task/internal/listeners/TeamAggregated_TaskUnassignmentListener.ts';
+import { ProjectAggregated_MemberCountListener } from '../modules/project/internal/listeners/ProjectAggregated_MemberCountListener.ts';
+import { ProjectAggregated_MemberTeamCleanupListener } from '../modules/team/internal/listeners/ProjectAggregated_MemberTeamCleanupListener.ts';
+import { ProjectAggregated_MemberTaskUnassignmentListener } from '../modules/task/internal/listeners/ProjectAggregated_MemberTaskUnassignmentListener.ts';
 import { logger } from '../logger';
 
 /**
@@ -37,6 +40,13 @@ export async function startConsumers() {
     const teamTaskOrphanListener =
         new TeamAggregated_TaskUnassignmentListener();
 
+    // Project Member Cascading Pipeline
+    const p_memberCountListener = new ProjectAggregated_MemberCountListener();
+    const p_memberTeamCleanupListener =
+        new ProjectAggregated_MemberTeamCleanupListener();
+    const p_memberTaskUnassignmentListener =
+        new ProjectAggregated_MemberTaskUnassignmentListener();
+
     await Promise.all([
         projectAggregator.init(),
         teamAggregator.init(),
@@ -48,6 +58,9 @@ export async function startConsumers() {
         teamProjectCountListener.init(),
         teamMemberCountListener.init(),
         teamTaskOrphanListener.init(),
+        p_memberCountListener.init(),
+        p_memberTeamCleanupListener.init(),
+        p_memberTaskUnassignmentListener.init(),
     ]);
 
     logger.info('[Registry] All domain consumers and listeners initialized');

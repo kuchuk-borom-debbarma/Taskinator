@@ -146,8 +146,20 @@ export async function insertProjectMembers(param: {
             FROM UNNEST(${ids}::text[]) AS u_id
             WHERE EXISTS (SELECT 1 FROM authorized)
             ON CONFLICT (fk_project_id, fk_user_id) DO NOTHING
-            RETURNING id, fk_project_id AS "projectId", fk_user_id AS "userId", version
+            RETURNING id, fk_project_id AS "projectId", fk_user_id AS "userId"
         ),
+        inserted_outbox AS (
+            INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
+            SELECT 
+                ${KAFKA_TOPICS.PROJECT},
+                "projectId"::text,
+                jsonb_build_object(
+                    'type', ${KAFKA_EVENTS.PROJECT.MEMBERS_ADDED},
+                    'projectId', "projectId",
+                    'addedUserIds', (SELECT json_agg("userId") FROM inserted_members),
+                    'actorId', ${param.actorId}
+                )
+            WHERE EXISTS (SELECT 1 FROM inserted_members)
         )
         SELECT 1 FROM authorized
     `.execute(db);
@@ -183,6 +195,18 @@ export async function deleteProjectMembers(param: {
               AND EXISTS (SELECT 1 FROM authorized)
             RETURNING id, fk_project_id AS "projectId", fk_user_id AS "userId"
         ),
+        inserted_outbox AS (
+            INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
+            SELECT 
+                ${KAFKA_TOPICS.PROJECT},
+                "projectId"::text,
+                jsonb_build_object(
+                    'type', ${KAFKA_EVENTS.PROJECT.MEMBERS_REMOVED},
+                    'projectId', "projectId",
+                    'removedUserIds', (SELECT json_agg("userId") FROM deleted_members),
+                    'actorId', ${param.actorId}
+                )
+            WHERE EXISTS (SELECT 1 FROM deleted_members)
         )
         SELECT 1 FROM authorized
     `.execute(db);
@@ -486,6 +510,26 @@ export const updateProjectTeamCountsBulk = async (
     await sql`
         UPDATE project SET 
             teams_count = project.teams_count + v.delta,
+            updated_at = NOW()
+        FROM (
+            SELECT * FROM UNNEST(${ids}::uuid[], ${deltas}::int[])
+        ) AS v(id, delta)
+        WHERE project.id = v.id
+    `.execute(db);
+};
+
+export const updateProjectMemberCountsBulk = async (
+    updates: Map<string, number>,
+): Promise<void> => {
+    const entries = Array.from(updates.entries());
+    if (entries.length === 0) return;
+
+    const ids = entries.map(([id]) => id);
+    const deltas = entries.map(([_, delta]) => delta);
+
+    await sql`
+        UPDATE project SET 
+            members_count = project.members_count + v.delta,
             updated_at = NOW()
         FROM (
             SELECT * FROM UNNEST(${ids}::uuid[], ${deltas}::int[])
