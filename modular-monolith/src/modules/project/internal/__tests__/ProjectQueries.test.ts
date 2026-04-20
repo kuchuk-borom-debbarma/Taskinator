@@ -23,6 +23,8 @@ import {
     insertProject,
     updateProject,
     deleteProjects,
+    insertProjectMembers,
+    deleteProjectMembers,
 } from '../ProjectQueries.ts';
 
 describe('ProjectQueries — Integration (Real DB + wCTE)', () => {
@@ -256,6 +258,99 @@ describe('ProjectQueries — Integration (Real DB + wCTE)', () => {
             // We can't easily verify the slice in a real DB without creating 1000 items
             // but we can at least ensure it doesn't crash and returns a reasonable number (0 because ids are dummy)
             expect(deletedCount).toBe(0);
+        });
+    });
+
+    describe('Project Membership Mutations', () => {
+        let projectId: string;
+
+        beforeEach(async () => {
+            const project = await insertProject({
+                userId,
+                name: 'Membership Project',
+            });
+            projectId = project!.id;
+        });
+
+        it('allows owner to add members', async () => {
+            const newUserId = (await createUser()).id;
+            const success = await insertProjectMembers({
+                actorId: userId,
+                projectId,
+                userIds: [newUserId],
+            });
+
+            expect(success).toBe(true);
+
+            // Verify member exists
+            const members = await getProjectMembers(userId, projectId);
+            expect(members.members.some((m) => m.userId === newUserId)).toBe(
+                true,
+            );
+        });
+
+        it('allows existing members to add new members', async () => {
+            const member1 = await createUser();
+            const member2 = await createUser();
+
+            // Owner adds member1
+            await insertProjectMembers({
+                actorId: userId,
+                projectId,
+                userIds: [member1.id],
+            });
+
+            // Member1 adds member2
+            const success = await insertProjectMembers({
+                actorId: member1.id,
+                projectId,
+                userIds: [member2.id],
+            });
+
+            expect(success).toBe(true);
+
+            const members = await getProjectMembers(userId, projectId);
+            expect(members.members.some((m) => m.userId === member2.id)).toBe(
+                true,
+            );
+        });
+
+        it('prevents non-members from adding members', async () => {
+            const stranger = await createUser();
+            const victim = await createUser();
+
+            await insertProjectMembers({
+                actorId: stranger.id,
+                projectId,
+                userIds: [victim.id],
+            });
+
+            const members = await getProjectMembers(userId, projectId);
+            expect(members.members.some((m) => m.userId === victim.id)).toBe(
+                false,
+            );
+        });
+
+        it('successfully removes members', async () => {
+            const member = await createUser();
+            await insertProjectMembers({
+                actorId: userId,
+                projectId,
+                userIds: [member.id],
+            });
+
+            const success = await deleteProjectMembers({
+                actorId: userId,
+                projectId,
+                userIds: [member.id],
+            });
+
+            expect(success).toBe(true);
+
+            const members = await getProjectMembers(userId, projectId);
+            expect(members.members.some((m) => m.userId === member.id)).toBe(
+                false,
+            );
         });
     });
 });

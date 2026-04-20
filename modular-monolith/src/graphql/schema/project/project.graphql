@@ -136,22 +136,10 @@ type ProjectMemberEdge {
 
 type AddProjectMembersPayload {
     success: Boolean!
-    """
-    The updated project after members were added.
-    """
-    project: Project
 }
 
 type RemoveProjectMembersPayload {
     success: Boolean!
-    """
-    Number of members successfully removed.
-    """
-    removedCount: Int!
-    """
-    The updated project after members were removed.
-    """
-    project: Project
 }
 
 type DeleteProjectsPayload {

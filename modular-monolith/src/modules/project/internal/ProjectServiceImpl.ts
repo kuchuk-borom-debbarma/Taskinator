@@ -122,4 +122,20 @@ export class ProjectServiceImpl implements ProjectService {
     }): Promise<{ success: boolean; deletedCount: number }> {
         return await queries.deleteProjects(param);
     }
+
+    async addProjectMembers(param: {
+        actorId: string;
+        projectId: string;
+        userIds: string[];
+    }): Promise<boolean> {
+        return await queries.insertProjectMembers(param);
+    }
+
+    async removeProjectMembers(param: {
+        actorId: string;
+        projectId: string;
+        userIds: string[];
+    }): Promise<boolean> {
+        return await queries.deleteProjectMembers(param);
+    }
 }

@@ -102,4 +102,16 @@ export interface ProjectService extends BaseService {
         actorId: string;
         projectIds: string[];
     }): Promise<{ success: boolean; deletedCount: number }>;
+
+    addProjectMembers(param: {
+        actorId: string;
+        projectId: string;
+        userIds: string[];
+    }): Promise<boolean>;
+
+    removeProjectMembers(param: {
+        actorId: string;
+        projectId: string;
+        userIds: string[];
+    }): Promise<boolean>;
 }

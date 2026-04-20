@@ -219,22 +219,40 @@ export const projectResolvers = {
                 projectIds,
             });
         },
-        addProjectMembers: (
+        addProjectMembers: async (
             _parent: any,
             { projectId, userIds }: { projectId: string; userIds: string[] },
-            _context: GraphQLContext,
+            context: GraphQLContext,
         ) => {
-            return { success: true, project: null };
+            if (!context.userId)
+                throw new UnauthorizedError('userId not found in context.');
+
+            const success = await projectService.addProjectMembers({
+                actorId: context.userId,
+                projectId,
+                userIds,
+            });
+
+            return { success };
         },
-        removeProjectMembers: (
+        removeProjectMembers: async (
             _parent: any,
             {
                 projectId,
                 memberIds,
             }: { projectId: string; memberIds: string[] },
-            _context: GraphQLContext,
+            context: GraphQLContext,
         ) => {
-            return { success: true, removedCount: 0, project: null };
+            if (!context.userId)
+                throw new UnauthorizedError('userId not found in context.');
+
+            const success = await projectService.removeProjectMembers({
+                actorId: context.userId,
+                projectId,
+                userIds: memberIds,
+            });
+
+            return { success };
         },
     },
 };

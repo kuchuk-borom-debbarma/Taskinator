@@ -118,11 +118,100 @@ export async function deleteProjects(param: {
         )
         SELECT id FROM deleted_projects
     `.execute(db);
+}
 
-    return {
-        success: true,
-        deletedCount: result.rows.length,
-    };
+export async function insertProjectMembers(param: {
+    actorId: string;
+    projectId: string;
+    userIds: string[];
+}): Promise<boolean> {
+    const ids = param.userIds.slice(0, 1000);
+    if (ids.length === 0) return true;
+
+    await sql`
+        WITH authorized AS (
+            SELECT 1 FROM project 
+            WHERE id = ${param.projectId}::uuid 
+              AND (
+                fk_user_id = ${param.actorId} -- Owner
+                OR EXISTS (
+                    SELECT 1 FROM project_member 
+                    WHERE fk_project_id = ${param.projectId}::uuid 
+                      AND fk_user_id = ${param.actorId} -- Existing Member
+                )
+              )
+        ),
+        inserted_members AS (
+            INSERT INTO project_member (fk_project_id, fk_user_id)
+            SELECT ${param.projectId}::uuid, u_id
+            FROM UNNEST(${ids}::text[]) AS u_id
+            WHERE EXISTS (SELECT 1 FROM authorized)
+            ON CONFLICT (fk_project_id, fk_user_id) DO NOTHING
+            RETURNING id, fk_project_id AS "projectId", fk_user_id AS "userId", version
+        ),
+        inserted_outbox AS (
+            INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
+            SELECT 
+                'project_member.created',
+                id::text,
+                jsonb_build_object(
+                    'memberId', id,
+                    'projectId', "projectId",
+                    'userId', "userId",
+                    'version', version
+                )
+            FROM inserted_members
+        )
+        SELECT 1 FROM authorized
+    `.execute(db);
+
+    return true;
+}
+
+export async function deleteProjectMembers(param: {
+    actorId: string;
+    projectId: string;
+    userIds: string[];
+}): Promise<boolean> {
+    const ids = param.userIds.slice(0, 1000);
+    if (ids.length === 0) return true;
+
+    await sql`
+        WITH authorized AS (
+            SELECT 1 FROM project 
+            WHERE id = ${param.projectId}::uuid 
+              AND (
+                fk_user_id = ${param.actorId} -- Owner
+                OR EXISTS (
+                    SELECT 1 FROM project_member 
+                    WHERE fk_project_id = ${param.projectId}::uuid 
+                      AND fk_user_id = ${param.actorId} -- Existing Member
+                )
+              )
+        ),
+        deleted_members AS (
+            DELETE FROM project_member
+            WHERE fk_project_id = ${param.projectId}::uuid
+              AND fk_user_id = ANY(${ids}::text[])
+              AND EXISTS (SELECT 1 FROM authorized)
+            RETURNING id, fk_project_id AS "projectId", fk_user_id AS "userId"
+        ),
+        inserted_outbox AS (
+            INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
+            SELECT 
+                'project_member.deleted',
+                id::text,
+                jsonb_build_object(
+                    'memberId', id,
+                    'projectId', "projectId",
+                    'userId', "userId"
+                )
+            FROM deleted_members
+        )
+        SELECT 1 FROM authorized
+    `.execute(db);
+
+    return true;
 }
 
 export const getProjects = async (
