@@ -166,10 +166,6 @@ type DeleteTeamsPayload {
     Number of teams successfully deleted.
     """
     deletedCount: Int!
-    """
-    The project the teams belonged to.
-    """
-    project: Project
 }
 
 type AddTeamMembersPayload {

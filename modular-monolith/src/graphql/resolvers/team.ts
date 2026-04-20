@@ -227,12 +227,25 @@ export const teamResolvers = {
                 team,
             };
         },
-        deleteTeams: (
+        deleteTeams: async (
             _parent: any,
             { projectId, teamIds }: { projectId: string; teamIds: string[] },
-            _context: GraphQLContext,
+            context: GraphQLContext,
         ) => {
-            return { success: true, deletedCount: 0, project: null };
+            if (!context.userId) {
+                return { success: false, deletedCount: 0 };
+            }
+
+            const { deletedCount } = await teamService.deleteTeams({
+                actorId: context.userId,
+                projectId,
+                teamIds,
+            });
+
+            return {
+                success: true,
+                deletedCount,
+            };
         },
         addTeamMembers: (
             _parent: any,

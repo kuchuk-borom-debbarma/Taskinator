@@ -83,6 +83,12 @@ export interface TeamService extends BaseService {
         projectId: string;
         name: string;
     }): Promise<Team>;
+
+    deleteTeams(param: {
+        actorId: string;
+        projectId: string;
+        teamIds: string[];
+    }): Promise<{ deletedCount: number }>;
 }
 
 export type { User };

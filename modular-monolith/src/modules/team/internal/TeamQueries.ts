@@ -376,3 +376,41 @@ export const getTeamsByActorIdAndIds = async (
 
     return result.rows;
 };
+export const deleteTeams = async (param: {
+    actorId: string;
+    projectId: string;
+    teamIds: string[];
+}): Promise<{ deletedCount: number }> => {
+    const ids = param.teamIds.slice(0, 1000); // Batch protection
+    if (ids.length === 0) return { deletedCount: 0 };
+
+    const result = await sql<{ deletedCount: string }>`
+        WITH authorized AS (
+            SELECT 1 FROM project WHERE id = ${param.projectId}::uuid AND fk_user_id = ${param.actorId}::text
+            LIMIT 1
+        ),
+        deleted_teams AS (
+            DELETE FROM project_team
+            WHERE id = ANY(${ids}::uuid[])
+              AND fk_project_id = ${param.projectId}::uuid
+              AND EXISTS (SELECT 1 FROM authorized)
+            RETURNING id, name, fk_project_id AS "projectId"
+        ),
+        inserted_outbox AS (
+            INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
+            SELECT 
+                'team.deleted',
+                id::text,
+                jsonb_build_object(
+                    'teamId', id,
+                    'projectId', "projectId",
+                    'name', name
+                )
+            FROM deleted_teams
+        )
+        SELECT COUNT(*)::text AS "deletedCount" FROM deleted_teams
+    `.execute(db);
+
+    const deletedCount = parseInt(result.rows[0]?.deletedCount ?? '0', 10);
+    return { deletedCount };
+};

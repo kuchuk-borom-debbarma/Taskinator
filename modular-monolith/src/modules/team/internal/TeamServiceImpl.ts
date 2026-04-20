@@ -6,6 +6,7 @@ import {
     getTeamsByActorIdAndIds,
     getTeamsByIds as getTeamsByIdsQuery,
     insertTeam,
+    deleteTeams,
     searchTeamUsers,
 } from './TeamQueries.ts';
 import type { User } from '../../auth/AuthService.ts';
@@ -68,6 +69,14 @@ export class TeamServiceImpl implements TeamService {
         name: string;
     }): Promise<Team> {
         return await insertTeam(param);
+    }
+
+    async deleteTeams(param: {
+        actorId: string;
+        projectId: string;
+        teamIds: string[];
+    }): Promise<{ deletedCount: number }> {
+        return await deleteTeams(param);
     }
 
     async init(): Promise<void> {
