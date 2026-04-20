@@ -9,7 +9,7 @@ import type {
 import { db } from '../../../database';
 import { decodeCursor, encodeCursor } from '../../../utils/utils.ts';
 import { sql } from 'kysely';
-import { NotFoundError } from '../../../graphql/errors.ts';
+import { NotFoundError, ConflictError } from '../../../graphql/errors.ts';
 
 export const getTasksPage = async (
     userId: string,
@@ -465,6 +465,148 @@ export const insertTask = async (param: {
     if (!task) {
         throw new NotFoundError(
             `Project with ID ${param.projectId} not found or you do not have permission to create tasks in it.`,
+        );
+    }
+
+    return task;
+};
+
+export const updateTask = async (param: {
+    actorId: string;
+    projectId: string;
+    taskId: string;
+    version: number;
+    title?: string | null;
+    description?: string | null;
+    status?: string | null;
+    teamId?: string | null;
+    memberId?: string | null;
+}): Promise<Task> => {
+    // 1. Build dynamic SET fragments
+    const updates: any[] = [];
+    if (param.title !== undefined) updates.push(sql`title = ${param.title}`);
+    if (param.description !== undefined)
+        updates.push(sql`description = ${param.description ?? ''}`);
+    if (param.status !== undefined)
+        updates.push(sql`status = ${param.status ?? 'TODO'}`);
+
+    // Assignment updates
+    if (param.teamId !== undefined)
+        updates.push(sql`fk_team_id = ${param.teamId}::uuid`);
+    if (param.memberId !== undefined)
+        updates.push(sql`fk_member_id = ${param.memberId}::text`);
+
+    if (updates.length === 0) {
+        // No updates, just fetch and return current state (or maybe we should require version check anyway?)
+        // To be safe and check optimistic lock, we'll still run a dummy update or just fetch.
+        // But the requirement usually implies something changed.
+    }
+
+    updates.push(sql`version = version + 1`);
+    updates.push(sql`fk_updated_by = ${param.actorId}`);
+    updates.push(sql`updated_at = NOW()`);
+
+    const setClause = sql.join(updates, sql`, `);
+
+    const result = await sql<Task>`
+        WITH authorized AS (
+            -- Actor must be project owner or member
+            SELECT 1 FROM project WHERE id = ${param.projectId}::uuid AND fk_user_id = ${param.actorId}::text
+            UNION ALL
+            SELECT 1 FROM project_member WHERE fk_project_id = ${param.projectId}::uuid AND fk_user_id = ${param.actorId}::text
+            LIMIT 1
+        ),
+        validation AS (
+            SELECT 1
+            WHERE (
+                -- If teamId is provided, it must belong to the project
+                ${param.teamId}::uuid IS NULL OR EXISTS (
+                    SELECT 1 FROM project_team WHERE id = ${param.teamId}::uuid AND fk_project_id = ${param.projectId}::uuid
+                )
+            ) AND (
+                -- If memberId is provided, they must be a project member
+                ${param.memberId}::text IS NULL OR EXISTS (
+                    SELECT 1 FROM project_member WHERE fk_user_id = ${param.memberId}::text AND fk_project_id = ${param.projectId}::uuid
+                )
+            ) AND (
+                -- If both provided, member must be in the team
+                ((${param.teamId}::uuid IS NULL) OR (${param.memberId}::text IS NULL)) OR EXISTS (
+                    SELECT 1 FROM project_team_member WHERE fk_team_id = ${param.teamId}::uuid AND fk_user_id = ${param.memberId}::text
+                )
+            )
+        ),
+        updated_task AS (
+            UPDATE project_task SET ${setClause}
+            WHERE id = ${param.taskId}::uuid
+              AND fk_project_id = ${param.projectId}::uuid
+              AND version = ${param.version}
+              AND EXISTS (SELECT 1 FROM authorized)
+              AND EXISTS (SELECT 1 FROM validation)
+            RETURNING 
+                id, 
+                fk_project_id AS "projectId", 
+                fk_team_id AS "teamId", 
+                fk_member_id AS "memberId",
+                title, 
+                description, 
+                status, 
+                version, 
+                last_event_id AS "lastEventId",
+                fk_created_by AS "createdBy", 
+                fk_updated_by AS "updatedBy",
+                priority, 
+                created_at AS "createdAt", 
+                updated_at AS "updatedAt"
+        ),
+        inserted_outbox AS (
+            INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
+            SELECT 
+                'task.updated',
+                id::text,
+                jsonb_build_object(
+                    'taskId', id,
+                    'projectId', projectId,
+                    'updates', jsonb_build_object(
+                        'title', title,
+                        'status', status,
+                        'teamId', teamId,
+                        'memberId', memberId
+                    ),
+                    'actorId', ${param.actorId}
+                )
+            FROM updated_task
+        )
+        SELECT * FROM updated_task
+    `.execute(db);
+
+    const task = result.rows[0];
+    if (!task) {
+        // Distinguish why it failed
+        const exists = await sql<{ id: string; version: number }>`
+            SELECT id, version FROM project_task WHERE id = ${param.taskId}::uuid AND fk_project_id = ${param.projectId}::uuid
+        `.execute(db);
+
+        if (exists.rows.length === 0) {
+            throw new NotFoundError(
+                `Task with ID ${param.taskId} not found in project ${param.projectId}.`,
+            );
+        }
+
+        const currentTask = exists.rows[0];
+        if (!currentTask) {
+            throw new NotFoundError(
+                `Task with ID ${param.taskId} not found in project ${param.projectId}.`,
+            );
+        }
+        if (currentTask.version !== param.version) {
+            throw new ConflictError(
+                `Task version mismatch. Expected ${param.version}, but current version is ${currentTask.version}.`,
+            );
+        }
+
+        // If it still failed, it's likely validation or auth
+        throw new NotFoundError(
+            `Unauthorized or validation failed for task update (Team/Member assignment rules).`,
         );
     }
 

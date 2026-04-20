@@ -104,6 +104,18 @@ export interface TaskService extends BaseService {
         description?: string | null;
         status?: string | null;
     }): Promise<Task>;
+
+    updateTask(param: {
+        actorId: string;
+        projectId: string;
+        taskId: string;
+        version: number;
+        title?: string | null;
+        description?: string | null;
+        status?: string | null;
+        teamId?: string | null;
+        memberId?: string | null;
+    }): Promise<Task>;
 }
 
 // ─── Neighbourhood (Radial Graph View) ──────────────────────────────────────

@@ -16,6 +16,7 @@ import {
     getTasksByIds as getTasksByIdsQuery,
     getTasksPage,
     insertTask,
+    updateTask,
 } from './TaskQueries.ts';
 
 export class TaskServiceImpl implements TaskService {
@@ -65,6 +66,20 @@ export class TaskServiceImpl implements TaskService {
         status?: string | null;
     }): Promise<Task> {
         return await insertTask(param);
+    }
+
+    async updateTask(param: {
+        actorId: string;
+        projectId: string;
+        taskId: string;
+        version: number;
+        title?: string | null;
+        description?: string | null;
+        status?: string | null;
+        teamId?: string | null;
+        memberId?: string | null;
+    }): Promise<Task> {
+        return await updateTask(param);
     }
 
     async getProjectLinks(

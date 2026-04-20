@@ -14,9 +14,13 @@ interface CreateTaskInput {
 }
 
 interface UpdateTaskInput {
+    projectId: string;
+    version: number;
     title?: string;
     description?: string;
     status?: string;
+    teamId?: string;
+    memberId?: string;
 }
 
 interface CreateTaskLinkInput {
@@ -275,19 +279,37 @@ export const taskResolvers = {
     },
 
     TaskMutation: {
-        create: (
+        create: async (
             _parent: any,
             { input }: { input: CreateTaskInput },
-            _context: GraphQLContext,
-        ) => {
-            return null;
+            context: GraphQLContext,
+        ): Promise<Task> => {
+            if (!context.userId) throw new UnauthorizedError();
+            return await taskService.createTask({
+                actorId: context.userId,
+                projectId: input.projectId,
+                title: input.title,
+                description: input.description,
+                status: input.status,
+            });
         },
-        update: (
+        update: async (
             _parent: any,
             { taskId, input }: { taskId: string; input: UpdateTaskInput },
-            _context: GraphQLContext,
-        ) => {
-            return null;
+            context: GraphQLContext,
+        ): Promise<Task> => {
+            if (!context.userId) throw new UnauthorizedError();
+            return await taskService.updateTask({
+                actorId: context.userId,
+                taskId,
+                projectId: input.projectId,
+                version: input.version,
+                title: input.title,
+                description: input.description,
+                status: input.status,
+                teamId: input.teamId,
+                memberId: input.memberId,
+            });
         },
         delete: (
             _parent: any,

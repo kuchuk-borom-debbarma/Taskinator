@@ -68,6 +68,14 @@ input CreateTaskInput {
 
 input UpdateTaskInput {
     """
+    Project the task belongs to.
+    """
+    projectId: ID!
+    """
+    Optimistic lock version.
+    """
+    version: Int!
+    """
     Updated title. Omit to leave unchanged.
     """
     title: String
@@ -79,6 +87,14 @@ input UpdateTaskInput {
     Updated status. Omit to leave unchanged.
     """
     status: String
+    """
+    Team to assign this task to.
+    """
+    teamId: ID
+    """
+    Member to assign this task to.
+    """
+    memberId: ID
 }
 
 input CreateTaskLinkInput {
