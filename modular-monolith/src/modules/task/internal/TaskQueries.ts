@@ -631,7 +631,7 @@ export const deleteTask = async (param: {
             WHERE id = ${param.taskId}::uuid
               AND fk_project_id = ${param.projectId}::uuid
               AND EXISTS (SELECT 1 FROM authorized)
-            RETURNING id, fk_project_id AS "projectId"
+            RETURNING id, fk_project_id AS "projectId", fk_team_id AS "teamId"
         ),
         inserted_outbox AS (
             INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
@@ -641,6 +641,7 @@ export const deleteTask = async (param: {
                 jsonb_build_object(
                     'taskId', id,
                     'projectId', projectId,
+                    'teamId', "teamId",
                     'actorId', ${param.actorId}
                 )
             FROM deleted_task

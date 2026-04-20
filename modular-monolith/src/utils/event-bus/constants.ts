@@ -4,6 +4,8 @@ export const KAFKA_TOPICS = {
     AUTH: 'auth-events',
     PROJECT_AGGREGATED: 'project-aggregated-events',
     TEAM_AGGREGATED: 'team-aggregated-events',
+    TASK: 'task-events',
+    TASK_AGGREGATED: 'task-aggregated-events',
 } as const;
 
 // Event type constants — values match exactly what the outbox SQL writes,
@@ -38,5 +40,12 @@ export const KAFKA_EVENTS = {
             'team.aggregated.team_member_counts_changed',
         DELETED: 'team.aggregated.deleted',
         MEMBER_REMOVED: 'team.aggregated.member_removed',
+    },
+    TASK: {
+        CREATED: 'task.created',
+        DELETED: 'task.deleted',
+    },
+    TASK_AGGREGATED: {
+        COUNTS_CHANGED: 'task.aggregated.counts_changed',
     },
 } as const;

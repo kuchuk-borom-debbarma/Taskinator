@@ -12,6 +12,9 @@ import { TeamAggregated_MemberTaskUnassignmentListener } from '../modules/task/i
 import { ProjectAggregated_MemberCountListener } from '../modules/project/internal/listeners/ProjectAggregated_MemberCountListener.ts';
 import { ProjectAggregated_MemberTeamCleanupListener } from '../modules/team/internal/listeners/ProjectAggregated_MemberTeamCleanupListener.ts';
 import { ProjectAggregated_MemberTaskUnassignmentListener } from '../modules/task/internal/listeners/ProjectAggregated_MemberTaskUnassignmentListener.ts';
+import { TaskEvents_BatchAggregator } from './consumers/task/TaskEvents_BatchAggregator.ts';
+import { TaskAggregated_ProjectCountListener } from '../modules/project/internal/listeners/TaskAggregated_ProjectCountListener.ts';
+import { TaskAggregated_TeamCountListener } from '../modules/team/internal/listeners/TaskAggregated_TeamCountListener.ts';
 import { logger } from '../logger';
 
 /**
@@ -49,6 +52,11 @@ export async function startConsumers() {
     const p_memberTaskUnassignmentListener =
         new ProjectAggregated_MemberTaskUnassignmentListener();
 
+    // Task Domain Aggregators & Listeners
+    const taskAggregator = new TaskEvents_BatchAggregator();
+    const taskProjectCountListener = new TaskAggregated_ProjectCountListener();
+    const taskTeamCountListener = new TaskAggregated_TeamCountListener();
+
     await Promise.all([
         projectAggregator.init(),
         teamAggregator.init(),
@@ -64,6 +72,9 @@ export async function startConsumers() {
         p_memberCountListener.init(),
         p_memberTeamCleanupListener.init(),
         p_memberTaskUnassignmentListener.init(),
+        taskAggregator.init(),
+        taskProjectCountListener.init(),
+        taskTeamCountListener.init(),
     ]);
 
     logger.info('[Registry] All domain consumers and listeners initialized');
