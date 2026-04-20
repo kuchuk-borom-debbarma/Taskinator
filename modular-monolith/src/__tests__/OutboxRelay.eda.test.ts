@@ -27,6 +27,7 @@ import {
 } from '../utils/event-bus/OutboxRelay.ts';
 import eventBus from '../utils/EventBus.ts';
 import { waitFor } from './helpers/waitFor.ts';
+import { KAFKA_TOPICS, KAFKA_EVENTS } from '../utils/event-bus/constants.ts';
 
 describe('OutboxRelay — EDA Integration (MemoryBus)', () => {
     beforeEach(async () => {
@@ -49,9 +50,10 @@ describe('OutboxRelay — EDA Integration (MemoryBus)', () => {
         await db
             .insertInto('outbox_events')
             .values({
-                kafka_topic: 'project.created',
+                kafka_topic: KAFKA_TOPICS.PROJECT,
                 kafka_key: 'test-project-id',
                 payload: {
+                    type: KAFKA_EVENTS.PROJECT.CREATED,
                     projectId: 'test-project-id',
                     userId: 'u1',
                     name: 'P',
@@ -66,7 +68,8 @@ describe('OutboxRelay — EDA Integration (MemoryBus)', () => {
 
         await waitFor(async () => {
             expect(publishSpy).toHaveBeenCalledWith(
-                'PROJECT_CREATED',
+                KAFKA_TOPICS.PROJECT,
+                KAFKA_EVENTS.PROJECT.CREATED,
                 expect.arrayContaining([
                     expect.objectContaining({ key: 'test-project-id' }),
                 ]),
@@ -91,32 +94,39 @@ describe('OutboxRelay — EDA Integration (MemoryBus)', () => {
             .insertInto('outbox_events')
             .values([
                 {
-                    kafka_topic: 'project.created',
+                    kafka_topic: KAFKA_TOPICS.PROJECT,
                     kafka_key: 'p1',
-                    payload: { id: 'p1' } as any,
+                    payload: {
+                        type: KAFKA_EVENTS.PROJECT.CREATED,
+                        id: 'p1',
+                    } as any,
                     status: 'PENDING',
                 },
                 {
-                    kafka_topic: 'project.created',
+                    kafka_topic: KAFKA_TOPICS.PROJECT,
                     kafka_key: 'p2',
-                    payload: { id: 'p2' } as any,
+                    payload: {
+                        type: KAFKA_EVENTS.PROJECT.CREATED,
+                        id: 'p2',
+                    } as any,
                     status: 'PENDING',
                 },
                 {
-                    kafka_topic: 'project.task.created',
+                    kafka_topic: 'another-topic',
                     kafka_key: 't1',
-                    payload: { id: 't1' } as any,
+                    payload: { type: 'another.event', id: 't1' } as any,
                     status: 'PENDING',
                 },
             ])
             .execute();
 
-        const calls: { topic: string; payloads: any[] }[] = [];
+        const calls: { topic: string; type: string; payloads: any[] }[] = [];
         const publishSpy = jest
             .spyOn(eventBus, 'publish')
-            .mockImplementation(async (topic, payload) => {
+            .mockImplementation(async (topic, type, payload) => {
                 calls.push({
                     topic,
+                    type,
                     payloads: Array.isArray(payload) ? payload : [payload],
                 });
             });
@@ -124,13 +134,19 @@ describe('OutboxRelay — EDA Integration (MemoryBus)', () => {
         startOutboxRelay();
 
         await waitFor(async () => {
-            // Expect 2 publish calls: one per topic
-            const topicCalls = calls.map((c) => c.topic).sort();
-            expect(topicCalls).toContain('PROJECT_CREATED');
-            expect(topicCalls).toContain('PROJECT_TASK_CREATED');
+            // Expect 2 publish calls: one per topic-type group
+            const topicTypeKeys = calls
+                .map((c) => `${c.topic}|${c.type}`)
+                .sort();
+            expect(topicTypeKeys).toContain(
+                `${KAFKA_TOPICS.PROJECT}|${KAFKA_EVENTS.PROJECT.CREATED}`,
+            );
+            expect(topicTypeKeys).toContain('another-topic|another.event');
 
             const projectCreatedCall = calls.find(
-                (c) => c.topic === 'PROJECT_CREATED',
+                (c) =>
+                    c.topic === KAFKA_TOPICS.PROJECT &&
+                    c.type === KAFKA_EVENTS.PROJECT.CREATED,
             );
             expect(projectCreatedCall!.payloads).toHaveLength(2);
         });
@@ -162,9 +178,9 @@ describe('OutboxRelay — EDA Integration (MemoryBus)', () => {
     it('processes only up to 100 events per poll cycle (batch limit)', async () => {
         // Insert 120 outbox events
         const events = Array.from({ length: 120 }, (_, i) => ({
-            kafka_topic: 'project.created',
+            kafka_topic: KAFKA_TOPICS.PROJECT,
             kafka_key: `p${i}`,
-            payload: { id: `p${i}` } as any,
+            payload: { type: KAFKA_EVENTS.PROJECT.CREATED, id: `p${i}` } as any,
             status: 'PENDING',
         }));
         await db.insertInto('outbox_events').values(events).execute();

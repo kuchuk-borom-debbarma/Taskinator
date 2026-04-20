@@ -1,5 +1,5 @@
 import { Kafka, Partitioners, type Producer, type Consumer } from 'kafkajs';
-import { EVENT_TO_TOPIC, KAFKA_TOPICS } from './constants.ts';
+import { KAFKA_TOPICS } from './constants.ts';
 import type { Bus, DomainEvent } from './types.ts';
 import { createEvent, withIdempotency } from './idempotency.ts';
 import { context, propagation, trace } from '@opentelemetry/api';
@@ -51,39 +51,24 @@ export class KafkaBus implements Bus {
     }
 
     async publish(
+        topic: string,
         type: string,
         payload:
             | { id?: string; key: string; data: any }
             | Array<{ id?: string; key: string; data: any }>,
     ) {
         const items = Array.isArray(payload) ? payload : [payload];
-        const topic = EVENT_TO_TOPIC[type];
-        if (!topic) throw new Error(`Unknown event type: ${type}`);
         const events = items.map((i) => createEvent(type, i.key, i.data, i.id));
         await this.emit(events, topic);
     }
 
     async subscribe(
+        topic: string,
         groupId: string,
         handlers: Record<string, (data: any) => Promise<void>>,
         options?: { batch?: boolean },
     ) {
-        // Group handlers by their Kafka topic, then spin up one consumer per topic.
-        const byTopic: Record<
-            string,
-            Record<string, (data: any) => Promise<void>>
-        > = {};
-        for (const [eventType, handler] of Object.entries(handlers)) {
-            const topic = EVENT_TO_TOPIC[eventType];
-            if (!topic) continue;
-            byTopic[topic] ??= {};
-            byTopic[topic]![eventType] = handler;
-        }
-        await Promise.all(
-            Object.entries(byTopic).map(([topic, topicHandlers]) =>
-                this.createConsumer(topic, groupId, topicHandlers, options),
-            ),
-        );
+        await this.createConsumer(topic, groupId, handlers, options);
     }
 
     private async emit(events: DomainEvent[], topic: string) {

@@ -1,4 +1,4 @@
-import { ProjectTopicConsumer } from '../modules/project/internal/consumers/ProjectTopicConsumer.ts';
+import { ProjectTopicConsumer } from './consumers/ProjectTopicConsumer.ts';
 import { ProjectAggregatedListener } from '../modules/auth/internal/listeners/ProjectAggregatedListener.ts';
 import { logger } from '../logger';
 

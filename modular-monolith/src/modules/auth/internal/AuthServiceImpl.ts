@@ -13,6 +13,10 @@ import { logger } from '../../../logger';
 const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-jwt-key';
 
 import { sql } from 'kysely';
+import {
+    KAFKA_TOPICS,
+    KAFKA_EVENTS,
+} from '../../../utils/event-bus/constants.ts';
 
 export class AuthServiceImpl implements AuthService {
     async init(): Promise<void> {
@@ -34,9 +38,10 @@ export class AuthServiceImpl implements AuthService {
                 RETURNING *
             )
             INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
-            SELECT 'auth.signup.started',
+            SELECT ${KAFKA_TOPICS.AUTH},
                    ${uid}::text,
                    jsonb_build_object(
+                       'type', ${KAFKA_EVENTS.AUTH.SIGNUP_STARTED},
                        'email', email,
                        'uid', id
                    )
@@ -62,9 +67,10 @@ export class AuthServiceImpl implements AuthService {
                 ),
                 inserted_outbox AS (
                     INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
-                    SELECT 'auth.user.created',
+                    SELECT ${KAFKA_TOPICS.AUTH},
                            id::text,
                            jsonb_build_object(
+                               'type', ${KAFKA_EVENTS.AUTH.USER_CREATED},
                                'email', email,
                                'uid', id
                            )

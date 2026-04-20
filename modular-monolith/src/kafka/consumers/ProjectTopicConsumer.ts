@@ -1,7 +1,7 @@
-import eventBus from '../../../../utils/EventBus.ts';
-import { KAFKA_EVENTS } from '../../../../utils/event-bus/constants.ts';
-import type { DomainEvent } from '../../../../utils/event-bus/types.ts';
-import { logger } from '../../../../logger';
+import eventBus from '../../utils/EventBus.ts';
+import { KAFKA_EVENTS, KAFKA_TOPICS } from '../../utils/event-bus/constants.ts';
+import type { DomainEvent } from '../../utils/event-bus/types.ts';
+import { logger } from '../../logger';
 
 export class ProjectTopicConsumer {
     async init() {
@@ -10,6 +10,7 @@ export class ProjectTopicConsumer {
         );
 
         await eventBus.subscribe(
+            KAFKA_TOPICS.PROJECT,
             'project-aggregator-group',
             {
                 [KAFKA_EVENTS.PROJECT.CREATED]:
@@ -82,6 +83,7 @@ export class ProjectTopicConsumer {
             }));
 
             await eventBus.publish(
+                KAFKA_TOPICS.PROJECT_AGGREGATED,
                 KAFKA_EVENTS.PROJECT_AGGREGATED.COUNTS_CHANGED,
                 eventsToPublish,
             );

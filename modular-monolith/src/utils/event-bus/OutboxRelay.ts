@@ -24,22 +24,34 @@ const dispatchToEventBus = async (
         payload: any;
     }[],
 ) => {
-    const byTopic: Record<
+    // Group events by [Topic + Type] to perform bulk-publishes for specific event streams
+    const groups = new Map<
         string,
-        Array<{ id: string; key: string; data: any }>
-    > = {};
+        {
+            topic: string;
+            type: string;
+            payloads: Array<{ id: string; key: string; data: any }>;
+        }
+    >();
 
     for (const event of events) {
-        byTopic[event.kafka_topic] ??= [];
-        byTopic[event.kafka_topic]!.push({
+        const topic = event.kafka_topic;
+        const type = event.payload.type;
+        const groupKey = `${topic}|${type}`;
+
+        if (!groups.has(groupKey)) {
+            groups.set(groupKey, { topic, type, payloads: [] });
+        }
+
+        groups.get(groupKey)!.payloads.push({
             id: event.id,
             key: event.kafka_key,
             data: event.payload,
         });
     }
 
-    const publishPromises = Object.entries(byTopic).map(
-        ([eventType, payloads]) => eventBus.publish(eventType, payloads),
+    const publishPromises = Array.from(groups.values()).map((group) =>
+        eventBus.publish(group.topic, group.type, group.payloads),
     );
 
     await Promise.all(publishPromises);

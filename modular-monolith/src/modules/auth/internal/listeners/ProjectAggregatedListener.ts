@@ -1,5 +1,8 @@
 import eventBus from '../../../../utils/EventBus.ts';
-import { KAFKA_EVENTS } from '../../../../utils/event-bus/constants.ts';
+import {
+    KAFKA_EVENTS,
+    KAFKA_TOPICS,
+} from '../../../../utils/event-bus/constants.ts';
 import type { DomainEvent } from '../../../../utils/event-bus/types.ts';
 import { db } from '../../../../database';
 import { sql } from 'kysely';
@@ -12,6 +15,7 @@ export class ProjectAggregatedListener {
         );
 
         await eventBus.subscribe(
+            KAFKA_TOPICS.PROJECT_AGGREGATED,
             'auth-project-aggregator-group',
             {
                 [KAFKA_EVENTS.PROJECT_AGGREGATED.COUNTS_CHANGED]:

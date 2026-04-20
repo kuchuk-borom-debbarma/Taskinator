@@ -3,6 +3,10 @@ import { db } from '../../../database';
 import { decodeCursor, encodeCursor } from '../../../utils/utils.ts';
 import { sql } from 'kysely';
 import type { PaginationParams } from '../../../types/pagination.ts';
+import {
+    KAFKA_TOPICS,
+    KAFKA_EVENTS,
+} from '../../../utils/event-bus/constants.ts';
 
 export async function insertProject(param: {
     userId: string;
@@ -27,9 +31,10 @@ export async function insertProject(param: {
         inserted_outbox AS (
             INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
             SELECT 
-                'project.created',
+                ${KAFKA_TOPICS.PROJECT},
                 id::text,
                 jsonb_build_object(
+                    'type', ${KAFKA_EVENTS.PROJECT.CREATED},
                     'projectId', id,
                     'userId', "userId",
                     'name', name
@@ -71,19 +76,6 @@ export async function updateProject(param: {
                 created_at::text AS "epochPrecision",
                 updated_at AS "updatedAt"
         ),
-        inserted_outbox AS (
-            INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
-            SELECT 
-                'project.updated',
-                id::text,
-                jsonb_build_object(
-                    'projectId', id,
-                    'userId', "userId",
-                    'name', name,
-                    'description', description,
-                    'version', version
-                )
-            FROM updated_project
         )
         SELECT * FROM updated_project
     `.execute(db);
@@ -108,9 +100,10 @@ export async function deleteProjects(param: {
         inserted_outbox AS (
             INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
             SELECT 
-                'project.deleted',
+                ${KAFKA_TOPICS.PROJECT},
                 id::text,
                 jsonb_build_object(
+                    'type', ${KAFKA_EVENTS.PROJECT.DELETED},
                     'projectId', id,
                     'userId', "userId",
                     'name', name
@@ -155,18 +148,6 @@ export async function insertProjectMembers(param: {
             ON CONFLICT (fk_project_id, fk_user_id) DO NOTHING
             RETURNING id, fk_project_id AS "projectId", fk_user_id AS "userId", version
         ),
-        inserted_outbox AS (
-            INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
-            SELECT 
-                'project_member.created',
-                id::text,
-                jsonb_build_object(
-                    'memberId', id,
-                    'projectId', "projectId",
-                    'userId', "userId",
-                    'version', version
-                )
-            FROM inserted_members
         )
         SELECT 1 FROM authorized
     `.execute(db);
@@ -202,17 +183,6 @@ export async function deleteProjectMembers(param: {
               AND EXISTS (SELECT 1 FROM authorized)
             RETURNING id, fk_project_id AS "projectId", fk_user_id AS "userId"
         ),
-        inserted_outbox AS (
-            INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
-            SELECT 
-                'project_member.deleted',
-                id::text,
-                jsonb_build_object(
-                    'memberId', id,
-                    'projectId', "projectId",
-                    'userId', "userId"
-                )
-            FROM deleted_members
         )
         SELECT 1 FROM authorized
     `.execute(db);
