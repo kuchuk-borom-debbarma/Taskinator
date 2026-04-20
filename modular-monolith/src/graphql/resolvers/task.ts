@@ -323,19 +323,31 @@ export const taskResolvers = {
                 taskId,
             });
         },
-        createLink: (
+        createLink: async (
             _parent: any,
             { input }: { input: CreateTaskLinkInput },
-            _context: GraphQLContext,
-        ) => {
-            return null;
+            context: GraphQLContext,
+        ): Promise<TaskLink> => {
+            if (!context.userId) throw new UnauthorizedError();
+            return await taskService.createTaskLink({
+                actorId: context.userId,
+                projectId: input.projectId,
+                sourceTaskId: input.sourceTaskId,
+                targetTaskId: input.targetTaskId,
+                label: input.label,
+            });
         },
-        deleteLink: (
+        deleteLink: async (
             _parent: any,
-            { linkId }: { linkId: string },
-            _context: GraphQLContext,
-        ) => {
-            return linkId;
+            { projectId, linkId }: { projectId: string; linkId: string },
+            context: GraphQLContext,
+        ): Promise<string> => {
+            if (!context.userId) throw new UnauthorizedError();
+            return await taskService.deleteTaskLink({
+                actorId: context.userId,
+                projectId,
+                linkId,
+            });
         },
     },
 };

@@ -4,6 +4,7 @@ import type {
     LinkConnection,
     PaginationParams,
     Task,
+    TaskLink,
     TaskConnection,
     TaskNeighbourhoodResult,
     TaskService,
@@ -18,6 +19,8 @@ import {
     insertTask,
     updateTask,
     deleteTask,
+    insertTaskLink,
+    deleteTaskLink,
 } from './TaskQueries.ts';
 
 export class TaskServiceImpl implements TaskService {
@@ -89,6 +92,24 @@ export class TaskServiceImpl implements TaskService {
         taskId: string;
     }): Promise<string> {
         return await deleteTask(param);
+    }
+
+    async createTaskLink(param: {
+        actorId: string;
+        projectId: string;
+        sourceTaskId: string;
+        targetTaskId: string;
+        label: string;
+    }): Promise<TaskLink> {
+        return await insertTaskLink(param);
+    }
+
+    async deleteTaskLink(param: {
+        actorId: string;
+        projectId: string;
+        linkId: string;
+    }): Promise<string> {
+        return await deleteTaskLink(param);
     }
 
     async getProjectLinks(

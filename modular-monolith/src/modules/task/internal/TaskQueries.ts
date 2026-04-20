@@ -657,3 +657,111 @@ export const deleteTask = async (param: {
 
     return deletedId;
 };
+
+export const insertTaskLink = async (param: {
+    actorId: string;
+    projectId: string;
+    sourceTaskId: string;
+    targetTaskId: string;
+    label: string;
+}): Promise<TaskLink> => {
+    const result = await sql<TaskLink>`
+        WITH authorized AS (
+            -- Actor must be project owner or member
+            SELECT 1 FROM project WHERE id = ${param.projectId}::uuid AND fk_user_id = ${param.actorId}::text
+            UNION ALL
+            SELECT 1 FROM project_member WHERE fk_project_id = ${param.projectId}::uuid AND fk_user_id = ${param.actorId}::text
+            LIMIT 1
+        ),
+        validation AS (
+            SELECT 1
+            WHERE ${param.sourceTaskId} != ${param.targetTaskId}
+              AND EXISTS (SELECT 1 FROM project_task WHERE id = ${param.sourceTaskId}::uuid AND fk_project_id = ${param.projectId}::uuid)
+              AND EXISTS (SELECT 1 FROM project_task WHERE id = ${param.targetTaskId}::uuid AND fk_project_id = ${param.projectId}::uuid)
+        ),
+        inserted_link AS (
+            INSERT INTO task_link (fk_project_id, source_task_id, target_task_id, label, created_by)
+            SELECT ${param.projectId}::uuid, ${param.sourceTaskId}::uuid, ${param.targetTaskId}::uuid, ${param.label}, ${param.actorId}
+            WHERE EXISTS (SELECT 1 FROM authorized)
+              AND EXISTS (SELECT 1 FROM validation)
+            RETURNING 
+                id, 
+                fk_project_id AS "projectId", 
+                source_task_id AS "sourceTaskId", 
+                target_task_id AS "targetTaskId", 
+                label, 
+                created_by AS "createdBy", 
+                created_at AS "createdAt"
+        ),
+        inserted_outbox AS (
+            INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
+            SELECT 
+                'task_link.created',
+                id::text,
+                jsonb_build_object(
+                    'linkId', id,
+                    'projectId', projectId,
+                    'sourceTaskId', sourceTaskId,
+                    'targetTaskId', targetTaskId,
+                    'label', label,
+                    'actorId', ${param.actorId}
+                )
+            FROM inserted_link
+        )
+        SELECT * FROM inserted_link
+    `.execute(db);
+
+    const link = result.rows[0];
+    if (!link) {
+        throw new NotFoundError(
+            `Unable to create link. Ensure tasks exist in project ${param.projectId}, source != target, and you are authorized.`,
+        );
+    }
+
+    return link;
+};
+
+export const deleteTaskLink = async (param: {
+    actorId: string;
+    projectId: string;
+    linkId: string;
+}): Promise<string> => {
+    const result = await sql<{ id: string }>`
+        WITH authorized AS (
+            -- Actor must be project owner or member
+            SELECT 1 FROM project WHERE id = ${param.projectId}::uuid AND fk_user_id = ${param.actorId}::text
+            UNION ALL
+            SELECT 1 FROM project_member WHERE fk_project_id = ${param.projectId}::uuid AND fk_user_id = ${param.actorId}::text
+            LIMIT 1
+        ),
+        deleted_link AS (
+            DELETE FROM task_link
+            WHERE id = ${param.linkId}::uuid
+              AND fk_project_id = ${param.projectId}::uuid
+              AND EXISTS (SELECT 1 FROM authorized)
+            RETURNING id, fk_project_id AS "projectId"
+        ),
+        inserted_outbox AS (
+            INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
+            SELECT 
+                'task_link.deleted',
+                id::text,
+                jsonb_build_object(
+                    'linkId', id,
+                    'projectId', projectId,
+                    'actorId', ${param.actorId}
+                )
+            FROM deleted_link
+        )
+        SELECT id FROM deleted_link
+    `.execute(db);
+
+    const deletedId = result.rows[0]?.id;
+    if (!deletedId) {
+        throw new NotFoundError(
+            `Link with ID ${param.linkId} not found or unauthorized in project ${param.projectId}.`,
+        );
+    }
+
+    return deletedId;
+};
