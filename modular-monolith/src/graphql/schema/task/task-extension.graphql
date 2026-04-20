@@ -116,6 +116,29 @@ input CreateTaskLinkInput {
     label: String!
 }
 
+input UpdateTaskLinkInput {
+    """
+    Project both tasks belong to.
+    """
+    projectId: ID!
+    """
+    The link to update.
+    """
+    linkId: ID!
+    """
+    The originating task (dependency source).
+    """
+    sourceTaskId: ID
+    """
+    The destination task (dependency target).
+    """
+    targetTaskId: ID
+    """
+    Semantic label for the relationship.
+    """
+    label: String
+}
+
 """
 Namespaced task mutations.
 """
@@ -144,6 +167,11 @@ type TaskMutation {
     Removes a task link by ID. Returns the ID of the deleted link.
     """
     deleteLink(projectId: ID!, linkId: ID!): ID!
+
+    """
+    Updates a task link (label, source, or target).
+    """
+    updateLink(input: UpdateTaskLinkInput!): TaskLink!
 }
 
 extend type Query {

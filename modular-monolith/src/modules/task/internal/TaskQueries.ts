@@ -765,3 +765,77 @@ export const deleteTaskLink = async (param: {
 
     return deletedId;
 };
+
+export const updateTaskLink = async (param: {
+    actorId: string;
+    projectId: string;
+    linkId: string;
+    sourceTaskId?: string | null;
+    targetTaskId?: string | null;
+    label?: string | null;
+}): Promise<TaskLink> => {
+    const result = await sql<TaskLink>`
+        WITH authorized AS (
+            -- Actor must be project owner or member
+            SELECT 1 FROM project WHERE id = ${param.projectId}::uuid AND fk_user_id = ${param.actorId}::text
+            UNION ALL
+            SELECT 1 FROM project_member WHERE fk_project_id = ${param.projectId}::uuid AND fk_user_id = ${param.actorId}::text
+            LIMIT 1
+        ),
+        current_link AS (
+            SELECT source_task_id, target_task_id FROM task_link WHERE id = ${param.linkId}::uuid AND fk_project_id = ${param.projectId}::uuid
+        ),
+        validation AS (
+            SELECT 1
+            WHERE (SELECT 1 FROM current_link) IS NOT NULL
+              AND COALESCE(${param.sourceTaskId}::uuid, (SELECT source_task_id FROM current_link)) != 
+                  COALESCE(${param.targetTaskId}::uuid, (SELECT target_task_id FROM current_link))
+              AND (${param.sourceTaskId}::uuid IS NULL OR EXISTS (SELECT 1 FROM project_task WHERE id = ${param.sourceTaskId}::uuid AND fk_project_id = ${param.projectId}::uuid))
+              AND (${param.targetTaskId}::uuid IS NULL OR EXISTS (SELECT 1 FROM project_task WHERE id = ${param.targetTaskId}::uuid AND fk_project_id = ${param.projectId}::uuid))
+        ),
+        updated_link AS (
+            UPDATE task_link
+            SET 
+                source_task_id = COALESCE(${param.sourceTaskId}::uuid, source_task_id),
+                target_task_id = COALESCE(${param.targetTaskId}::uuid, target_task_id),
+                label = COALESCE(${param.label}, label)
+            WHERE id = ${param.linkId}::uuid
+              AND fk_project_id = ${param.projectId}::uuid
+              AND EXISTS (SELECT 1 FROM authorized)
+              AND EXISTS (SELECT 1 FROM validation)
+            RETURNING 
+                id, 
+                fk_project_id AS "projectId", 
+                source_task_id AS "sourceTaskId", 
+                target_task_id AS "targetTaskId", 
+                label, 
+                created_by AS "createdBy", 
+                created_at AS "createdAt"
+        ),
+        inserted_outbox AS (
+            INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
+            SELECT 
+                'task_link.updated',
+                id::text,
+                jsonb_build_object(
+                    'linkId', id,
+                    'projectId', projectId,
+                    'sourceTaskId', sourceTaskId,
+                    'targetTaskId', targetTaskId,
+                    'label', label,
+                    'actorId', ${param.actorId}
+                )
+            FROM updated_link
+        )
+        SELECT * FROM updated_link
+    `.execute(db);
+
+    const link = result.rows[0];
+    if (!link) {
+        throw new NotFoundError(
+            `Unable to update link. Ensure link exists in project ${param.projectId}, source != target, and you are authorized.`,
+        );
+    }
+
+    return link;
+};

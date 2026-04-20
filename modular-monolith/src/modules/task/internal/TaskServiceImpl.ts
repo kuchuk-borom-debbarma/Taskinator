@@ -21,6 +21,7 @@ import {
     deleteTask,
     insertTaskLink,
     deleteTaskLink,
+    updateTaskLink,
 } from './TaskQueries.ts';
 
 export class TaskServiceImpl implements TaskService {
@@ -110,6 +111,17 @@ export class TaskServiceImpl implements TaskService {
         linkId: string;
     }): Promise<string> {
         return await deleteTaskLink(param);
+    }
+
+    async updateTaskLink(param: {
+        actorId: string;
+        projectId: string;
+        linkId: string;
+        sourceTaskId?: string | null;
+        targetTaskId?: string | null;
+        label?: string | null;
+    }): Promise<TaskLink> {
+        return await updateTaskLink(param);
     }
 
     async getProjectLinks(
