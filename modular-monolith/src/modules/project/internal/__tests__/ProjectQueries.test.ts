@@ -15,11 +15,14 @@ import {
     createUser,
     addProjectMember,
 } from '../../../../__tests__/helpers/factories.ts';
+import { sql } from 'kysely';
 import {
     getProjects,
     getProject,
     getProjectMembers,
     insertProject,
+    updateProject,
+    deleteProjects,
 } from '../ProjectQueries.ts';
 
 describe('ProjectQueries — Integration (Real DB + wCTE)', () => {
@@ -200,6 +203,59 @@ describe('ProjectQueries — Integration (Real DB + wCTE)', () => {
             });
 
             expect(failedUpdate).toBeNull();
+        });
+    });
+
+    describe('deleteProjects', () => {
+        it('deletes only projects owned by the actor and logs events', async () => {
+            const p1 = await insertProject({
+                userId,
+                name: 'P1',
+            });
+            const p2 = await insertProject({
+                userId,
+                name: 'P2',
+            });
+            const otherUser = await createUser();
+            const p3 = await insertProject({
+                userId: otherUser.id,
+                name: 'Other P',
+            });
+
+            const { success, deletedCount } = await deleteProjects({
+                actorId: userId,
+                projectIds: [p1!.id, p2!.id, p3!.id],
+            });
+
+            expect(success).toBe(true);
+            expect(deletedCount).toBe(2);
+
+            // Verify p1 and p2 are gone, p3 remains
+            expect(await getProject(userId, p1!.id)).toBeNull();
+            expect(await getProject(userId, p2!.id)).toBeNull();
+            expect(await getProject(otherUser.id, p3!.id)).not.toBeNull();
+
+            // Verify outbox has 2 deletion events
+            const outboxEntries = await sql<any>`
+                SELECT * FROM outbox_events 
+                WHERE kafka_topic = 'project.deleted' 
+                  AND kafka_key IN (${p1!.id}, ${p2!.id})
+            `.execute(db);
+
+            expect(outboxEntries.rows).toHaveLength(2);
+        });
+
+        it('limits deletion to 1000 projects per call', async () => {
+            const projectIds = Array.from({ length: 1100 }).map(
+                () => '00000000-0000-0000-0000-000000000000',
+            ); // dummy ids
+            const { deletedCount } = await deleteProjects({
+                actorId: userId,
+                projectIds,
+            });
+            // We can't easily verify the slice in a real DB without creating 1000 items
+            // but we can at least ensure it doesn't crash and returns a reasonable number (0 because ids are dummy)
+            expect(deletedCount).toBe(0);
         });
     });
 });

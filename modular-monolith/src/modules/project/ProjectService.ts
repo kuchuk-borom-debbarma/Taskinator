@@ -97,4 +97,9 @@ export interface ProjectService extends BaseService {
         name?: string;
         description?: string;
     }): Promise<Project | null>;
+
+    deleteProjects(param: {
+        actorId: string;
+        projectIds: string[];
+    }): Promise<{ success: boolean; deletedCount: number }>;
 }

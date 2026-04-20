@@ -206,12 +206,18 @@ export const projectResolvers = {
 
             return result;
         },
-        deleteProjects: (
+        deleteProjects: async (
             _parent: any,
             { projectIds }: { projectIds: string[] },
-            _context: GraphQLContext,
+            context: GraphQLContext,
         ) => {
-            return { success: true, deletedCount: 0 };
+            if (!context.userId)
+                throw new UnauthorizedError('userId not found in context.');
+
+            return await projectService.deleteProjects({
+                actorId: context.userId,
+                projectIds,
+            });
         },
         addProjectMembers: (
             _parent: any,

@@ -40,7 +40,7 @@ async function bootstrap() {
 
         // Phase 3: Public API (GraphQL)
         const server = Bun.serve({
-            fetch: yoga,
+            fetch: (req) => yoga(req),
             port: 3000,
         });
         console.log(

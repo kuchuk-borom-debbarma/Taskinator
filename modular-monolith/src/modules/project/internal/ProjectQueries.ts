@@ -6,7 +6,7 @@ import { sql } from 'kysely';
 export async function insertProject(param: {
     userId: string;
     name: string;
-    description: string | undefined;
+    description?: string;
 }): Promise<Project | null> {
     const result = await sql<Project>`
         WITH inserted_project AS (
@@ -88,6 +88,41 @@ export async function updateProject(param: {
     `.execute(db);
 
     return result.rows[0] || null;
+}
+
+export async function deleteProjects(param: {
+    actorId: string;
+    projectIds: string[];
+}): Promise<{ success: boolean; deletedCount: number }> {
+    const ids = param.projectIds.slice(0, 1000); // Batch protection
+    if (ids.length === 0) return { success: true, deletedCount: 0 };
+
+    const result = await sql<{ id: string }>`
+        WITH deleted_projects AS (
+            DELETE FROM project 
+            WHERE id = ANY(${ids}::uuid[]) 
+              AND fk_user_id = ${param.actorId}
+            RETURNING id, name, fk_user_id AS "userId"
+        ),
+        inserted_outbox AS (
+            INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
+            SELECT 
+                'project.deleted',
+                id::text,
+                jsonb_build_object(
+                    'projectId', id,
+                    'userId', "userId",
+                    'name', name
+                )
+            FROM deleted_projects
+        )
+        SELECT id FROM deleted_projects
+    `.execute(db);
+
+    return {
+        success: true,
+        deletedCount: result.rows.length,
+    };
 }
 
 export const getProjects = async (
