@@ -4,7 +4,6 @@ import type {
     ProjectService,
 } from '../ProjectService.ts';
 import {
-    getProject,
     getProjectMembers,
     getProjectMembersByActorIdAndIds,
     getProjectMembersByIds,
@@ -33,13 +32,6 @@ export class ProjectServiceImpl implements ProjectService {
     }> {
         console.log(`[Project Service] Getting projects for userId: ${userId}`);
         return getProjects(userId, params);
-    }
-
-    async getProject(
-        userId: string,
-        projectId: string,
-    ): Promise<Project | null> {
-        return getProject(userId, projectId);
     }
 
     async getProjectMembers(

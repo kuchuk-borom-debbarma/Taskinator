@@ -18,7 +18,6 @@ import {
 import { sql } from 'kysely';
 import {
     getProjects,
-    getProject,
     getProjectMembers,
     insertProject,
     updateProject,
@@ -52,22 +51,6 @@ describe('ProjectQueries — Integration (Real DB + wCTE)', () => {
             const { projects } = await getProjects(userId);
             expect(projects).toHaveLength(1);
             expect(projects[0]!.name).toBe('Mine');
-        });
-    });
-
-    describe('getProject', () => {
-        it('returns a single project owned by the user', async () => {
-            const project = await createProject(userId, { name: 'Single' });
-            const found = await getProject(userId, project.id);
-            expect(found).not.toBeNull();
-            expect(found!.id).toBe(project.id);
-        });
-
-        it('returns null for a project the user does not own', async () => {
-            const otherUser = await createUser();
-            const project = await createProject(otherUser.id);
-            const found = await getProject(userId, project.id);
-            expect(found).toBeNull();
         });
     });
 
@@ -114,7 +97,11 @@ describe('ProjectQueries — Integration (Real DB + wCTE)', () => {
             expect(project!.userId).toBe(userId);
 
             // Verify project exists in DB
-            const dbProject = await getProject(userId, project!.id);
+            const dbProject = await db
+                .selectFrom('project')
+                .selectAll()
+                .where('id', '=', project!.id as any)
+                .executeTakeFirst();
             expect(dbProject).not.toBeNull();
 
             // Verify atomic outbox entry exists
@@ -233,9 +220,22 @@ describe('ProjectQueries — Integration (Real DB + wCTE)', () => {
             expect(deletedCount).toBe(2);
 
             // Verify p1 and p2 are gone, p3 remains
-            expect(await getProject(userId, p1!.id)).toBeNull();
-            expect(await getProject(userId, p2!.id)).toBeNull();
-            expect(await getProject(otherUser.id, p3!.id)).not.toBeNull();
+            const findP1 = await db
+                .selectFrom('project')
+                .where('id', '=', p1!.id as any)
+                .executeTakeFirst();
+            const findP2 = await db
+                .selectFrom('project')
+                .where('id', '=', p2!.id as any)
+                .executeTakeFirst();
+            const findP3 = await db
+                .selectFrom('project')
+                .where('id', '=', p3!.id as any)
+                .executeTakeFirst();
+
+            expect(findP1).toBeUndefined();
+            expect(findP2).toBeUndefined();
+            expect(findP3).toBeDefined();
 
             // Verify outbox has 2 deletion events
             const outboxEntries = await sql<any>`
