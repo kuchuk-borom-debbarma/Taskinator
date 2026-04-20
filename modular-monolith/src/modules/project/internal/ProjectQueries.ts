@@ -41,6 +41,56 @@ export async function insertProject(param: {
     return result.rows[0] || null;
 }
 
+export async function updateProject(param: {
+    actorId: string;
+    id: string;
+    version: number;
+    name?: string;
+    description?: string;
+}): Promise<Project | null> {
+    const result = await sql<Project>`
+        WITH updated_project AS (
+            UPDATE project 
+            SET 
+                name = COALESCE(${param.name ?? null}, name),
+                description = COALESCE(${param.description ?? null}, description),
+                version = version + 1,
+                updated_at = NOW()
+            WHERE id = ${param.id}::uuid 
+              AND fk_user_id = ${param.actorId}
+              AND version = ${param.version}
+            RETURNING 
+                id, 
+                name, 
+                description, 
+                fk_user_id AS "userId", 
+                version, 
+                last_event_id AS "lastEventId", 
+                created_at AS "createdAt", 
+                created_at::text AS "epochPrecision",
+                updated_at AS "updatedAt"
+        ),
+        inserted_outbox AS (
+            INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
+            SELECT 
+                'project.updated',
+                id::text,
+                jsonb_build_object(
+                    'projectId', id,
+                    'userId', "userId",
+                    'name', name,
+                    'description', description,
+                    'version', version
+                )
+            FROM updated_project
+        )
+        SELECT * FROM updated_project
+    `.execute(db);
+
+    return result.rows[0] || null;
+}
+
+
 export const getProjects = async (
     userId: string,
     params: {

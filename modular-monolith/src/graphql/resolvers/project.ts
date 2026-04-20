@@ -172,16 +172,39 @@ export const projectResolvers = {
                 throw new MutationFailedError(`Failed to create project`);
             return result;
         },
-        updateProject: (
+        updateProject: async (
             _parent: any,
             {
                 id,
+                version,
                 name,
                 description,
-            }: { id: string; name?: string; description?: string },
-            _context: GraphQLContext,
+            }: {
+                id: string;
+                version: number;
+                name?: string;
+                description?: string;
+            },
+            context: GraphQLContext,
         ) => {
-            return null;
+            if (!context.userId)
+                throw new UnauthorizedError('userId not found in context.');
+
+            const result = await projectService.updateProject({
+                actorId: context.userId,
+                id,
+                version,
+                name,
+                description,
+            });
+
+            if (!result) {
+                throw new MutationFailedError(
+                    'Failed to update project. Version mismatch or unauthorized.',
+                );
+            }
+
+            return result;
         },
         deleteProjects: (
             _parent: any,

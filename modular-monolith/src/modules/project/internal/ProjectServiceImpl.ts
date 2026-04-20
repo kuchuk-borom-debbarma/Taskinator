@@ -105,4 +105,15 @@ export class ProjectServiceImpl implements ProjectService {
             description,
         });
     }
+
+    async updateProject(param: {
+        actorId: string;
+        id: string;
+        version: number;
+        name?: string;
+        description?: string;
+    }): Promise<Project | null> {
+        return await queries.updateProject(param);
+    }
 }
+

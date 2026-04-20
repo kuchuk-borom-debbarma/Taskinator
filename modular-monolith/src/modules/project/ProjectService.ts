@@ -89,4 +89,13 @@ export interface ProjectService extends BaseService {
         name: string;
         description?: string;
     }): Promise<Project | null>;
+
+    updateProject(param: {
+        actorId: string;
+        id: string;
+        version: number;
+        name?: string;
+        description?: string;
+    }): Promise<Project | null>;
 }
+

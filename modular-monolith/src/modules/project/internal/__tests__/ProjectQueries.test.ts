@@ -126,4 +126,81 @@ describe('ProjectQueries — Integration (Real DB + wCTE)', () => {
             expect(event.payload.name).toBe(name);
         });
     });
+
+    describe('updateProject', () => {
+        it('successfully updates project and increments version', async () => {
+            const project = await insertProject({
+                userId,
+                name: 'Old Name',
+            });
+
+            const updated = await updateProject({
+                actorId: userId,
+                id: project!.id,
+                version: project!.version,
+                name: 'New Name',
+                description: 'New Description',
+            });
+
+            expect(updated).not.toBeNull();
+            expect(updated!.name).toBe('New Name');
+            expect(updated!.description).toBe('New Description');
+            expect(updated!.version).toBe(project!.version + 1);
+
+            // Verify outbox
+            const outboxEntries = await sql<any>`
+                SELECT * FROM outbox_events 
+                WHERE kafka_topic = 'project.updated' 
+                  AND kafka_key = ${project!.id}::text
+                ORDER BY created_at DESC LIMIT 1
+            `.execute(db);
+
+            expect(outboxEntries.rows).toHaveLength(1);
+            expect(outboxEntries.rows[0].payload.name).toBe('New Name');
+        });
+
+        it('fails update if version is stale (optimistic locking)', async () => {
+            const project = await insertProject({
+                userId,
+                name: 'Old Name',
+            });
+
+            // Update once to increment version
+            await updateProject({
+                actorId: userId,
+                id: project!.id,
+                version: project!.version,
+                name: 'First Update',
+            });
+
+            // Try to update again with the original version
+            const failedUpdate = await updateProject({
+                actorId: userId,
+                id: project!.id,
+                version: project!.version, // Stale version
+                name: 'Second Update',
+            });
+
+            expect(failedUpdate).toBeNull();
+        });
+
+        it('fails update if actor is not the owner', async () => {
+            const project = await insertProject({
+                userId,
+                name: 'Project Name',
+            });
+
+            const attackerId = (await createUser()).id;
+
+            const failedUpdate = await updateProject({
+                actorId: attackerId,
+                id: project!.id,
+                version: project!.version,
+                name: 'Hacked!',
+            });
+
+            expect(failedUpdate).toBeNull();
+        });
+    });
 });
+

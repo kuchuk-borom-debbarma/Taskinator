@@ -26,7 +26,7 @@ extend type Mutation {
     """
     Updates a project's name or description. Returns the updated project.
     """
-    updateProject(id: ID!, name: String, description: String): Project
+    updateProject(id: ID!, version: Int!, name: String, description: String): Project
 
     """
     Permanently deletes one or more projects.
