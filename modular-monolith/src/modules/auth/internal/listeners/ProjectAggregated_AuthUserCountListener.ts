@@ -8,10 +8,16 @@ import { db } from '../../../../database';
 import { sql } from 'kysely';
 import { logger } from '../../../../logger';
 
-export class ProjectAggregatedListener {
+/**
+ * Execution Listener
+ *
+ * This performs the actual bulk SQL updates against the 'users' table in the database
+ * once the events have been aggregated and folded.
+ */
+export class ProjectAggregated_AuthUserCountListener {
     async init() {
         logger.info(
-            '[Auth Listener] Initializing listener for project.aggregated.counts_changed',
+            '[ProjectAggregated -> Auth] Initializing Listener for users project counts',
         );
 
         await eventBus.subscribe(

@@ -839,3 +839,31 @@ export const updateTaskLink = async (param: {
 
     return link;
 };
+
+export const deleteProjectTasksByProjectIds = async (
+    projectIds: string[],
+): Promise<{ deletedCount: number }> => {
+    if (projectIds.length === 0) return { deletedCount: 0 };
+
+    const result = await sql<{ id: string }>`
+        DELETE FROM project_task
+        WHERE fk_project_id = ANY(${projectIds}::uuid[])
+        RETURNING id
+    `.execute(db);
+
+    return { deletedCount: result.rows.length };
+};
+
+export const deleteProjectTaskLinksByProjectIds = async (
+    projectIds: string[],
+): Promise<{ deletedCount: number }> => {
+    if (projectIds.length === 0) return { deletedCount: 0 };
+
+    const result = await sql<{ id: string }>`
+        DELETE FROM project_task_link
+        WHERE fk_project_id = ANY(${projectIds}::uuid[])
+        RETURNING id
+    `.execute(db);
+
+    return { deletedCount: result.rows.length };
+};

@@ -585,3 +585,31 @@ export const updateTeam = async (param: {
 
     return team;
 };
+
+export const deleteTeamsByProjectIds = async (
+    projectIds: string[],
+): Promise<{ deletedCount: number }> => {
+    if (projectIds.length === 0) return { deletedCount: 0 };
+
+    const result = await sql<{ deletedCount: string }>`
+        DELETE FROM project_team
+        WHERE fk_project_id = ANY(${projectIds}::uuid[])
+        RETURNING id
+    `.execute(db);
+
+    return { deletedCount: result.rows.length };
+};
+
+export const deleteProjectTeamMembersByProjectIds = async (
+    projectIds: string[],
+): Promise<{ deletedCount: number }> => {
+    if (projectIds.length === 0) return { deletedCount: 0 };
+
+    const result = await sql<{ id: string }>`
+        DELETE FROM project_team_member
+        WHERE fk_project_id = ANY(${projectIds}::uuid[])
+        RETURNING id
+    `.execute(db);
+
+    return { deletedCount: result.rows.length };
+};
