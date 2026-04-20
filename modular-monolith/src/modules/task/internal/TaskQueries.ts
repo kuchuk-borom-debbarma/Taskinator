@@ -867,3 +867,21 @@ export const deleteProjectTaskLinksByProjectIds = async (
 
     return { deletedCount: result.rows.length };
 };
+
+export const unassignTasksByTeamIds = async (
+    teamIds: string[],
+): Promise<{ updatedCount: number }> => {
+    if (teamIds.length === 0) return { updatedCount: 0 };
+
+    const result = await sql<{ id: string }>`
+        UPDATE project_task
+        SET 
+            fk_team_id = NULL,
+            fk_member_id = NULL,
+            updated_at = NOW()
+        WHERE fk_team_id = ANY(${teamIds}::uuid[])
+        RETURNING id
+    `.execute(db);
+
+    return { updatedCount: result.rows.length };
+};

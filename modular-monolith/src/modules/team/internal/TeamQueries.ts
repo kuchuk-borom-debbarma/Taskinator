@@ -613,3 +613,23 @@ export const deleteProjectTeamMembersByProjectIds = async (
 
     return { deletedCount: result.rows.length };
 };
+
+export const updateTeamMemberCountsBulk = async (
+    updates: Map<string, number>,
+): Promise<void> => {
+    const entries = Array.from(updates.entries());
+    if (entries.length === 0) return;
+
+    const ids = entries.map(([id]) => id);
+    const deltas = entries.map(([_, delta]) => delta);
+
+    await sql`
+        UPDATE project_team SET 
+            members_count = project_team.members_count + v.delta,
+            updated_at = NOW()
+        FROM (
+            SELECT * FROM UNNEST(${ids}::uuid[], ${deltas}::int[])
+        ) AS v(id, delta)
+        WHERE project_team.id = v.id
+    `.execute(db);
+};
