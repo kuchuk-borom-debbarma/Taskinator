@@ -350,4 +350,7 @@ export const taskResolvers = {
             });
         },
     },
+    TaskLabelCount: {
+        count: () => 0,
+    },
 };

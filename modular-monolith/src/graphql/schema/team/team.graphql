@@ -91,6 +91,16 @@ type Team {
     Useful for event-sourcing consumers.
     """
     lastEventId: ID
+
+    """
+    Number of members in the team.
+    """
+    membersCount: Int!
+
+    """
+    Number of tasks assigned to the team.
+    """
+    tasksCount: Int!
 }
 
 """

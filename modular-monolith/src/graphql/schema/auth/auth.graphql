@@ -15,6 +15,11 @@ type User {
     The user's unique username.
     """
     username: String!
+
+    """
+    The number of projects the user is a member of.
+    """
+    projectsCount: Int!
 }
 
 """
