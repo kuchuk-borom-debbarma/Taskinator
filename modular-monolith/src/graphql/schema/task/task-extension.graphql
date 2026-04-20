@@ -133,7 +133,7 @@ type TaskMutation {
     """
     Permanently deletes a task. Returns the ID of the deleted task.
     """
-    delete(taskId: ID!): ID!
+    delete(projectId: ID!, taskId: ID!): ID!
 
     """
     Creates a directed, labelled link between two tasks.

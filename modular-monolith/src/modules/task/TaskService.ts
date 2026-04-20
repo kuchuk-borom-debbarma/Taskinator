@@ -116,6 +116,12 @@ export interface TaskService extends BaseService {
         teamId?: string | null;
         memberId?: string | null;
     }): Promise<Task>;
+
+    deleteTask(param: {
+        actorId: string;
+        projectId: string;
+        taskId: string;
+    }): Promise<string>;
 }
 
 // ─── Neighbourhood (Radial Graph View) ──────────────────────────────────────

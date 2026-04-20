@@ -17,6 +17,7 @@ import {
     getTasksPage,
     insertTask,
     updateTask,
+    deleteTask,
 } from './TaskQueries.ts';
 
 export class TaskServiceImpl implements TaskService {
@@ -80,6 +81,14 @@ export class TaskServiceImpl implements TaskService {
         memberId?: string | null;
     }): Promise<Task> {
         return await updateTask(param);
+    }
+
+    async deleteTask(param: {
+        actorId: string;
+        projectId: string;
+        taskId: string;
+    }): Promise<string> {
+        return await deleteTask(param);
     }
 
     async getProjectLinks(

@@ -612,3 +612,48 @@ export const updateTask = async (param: {
 
     return task;
 };
+
+export const deleteTask = async (param: {
+    actorId: string;
+    projectId: string;
+    taskId: string;
+}): Promise<string> => {
+    const result = await sql<{ id: string }>`
+        WITH authorized AS (
+            -- Actor must be project owner or member
+            SELECT 1 FROM project WHERE id = ${param.projectId}::uuid AND fk_user_id = ${param.actorId}::text
+            UNION ALL
+            SELECT 1 FROM project_member WHERE fk_project_id = ${param.projectId}::uuid AND fk_user_id = ${param.actorId}::text
+            LIMIT 1
+        ),
+        deleted_task AS (
+            DELETE FROM project_task
+            WHERE id = ${param.taskId}::uuid
+              AND fk_project_id = ${param.projectId}::uuid
+              AND EXISTS (SELECT 1 FROM authorized)
+            RETURNING id, fk_project_id AS "projectId"
+        ),
+        inserted_outbox AS (
+            INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
+            SELECT 
+                'task.deleted',
+                id::text,
+                jsonb_build_object(
+                    'taskId', id,
+                    'projectId', projectId,
+                    'actorId', ${param.actorId}
+                )
+            FROM deleted_task
+        )
+        SELECT id FROM deleted_task
+    `.execute(db);
+
+    const deletedId = result.rows[0]?.id;
+    if (!deletedId) {
+        throw new NotFoundError(
+            `Task with ID ${param.taskId} not found or unauthorized in project ${param.projectId}.`,
+        );
+    }
+
+    return deletedId;
+};

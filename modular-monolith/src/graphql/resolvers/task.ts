@@ -311,12 +311,17 @@ export const taskResolvers = {
                 memberId: input.memberId,
             });
         },
-        delete: (
+        delete: async (
             _parent: any,
-            { taskId }: { taskId: string },
-            _context: GraphQLContext,
-        ) => {
-            return taskId;
+            { projectId, taskId }: { projectId: string; taskId: string },
+            context: GraphQLContext,
+        ): Promise<string> => {
+            if (!context.userId) throw new UnauthorizedError();
+            return await taskService.deleteTask({
+                actorId: context.userId,
+                projectId,
+                taskId,
+            });
         },
         createLink: (
             _parent: any,
