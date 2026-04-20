@@ -414,3 +414,101 @@ export const deleteTeams = async (param: {
     const deletedCount = parseInt(result.rows[0]?.deletedCount ?? '0', 10);
     return { deletedCount };
 };
+
+export const insertTeamMembers = async (param: {
+    actorId: string;
+    projectId: string;
+    teamId: string;
+    userIds: string[];
+}): Promise<{ addedCount: number }> => {
+    const ids = param.userIds.slice(0, 1000);
+    if (ids.length === 0) return { addedCount: 0 };
+
+    const result = await sql<{ addedCount: string }>`
+        WITH authorized AS (
+            SELECT 1 FROM project WHERE id = ${param.projectId}::uuid AND fk_user_id = ${param.actorId}::text
+            UNION ALL
+            SELECT 1 FROM project_member WHERE fk_project_id = ${param.projectId}::uuid AND fk_user_id = ${param.actorId}::text
+            LIMIT 1
+        ),
+        valid_users AS (
+            SELECT fk_user_id 
+            FROM project_member 
+            WHERE fk_project_id = ${param.projectId}::uuid 
+              AND fk_user_id = ANY(${ids}::text[])
+        ),
+        inserted_members AS (
+            INSERT INTO project_team_member (fk_team_id, fk_project_id, fk_user_id)
+            SELECT ${param.teamId}::uuid, ${param.projectId}::uuid, vu.fk_user_id
+            FROM valid_users vu
+            WHERE EXISTS (SELECT 1 FROM authorized)
+            ON CONFLICT DO NOTHING
+            RETURNING fk_user_id
+        ),
+        inserted_outbox AS (
+            INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
+            SELECT 
+                'team.members_added',
+                ${param.teamId},
+                jsonb_build_object(
+                    'teamId', ${param.teamId},
+                    'projectId', ${param.projectId},
+                    'addedUserIds', (SELECT json_agg(fk_user_id) FROM inserted_members)
+                )
+            WHERE EXISTS (SELECT 1 FROM inserted_members)
+        )
+        SELECT COUNT(*)::text AS "addedCount" FROM inserted_members
+    `.execute(db);
+
+    const addedCount = parseInt(result.rows[0]?.addedCount ?? '0', 10);
+    if (addedCount === 0 && ids.length > 0) {
+        // Double check if team exists or if it was auth failure
+        const team = await getTeamsByIds([param.teamId]);
+        if (!team[0]) throw new NotFoundError('Team not found');
+        // If team exists but 0 added, it could be auth failure OR users already in team
+    }
+
+    return { addedCount };
+};
+
+export const deleteTeamMembers = async (param: {
+    actorId: string;
+    projectId: string;
+    teamId: string;
+    userIds: string[];
+}): Promise<{ removedCount: number }> => {
+    const ids = param.userIds.slice(0, 1000);
+    if (ids.length === 0) return { removedCount: 0 };
+
+    const result = await sql<{ removedCount: string }>`
+        WITH authorized AS (
+            SELECT 1 FROM project WHERE id = ${param.projectId}::uuid AND fk_user_id = ${param.actorId}::text
+            UNION ALL
+            SELECT 1 FROM project_member WHERE fk_project_id = ${param.projectId}::uuid AND fk_user_id = ${param.actorId}::text
+            LIMIT 1
+        ),
+        deleted_members AS (
+            DELETE FROM project_team_member
+            WHERE fk_team_id = ${param.teamId}::uuid
+              AND fk_user_id = ANY(${ids}::text[])
+              AND EXISTS (SELECT 1 FROM authorized)
+            RETURNING fk_user_id
+        ),
+        inserted_outbox AS (
+            INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
+            SELECT 
+                'team.members_removed',
+                ${param.teamId},
+                jsonb_build_object(
+                    'teamId', ${param.teamId},
+                    'projectId', ${param.projectId},
+                    'removedUserIds', (SELECT json_agg(fk_user_id) FROM deleted_members)
+                )
+            WHERE EXISTS (SELECT 1 FROM deleted_members)
+        )
+        SELECT COUNT(*)::text AS "removedCount" FROM deleted_members
+    `.execute(db);
+
+    const removedCount = parseInt(result.rows[0]?.removedCount ?? '0', 10);
+    return { removedCount };
+};

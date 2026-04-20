@@ -247,27 +247,55 @@ export const teamResolvers = {
                 deletedCount,
             };
         },
-        addTeamMembers: (
+        addTeamMembers: async (
             _parent: any,
             {
                 projectId,
                 teamId,
                 userIds,
             }: { projectId: string; teamId: string; userIds: string[] },
-            _context: GraphQLContext,
+            context: GraphQLContext,
         ) => {
-            return { success: true, team: null };
+            if (!context.userId) {
+                throw new Error('Unauthorized');
+            }
+
+            const { addedCount } = await teamService.addTeamMembers({
+                actorId: context.userId,
+                projectId,
+                teamId,
+                userIds,
+            });
+
+            return {
+                success: true,
+                addedCount,
+            };
         },
-        removeTeamMembers: (
+        removeTeamMembers: async (
             _parent: any,
             {
                 projectId,
                 teamId,
                 userIds,
             }: { projectId: string; teamId: string; userIds: string[] },
-            _context: GraphQLContext,
+            context: GraphQLContext,
         ) => {
-            return { success: true, team: null };
+            if (!context.userId) {
+                throw new Error('Unauthorized');
+            }
+
+            const { removedCount } = await teamService.removeTeamMembers({
+                actorId: context.userId,
+                projectId,
+                teamId,
+                userIds,
+            });
+
+            return {
+                success: true,
+                removedCount,
+            };
         },
     },
 };

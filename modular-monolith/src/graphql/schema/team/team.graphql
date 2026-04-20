@@ -171,15 +171,15 @@ type DeleteTeamsPayload {
 type AddTeamMembersPayload {
     success: Boolean!
     """
-    The updated team after members were added.
+    Number of members successfully added.
     """
-    team: Team
+    addedCount: Int!
 }
 
 type RemoveTeamMembersPayload {
     success: Boolean!
     """
-    The updated team after members were removed.
+    Number of members successfully removed.
     """
-    team: Team
+    removedCount: Int!
 }
