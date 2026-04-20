@@ -77,6 +77,12 @@ export interface TeamService extends BaseService {
         actorId: string,
         teamIds: string[],
     ): Promise<Team[]>;
+
+    createTeam(param: {
+        actorId: string;
+        projectId: string;
+        name: string;
+    }): Promise<Team>;
 }
 
 export type { User };

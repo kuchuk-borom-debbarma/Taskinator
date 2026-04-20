@@ -4,6 +4,51 @@ import { decodeCursor, encodeCursor } from '../../../utils/utils.ts';
 import { sql } from 'kysely';
 import type { PaginationParams } from '../../../types/pagination.ts';
 import type { User } from '../../auth/AuthService.ts';
+import { NotFoundError } from '../../../graphql/errors.ts';
+
+export const insertTeam = async (param: {
+    actorId: string;
+    projectId: string;
+    name: string;
+}): Promise<Team> => {
+    const result = await sql<Team>`
+        WITH authorized AS (
+            SELECT 1 FROM project WHERE id = ${param.projectId}::uuid AND fk_user_id = ${param.actorId}::text
+            UNION ALL
+            SELECT 1 FROM project_member WHERE fk_project_id = ${param.projectId}::uuid AND fk_user_id = ${param.actorId}::text
+            LIMIT 1
+        ),
+        inserted_team AS (
+            INSERT INTO project_team (name, fk_project_id, fk_user_id)
+            SELECT ${param.name}, ${param.projectId}::uuid, ${param.actorId}
+            WHERE EXISTS (SELECT 1 FROM authorized)
+            RETURNING id, name, fk_project_id AS "projectId", fk_user_id AS "createdBy", version, last_event_id AS "lastEventId", created_at AS "createdAt", updated_at AS "updatedAt"
+        ),
+        inserted_outbox AS (
+            INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
+            SELECT 
+                'team.created',
+                "projectId"::text,
+                jsonb_build_object(
+                    'teamId', id,
+                    'projectId', "projectId",
+                    'name', name,
+                    'createdBy', "createdBy"
+                )
+            FROM inserted_team
+        )
+        SELECT * FROM inserted_team
+    `.execute(db);
+
+    const team = result.rows[0];
+    if (!team) {
+        throw new NotFoundError(
+            `Project with ID ${param.projectId} not found or you are not authorized to create a team in it.`,
+        );
+    }
+
+    return team;
+};
 
 export const getTeams = async (
     userId: string,

@@ -17,7 +17,8 @@ import {
     createTeam,
     addTeamMember,
 } from '../../../../__tests__/helpers/factories.ts';
-import { getTeams, getTeamMembers } from '../TeamQueries.ts';
+import { getTeams, getTeamMembers, insertTeam } from '../TeamQueries.ts';
+import { sql } from 'kysely';
 
 describe('TeamQueries — Integration (Real DB + wCTE)', () => {
     let ownerId: string;
@@ -66,6 +67,52 @@ describe('TeamQueries — Integration (Real DB + wCTE)', () => {
             const result = await getTeamMembers(ownerId, projectId, team.id);
             expect(result.members).toHaveLength(1);
             expect(result.members[0]!.userId).toBe(m.id);
+        });
+    });
+
+    // ─── insertTeam ─────────────────────────────────────────────────────────────
+    describe('insertTeam', () => {
+        it('allows project owner to create a team', async () => {
+            const team = await insertTeam({
+                actorId: ownerId,
+                projectId: projectId,
+                name: 'Owner Team',
+            });
+
+            expect(team.name).toBe('Owner Team');
+            expect(team.projectId).toBe(projectId);
+
+            // Verify outbox
+            const outbox =
+                await sql<any>`SELECT * FROM outbox_events WHERE kafka_topic = 'team.created'`.execute(
+                    db,
+                );
+            expect(outbox.rows).toHaveLength(1);
+            expect(outbox.rows[0].payload.teamId).toBe(team.id);
+        });
+
+        it('allows project member to create a team', async () => {
+            const member = await createUser();
+            await addProjectMember(projectId, member.id);
+
+            const team = await insertTeam({
+                actorId: member.id,
+                projectId: projectId,
+                name: 'Member Team',
+            });
+
+            expect(team.name).toBe('Member Team');
+        });
+
+        it('throws NotFoundError for non-members', async () => {
+            const stranger = await createUser();
+            await expect(
+                insertTeam({
+                    actorId: stranger.id,
+                    projectId: projectId,
+                    name: 'Rogue Team',
+                }),
+            ).rejects.toThrow('Project with ID');
         });
     });
 });

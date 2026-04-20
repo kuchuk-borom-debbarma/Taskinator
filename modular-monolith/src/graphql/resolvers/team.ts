@@ -209,12 +209,23 @@ export const teamResolvers = {
     },
 
     Mutation: {
-        createTeam: (
+        createTeam: async (
             _parent: any,
             { projectId, name }: { projectId: string; name: string },
-            _context: GraphQLContext,
+            context: GraphQLContext,
         ) => {
-            return { success: true, team: null };
+            if (!context.userId) throw new UnauthorizedError();
+
+            const team = await teamService.createTeam({
+                actorId: context.userId,
+                projectId,
+                name,
+            });
+
+            return {
+                success: true,
+                team,
+            };
         },
         deleteTeams: (
             _parent: any,

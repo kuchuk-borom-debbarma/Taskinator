@@ -5,6 +5,7 @@ import {
     getTeams,
     getTeamsByActorIdAndIds,
     getTeamsByIds as getTeamsByIdsQuery,
+    insertTeam,
     searchTeamUsers,
 } from './TeamQueries.ts';
 import type { User } from '../../auth/AuthService.ts';
@@ -59,6 +60,14 @@ export class TeamServiceImpl implements TeamService {
         teamIds: string[],
     ): Promise<Team[]> {
         return await getTeamsByActorIdAndIds(actorId, teamIds);
+    }
+
+    async createTeam(param: {
+        actorId: string;
+        projectId: string;
+        name: string;
+    }): Promise<Team> {
+        return await insertTeam(param);
     }
 
     async init(): Promise<void> {
