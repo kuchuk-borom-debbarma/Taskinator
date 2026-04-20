@@ -509,7 +509,13 @@ export const updateTask = async (param: {
     const setClause = sql.join(updates, sql`, `);
 
     const result = await sql<Task>`
-        WITH authorized AS (
+        WITH current_state AS (
+            SELECT id, fk_project_id, fk_team_id, fk_member_id, title, status, version
+            FROM project_task
+            WHERE id = ${param.taskId}::uuid AND fk_project_id = ${param.projectId}::uuid
+            FOR UPDATE
+        ),
+        authorized AS (
             -- Actor must be project owner or member
             SELECT 1 FROM project WHERE id = ${param.projectId}::uuid AND fk_user_id = ${param.actorId}::text
             UNION ALL
@@ -562,19 +568,26 @@ export const updateTask = async (param: {
             INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
             SELECT 
                 'task.updated',
-                id::text,
+                u.id::text,
                 jsonb_build_object(
-                    'taskId', id,
-                    'projectId', projectId,
-                    'updates', jsonb_build_object(
-                        'title', title,
-                        'status', status,
-                        'teamId', teamId,
-                        'memberId', memberId
+                    'taskId', u.id,
+                    'projectId', u."projectId",
+                    'old', jsonb_build_object(
+                        'teamId', c.fk_team_id,
+                        'memberId', c.fk_member_id,
+                        'title', c.title,
+                        'status', c.status
+                    ),
+                    'new', jsonb_build_object(
+                        'teamId', u."teamId",
+                        'memberId', u."memberId",
+                        'title', u.title,
+                        'status', u.status
                     ),
                     'actorId', ${param.actorId}
                 )
-            FROM updated_task
+            FROM updated_task u
+            CROSS JOIN current_state c
         )
         SELECT * FROM updated_task
     `.execute(db);

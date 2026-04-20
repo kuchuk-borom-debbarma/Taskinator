@@ -20,6 +20,7 @@ export class TaskEvents_BatchAggregator {
             'task-aggregator-group',
             {
                 [KAFKA_EVENTS.TASK.CREATED]: this.handleTaskBatch.bind(this),
+                [KAFKA_EVENTS.TASK.UPDATED]: this.handleTaskBatch.bind(this),
                 [KAFKA_EVENTS.TASK.DELETED]: this.handleTaskBatch.bind(this),
             },
             { batch: true },
@@ -33,49 +34,53 @@ export class TaskEvents_BatchAggregator {
             `[Task Coordinator] Processing batch of ${events.length} events`,
         );
 
-        // 1. Semantic Folding (Cancellation Logic)
-        // Group by TaskId to cancel out Create+Delete in same batch
-        const taskBalance = new Map<
-            string,
-            { projectId: string; teamId: string | null; balance: number }
-        >();
-
-        for (const event of events) {
-            const { taskId, projectId, teamId } = event.data;
-            const current = taskBalance.get(taskId) || {
-                projectId,
-                teamId: teamId || null,
-                balance: 0,
-            };
-
-            if (event.type === KAFKA_EVENTS.TASK.CREATED) {
-                current.balance += 1;
-            } else if (event.type === KAFKA_EVENTS.TASK.DELETED) {
-                current.balance -= 1;
-            }
-
-            taskBalance.set(taskId, current);
-        }
-
-        // 2. Aggregate counts per Project and Team
+        // 1. Semantic Folding & Count Delta Preparation
+        // We use a delta-based approach for counters
         const projectIncrements = new Map<string, number>();
         const teamIncrements = new Map<string, number>();
 
-        for (const state of taskBalance.values()) {
-            if (state.balance === 0) continue;
+        for (const event of events) {
+            const { projectId } = event.data;
 
-            // Project level
-            projectIncrements.set(
-                state.projectId,
-                (projectIncrements.get(state.projectId) || 0) + state.balance,
-            );
+            switch (event.type) {
+                case KAFKA_EVENTS.TASK.CREATED:
+                    projectIncrements.set(
+                        projectId,
+                        (projectIncrements.get(projectId) || 0) + 1,
+                    );
+                    break;
 
-            // Team level (if assigned)
-            if (state.teamId) {
-                teamIncrements.set(
-                    state.teamId,
-                    (teamIncrements.get(state.teamId) || 0) + state.balance,
-                );
+                case KAFKA_EVENTS.TASK.DELETED:
+                    projectIncrements.set(
+                        projectId,
+                        (projectIncrements.get(projectId) || 0) - 1,
+                    );
+                    if (event.data.teamId) {
+                        teamIncrements.set(
+                            event.data.teamId,
+                            (teamIncrements.get(event.data.teamId) || 0) - 1,
+                        );
+                    }
+                    break;
+
+                case KAFKA_EVENTS.TASK.UPDATED:
+                    const { old, new: newState } = event.data;
+                    // If team changed, adjust counters
+                    if (old.teamId !== newState.teamId) {
+                        if (old.teamId) {
+                            teamIncrements.set(
+                                old.teamId,
+                                (teamIncrements.get(old.teamId) || 0) - 1,
+                            );
+                        }
+                        if (newState.teamId) {
+                            teamIncrements.set(
+                                newState.teamId,
+                                (teamIncrements.get(newState.teamId) || 0) + 1,
+                            );
+                        }
+                    }
+                    break;
             }
         }
 
