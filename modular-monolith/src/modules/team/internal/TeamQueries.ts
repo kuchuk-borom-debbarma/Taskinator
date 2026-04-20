@@ -4,7 +4,7 @@ import { decodeCursor, encodeCursor } from '../../../utils/utils.ts';
 import { sql } from 'kysely';
 import type { PaginationParams } from '../../../types/pagination.ts';
 import type { User } from '../../auth/AuthService.ts';
-import { NotFoundError } from '../../../graphql/errors.ts';
+import { NotFoundError, ConflictError } from '../../../graphql/errors.ts';
 
 export const insertTeam = async (param: {
     actorId: string;
@@ -511,4 +511,77 @@ export const deleteTeamMembers = async (param: {
 
     const removedCount = parseInt(result.rows[0]?.removedCount ?? '0', 10);
     return { removedCount };
+};
+
+export const updateTeam = async (param: {
+    actorId: string;
+    projectId: string;
+    teamId: string;
+    name: string;
+    version: number;
+}): Promise<Team> => {
+    const result = await sql<Team>`
+        WITH authorized AS (
+            SELECT 1 FROM project WHERE id = ${param.projectId}::uuid AND fk_user_id = ${param.actorId}::text
+            UNION ALL
+            SELECT 1 FROM project_member WHERE fk_project_id = ${param.projectId}::uuid AND fk_user_id = ${param.actorId}::text
+            LIMIT 1
+        ),
+        updated AS (
+            UPDATE project_team
+            SET 
+                name = ${param.name},
+                version = version + 1,
+                updated_at = NOW()
+            WHERE id = ${param.teamId}::uuid
+              AND fk_project_id = ${param.projectId}::uuid
+              AND version = ${param.version}
+              AND EXISTS (SELECT 1 FROM authorized)
+            RETURNING id, name, fk_project_id AS "projectId", fk_user_id AS "createdBy", 
+                      version, last_event_id AS "lastEventId", created_at AS "createdAt", updated_at AS "updatedAt"
+        ),
+        inserted_outbox AS (
+            INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
+            SELECT 
+                'team.updated',
+                id::text,
+                jsonb_build_object(
+                    'teamId', id,
+                    'projectId', projectId,
+                    'name', name,
+                    'version', version,
+                    'actorId', ${param.actorId}
+                )
+            FROM updated
+        )
+        SELECT * FROM updated
+    `.execute(db);
+
+    const team = result.rows[0];
+    if (!team) {
+        // Distinguish between Not Found / Unauthorized vs Version Conflict
+        const currentTeamResult = await sql<{ version: number }>`
+            SELECT version FROM project_team WHERE id = ${param.teamId}::uuid
+        `.execute(db);
+
+        const currentTeam = currentTeamResult.rows[0];
+        if (!currentTeam) {
+            throw new NotFoundError(
+                `Team with ID ${param.teamId} not found or you are not authorized.`,
+            );
+        }
+
+        if (currentTeam.version !== param.version) {
+            throw new ConflictError(
+                `Team version mismatch. Current version is ${currentTeam.version}, but you provided ${param.version}.`,
+            );
+        }
+
+        // If version matches but update failed, it was probably authorization
+        throw new NotFoundError(
+            `Team with ID ${param.teamId} not found or you are not authorized to update it.`,
+        );
+    }
+
+    return team;
 };

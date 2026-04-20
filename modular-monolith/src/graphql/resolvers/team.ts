@@ -297,5 +297,35 @@ export const teamResolvers = {
                 removedCount,
             };
         },
+        updateTeam: async (
+            _parent: any,
+            {
+                projectId,
+                teamId,
+                name,
+                version,
+            }: {
+                projectId: string;
+                teamId: string;
+                name: string;
+                version: number;
+            },
+            context: GraphQLContext,
+        ) => {
+            if (!context.userId) throw new UnauthorizedError();
+
+            const team = await teamService.updateTeam({
+                actorId: context.userId,
+                projectId,
+                teamId,
+                name,
+                version,
+            });
+
+            return {
+                success: true,
+                team,
+            };
+        },
     },
 };

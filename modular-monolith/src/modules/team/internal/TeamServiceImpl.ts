@@ -9,6 +9,7 @@ import {
     deleteTeams,
     insertTeamMembers,
     deleteTeamMembers,
+    updateTeam,
     searchTeamUsers,
 } from './TeamQueries.ts';
 import type { User } from '../../auth/AuthService.ts';
@@ -97,6 +98,16 @@ export class TeamServiceImpl implements TeamService {
         userIds: string[];
     }): Promise<{ removedCount: number }> {
         return await deleteTeamMembers(param);
+    }
+
+    async updateTeam(param: {
+        actorId: string;
+        projectId: string;
+        teamId: string;
+        name: string;
+        version: number;
+    }): Promise<Team> {
+        return await updateTeam(param);
     }
 
     async init(): Promise<void> {

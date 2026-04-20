@@ -183,3 +183,11 @@ type RemoveTeamMembersPayload {
     """
     removedCount: Int!
 }
+
+type UpdateTeamPayload {
+    success: Boolean!
+    """
+    The updated team.
+    """
+    team: Team
+}

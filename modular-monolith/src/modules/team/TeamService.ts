@@ -103,6 +103,14 @@ export interface TeamService extends BaseService {
         teamId: string;
         userIds: string[];
     }): Promise<{ removedCount: number }>;
+
+    updateTeam(param: {
+        actorId: string;
+        projectId: string;
+        teamId: string;
+        name: string;
+        version: number;
+    }): Promise<Team>;
 }
 
 export type { User };

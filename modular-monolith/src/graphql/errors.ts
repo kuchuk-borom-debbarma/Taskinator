@@ -54,3 +54,13 @@ export class MutationFailedError extends GraphQLError {
         });
     }
 }
+export class ConflictError extends GraphQLError {
+    constructor(message: string = 'Conflict: Stale data detected') {
+        super(message, {
+            extensions: {
+                code: 'CONFLICT',
+                http: { status: 409 },
+            },
+        });
+    }
+}
