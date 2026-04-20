@@ -3,6 +3,7 @@ import type {
     ProjectMember,
     ProjectService,
 } from '../ProjectService.ts';
+import type { PaginationParams } from '../../../types/pagination.ts';
 import {
     getProjectMembers,
     getProjectMembersByActorIdAndIds,
@@ -19,12 +20,7 @@ import eventBus from '../../../utils/EventBus.ts';
 export class ProjectServiceImpl implements ProjectService {
     async getProjectsOfUser(
         userId: string,
-        params?: {
-            first?: number;
-            after?: string;
-            last?: number;
-            before?: string;
-        },
+        params?: PaginationParams,
     ): Promise<{
         projects: Project[];
         nextCursor: string | null;
@@ -37,12 +33,7 @@ export class ProjectServiceImpl implements ProjectService {
     async getProjectMembers(
         userId: string,
         projectId: string,
-        params?: {
-            first?: number;
-            after?: string;
-            last?: number;
-            before?: string;
-        },
+        params?: PaginationParams,
     ): Promise<{
         members: ProjectMember[];
         nextCursor: string | null;

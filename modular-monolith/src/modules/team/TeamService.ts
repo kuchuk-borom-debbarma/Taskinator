@@ -1,5 +1,6 @@
 import type { BaseService } from '../project';
 import type { User } from '../auth/AuthService.ts';
+import type { PaginationParams } from '../../types/pagination.ts';
 
 export type Team = {
     id: string;
@@ -27,11 +28,7 @@ export interface TeamService extends BaseService {
     getTeams(
         userId: string,
         projectId: string | null,
-        params?: {
-            first?: number;
-            after?: string;
-            last?: number;
-            before?: string;
+        params?: PaginationParams & {
             memberId?: string;
         },
     ): Promise<{
@@ -44,12 +41,7 @@ export interface TeamService extends BaseService {
         userId: string,
         projectId: string,
         teamId: string,
-        params?: {
-            first?: number;
-            after?: string;
-            last?: number;
-            before?: string;
-        },
+        params?: PaginationParams,
     ): Promise<{
         members: TeamMember[];
         nextCursor: string | null;
@@ -60,16 +52,14 @@ export interface TeamService extends BaseService {
      * Search users who are members of a specific team.
      * Exact match on username or user id. Cursor-paginated.
      */
-    searchTeamUsers(params: {
-        actorId: string;
-        projectId: string;
-        teamId: string;
-        search?: string;
-        first?: number;
-        after?: string;
-        last?: number;
-        before?: string;
-    }): Promise<{
+    searchTeamUsers(
+        params: {
+            actorId: string;
+            projectId: string;
+            teamId: string;
+            search?: string;
+        } & PaginationParams,
+    ): Promise<{
         users: User[];
         nextCursor: string | null;
         prevCursor: string | null;

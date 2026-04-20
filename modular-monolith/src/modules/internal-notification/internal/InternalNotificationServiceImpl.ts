@@ -3,6 +3,7 @@ import type {
     InternalNotification,
     InternalNotificationService,
 } from '../InternalNotificationService.ts';
+import type { PaginationParams } from '../../../types/pagination.ts';
 import * as Queries from './InternalNotificationQueries.ts';
 import eventBus from '../../../utils/EventBus.ts';
 import { notificationRequestedListener } from './listeners/NotificationRequestedListener.ts';
@@ -32,12 +33,7 @@ export class InternalNotificationServiceImpl
 
     async getNotifications(
         userId: string,
-        params: {
-            first?: number;
-            after?: string;
-            last?: number;
-            before?: string;
-        },
+        params: PaginationParams,
     ): Promise<{
         notifications: InternalNotification[];
         nextCursor: string | null;

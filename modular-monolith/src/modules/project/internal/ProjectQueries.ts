@@ -2,6 +2,7 @@ import type { Project, ProjectMember } from '../ProjectService.ts';
 import { db } from '../../../database';
 import { decodeCursor, encodeCursor } from '../../../utils/utils.ts';
 import { sql } from 'kysely';
+import type { PaginationParams } from '../../../types/pagination.ts';
 
 export async function insertProject(param: {
     userId: string;
@@ -221,12 +222,7 @@ export async function deleteProjectMembers(param: {
 
 export const getProjects = async (
     userId: string,
-    params: {
-        first?: number;
-        after?: string;
-        last?: number;
-        before?: string;
-    } = {},
+    params: PaginationParams = {},
 ): Promise<{
     projects: Project[];
     nextCursor: string | null;
@@ -319,12 +315,7 @@ export const getProjects = async (
 export const getProjectMembers = async (
     userId: string,
     projectId: string,
-    params: {
-        first?: number;
-        after?: string;
-        last?: number;
-        before?: string;
-    } = {},
+    params: PaginationParams = {},
 ): Promise<{
     members: ProjectMember[];
     nextCursor: string | null;

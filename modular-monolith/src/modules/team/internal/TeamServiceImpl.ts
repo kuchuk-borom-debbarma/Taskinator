@@ -1,4 +1,5 @@
 import type { Team, TeamMember, TeamService } from '../TeamService.ts';
+import type { PaginationParams } from '../../../types/pagination.ts';
 import {
     getTeamMembers,
     getTeams,
@@ -12,13 +13,7 @@ export class TeamServiceImpl implements TeamService {
     async getTeams(
         userId: string,
         projectId: string | null,
-        params?: {
-            first?: number;
-            after?: string;
-            last?: number;
-            before?: string;
-            memberId?: string;
-        },
+        params?: PaginationParams & { memberId?: string },
     ): Promise<{
         teams: Team[];
         nextCursor: string | null;
@@ -31,12 +26,7 @@ export class TeamServiceImpl implements TeamService {
         userId: string,
         projectId: string,
         teamId: string,
-        params?: {
-            first?: number;
-            after?: string;
-            last?: number;
-            before?: string;
-        },
+        params?: PaginationParams,
     ): Promise<{
         members: TeamMember[];
         nextCursor: string | null;
@@ -45,16 +35,14 @@ export class TeamServiceImpl implements TeamService {
         return getTeamMembers(userId, projectId, teamId, params);
     }
 
-    async searchTeamUsers(params: {
-        actorId: string;
-        projectId: string;
-        teamId: string;
-        search?: string;
-        first?: number;
-        after?: string;
-        last?: number;
-        before?: string;
-    }): Promise<{
+    async searchTeamUsers(
+        params: {
+            actorId: string;
+            projectId: string;
+            teamId: string;
+            search?: string;
+        } & PaginationParams,
+    ): Promise<{
         users: User[];
         nextCursor: string | null;
         prevCursor: string | null;

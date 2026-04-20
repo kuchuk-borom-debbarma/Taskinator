@@ -1,4 +1,5 @@
 import type { BaseService } from './index.ts';
+import type { PaginationParams } from '../../types/pagination.ts';
 
 export type Project = {
     id: string;
@@ -29,12 +30,7 @@ export interface ProjectService extends BaseService {
      */
     getProjectsOfUser(
         userId: string,
-        params?: {
-            first?: number;
-            after?: string;
-            last?: number;
-            before?: string;
-        },
+        params?: PaginationParams,
     ): Promise<{
         projects: Project[];
         nextCursor: string | null;
@@ -44,12 +40,7 @@ export interface ProjectService extends BaseService {
     getProjectMembers(
         userId: string,
         projectId: string,
-        params?: {
-            first?: number;
-            after?: string;
-            last?: number;
-            before?: string;
-        },
+        params?: PaginationParams,
     ): Promise<{
         members: ProjectMember[];
         nextCursor: string | null;

@@ -8,13 +8,7 @@ import {
 } from '../errors.ts';
 import { projectService } from '../../modules/project';
 import { encodeCursor } from '../../utils/utils.ts';
-
-interface PaginationArgs {
-    first?: number;
-    after?: string;
-    last?: number;
-    before?: string;
-}
+import type { PaginationParams } from '../../types/pagination.ts';
 
 export const projectResolvers = {
     Project: {
@@ -26,7 +20,7 @@ export const projectResolvers = {
         },
         projectMembers: async (
             parent: Project,
-            args: PaginationArgs,
+            args: PaginationParams,
             context: GraphQLContext,
         ) => {
             if (!context.userId) throw new UnauthorizedError();
@@ -95,7 +89,7 @@ export const projectResolvers = {
     User: {
         projects: async (
             parent: User,
-            args: PaginationArgs,
+            args: PaginationParams,
             context: GraphQLContext,
         ) => {
             if (!context.userId) throw new UnauthorizedError();

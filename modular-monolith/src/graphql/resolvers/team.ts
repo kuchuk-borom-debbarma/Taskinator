@@ -5,13 +5,7 @@ import { NotFoundError, UnauthorizedError } from '../errors.ts';
 import { teamService } from '../../modules/team';
 import { taskService } from '../../modules/task';
 import { encodeCursor } from '../../utils/utils.ts';
-
-interface PaginationArgs {
-    first?: number;
-    after?: string;
-    last?: number;
-    before?: string;
-}
+import type { PaginationParams } from '../../types/pagination.ts';
 
 export const teamResolvers = {
     Team: {
@@ -23,7 +17,7 @@ export const teamResolvers = {
         },
         members: async (
             parent: Team,
-            args: PaginationArgs,
+            args: PaginationParams,
             context: GraphQLContext,
         ) => {
             if (!context.userId) throw new UnauthorizedError();
@@ -51,7 +45,7 @@ export const teamResolvers = {
         },
         tasks: async (
             parent: Team,
-            args: PaginationArgs,
+            args: PaginationParams,
             context: GraphQLContext,
         ) => {
             if (!context.userId) throw new UnauthorizedError();
@@ -136,7 +130,7 @@ export const teamResolvers = {
     Project: {
         teams: async (
             parent: Project,
-            args: PaginationArgs,
+            args: PaginationParams,
             context: GraphQLContext,
         ) => {
             if (!context.userId) throw new UnauthorizedError();

@@ -2,18 +2,13 @@ import type { Team, TeamMember } from '../TeamService.ts';
 import { db } from '../../../database';
 import { decodeCursor, encodeCursor } from '../../../utils/utils.ts';
 import { sql } from 'kysely';
+import type { PaginationParams } from '../../../types/pagination.ts';
 import type { User } from '../../auth/AuthService.ts';
 
 export const getTeams = async (
     userId: string,
     projectId: string | null,
-    params: {
-        first?: number;
-        after?: string;
-        last?: number;
-        before?: string;
-        memberId?: string;
-    } = {},
+    params: PaginationParams & { memberId?: string } = {},
 ): Promise<{
     teams: Team[];
     nextCursor: string | null;
@@ -109,12 +104,7 @@ export const getTeamMembers = async (
     userId: string,
     projectId: string,
     teamId: string,
-    params: {
-        first?: number;
-        after?: string;
-        last?: number;
-        before?: string;
-    } = {},
+    params: PaginationParams = {},
 ): Promise<{
     members: TeamMember[];
     nextCursor: string | null;
@@ -198,16 +188,14 @@ export const getTeamMembers = async (
     return { members, nextCursor, prevCursor };
 };
 
-export const searchTeamUsers = async (params: {
-    actorId: string;
-    projectId: string;
-    teamId: string;
-    search?: string;
-    first?: number;
-    after?: string;
-    last?: number;
-    before?: string;
-}): Promise<{
+export const searchTeamUsers = async (
+    params: {
+        actorId: string;
+        projectId: string;
+        teamId: string;
+        search?: string;
+    } & PaginationParams,
+): Promise<{
     users: User[];
     nextCursor: string | null;
     prevCursor: string | null;

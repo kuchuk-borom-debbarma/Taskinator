@@ -1,5 +1,6 @@
 import { db } from '../../../database';
 import { sql } from 'kysely';
+import type { PaginationParams } from '../../../types/pagination.ts';
 import type {
     CreateNotificationParam,
     InternalNotification,
@@ -68,12 +69,7 @@ export const insertNotification = async (
 
 export const getNotifications = async (
     userId: string,
-    params: {
-        first?: number;
-        after?: string;
-        last?: number;
-        before?: string;
-    } = {},
+    params: PaginationParams = {},
 ): Promise<{
     notifications: InternalNotification[];
     nextCursor: string | null;

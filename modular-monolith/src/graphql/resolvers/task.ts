@@ -4,13 +4,7 @@ import type { Project } from '../../modules/project/ProjectService.ts';
 import { NotFoundError, UnauthorizedError } from '../errors.ts';
 import { taskService } from '../../modules/task';
 import { encodeCursor } from '../../utils/utils.ts';
-
-interface PaginationArgs {
-    first?: number;
-    after?: string;
-    last?: number;
-    before?: string;
-}
+import type { PaginationParams } from '../../types/pagination.ts';
 
 interface CreateTaskInput {
     projectId: string;
@@ -66,7 +60,10 @@ export const taskResolvers = {
         },
         neighbourLinks: async (
             parent: Task,
-            args: any,
+            args: PaginationParams & {
+                direction: 'incoming' | 'outgoing' | 'both';
+                depthLimit: number;
+            },
             context: GraphQLContext,
         ) => {
             if (!context.userId) throw new UnauthorizedError();
@@ -79,8 +76,9 @@ export const taskResolvers = {
                         userId: context.userId,
                         projectId: parent.projectId,
                         taskId: parent.id,
-                        direction:
-                            direction === 'both' ? 'incoming' : direction,
+                        direction: (direction === 'both'
+                            ? 'incoming'
+                            : direction) as 'incoming' | 'outgoing',
                     },
                     pagination,
                 );
@@ -192,7 +190,7 @@ export const taskResolvers = {
     Project: {
         projectTasks: async (
             parent: Project,
-            args: any,
+            args: PaginationParams,
             context: GraphQLContext,
         ) => {
             if (!context.userId) throw new UnauthorizedError();
@@ -218,7 +216,7 @@ export const taskResolvers = {
         },
         assignedTasks: async (
             parent: Project,
-            args: any,
+            args: PaginationParams,
             context: GraphQLContext,
         ) => {
             if (!context.userId) throw new UnauthorizedError();

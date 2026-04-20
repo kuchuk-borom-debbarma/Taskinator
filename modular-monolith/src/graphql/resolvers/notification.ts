@@ -1,12 +1,6 @@
 import type { GraphQLContext } from '../context.ts';
 import type { InternalNotification } from '../../modules/internal-notification';
-
-interface PaginationArgs {
-    first?: number;
-    after?: string;
-    last?: number;
-    before?: string;
-}
+import type { PaginationParams } from '../../types/pagination.ts';
 
 export const notificationResolvers = {
     InternalNotification: {
@@ -29,7 +23,7 @@ export const notificationResolvers = {
     Query: {
         notifications: (
             _parent: any,
-            _args: PaginationArgs,
+            _args: PaginationParams,
             _context: GraphQLContext,
         ) => {
             return null;

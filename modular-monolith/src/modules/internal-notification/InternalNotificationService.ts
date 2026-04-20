@@ -1,4 +1,5 @@
 import type { BaseService } from '../project';
+import type { PaginationParams } from '../../types/pagination.ts';
 
 export interface InternalNotification {
     id: string;
@@ -32,12 +33,7 @@ export interface InternalNotificationService extends BaseService {
     markAllAsRead(userId: string): Promise<void>;
     getNotifications(
         userId: string,
-        params: {
-            first?: number;
-            after?: string;
-            last?: number;
-            before?: string;
-        },
+        params: PaginationParams,
     ): Promise<{
         notifications: InternalNotification[];
         nextCursor: string | null;

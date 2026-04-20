@@ -1,4 +1,5 @@
 import type { BaseService } from './index.ts';
+import type { PaginationParams as SharedPaginationParams } from '../../types/pagination.ts';
 
 export type TaskStatus = string;
 
@@ -38,14 +39,10 @@ export type TaskLink = {
     updatedAt?: string;
 };
 
-export interface PaginationParams {
-    first?: number;
-    after?: string;
-    last?: number;
-    before?: string;
+export type PaginationParams = SharedPaginationParams & {
     teamId?: string;
     memberId?: string;
-}
+};
 
 export interface TaskConnection {
     tasks: Task[];
@@ -121,13 +118,9 @@ export interface TaskNeighbourhoodResult {
     prevCursor: string | null;
 }
 
-export interface GetNeighbourhoodParam {
+export interface GetNeighbourhoodParam extends SharedPaginationParams {
     userId: string;
     projectId: string;
     taskId: string;
     maxDepth?: number; // default 3, hard cap 5
-    first?: number;
-    last?: number;
-    after?: string;
-    before?: string;
 }
