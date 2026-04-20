@@ -11,8 +11,6 @@ interface CreateTaskInput {
     title: string;
     description?: string;
     status?: string;
-    teamId?: string;
-    memberId?: string;
 }
 
 interface UpdateTaskInput {

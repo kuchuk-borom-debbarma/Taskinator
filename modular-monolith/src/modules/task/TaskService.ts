@@ -95,6 +95,15 @@ export interface TaskService extends BaseService {
     getTaskNeighbourhood(
         params: GetNeighbourhoodParam,
     ): Promise<TaskNeighbourhoodResult>;
+
+    // Write Operations
+    createTask(param: {
+        actorId: string;
+        projectId: string;
+        title: string;
+        description?: string | null;
+        status?: string | null;
+    }): Promise<Task>;
 }
 
 // ─── Neighbourhood (Radial Graph View) ──────────────────────────────────────

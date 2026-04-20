@@ -9,6 +9,7 @@ import type {
 import { db } from '../../../database';
 import { decodeCursor, encodeCursor } from '../../../utils/utils.ts';
 import { sql } from 'kysely';
+import { NotFoundError } from '../../../graphql/errors.ts';
 
 export const getTasksPage = async (
     userId: string,
@@ -395,4 +396,77 @@ export const getNeighbourhood = async (
         nextCursor: null,
         prevCursor: null,
     };
+};
+
+export const insertTask = async (param: {
+    actorId: string;
+    projectId: string;
+    title: string;
+    description?: string | null;
+    status?: string | null;
+}): Promise<Task> => {
+    const result = await sql<Task>`
+        WITH authorized AS (
+            SELECT 1 FROM project WHERE id = ${param.projectId}::uuid AND fk_user_id = ${param.actorId}::text
+            UNION ALL
+            SELECT 1 FROM project_member WHERE fk_project_id = ${param.projectId}::uuid AND fk_user_id = ${param.actorId}::text
+            LIMIT 1
+        ),
+        inserted_task AS (
+            INSERT INTO project_task (
+                fk_project_id, 
+                title, 
+                description, 
+                status, 
+                fk_created_by, 
+                fk_updated_by
+            )
+            SELECT 
+                ${param.projectId}::uuid, 
+                ${param.title}, 
+                ${param.description ?? ''}, 
+                ${param.status ?? 'TODO'}, 
+                ${param.actorId}, 
+                ${param.actorId}
+            WHERE EXISTS (SELECT 1 FROM authorized)
+            RETURNING 
+                id, 
+                fk_project_id AS "projectId", 
+                fk_team_id AS "teamId", 
+                fk_member_id AS "memberId",
+                title, 
+                description, 
+                status, 
+                version, 
+                last_event_id AS "lastEventId",
+                fk_created_by AS "createdBy", 
+                fk_updated_by AS "updatedBy",
+                priority, 
+                created_at AS "createdAt", 
+                updated_at AS "updatedAt"
+        ),
+        inserted_outbox AS (
+            INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
+            SELECT 
+                'task.created',
+                id::text,
+                jsonb_build_object(
+                    'taskId', id,
+                    'projectId', projectId,
+                    'title', title,
+                    'actorId', ${param.actorId}
+                )
+            FROM inserted_task
+        )
+        SELECT * FROM inserted_task
+    `.execute(db);
+
+    const task = result.rows[0];
+    if (!task) {
+        throw new NotFoundError(
+            `Project with ID ${param.projectId} not found or you do not have permission to create tasks in it.`,
+        );
+    }
+
+    return task;
 };

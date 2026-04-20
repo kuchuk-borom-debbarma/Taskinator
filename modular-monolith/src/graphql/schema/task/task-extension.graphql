@@ -64,14 +64,6 @@ input CreateTaskInput {
     Initial lifecycle status. Defaults to server-defined value if omitted.
     """
     status: String
-    """
-    Team to assign this task to.
-    """
-    teamId: ID
-    """
-    Member to assign this task to.
-    """
-    memberId: ID
 }
 
 input UpdateTaskInput {

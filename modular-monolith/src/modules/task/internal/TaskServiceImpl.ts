@@ -15,6 +15,7 @@ import {
     getTasksByActorIdAndIds,
     getTasksByIds as getTasksByIdsQuery,
     getTasksPage,
+    insertTask,
 } from './TaskQueries.ts';
 
 export class TaskServiceImpl implements TaskService {
@@ -54,6 +55,16 @@ export class TaskServiceImpl implements TaskService {
         params: GetNeighbourhoodParam,
     ): Promise<TaskNeighbourhoodResult> {
         return await getNeighbourhood(params);
+    }
+
+    async createTask(param: {
+        actorId: string;
+        projectId: string;
+        title: string;
+        description?: string | null;
+        status?: string | null;
+    }): Promise<Task> {
+        return await insertTask(param);
     }
 
     async getProjectLinks(
