@@ -1,3 +1,5 @@
+import type { Transaction } from 'kysely';
+import type { Database } from '../../../../database';
 import { logger } from '../../../../logger';
 import eventBus from '../../../../utils/EventBus.ts';
 import type { DomainEvent } from '../../../../utils/event-bus';
@@ -29,6 +31,7 @@ export class ProjectAggregated_ChangeUserProjectCount {
 
     private async handleAggregatedCounts(
         events: DomainEvent<{ userId: string; delta: number }>[],
+        trx?: Transaction<Database>,
     ) {
         if (events.length === 0) return;
 
@@ -46,7 +49,7 @@ export class ProjectAggregated_ChangeUserProjectCount {
         );
 
         try {
-            await updateUserProjectCountsBulk(consolidates);
+            await updateUserProjectCountsBulk(consolidates, trx);
 
             logger.info(
                 '[Auth Listener] Successfully updated projects_count for user batch',

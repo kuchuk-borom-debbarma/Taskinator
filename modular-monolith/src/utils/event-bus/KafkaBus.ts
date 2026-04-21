@@ -1,5 +1,7 @@
 import { context, propagation, trace } from '@opentelemetry/api';
 import { type Consumer, Kafka, Partitioners, type Producer } from 'kafkajs';
+import type { Transaction } from 'kysely';
+import type { Database } from '../../database';
 import { KAFKA_TOPICS } from './constants.ts';
 import { createEvent, withIdempotency } from './idempotency.ts';
 import type { Bus, DomainEvent } from './types.ts';
@@ -140,13 +142,14 @@ export class KafkaBus implements Bus {
                                     await withIdempotency(
                                         allEvents,
                                         groupId,
-                                        async (unprocessed) => {
+                                        async (unprocessed, trx) => {
                                             await this.executeHandlers(
                                                 unprocessed,
                                                 handlers,
                                                 options,
                                                 isRunning,
                                                 isStale,
+                                                trx,
                                             );
                                         },
                                     );
@@ -170,10 +173,14 @@ export class KafkaBus implements Bus {
 
     private async executeHandlers(
         events: DomainEvent[],
-        handlers: Record<string, (data: any) => Promise<void>>,
+        handlers: Record<
+            string,
+            (data: any, trx?: Transaction<Database>) => Promise<void>
+        >,
         options: { batch?: boolean } | undefined,
         isRunning: () => boolean,
         isStale: () => boolean,
+        trx?: Transaction<Database>,
     ) {
         // Pre-filter: drop any events if the consumer was
         // revoked mid-batch (rebalance / shutdown).
@@ -197,11 +204,11 @@ export class KafkaBus implements Bus {
 
                 if (options?.batch) {
                     // Pass the entire array of events to the batch handler
-                    await handler(events);
+                    await handler(events, trx);
                 } else {
                     // Maintain standard serial execution for non-batch handlers
                     for (const e of events) {
-                        await handler(e.data);
+                        await handler(e.data, trx);
                     }
                 }
             }),

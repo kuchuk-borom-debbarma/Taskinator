@@ -42,10 +42,11 @@ describe('withIdempotency — Real DB Integration', () => {
         await withIdempotency([event], 'group-A', handler);
 
         expect(handler).toHaveBeenCalledTimes(1);
-        expect(handler).toHaveBeenCalledWith([event]);
+        // Signature now has (unprocessed, trx)
+        expect(handler).toHaveBeenCalledWith([event], expect.anything());
     });
 
-    it('inserts a row into processed_event on first delivery', async () => {
+    it('inserts a row into processed_event ONLY AFTER handler succeeds', async () => {
         const event = createEvent('PROJECT_CREATED', 'key-2', {});
         await withIdempotency(
             [event],
@@ -61,6 +62,36 @@ describe('withIdempotency — Real DB Integration', () => {
             .execute();
 
         expect(rows).toHaveLength(1);
+    });
+
+    it('rollbacks processed_event marker if handler fails', async () => {
+        const event = createEvent('PROJECT_CREATED', 'key-fail', {});
+        const errorMessage = 'Storage failure simulation';
+        const handler = jest.fn(async () => {
+            throw new Error(errorMessage);
+        }) as any;
+
+        // First attempt: handler fails
+        await expect(
+            withIdempotency([event], 'group-fail', handler),
+        ).rejects.toThrow(errorMessage);
+
+        // Verify NO marker was inserted
+        const rows = await db
+            .selectFrom('processed_event')
+            .selectAll()
+            .where('event_id', '=', event.eventId as any)
+            .where('consumer_group', '=', 'group-fail')
+            .execute();
+
+        expect(rows).toHaveLength(0);
+
+        // Second attempt: simulating a retry
+        const successHandler = jest.fn(async () => {}) as any;
+        await withIdempotency([event], 'group-fail', successHandler);
+
+        // Success handler should be called because the previous failed one rollbacked the claim
+        expect(successHandler).toHaveBeenCalledTimes(1);
     });
 
     it('does NOT call the handler on retry (same eventId, same groupId)', async () => {
@@ -107,7 +138,7 @@ describe('withIdempotency — Real DB Integration', () => {
 
         // Handler should only be called with the NEW event
         expect(handler).toHaveBeenCalledTimes(1);
-        expect(handler).toHaveBeenCalledWith([eventNew]);
+        expect(handler).toHaveBeenCalledWith([eventNew], expect.anything());
     });
 
     it('does nothing for an empty event list', async () => {
