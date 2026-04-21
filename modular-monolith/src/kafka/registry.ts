@@ -8,6 +8,7 @@ import { TeamAggregated_SyncProjectTeamCountListener } from '../modules/project/
 import { ProjectAggregated_DeleteProjectTask } from '../modules/task/internal/listeners/ProjectAggregated_DeleteProjectTask.ts';
 import { ProjectAggregated_DeleteProjectTaskLink } from '../modules/task/internal/listeners/ProjectAggregated_DeleteProjectTaskLink.ts';
 import { ProjectAggregated_UnassignProjectTaskMember } from '../modules/task/internal/listeners/ProjectAggregated_UnassignProjectTaskMember.ts';
+import { TaskAggregated_DeleteTaskLinksListener } from '../modules/task/internal/listeners/TaskAggregated_DeleteTaskLinksListener.ts';
 import { TeamAggregated_OrphanTeamTasksListener } from '../modules/task/internal/listeners/TeamAggregated_OrphanTeamTasksListener.ts';
 import { TeamAggregated_UnassignMemberFromTeamTasksListener } from '../modules/task/internal/listeners/TeamAggregated_UnassignMemberFromTeamTasksListener.ts';
 import { ProjectAggregated_DeleteProjectTeam } from '../modules/team/internal/listeners/ProjectAggregated_DeleteProjectTeam.ts';
@@ -69,6 +70,8 @@ export async function startConsumers() {
     const taskProjectSyncListener =
         new TaskAggregated_SyncProjectTaskCountListener();
     const taskTeamSyncListener = new TaskAggregated_SyncTeamTaskCountListener();
+    const taskLinkCleanupListener =
+        new TaskAggregated_DeleteTaskLinksListener();
 
     await Promise.all([
         projectAggregator.init(),
@@ -91,6 +94,7 @@ export async function startConsumers() {
         taskAggregator.init(),
         taskProjectSyncListener.init(),
         taskTeamSyncListener.init(),
+        taskLinkCleanupListener.init(),
     ]);
 
     logger.info('[Registry] All domain consumers and listeners initialized');

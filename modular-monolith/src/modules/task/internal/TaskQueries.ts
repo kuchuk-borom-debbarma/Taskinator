@@ -967,13 +967,14 @@ export const unassignTeamMembersFromTasksBatch = async (
 
 export const deleteTaskLinksByTaskIds = async (
     taskIds: string[],
+    trx?: Transaction<Database>,
 ): Promise<void> => {
     if (taskIds.length === 0) return;
     await sql`
         DELETE FROM task_link 
         WHERE source_task_id = ANY(${taskIds}::uuid[]) 
            OR target_task_id = ANY(${taskIds}::uuid[])
-    `.execute(db);
+    `.execute(trx || db);
 };
 
 export const deleteReachabilityByTaskIds = async (
