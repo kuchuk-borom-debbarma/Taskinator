@@ -739,7 +739,7 @@ export async function deleteProjectTeamBatch(
  * Bulk repair of Team Member counts.
  */
 export async function incrementTeamMemberCountsBulk(
-    trx: Transaction<Database> | null,
+    trx: any,
     deltas: Map<string, number>,
 ): Promise<void> {
     const entries = Array.from(deltas.entries());

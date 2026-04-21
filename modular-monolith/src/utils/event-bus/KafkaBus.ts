@@ -1,9 +1,7 @@
 import { context, propagation, trace } from '@opentelemetry/api';
 import { type Consumer, Kafka, Partitioners, type Producer } from 'kafkajs';
-import type { Transaction } from 'kysely';
-import type { Database } from '../../database';
 import { KAFKA_TOPICS } from './constants.ts';
-import { createEvent, withIdempotency } from './idempotency.ts';
+import { createEvent } from './idempotency.ts';
 import type { Bus, DomainEvent } from './types.ts';
 
 export class KafkaBus implements Bus {
@@ -33,7 +31,7 @@ export class KafkaBus implements Bus {
         const admin = this.kafka.admin();
         await admin.connect();
         const existingTopics = await admin.listTopics();
-        const requiredTopics = Object.values(KAFKA_TOPICS);
+        const requiredTopics = Object.values(KAFKA_TOPICS) as string[];
         const topicsToCreate = requiredTopics.filter(
             (t) => !existingTopics.includes(t),
         );
@@ -68,7 +66,7 @@ export class KafkaBus implements Bus {
         topic: string,
         groupId: string,
         handlers: Record<string, (data: any) => Promise<void>>,
-        options?: { batch?: boolean; manualIdempotency?: boolean },
+        options?: { batch?: boolean },
     ) {
         await this.createConsumer(topic, groupId, handlers, options);
     }
@@ -88,7 +86,7 @@ export class KafkaBus implements Bus {
         topic: string,
         groupId: string,
         handlers: Record<string, (data: any) => Promise<void>>,
-        options?: { batch?: boolean; manualIdempotency?: boolean },
+        options?: { batch?: boolean },
     ) {
         const consumer = this.kafka.consumer({ groupId });
         await consumer.connect();
@@ -127,33 +125,14 @@ export class KafkaBus implements Bus {
                                     )
                                     .filter((e) => handlers[e.type]);
 
-                                // 2. Idempotency handling
-                                if (options?.manualIdempotency) {
-                                    // Bypassing global idempotency. The listener MUST call claimEventsAtomic.
-                                    await this.executeHandlers(
-                                        allEvents,
-                                        handlers,
-                                        options,
-                                        isRunning,
-                                        isStale,
-                                    );
-                                } else {
-                                    // Standard Global Idempotency (Non-Transactional)
-                                    await withIdempotency(
-                                        allEvents,
-                                        groupId,
-                                        async (unprocessed, trx) => {
-                                            await this.executeHandlers(
-                                                unprocessed,
-                                                handlers,
-                                                options,
-                                                isRunning,
-                                                isStale,
-                                                trx,
-                                            );
-                                        },
-                                    );
-                                }
+                                // 2. Execute Handlers (Idempotency is now the responsibility of the handler)
+                                await this.executeHandlers(
+                                    allEvents,
+                                    handlers,
+                                    options,
+                                    isRunning,
+                                    isStale,
+                                );
 
                                 // 3. Mark the Kafka batch as consumed to advance the offset
                                 for (const m of batch.messages)
@@ -173,14 +152,10 @@ export class KafkaBus implements Bus {
 
     private async executeHandlers(
         events: DomainEvent[],
-        handlers: Record<
-            string,
-            (data: any, trx?: Transaction<Database>) => Promise<void>
-        >,
+        handlers: Record<string, (data: any) => Promise<void>>,
         options: { batch?: boolean } | undefined,
         isRunning: () => boolean,
         isStale: () => boolean,
-        trx?: Transaction<Database>,
     ) {
         // Pre-filter: drop any events if the consumer was
         // revoked mid-batch (rebalance / shutdown).
@@ -204,11 +179,11 @@ export class KafkaBus implements Bus {
 
                 if (options?.batch) {
                     // Pass the entire array of events to the batch handler
-                    await handler(events, trx);
+                    await handler(events);
                 } else {
                     // Maintain standard serial execution for non-batch handlers
                     for (const e of events) {
-                        await handler(e.data, trx);
+                        await handler(e.data);
                     }
                 }
             }),

@@ -1,29 +1,23 @@
 /**
  * TIER 2 EDA: Idempotency Engine Integration Tests
  *
- * Verifies the `withIdempotency` function using a real DB-backed
+ * Verifies the `claimEventsAtomic` function using a real DB-backed
  * `processed_event` table to guarantee exactly-once processing.
  *
- * - First delivery: handler is called, processed_event row inserted
- * - Retry (same eventId, same groupId): handler is NOT called again
- * - Same eventId, different groupId: each group processes independently
+ * - First claim: returns the events and inserts processed_event rows
+ * - Retry (same eventId, same groupId): returns empty list (already claimed)
+ * - Same eventId, different groupId: each group claims independently
+ * - Transactional Safety: rolls back marker if parent transaction fails
  */
-import {
-    afterAll,
-    beforeEach,
-    describe,
-    expect,
-    it,
-    jest,
-} from '@jest/globals';
+import { afterAll, beforeEach, describe, expect, it } from '@jest/globals';
 import { db } from '../database/index.ts';
 import {
+    claimEventsAtomic,
     createEvent,
-    withIdempotency,
 } from '../utils/event-bus/idempotency.ts';
 import { cleanupDb, destroyDb } from './helpers/db.ts';
 
-describe('withIdempotency — Real DB Integration', () => {
+describe('claimEventsAtomic — Real DB Integration', () => {
     beforeEach(async () => {
         await cleanupDb();
     });
@@ -33,117 +27,108 @@ describe('withIdempotency — Real DB Integration', () => {
         await destroyDb();
     });
 
-    it('calls the handler exactly once for a new event', async () => {
-        const handler = jest.fn(async () => {}) as any;
-        const event = createEvent('PROJECT_CREATED', 'key-1', {
-            projectId: 'p1',
+    it('successfully claims a new event and returns it', async () => {
+        await db.transaction().execute(async (trx) => {
+            const event = createEvent('PROJECT_CREATED', 'key-1', {
+                projectId: 'p1',
+            });
+
+            const unprocessed = await claimEventsAtomic(
+                trx,
+                [event],
+                'group-A',
+            );
+
+            expect(unprocessed).toHaveLength(1);
+            expect(unprocessed[0]!.eventId).toBe(event.eventId);
         });
-
-        await withIdempotency([event], 'group-A', handler);
-
-        expect(handler).toHaveBeenCalledTimes(1);
-        // Signature now has (unprocessed, trx)
-        expect(handler).toHaveBeenCalledWith([event], expect.anything());
-    });
-
-    it('inserts a row into processed_event ONLY AFTER handler succeeds', async () => {
-        const event = createEvent('PROJECT_CREATED', 'key-2', {});
-        await withIdempotency(
-            [event],
-            'group-A',
-            jest.fn(async () => {}) as any,
-        );
 
         const rows = await db
             .selectFrom('processed_event')
             .selectAll()
-            .where('event_id', '=', event.eventId as any)
-            .where('consumer_group', '=', 'group-A')
             .execute();
-
         expect(rows).toHaveLength(1);
     });
 
-    it('rollbacks processed_event marker if handler fails', async () => {
+    it('returns empty list if events were already claimed by the same group', async () => {
+        const event = createEvent('PROJECT_CREATED', 'key-2', {});
+        const groupId = 'group-A';
+
+        // First Claim
+        await db.transaction().execute(async (trx) => {
+            await claimEventsAtomic(trx, [event], groupId);
+        });
+
+        // Second Claim (Retry)
+        await db.transaction().execute(async (trx) => {
+            const unprocessed = await claimEventsAtomic(trx, [event], groupId);
+            expect(unprocessed).toHaveLength(0);
+        });
+    });
+
+    it('rollbacks processed_event marker if transaction fails', async () => {
         const event = createEvent('PROJECT_CREATED', 'key-fail', {});
-        const errorMessage = 'Storage failure simulation';
-        const handler = jest.fn(async () => {
-            throw new Error(errorMessage);
-        }) as any;
+        const groupId = 'group-fail';
 
-        // First attempt: handler fails
-        await expect(
-            withIdempotency([event], 'group-fail', handler),
-        ).rejects.toThrow(errorMessage);
+        try {
+            await db.transaction().execute(async (trx) => {
+                await claimEventsAtomic(trx, [event], groupId);
+                throw new Error('Simulation Failure');
+            });
+        } catch (err) {
+            // Error caught
+        }
 
-        // Verify NO marker was inserted
+        // Verify NO marker was inserted because of rollback
         const rows = await db
             .selectFrom('processed_event')
             .selectAll()
             .where('event_id', '=', event.eventId as any)
-            .where('consumer_group', '=', 'group-fail')
+            .where('consumer_group', '=', groupId)
             .execute();
 
         expect(rows).toHaveLength(0);
-
-        // Second attempt: simulating a retry
-        const successHandler = jest.fn(async () => {}) as any;
-        await withIdempotency([event], 'group-fail', successHandler);
-
-        // Success handler should be called because the previous failed one rollbacked the claim
-        expect(successHandler).toHaveBeenCalledTimes(1);
     });
 
-    it('does NOT call the handler on retry (same eventId, same groupId)', async () => {
-        const handler = jest.fn(async () => {}) as any;
-        const event = createEvent('PROJECT_CREATED', 'key-3', {});
-
-        // First delivery
-        await withIdempotency([event], 'group-A', handler);
-        // Retry — simulating a Kafka consumer re-delivering the same message
-        await withIdempotency([event], 'group-A', handler);
-
-        expect(handler).toHaveBeenCalledTimes(1);
-    });
-
-    it('calls the handler for different groupIds with the same eventId', async () => {
-        const handlerA = jest.fn(async () => {}) as any;
-        const handlerB = jest.fn(async () => {}) as any;
+    it('allows different groups to claim the same event independently', async () => {
         const event = createEvent('PROJECT_DELETED', 'key-4', {});
 
-        await withIdempotency([event], 'consumer-group-A', handlerA);
-        await withIdempotency([event], 'consumer-group-B', handlerB);
+        await db.transaction().execute(async (trx) => {
+            const claim1 = await claimEventsAtomic(trx, [event], 'group-1');
+            expect(claim1).toHaveLength(1);
+        });
 
-        expect(handlerA).toHaveBeenCalledTimes(1);
-        expect(handlerB).toHaveBeenCalledTimes(1);
+        await db.transaction().execute(async (trx) => {
+            const claim2 = await claimEventsAtomic(trx, [event], 'group-2');
+            expect(claim2).toHaveLength(1);
+        });
+
+        const rows = await db
+            .selectFrom('processed_event')
+            .selectAll()
+            .execute();
+        expect(rows).toHaveLength(2);
     });
 
-    it('processes only unprocessed events in a mixed batch', async () => {
-        const eventAlreadyProcessed = createEvent('X', 'k1', {});
-        const eventNew = createEvent('X', 'k2', {});
+    it('correctly filters a mixed batch of new and processed events', async () => {
+        const event1 = createEvent('X', 'k1', {});
+        const event2 = createEvent('X', 'k2', {});
+        const groupId = 'group-mixed';
 
-        // Pre-process the first event
-        await withIdempotency(
-            [eventAlreadyProcessed],
-            'group-Z',
-            jest.fn(async () => {}) as any,
-        );
+        // Pre-claim event1
+        await db.transaction().execute(async (trx) => {
+            await claimEventsAtomic(trx, [event1], groupId);
+        });
 
-        const handler = jest.fn(async () => {}) as any;
-        await withIdempotency(
-            [eventAlreadyProcessed, eventNew],
-            'group-Z',
-            handler,
-        );
-
-        // Handler should only be called with the NEW event
-        expect(handler).toHaveBeenCalledTimes(1);
-        expect(handler).toHaveBeenCalledWith([eventNew], expect.anything());
-    });
-
-    it('does nothing for an empty event list', async () => {
-        const handler = jest.fn(async () => {}) as any;
-        await withIdempotency([], 'group-A', handler);
-        expect(handler).not.toHaveBeenCalled();
+        // Try to claim both
+        await db.transaction().execute(async (trx) => {
+            const unprocessed = await claimEventsAtomic(
+                trx,
+                [event1, event2],
+                groupId,
+            );
+            expect(unprocessed).toHaveLength(1);
+            expect(unprocessed[0]!.eventId).toBe(event2.eventId);
+        });
     });
 });

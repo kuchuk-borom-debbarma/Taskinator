@@ -1,11 +1,11 @@
-import type { Transaction } from 'kysely';
-import type { Database } from '../../../../database';
+import { db } from '../../../../database';
 import { logger } from '../../../../logger';
 import eventBus from '../../../../utils/EventBus.ts';
 import {
     KAFKA_EVENTS,
     KAFKA_TOPICS,
 } from '../../../../utils/event-bus/constants.ts';
+import { claimEventsAtomic } from '../../../../utils/event-bus/idempotency.ts';
 import type { DomainEvent } from '../../../../utils/event-bus/types.ts';
 import { removeProjectTeamMembersBatch } from '../TeamQueries.ts';
 
@@ -33,43 +33,45 @@ export class ProjectAggregated_RemoveProjectTeamMember {
 
     private async handleRemoveProjectTeamMember(
         events: DomainEvent<{ projectId: string; userIds: string[] }>[],
-        trx?: Transaction<Database>,
     ) {
         if (events.length === 0) return;
 
-        // Grouping events for batch processing efficiency
-        const projectMap = new Map<string, Set<string>>();
-        for (const event of events) {
-            const { projectId, userIds } = event.data;
-            const existing = projectMap.get(projectId) || new Set<string>();
-            userIds.forEach((id) => existing.add(id));
-            projectMap.set(projectId, existing);
-        }
+        await db.transaction().execute(async (trx) => {
+            // [1] Explicit Idempotency Claim
+            const unprocessed = await claimEventsAtomic(
+                trx,
+                events,
+                'team-project-member-purge-group',
+            );
 
-        const deltas = Array.from(projectMap.entries()).map(
-            ([projectId, userIdsSet]) => ({
-                projectId,
-                userIds: Array.from(userIdsSet),
-            }),
-        );
+            if (unprocessed.length === 0) return;
 
-        logger.info(
-            `[ProjectAggregated -> Team] Executing consolidated batch removal of memberships for ${deltas.length} projects`,
-        );
+            // [2] Grouping events for batch processing efficiency
+            const projectMap = new Map<string, Set<string>>();
+            for (const event of unprocessed) {
+                const { projectId, userIds } = event.data;
+                const existing = projectMap.get(projectId) || new Set<string>();
+                userIds.forEach((id: string) => existing.add(id));
+                projectMap.set(projectId, existing);
+            }
 
-        try {
+            const deltas = Array.from(projectMap.entries()).map(
+                ([projectId, userIdsSet]) => ({
+                    projectId,
+                    userIds: Array.from(userIdsSet),
+                }),
+            );
+
+            logger.info(
+                `[ProjectAggregated -> Team] Executing consolidated batch removal of memberships for ${deltas.length} projects (from ${unprocessed.length} events)`,
+            );
+
             const { affectedProjectCount, affectedTeamCount } =
                 await removeProjectTeamMembersBatch(deltas, trx);
 
             logger.info(
                 `[ProjectAggregated -> Team] Successfully purged memberships across ${affectedProjectCount} projects and repaired ${affectedTeamCount} team counters`,
             );
-        } catch (err) {
-            logger.error(
-                '[ProjectAggregated -> Team] Failed to process project team member removal:',
-                err,
-            );
-            throw err;
-        }
+        });
     }
 }

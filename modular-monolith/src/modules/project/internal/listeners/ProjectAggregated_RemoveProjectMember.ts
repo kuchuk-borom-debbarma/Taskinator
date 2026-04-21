@@ -1,11 +1,11 @@
-import type { Transaction } from 'kysely';
-import type { Database } from '../../../../database';
+import { db } from '../../../../database';
 import { logger } from '../../../../logger';
 import eventBus from '../../../../utils/EventBus.ts';
 import {
     KAFKA_EVENTS,
     KAFKA_TOPICS,
 } from '../../../../utils/event-bus/constants.ts';
+import { claimEventsAtomic } from '../../../../utils/event-bus/idempotency.ts';
 import type { DomainEvent } from '../../../../utils/event-bus/types.ts';
 import { purgeProjectMembersBatch } from '../ProjectQueries.ts';
 
@@ -32,44 +32,46 @@ export class ProjectAggregated_RemoveProjectMember {
 
     private async handleRemoveMember(
         events: DomainEvent<{ projectId: string; userIds: string[] }>[],
-        trx?: Transaction<Database>,
     ) {
         if (events.length === 0) return;
 
-        // Grouping events for batch query
-        const projectMap = new Map<string, Set<string>>();
+        await db.transaction().execute(async (trx) => {
+            // [1] Explicit Idempotency Claim
+            const unprocessed = await claimEventsAtomic(
+                trx,
+                events,
+                'project-member-removal-group',
+            );
 
-        for (const event of events) {
-            const { projectId, userIds } = event.data;
-            const existing = projectMap.get(projectId) || new Set<string>();
-            userIds.forEach((id) => existing.add(id));
-            projectMap.set(projectId, existing);
-        }
+            if (unprocessed.length === 0) return;
 
-        const deltas = Array.from(projectMap.entries()).map(
-            ([projectId, userIdsSet]) => ({
-                projectId,
-                userIds: Array.from(userIdsSet),
-            }),
-        );
+            // [2] Grouping events for batch query
+            const projectMap = new Map<string, Set<string>>();
 
-        logger.info(
-            `[ProjectAggregated -> Project] Performing batch member removal for ${deltas.length} projects`,
-        );
+            for (const event of unprocessed) {
+                const { projectId, userIds } = event.data;
+                const existing = projectMap.get(projectId) || new Set<string>();
+                userIds.forEach((id: string) => existing.add(id));
+                projectMap.set(projectId, existing);
+            }
 
-        try {
+            const deltas = Array.from(projectMap.entries()).map(
+                ([projectId, userIdsSet]) => ({
+                    projectId,
+                    userIds: Array.from(userIdsSet),
+                }),
+            );
+
+            logger.info(
+                `[ProjectAggregated -> Project] Performing batch member removal for ${deltas.length} projects (from ${unprocessed.length} events)`,
+            );
+
             const { affectedProjectMemberCounts } =
                 await purgeProjectMembersBatch(deltas, trx);
 
             logger.info(
                 `[ProjectAggregated -> Project] Successfully removed ${affectedProjectMemberCounts.size} membership types across ${deltas.length} projects`,
             );
-        } catch (err) {
-            logger.error(
-                '[ProjectAggregated -> Project] Failed to process project member removal:',
-                err,
-            );
-            throw err;
-        }
+        });
     }
 }

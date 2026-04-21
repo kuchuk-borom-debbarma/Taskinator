@@ -1,4 +1,5 @@
-import { db } from '../../../../database';
+import type { Transaction } from 'kysely';
+import { type Database, db } from '../../../../database';
 import { logger } from '../../../../logger';
 import {
     KAFKA_EVENTS,
@@ -15,6 +16,7 @@ export class TaskCountHandler {
     async handle(
         projectIncrements: Map<string, number>,
         teamIncrements: Map<string, number>,
+        trx?: Transaction<Database>,
     ): Promise<void> {
         const pEntries = Array.from(projectIncrements.entries());
         const tEntries = Array.from(teamIncrements.entries());
@@ -48,11 +50,12 @@ export class TaskCountHandler {
             })),
         ];
 
-        await appendEventsToOutbox(db, outboxEntries);
+        await appendEventsToOutbox(trx ?? db, outboxEntries);
     }
 
     async handleMemberAssignments(
         assignments: Map<string, any[]>,
+        trx?: Transaction<Database>,
     ): Promise<void> {
         const entries = Array.from(assignments.entries());
         if (entries.length === 0) return;
@@ -71,6 +74,6 @@ export class TaskCountHandler {
             },
         }));
 
-        await appendEventsToOutbox(db, outboxEntries);
+        await appendEventsToOutbox(trx ?? db, outboxEntries);
     }
 }

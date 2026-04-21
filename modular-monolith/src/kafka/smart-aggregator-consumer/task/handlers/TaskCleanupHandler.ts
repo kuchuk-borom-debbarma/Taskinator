@@ -1,4 +1,5 @@
-import { db } from '../../../../database';
+import type { Transaction } from 'kysely';
+import { type Database, db } from '../../../../database';
 import { logger } from '../../../../logger';
 import { findLinksForTaskRepair } from '../../../../modules/task/internal/TaskQueries.ts';
 import {
@@ -16,7 +17,10 @@ import {
 export class TaskCleanupHandler {
     name = 'TaskCleanupHandler';
 
-    async handle(taskIds: string[]): Promise<void> {
+    async handle(
+        taskIds: string[],
+        trx?: Transaction<Database>,
+    ): Promise<void> {
         if (taskIds.length === 0) return;
 
         logger.info(
@@ -49,6 +53,6 @@ export class TaskCleanupHandler {
         });
 
         // 2. Push all signals to Outbox
-        await appendEventsToOutbox(db, signals);
+        await appendEventsToOutbox(trx || db, signals);
     }
 }

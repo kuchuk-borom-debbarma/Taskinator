@@ -34,7 +34,7 @@ export class TaskLinkEvents_BatchAggregator {
                 [KAFKA_EVENTS.TASK_LINK.UPDATED]: this.handleBatch.bind(this),
                 [KAFKA_EVENTS.TASK_LINK.DELETED]: this.handleBatch.bind(this),
             },
-            { batch: true, manualIdempotency: true },
+            { batch: true },
         );
     }
 

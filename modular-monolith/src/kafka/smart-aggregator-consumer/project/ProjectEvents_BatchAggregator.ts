@@ -3,6 +3,7 @@ import { logger } from '../../../logger';
 import eventBus from '../../../utils/EventBus.ts';
 import type { DomainEvent } from '../../../utils/event-bus';
 import { KAFKA_EVENTS, KAFKA_TOPICS } from '../../../utils/event-bus';
+import { claimEventsAtomic } from '../../../utils/event-bus/idempotency.ts';
 import {
     appendEventsToOutbox,
     type OutboxEntry,
@@ -35,241 +36,216 @@ export class ProjectEvents_BatchAggregator {
     private async handleProjectBatch(events: DomainEvent[]) {
         if (events.length === 0) return;
 
-        logger.info(
-            `[Project Coordinator] Processing batch of ${events.length} events`,
-        );
+        await db.transaction().execute(async (trx) => {
+            // [1] Explicit Idempotency Claim
+            const unprocessed = await claimEventsAtomic(
+                trx,
+                events,
+                'project-aggregator-group',
+            );
 
-        // 1. Semantic Folding (Cancellation Logic)
-        const projectStates = new Map<
-            string,
-            ProjectState & {
-                membershipBalance: number;
-                removedUserIds: string[];
+            if (unprocessed.length === 0) {
+                logger.info(
+                    '[Project Coordinator] Batch already processed, skipping',
+                );
+                return;
             }
-        >();
 
-        for (const event of events) {
-            const { projectId, userId } = event.data;
-            const current = projectStates.get(projectId) || {
-                projectId,
-                userId,
-                netBalance: 0,
-                membershipBalance: 0,
-                removedUserIds: [] as string[],
-            };
+            logger.info(
+                `[Project Coordinator] Processing batch of ${unprocessed.length} new events`,
+            );
 
-            switch (event.type) {
-                case KAFKA_EVENTS.PROJECT.CREATED:
-                    current.netBalance += 1;
-                    break;
-                case KAFKA_EVENTS.PROJECT.DELETED:
-                    current.netBalance -= 1;
-                    break;
-                case KAFKA_EVENTS.PROJECT.MEMBERS_ADDED:
-                    current.membershipBalance +=
-                        event.data.addedUserIds?.length || 0;
-                    break;
-                case KAFKA_EVENTS.PROJECT.MEMBERS_REMOVED: {
-                    const removed = event.data.removedUserIds || [];
-                    current.membershipBalance -= removed.length;
-                    current.removedUserIds.push(...removed);
-                    break;
+            // [2] Semantic Folding (Cancellation Logic)
+            const projectStates = new Map<
+                string,
+                ProjectState & {
+                    membershipBalance: number;
+                    removedUserIds: string[];
+                }
+            >();
+
+            for (const event of unprocessed) {
+                const { projectId, userId } = event.data;
+                const current = projectStates.get(projectId) || {
+                    projectId,
+                    userId,
+                    netBalance: 0,
+                    membershipBalance: 0,
+                    removedUserIds: [] as string[],
+                };
+
+                switch (event.type) {
+                    case KAFKA_EVENTS.PROJECT.CREATED:
+                        current.netBalance += 1;
+                        break;
+                    case KAFKA_EVENTS.PROJECT.DELETED:
+                        current.netBalance -= 1;
+                        break;
+                    case KAFKA_EVENTS.PROJECT.MEMBERS_ADDED:
+                        current.membershipBalance +=
+                            event.data.addedUserIds?.length || 0;
+                        break;
+                    case KAFKA_EVENTS.PROJECT.MEMBERS_REMOVED: {
+                        const removed = event.data.removedUserIds || [];
+                        current.membershipBalance -= removed.length;
+                        current.removedUserIds.push(...removed);
+                        break;
+                    }
+                }
+
+                projectStates.set(projectId, current);
+            }
+
+            // [3] Grouping & Filtering (Clean Data Preparation)
+            const userIncrements = new Map<string, number>();
+            const memberIncrements = new Map<string, number>();
+            const deletedProjectIds: string[] = [];
+            const memberRemovals: Map<string, string[]> = new Map();
+
+            for (const state of projectStates.values()) {
+                if (state.netBalance !== 0) {
+                    userIncrements.set(
+                        state.userId,
+                        (userIncrements.get(state.userId) || 0) +
+                            state.netBalance,
+                    );
+                }
+
+                if (state.membershipBalance !== 0) {
+                    memberIncrements.set(
+                        state.projectId,
+                        (memberIncrements.get(state.projectId) || 0) +
+                            state.membershipBalance,
+                    );
+                }
+
+                if (state.removedUserIds.length > 0) {
+                    const existing = memberRemovals.get(state.projectId) || [];
+                    memberRemovals.set(state.projectId, [
+                        ...existing,
+                        ...state.removedUserIds,
+                    ]);
+                }
+
+                if (state.netBalance < 0) {
+                    deletedProjectIds.push(state.projectId);
                 }
             }
 
-            projectStates.set(projectId, current);
-        }
+            // --- 4. Build all outbox entries (Pure Semantic Signals) ---
+            const outboxEntries: OutboxEntry[] = [];
 
-        // 2. Grouping & Filtering (Clean Data Preparation)
-        const userIncrements = new Map<string, number>();
-        const memberIncrements = new Map<string, number>();
-        const deletedProjectIds: string[] = [];
-        const memberRemovals: Map<string, string[]> = new Map();
+            for (const [userId, delta] of userIncrements.entries()) {
+                outboxEntries.push({
+                    kafka_topic: KAFKA_TOPICS.PROJECT_AGGREGATED,
+                    payload: {
+                        type: KAFKA_EVENTS.PROJECT_AGGREGATED
+                            .CHANGE_USER_PROJECT_COUNT,
+                        userId,
+                        delta,
+                    },
+                });
+            }
 
-        for (const state of projectStates.values()) {
-            // Lifecycle Counts (User Level)
-            if (state.netBalance !== 0) {
-                userIncrements.set(
-                    state.userId,
-                    (userIncrements.get(state.userId) || 0) + state.netBalance,
+            for (const [projectId, delta] of memberIncrements.entries()) {
+                outboxEntries.push({
+                    kafka_topic: KAFKA_TOPICS.PROJECT_AGGREGATED,
+                    payload: {
+                        type: KAFKA_EVENTS.PROJECT_AGGREGATED
+                            .CHANGE_PROJECT_MEMBER_COUNT,
+                        projectId,
+                        delta,
+                    },
+                });
+            }
+
+            for (const [projectId, userIds] of memberRemovals.entries()) {
+                outboxEntries.push({
+                    kafka_topic: KAFKA_TOPICS.PROJECT_AGGREGATED,
+                    payload: {
+                        type: KAFKA_EVENTS.PROJECT_AGGREGATED
+                            .REMOVE_PROJECT_MEMBER,
+                        projectId,
+                        userIds,
+                    },
+                });
+
+                outboxEntries.push({
+                    kafka_topic: KAFKA_TOPICS.PROJECT_AGGREGATED,
+                    payload: {
+                        type: KAFKA_EVENTS.PROJECT_AGGREGATED
+                            .REMOVE_PROJECT_TEAM_MEMBER,
+                        projectId,
+                        userIds,
+                    },
+                });
+
+                outboxEntries.push({
+                    kafka_topic: KAFKA_TOPICS.PROJECT_AGGREGATED,
+                    payload: {
+                        type: KAFKA_EVENTS.PROJECT_AGGREGATED
+                            .UNASSIGN_PROJECT_TASK_MEMBER,
+                        projectId,
+                        userIds,
+                    },
+                });
+            }
+
+            if (deletedProjectIds.length > 0) {
+                outboxEntries.push({
+                    kafka_topic: KAFKA_TOPICS.PROJECT_AGGREGATED,
+                    payload: {
+                        type: KAFKA_EVENTS.PROJECT_AGGREGATED
+                            .DELETE_PROJECT_MEMBER,
+                        projectIds: deletedProjectIds,
+                    },
+                });
+
+                outboxEntries.push({
+                    kafka_topic: KAFKA_TOPICS.PROJECT_AGGREGATED,
+                    payload: {
+                        type: KAFKA_EVENTS.PROJECT_AGGREGATED
+                            .DELETE_PROJECT_TEAM,
+                        projectIds: deletedProjectIds,
+                    },
+                });
+
+                outboxEntries.push({
+                    kafka_topic: KAFKA_TOPICS.PROJECT_AGGREGATED,
+                    payload: {
+                        type: KAFKA_EVENTS.PROJECT_AGGREGATED
+                            .DELETE_PROJECT_TEAM_MEMBER,
+                        projectIds: deletedProjectIds,
+                    },
+                });
+
+                outboxEntries.push({
+                    kafka_topic: KAFKA_TOPICS.PROJECT_AGGREGATED,
+                    payload: {
+                        type: KAFKA_EVENTS.PROJECT_AGGREGATED
+                            .DELETE_PROJECT_TASK,
+                        projectIds: deletedProjectIds,
+                    },
+                });
+
+                outboxEntries.push({
+                    kafka_topic: KAFKA_TOPICS.PROJECT_AGGREGATED,
+                    payload: {
+                        type: KAFKA_EVENTS.PROJECT_AGGREGATED
+                            .DELETE_PROJECT_TASK_LINK,
+                        projectIds: deletedProjectIds,
+                    },
+                });
+            }
+
+            // [5] Single atomic write
+            if (outboxEntries.length > 0) {
+                await appendEventsToOutbox(trx, outboxEntries);
+                logger.info(
+                    `[Project Coordinator] Wrote ${outboxEntries.length} outbox entries for batch`,
                 );
             }
-
-            // Membership Counts (Project Level)
-            if (state.membershipBalance !== 0) {
-                memberIncrements.set(
-                    state.projectId,
-                    (memberIncrements.get(state.projectId) || 0) +
-                        state.membershipBalance,
-                );
-            }
-
-            // Membership Cleanup (Cascading Cleanup)
-            if (state.removedUserIds.length > 0) {
-                const existing = memberRemovals.get(state.projectId) || [];
-                memberRemovals.set(state.projectId, [
-                    ...existing,
-                    ...state.removedUserIds,
-                ]);
-            }
-
-            // Project Deletion Cleanup
-            if (state.netBalance < 0) {
-                deletedProjectIds.push(state.projectId);
-            }
-        }
-
-        /**
-         * --- ARCHITECTURAL NOTE: UNKEYED PARTITIONING ---
-         * We do NOT use specific kafka_keys (e.g., projectId) for these aggregated signals.
-         * RATIONALE:
-         * 1. Maximize Throughput: Allows Kafka to distribute signals across all partitions, preventing
-         *    hot-spotting on busy projects.
-         * 2. Commutative Deltas: Counters (+1/-1) are order-independent, so exact delivery sequence
-         *    does not matter for final consistency.
-         *
-         * ZOMBIE RISK:
-         * In-batch Semantic Folding (Step 1) covers most race conditions. However, cross-batch out-of-order
-         * delivery (e.g., a 'Remove' batch processed before a delayed 'Add' batch) can lead to "Zombie
-         * Memberships." This is accepted in favor of 10k RPS scalability, with the requirement of a
-         * background reconciliation/vacuum process in the future.
-         */
-
-        // --- 3. Build all outbox entries (Pure Semantic Signals) ---
-        // These events are handled by Execution Listeners in various modules (Project, Team, Task, Auth).
-
-        const outboxEntries: OutboxEntry[] = [];
-
-        /**
-         * [Auth Domain] Update User Project Count
-         * Signaling: Project Created (+1) or Deleted (-1)
-         */
-        for (const [userId, delta] of userIncrements.entries()) {
-            outboxEntries.push({
-                kafka_topic: KAFKA_TOPICS.PROJECT_AGGREGATED,
-                payload: {
-                    type: KAFKA_EVENTS.PROJECT_AGGREGATED
-                        .CHANGE_USER_PROJECT_COUNT,
-                    userId,
-                    delta,
-                },
-            });
-        }
-
-        /**
-         * [Project Domain] Update Project Member Count
-         * Signaling: Member Added (+1) or Removed (-1)
-         */
-        for (const [projectId, delta] of memberIncrements.entries()) {
-            outboxEntries.push({
-                kafka_topic: KAFKA_TOPICS.PROJECT_AGGREGATED,
-                payload: {
-                    type: KAFKA_EVENTS.PROJECT_AGGREGATED
-                        .CHANGE_PROJECT_MEMBER_COUNT,
-                    projectId,
-                    delta,
-                },
-            });
-        }
-
-        /**
-         * [Cross-Domain Cascade] Specific Member Removal Orchestration
-         * Signaling: Explicit instructions for downstream modules to purge user-specific data.
-         */
-        for (const [projectId, userIds] of memberRemovals.entries()) {
-            // [Project Module] Instruction to purge the specific membership records
-            outboxEntries.push({
-                kafka_topic: KAFKA_TOPICS.PROJECT_AGGREGATED,
-                payload: {
-                    type: KAFKA_EVENTS.PROJECT_AGGREGATED.REMOVE_PROJECT_MEMBER,
-                    projectId,
-                    userIds,
-                },
-            });
-
-            // [Team Module] Instruction to purge the user from all project teams
-            outboxEntries.push({
-                kafka_topic: KAFKA_TOPICS.PROJECT_AGGREGATED,
-                payload: {
-                    type: KAFKA_EVENTS.PROJECT_AGGREGATED
-                        .REMOVE_PROJECT_TEAM_MEMBER,
-                    projectId,
-                    userIds,
-                },
-            });
-
-            // [Task Module] Instruction to unassign the user from all project tasks
-            outboxEntries.push({
-                kafka_topic: KAFKA_TOPICS.PROJECT_AGGREGATED,
-                payload: {
-                    type: KAFKA_EVENTS.PROJECT_AGGREGATED
-                        .UNASSIGN_PROJECT_TASK_MEMBER,
-                    projectId,
-                    userIds,
-                },
-            });
-        }
-
-        /**
-         * [Global Decommissioning] Project Deletion Cascade
-         * Signaling: Entire projects have been deleted.
-         * Triggers a coordinated purge across all modules.
-         */
-        if (deletedProjectIds.length > 0) {
-            // [Project Module] Cleanup project members
-            outboxEntries.push({
-                kafka_topic: KAFKA_TOPICS.PROJECT_AGGREGATED,
-                payload: {
-                    type: KAFKA_EVENTS.PROJECT_AGGREGATED.DELETE_PROJECT_MEMBER,
-                    projectIds: deletedProjectIds,
-                },
-            });
-
-            // [Team Module] Cleanup all teams in the project
-            outboxEntries.push({
-                kafka_topic: KAFKA_TOPICS.PROJECT_AGGREGATED,
-                payload: {
-                    type: KAFKA_EVENTS.PROJECT_AGGREGATED.DELETE_PROJECT_TEAM,
-                    projectIds: deletedProjectIds,
-                },
-            });
-
-            // [Team Module] Cleanup all team membership records
-            outboxEntries.push({
-                kafka_topic: KAFKA_TOPICS.PROJECT_AGGREGATED,
-                payload: {
-                    type: KAFKA_EVENTS.PROJECT_AGGREGATED
-                        .DELETE_PROJECT_TEAM_MEMBER,
-                    projectIds: deletedProjectIds,
-                },
-            });
-
-            // [Task Module] Cleanup all tasks in the project
-            outboxEntries.push({
-                kafka_topic: KAFKA_TOPICS.PROJECT_AGGREGATED,
-                payload: {
-                    type: KAFKA_EVENTS.PROJECT_AGGREGATED.DELETE_PROJECT_TASK,
-                    projectIds: deletedProjectIds,
-                },
-            });
-
-            // [Task Module] Cleanup all project task links
-            outboxEntries.push({
-                kafka_topic: KAFKA_TOPICS.PROJECT_AGGREGATED,
-                payload: {
-                    type: KAFKA_EVENTS.PROJECT_AGGREGATED
-                        .DELETE_PROJECT_TASK_LINK,
-                    projectIds: deletedProjectIds,
-                },
-            });
-        }
-
-        // 4. Single atomic write — throws on failure so Kafka does NOT ACK the batch
-        await appendEventsToOutbox(db, outboxEntries);
-
-        logger.info(
-            `[Project Coordinator] Wrote ${outboxEntries.length} outbox entries for batch of ${events.length} events`,
-        );
+        });
     }
 }
 

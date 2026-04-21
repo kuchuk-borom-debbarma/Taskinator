@@ -3,6 +3,7 @@ import { logger } from '../../../logger';
 import eventBus from '../../../utils/EventBus.ts';
 import type { DomainEvent } from '../../../utils/event-bus';
 import { KAFKA_EVENTS, KAFKA_TOPICS } from '../../../utils/event-bus';
+import { claimEventsAtomic } from '../../../utils/event-bus/idempotency.ts';
 import {
     appendEventsToOutbox,
     type OutboxEntry,
@@ -38,160 +39,171 @@ export class TeamEvents_BatchAggregator {
     private async handleTeamBatch(events: DomainEvent[]) {
         if (events.length === 0) return;
 
-        logger.info(
-            `[Team Coordinator] Processing batch of ${events.length} events`,
-        );
+        await db.transaction().execute(async (trx) => {
+            // [1] Explicit Idempotency Claim
+            // Ensures we only process each team event once, even on Kafka retries.
+            const unprocessed = await claimEventsAtomic(
+                trx,
+                events,
+                'team-aggregator-group',
+            );
 
-        // 1. Semantic Folding (Cancellation Logic)
-        const teamStates = new Map<
-            string,
-            {
-                teamId: string;
-                projectId: string;
-                lifecycleBalance: number; // +1 created, -1 deleted
-                membershipBalance: number; // +N added, -M removed
-                removedUserIds: string[];
+            if (unprocessed.length === 0) {
+                logger.info(
+                    '[Team Coordinator] Batch already processed, skipping',
+                );
+                return;
             }
-        >();
 
-        for (const event of events) {
-            const { teamId, projectId } = event.data;
-            const current = teamStates.get(teamId) || {
-                teamId,
-                projectId,
-                lifecycleBalance: 0,
-                membershipBalance: 0,
-                removedUserIds: [] as string[],
-            };
+            logger.info(
+                `[Team Coordinator] Processing batch of ${unprocessed.length} new events`,
+            );
 
-            switch (event.type) {
-                case KAFKA_EVENTS.TEAM.CREATED:
-                    current.lifecycleBalance += 1;
-                    break;
-                case KAFKA_EVENTS.TEAM.DELETED:
-                    current.lifecycleBalance -= 1;
-                    break;
-                case KAFKA_EVENTS.TEAM.MEMBERS_ADDED:
-                    current.membershipBalance +=
-                        event.data.addedUserIds?.length || 0;
-                    break;
-                case KAFKA_EVENTS.TEAM.MEMBERS_REMOVED: {
-                    const removed = event.data.removedUserIds || [];
-                    current.membershipBalance -= removed.length;
-                    current.removedUserIds.push(...removed);
-                    break;
+            // [2] Semantic Folding (Cancellation Logic)
+            const teamStates = new Map<
+                string,
+                {
+                    teamId: string;
+                    projectId: string;
+                    lifecycleBalance: number; // +1 created, -1 deleted
+                    membershipBalance: number; // +N added, -M removed
+                    removedUserIds: string[];
+                }
+            >();
+
+            for (const event of unprocessed) {
+                const { teamId, projectId } = event.data;
+                const current = teamStates.get(teamId) || {
+                    teamId,
+                    projectId,
+                    lifecycleBalance: 0,
+                    membershipBalance: 0,
+                    removedUserIds: [] as string[],
+                };
+
+                switch (event.type) {
+                    case KAFKA_EVENTS.TEAM.CREATED:
+                        current.lifecycleBalance += 1;
+                        break;
+                    case KAFKA_EVENTS.TEAM.DELETED:
+                        current.lifecycleBalance -= 1;
+                        break;
+                    case KAFKA_EVENTS.TEAM.MEMBERS_ADDED:
+                        current.membershipBalance +=
+                            event.data.addedUserIds?.length || 0;
+                        break;
+                    case KAFKA_EVENTS.TEAM.MEMBERS_REMOVED: {
+                        const removed = event.data.removedUserIds || [];
+                        current.membershipBalance -= removed.length;
+                        current.removedUserIds.push(...removed);
+                        break;
+                    }
+                }
+
+                teamStates.set(teamId, current);
+            }
+
+            // [3] Grouping & Data Preparation
+            const projectTeamDeltas = new Map<string, number>();
+            const teamMemberDeltas = new Map<string, number>();
+            const deletedTeamIds: string[] = [];
+            const memberRemovals = new Map<string, string[]>();
+
+            for (const state of teamStates.values()) {
+                if (state.lifecycleBalance !== 0) {
+                    projectTeamDeltas.set(
+                        state.projectId,
+                        (projectTeamDeltas.get(state.projectId) || 0) +
+                            state.lifecycleBalance,
+                    );
+                }
+
+                if (state.membershipBalance !== 0) {
+                    teamMemberDeltas.set(
+                        state.teamId,
+                        (teamMemberDeltas.get(state.teamId) || 0) +
+                            state.membershipBalance,
+                    );
+                }
+
+                if (state.removedUserIds.length > 0) {
+                    const existing = memberRemovals.get(state.teamId) || [];
+                    memberRemovals.set(state.teamId, [
+                        ...existing,
+                        ...state.removedUserIds,
+                    ]);
+                }
+
+                if (state.lifecycleBalance < 0) {
+                    deletedTeamIds.push(state.teamId);
                 }
             }
 
-            teamStates.set(teamId, current);
-        }
+            // [4] Build Outbox Signals
+            const outboxEntries: OutboxEntry[] = [];
 
-        // 2. Grouping & Data Preparation
-        const projectTeamDeltas = new Map<string, number>();
-        const teamMemberDeltas = new Map<string, number>();
-        const deletedTeamIds: string[] = [];
-        const memberRemovals = new Map<string, string[]>();
+            for (const [projectId, delta] of projectTeamDeltas.entries()) {
+                outboxEntries.push({
+                    kafka_topic: KAFKA_TOPICS.TEAM_AGGREGATED,
+                    payload: {
+                        type: KAFKA_EVENTS.TEAM_AGGREGATED
+                            .SYNC_PROJECT_TEAM_COUNT,
+                        projectId,
+                        delta,
+                    },
+                });
+            }
 
-        for (const state of teamStates.values()) {
-            // Project Level: Team Count Changes
-            if (state.lifecycleBalance !== 0) {
-                projectTeamDeltas.set(
-                    state.projectId,
-                    (projectTeamDeltas.get(state.projectId) || 0) +
-                        state.lifecycleBalance,
+            for (const [teamId, delta] of teamMemberDeltas.entries()) {
+                outboxEntries.push({
+                    kafka_topic: KAFKA_TOPICS.TEAM_AGGREGATED,
+                    payload: {
+                        type: KAFKA_EVENTS.TEAM_AGGREGATED
+                            .SYNC_TEAM_MEMBER_COUNT,
+                        teamId,
+                        delta,
+                    },
+                });
+            }
+
+            for (const [teamId, userIds] of memberRemovals.entries()) {
+                outboxEntries.push({
+                    kafka_topic: KAFKA_TOPICS.TEAM_AGGREGATED,
+                    payload: {
+                        type: KAFKA_EVENTS.TEAM_AGGREGATED
+                            .UNASSIGN_MEMBER_FROM_TEAM_TASKS,
+                        teamId,
+                        userIds,
+                    },
+                });
+            }
+
+            if (deletedTeamIds.length > 0) {
+                outboxEntries.push({
+                    kafka_topic: KAFKA_TOPICS.TEAM_AGGREGATED,
+                    payload: {
+                        type: KAFKA_EVENTS.TEAM_AGGREGATED
+                            .PURGE_TEAM_MEMBERSHIPS,
+                        teamIds: deletedTeamIds,
+                    },
+                });
+
+                outboxEntries.push({
+                    kafka_topic: KAFKA_TOPICS.TEAM_AGGREGATED,
+                    payload: {
+                        type: KAFKA_EVENTS.TEAM_AGGREGATED.ORPHAN_TEAM_TASKS,
+                        teamIds: deletedTeamIds,
+                    },
+                });
+            }
+
+            // [5] Atomic Sink
+            if (outboxEntries.length > 0) {
+                await appendEventsToOutbox(trx, outboxEntries);
+                logger.info(
+                    `[Team Coordinator] Wrote ${outboxEntries.length} signals for batch`,
                 );
             }
-
-            // Team Level: Member Count Changes
-            if (state.membershipBalance !== 0) {
-                teamMemberDeltas.set(
-                    state.teamId,
-                    (teamMemberDeltas.get(state.teamId) || 0) +
-                        state.membershipBalance,
-                );
-            }
-
-            // Explicit Member Removal (Cleanup)
-            if (state.removedUserIds.length > 0) {
-                const existing = memberRemovals.get(state.teamId) || [];
-                memberRemovals.set(state.teamId, [
-                    ...existing,
-                    ...state.removedUserIds,
-                ]);
-            }
-
-            // Team Lifecycle Deletion (Cleanup)
-            if (state.lifecycleBalance < 0) {
-                deletedTeamIds.push(state.teamId);
-            }
-        }
-
-        // 3. Build Outbox Signals
-        const outboxEntries: OutboxEntry[] = [];
-
-        // Signal: Sync Project Team Count
-        for (const [projectId, delta] of projectTeamDeltas.entries()) {
-            outboxEntries.push({
-                kafka_topic: KAFKA_TOPICS.TEAM_AGGREGATED,
-                payload: {
-                    type: KAFKA_EVENTS.TEAM_AGGREGATED.SYNC_PROJECT_TEAM_COUNT,
-                    projectId,
-                    delta,
-                },
-            });
-        }
-
-        // Signal: Sync Team Member Count
-        for (const [teamId, delta] of teamMemberDeltas.entries()) {
-            outboxEntries.push({
-                kafka_topic: KAFKA_TOPICS.TEAM_AGGREGATED,
-                payload: {
-                    type: KAFKA_EVENTS.TEAM_AGGREGATED.SYNC_TEAM_MEMBER_COUNT,
-                    teamId,
-                    delta,
-                },
-            });
-        }
-
-        // Signal: Unassign Member from Team Tasks
-        for (const [teamId, userIds] of memberRemovals.entries()) {
-            outboxEntries.push({
-                kafka_topic: KAFKA_TOPICS.TEAM_AGGREGATED,
-                payload: {
-                    type: KAFKA_EVENTS.TEAM_AGGREGATED
-                        .UNASSIGN_MEMBER_FROM_TEAM_TASKS,
-                    teamId,
-                    userIds,
-                },
-            });
-        }
-
-        // Signal: Decommissioning Cleanup (Team Deleted)
-        if (deletedTeamIds.length > 0) {
-            // [Team Module] Purge memberships
-            outboxEntries.push({
-                kafka_topic: KAFKA_TOPICS.TEAM_AGGREGATED,
-                payload: {
-                    type: KAFKA_EVENTS.TEAM_AGGREGATED.PURGE_TEAM_MEMBERSHIPS,
-                    teamIds: deletedTeamIds,
-                },
-            });
-
-            // [Task Module] Orphan tasks (NULL out team_id)
-            outboxEntries.push({
-                kafka_topic: KAFKA_TOPICS.TEAM_AGGREGATED,
-                payload: {
-                    type: KAFKA_EVENTS.TEAM_AGGREGATED.ORPHAN_TEAM_TASKS,
-                    teamIds: deletedTeamIds,
-                },
-            });
-        }
-
-        // 4. Atomic Sink
-        await appendEventsToOutbox(db, outboxEntries);
-
-        logger.info(
-            `[Team Coordinator] Wrote ${outboxEntries.length} signals for batch of ${events.length} events`,
-        );
+        });
     }
 }

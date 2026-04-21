@@ -1,11 +1,11 @@
-import type { Transaction } from 'kysely';
-import type { Database } from '../../../../database';
+import { db } from '../../../../database';
 import { logger } from '../../../../logger';
 import eventBus from '../../../../utils/EventBus.ts';
 import {
     KAFKA_EVENTS,
     KAFKA_TOPICS,
 } from '../../../../utils/event-bus/constants.ts';
+import { claimEventsAtomic } from '../../../../utils/event-bus/idempotency.ts';
 import type { DomainEvent } from '../../../../utils/event-bus/types.ts';
 import { deleteProjectTaskLinksBatch } from '../TaskQueries.ts';
 
@@ -33,19 +33,28 @@ export class ProjectAggregated_DeleteProjectTaskLink {
 
     private async handleDeleteProjectTaskLink(
         events: DomainEvent<{ projectIds: string[] }>[],
-        trx?: Transaction<Database>,
     ) {
         if (events.length === 0) return;
 
-        const projectIds = Array.from(
-            new Set(events.flatMap((e) => e.data.projectIds)),
-        );
+        await db.transaction().execute(async (trx) => {
+            // [1] Explicit Idempotency Claim
+            const unprocessed = await claimEventsAtomic(
+                trx,
+                events,
+                'task-link-decommissioning-group',
+            );
 
-        logger.info(
-            `[ProjectAggregated -> Task] Decommissioning task links for ${projectIds.length} projects`,
-        );
+            if (unprocessed.length === 0) return;
 
-        try {
+            // [2] Collect all unique project IDs from the batch
+            const projectIds = Array.from(
+                new Set(unprocessed.flatMap((e) => e.data.projectIds)),
+            );
+
+            logger.info(
+                `[ProjectAggregated -> Task] Decommissioning task links for ${projectIds.length} projects (from ${unprocessed.length} events)`,
+            );
+
             const { affectedCount } = await deleteProjectTaskLinksBatch(
                 projectIds,
                 trx,
@@ -54,12 +63,6 @@ export class ProjectAggregated_DeleteProjectTaskLink {
             logger.info(
                 `[ProjectAggregated -> Task] Successfully purged ${affectedCount} task link records`,
             );
-        } catch (err) {
-            logger.error(
-                '[ProjectAggregated -> Task] Failed to decommission project task links:',
-                err,
-            );
-            throw err;
-        }
+        });
     }
 }

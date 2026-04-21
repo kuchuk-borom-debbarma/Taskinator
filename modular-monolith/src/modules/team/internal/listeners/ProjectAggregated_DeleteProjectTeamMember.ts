@@ -1,11 +1,11 @@
-import type { Transaction } from 'kysely';
-import type { Database } from '../../../../database';
+import { db } from '../../../../database';
 import { logger } from '../../../../logger';
 import eventBus from '../../../../utils/EventBus.ts';
 import {
     KAFKA_EVENTS,
     KAFKA_TOPICS,
 } from '../../../../utils/event-bus/constants.ts';
+import { claimEventsAtomic } from '../../../../utils/event-bus/idempotency.ts';
 import type { DomainEvent } from '../../../../utils/event-bus/types.ts';
 import { deleteProjectTeamMemberBatch } from '../TeamQueries.ts';
 
@@ -33,19 +33,28 @@ export class ProjectAggregated_DeleteProjectTeamMember {
 
     private async handleDeleteProjectTeamMember(
         events: DomainEvent<{ projectIds: string[] }>[],
-        trx?: Transaction<Database>,
     ) {
         if (events.length === 0) return;
 
-        const projectIds = Array.from(
-            new Set(events.flatMap((e) => e.data.projectIds)),
-        );
+        await db.transaction().execute(async (trx) => {
+            // [1] Explicit Idempotency Claim
+            const unprocessed = await claimEventsAtomic(
+                trx,
+                events,
+                'team-membership-decommissioning-group',
+            );
 
-        logger.info(
-            `[ProjectAggregated -> Team] Decommissioning team members for ${projectIds.length} projects`,
-        );
+            if (unprocessed.length === 0) return;
 
-        try {
+            // [2] Collect all unique project IDs from the batch
+            const projectIds = Array.from(
+                new Set(unprocessed.flatMap((e) => e.data.projectIds)),
+            );
+
+            logger.info(
+                `[ProjectAggregated -> Team] Decommissioning team members for ${projectIds.length} projects (from ${unprocessed.length} events)`,
+            );
+
             const { affectedCount } = await deleteProjectTeamMemberBatch(
                 projectIds,
                 trx,
@@ -54,12 +63,6 @@ export class ProjectAggregated_DeleteProjectTeamMember {
             logger.info(
                 `[ProjectAggregated -> Team] Successfully purged ${affectedCount} team membership records`,
             );
-        } catch (err) {
-            logger.error(
-                '[ProjectAggregated -> Team] Failed to decommission project team members:',
-                err,
-            );
-            throw err;
-        }
+        });
     }
 }

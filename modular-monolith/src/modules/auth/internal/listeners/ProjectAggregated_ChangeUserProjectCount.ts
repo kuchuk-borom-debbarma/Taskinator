@@ -1,9 +1,9 @@
-import type { Transaction } from 'kysely';
-import type { Database } from '../../../../database';
+import { db } from '../../../../database';
 import { logger } from '../../../../logger';
 import eventBus from '../../../../utils/EventBus.ts';
 import type { DomainEvent } from '../../../../utils/event-bus';
 import { KAFKA_EVENTS, KAFKA_TOPICS } from '../../../../utils/event-bus';
+import { claimEventsAtomic } from '../../../../utils/event-bus/idempotency.ts';
 import { updateUserProjectCountsBulk } from '../AuthQueries.ts';
 
 /**
@@ -31,35 +31,35 @@ export class ProjectAggregated_ChangeUserProjectCount {
 
     private async handleAggregatedCounts(
         events: DomainEvent<{ userId: string; delta: number }>[],
-        trx?: Transaction<Database>,
     ) {
         if (events.length === 0) return;
 
-        // Consolidate multiple events for the same user into a single delta
-        // (Even in aggregated events, we might have multiple increments for a busy user in one batch)
-        const consolidates = new Map<string, number>();
-        for (const event of events) {
-            const { userId, delta } = event.data;
-            consolidates.set(userId, (consolidates.get(userId) || 0) + delta);
-        }
+        await db.transaction().execute(async (trx) => {
+            // [1] Explicit Idempotency Claim
+            const unprocessed = await claimEventsAtomic(
+                trx,
+                events,
+                'auth-project-aggregator-group',
+            );
 
-        const entries = Array.from(consolidates.entries());
-        logger.info(
-            `[Auth Listener] Performing bulk projects_count update for ${entries.length} users (from ${events.length} events)`,
-        );
+            if (unprocessed.length === 0) return;
 
-        try {
-            await updateUserProjectCountsBulk(consolidates, trx);
+            // [2] Consolidate multiple events for the same user into a single delta
+            const consolidates = new Map<string, number>();
+            for (const event of unprocessed) {
+                const { userId, delta } = event.data;
+                consolidates.set(
+                    userId,
+                    (consolidates.get(userId) || 0) + delta,
+                );
+            }
 
+            const entries = Array.from(consolidates.entries());
             logger.info(
-                '[Auth Listener] Successfully updated projects_count for user batch',
+                `[Auth Listener] Performing bulk projects_count update for ${entries.length} users (from ${unprocessed.length} events)`,
             );
-        } catch (err) {
-            logger.error(
-                '[Auth Listener] Failed to update projects_count in bulk:',
-                err,
-            );
-            throw err;
-        }
+
+            await updateUserProjectCountsBulk(consolidates, trx);
+        });
     }
 }
