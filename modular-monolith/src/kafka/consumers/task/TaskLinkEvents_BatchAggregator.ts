@@ -1,3 +1,4 @@
+import { db } from '../../../database';
 import eventBus from '../../../utils/EventBus.ts';
 import {
     KAFKA_EVENTS,
@@ -5,7 +6,11 @@ import {
 } from '../../../utils/event-bus/constants.ts';
 import type { DomainEvent } from '../../../utils/event-bus/types.ts';
 import { logger } from '../../../logger';
-import { type ReachabilityExpansionStep } from '../../modules/task/internal/ReachabilityQueries.ts';
+import {
+    type ReachabilityExpansionStep,
+    type TaskDirectLinkDelta,
+} from '../../../modules/task/internal/ReachabilityQueries.ts';
+import { claimEventsAtomic } from '../../../utils/event-bus/idempotency.ts';
 
 interface Edge {
     s: string;
@@ -17,6 +22,7 @@ interface Edge {
  * Handles Created, Updated, and Deleted events with semantic folding and project isolation.
  *
  * Logic: Calculates net deltas for direct incoming/outgoing counts per node.
+ * Signals results via the Transactional Outbox for 100% resilience.
  */
 export class TaskLinkEvents_BatchAggregator {
     async init() {
@@ -30,7 +36,7 @@ export class TaskLinkEvents_BatchAggregator {
                 [KAFKA_EVENTS.TASK_LINK.UPDATED]: this.handleBatch.bind(this),
                 [KAFKA_EVENTS.TASK_LINK.DELETED]: this.handleBatch.bind(this),
             },
-            { batch: true },
+            { batch: true, manualIdempotency: true },
         );
     }
 
@@ -160,43 +166,76 @@ export class TaskLinkEvents_BatchAggregator {
                 }
             }
 
-            // 3. Signal Direct Link Count Changes
-            const deltaList = Array.from(taskDeltas.entries())
-                .map(([taskId, counts]) => ({
-                    taskId,
-                    incomingDelta: counts.in,
-                    outgoingDelta: counts.out,
-                }))
-                .filter((d) => d.incomingDelta !== 0 || d.outgoingDelta !== 0);
+            // 3. Atomicaly Signal results via Transactional Outbox
+            await db.transaction().execute(async (trx) => {
+                // [NEW] ATOMIC CLAIM: Deduplicate events at the database level.
+                // This ensures that if the server crashes before this transaction commits,
+                // the events are NOT marked as processed.
+                const projectEvents = events.filter(
+                    (e) => e.data.projectId === projectId,
+                );
+                const approvedEvents = await claimEventsAtomic(
+                    trx,
+                    projectEvents,
+                    'task-link-aggregator-group',
+                );
 
-            if (deltaList.length > 0) {
-                logger.info(
-                    `[Task Link Aggregator] Project ${projectId}: Signaling ${deltaList.length} task count deltas`,
-                );
-                await eventBus.publish(
-                    KAFKA_TOPICS.TASK_AGGREGATED,
-                    KAFKA_EVENTS.TASK_AGGREGATED.DIRECT_LINK_COUNTS_CHANGED,
-                    {
-                        key: projectId,
-                        data: { projectId, deltas: deltaList },
-                    },
-                );
-            }
+                if (approvedEvents.length === 0) {
+                    logger.info(
+                        `[Task Link Aggregator] Project ${projectId}: Skipping redundant/retried batch`,
+                    );
+                    return;
+                }
 
-            // 4. Signal Reachability Expansion
-            if (reachabilitySteps.length > 0) {
-                logger.info(
-                    `[Task Link Aggregator] Project ${projectId}: Signaling ${reachabilitySteps.length} reachability expansion steps`,
-                );
-                await eventBus.publish(
-                    KAFKA_TOPICS.TASK_AGGREGATED,
-                    KAFKA_EVENTS.TASK_AGGREGATED.REACHABILITY_EXPAND,
-                    {
-                        key: projectId,
-                        data: { steps: reachabilitySteps },
-                    },
-                );
-            }
+                const outboxEntries = [];
+
+                // Direct Link Count Signal
+                const deltaList = Array.from(taskDeltas.entries())
+                    .map(([taskId, counts]) => ({
+                        taskId,
+                        incomingDelta: counts.in,
+                        outgoingDelta: counts.out,
+                    }))
+                    .filter(
+                        (d) => d.incomingDelta !== 0 || d.outgoingDelta !== 0,
+                    );
+
+                if (deltaList.length > 0) {
+                    outboxEntries.push({
+                        kafka_topic: KAFKA_TOPICS.TASK_AGGREGATED,
+                        kafka_key: projectId,
+                        payload: {
+                            type: KAFKA_EVENTS.TASK_AGGREGATED
+                                .DIRECT_LINK_COUNTS_CHANGED,
+                            projectId,
+                            deltas: deltaList,
+                        },
+                    });
+                }
+
+                // Reachability Expansion Signal
+                if (reachabilitySteps.length > 0) {
+                    outboxEntries.push({
+                        kafka_topic: KAFKA_TOPICS.TASK_AGGREGATED,
+                        kafka_key: projectId,
+                        payload: {
+                            type: KAFKA_EVENTS.TASK_AGGREGATED
+                                .REACHABILITY_EXPAND,
+                            steps: reachabilitySteps,
+                        },
+                    });
+                }
+
+                if (outboxEntries.length > 0) {
+                    logger.info(
+                        `[Task Link Aggregator] Project ${projectId}: Atomically signaling ${outboxEntries.length} outbox events`,
+                    );
+                    await trx
+                        .insertInto('outbox_events')
+                        .values(outboxEntries)
+                        .execute();
+                }
+            });
         }
     }
 }

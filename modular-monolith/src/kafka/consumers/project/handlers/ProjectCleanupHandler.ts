@@ -1,4 +1,4 @@
-import eventBus from '../../../../utils/EventBus.ts';
+import { db } from '../../../../database';
 import {
     KAFKA_EVENTS,
     KAFKA_TOPICS,
@@ -6,25 +6,30 @@ import {
 import { logger } from '../../../../logger';
 
 /**
- * Signals project deletion cleanup to other modules.
+ * Publishes signaling events for Project cleanup using the Transactional Outbox.
  */
 export class ProjectCleanupHandler {
     name = 'ProjectCleanupHandler';
 
-    async handle(deletedProjectIds: string[]): Promise<void> {
-        if (deletedProjectIds.length === 0) return;
+    async handle(projectIds: string[]): Promise<void> {
+        if (projectIds.length === 0) return;
 
         logger.info(
-            `[${this.name}] Signal detected for ${deletedProjectIds.length} deleted projects. Triggering cross-module cleanup.`,
+            `[${this.name}] Signaling cleanup via Outbox: ${projectIds.length} projects`,
         );
 
-        await eventBus.publish(
-            KAFKA_TOPICS.PROJECT_AGGREGATED,
-            KAFKA_EVENTS.PROJECT_AGGREGATED.DELETED,
-            {
-                key: 'cleanup-batch',
-                data: { projectIds: deletedProjectIds },
-            },
-        );
+        await db
+            .insertInto('outbox_events')
+            .values([
+                {
+                    kafka_topic: KAFKA_TOPICS.PROJECT_AGGREGATED,
+                    kafka_key: 'cleanup',
+                    payload: {
+                        type: KAFKA_EVENTS.PROJECT_AGGREGATED.DELETED,
+                        projectIds,
+                    },
+                },
+            ])
+            .execute();
     }
 }

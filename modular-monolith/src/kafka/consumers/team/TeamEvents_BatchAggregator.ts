@@ -150,14 +150,16 @@ export class TeamEvents_BatchAggregator {
                         err,
                     );
                 }),
-            this.memberCleanupHandler
-                .handle(memberRemovals)
-                .catch((err: any) => {
-                    logger.error(
-                        '[Team Aggregator] Member cleanup handler failed:',
-                        err,
-                    );
-                }),
+            ...Array.from(memberRemovals.entries()).map(([tid, uids]) =>
+                this.memberCleanupHandler
+                    .handle(tid, uids)
+                    .catch((err: any) => {
+                        logger.error(
+                            '[Team Aggregator] Member cleanup handler failed:',
+                            err,
+                        );
+                    }),
+            ),
             this.cleanupHandler.handle(deletedTeamIds).catch((err: any) => {
                 logger.error('[Team Aggregator] Cleanup handler failed:', err);
             }),

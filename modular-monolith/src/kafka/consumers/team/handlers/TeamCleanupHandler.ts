@@ -1,4 +1,4 @@
-import eventBus from '../../../../utils/EventBus.ts';
+import { db } from '../../../../database';
 import {
     KAFKA_EVENTS,
     KAFKA_TOPICS,
@@ -6,25 +6,30 @@ import {
 import { logger } from '../../../../logger';
 
 /**
- * Signals team deletion cleanup to other modules.
+ * Publishes signaling events for Team cleanup using the Transactional Outbox.
  */
 export class TeamCleanupHandler {
     name = 'TeamCleanupHandler';
 
-    async handle(deletedTeamIds: string[]): Promise<void> {
-        if (deletedTeamIds.length === 0) return;
+    async handle(teamIds: string[]): Promise<void> {
+        if (teamIds.length === 0) return;
 
         logger.info(
-            `[${this.name}] Signal detected for ${deletedTeamIds.length} deleted teams. Triggering cross-module cleanup.`,
+            `[${this.name}] Signaling cleanup via Outbox: ${teamIds.length} teams`,
         );
 
-        await eventBus.publish(
-            KAFKA_TOPICS.TEAM_AGGREGATED,
-            KAFKA_EVENTS.TEAM_AGGREGATED.DELETED,
-            {
-                key: 'team-cleanup-batch',
-                data: { teamIds: deletedTeamIds },
-            },
-        );
+        await db
+            .insertInto('outbox_events')
+            .values([
+                {
+                    kafka_topic: KAFKA_TOPICS.TEAM_AGGREGATED,
+                    kafka_key: 'cleanup',
+                    payload: {
+                        type: KAFKA_EVENTS.TEAM_AGGREGATED.DELETED,
+                        teamIds,
+                    },
+                },
+            ])
+            .execute();
     }
 }

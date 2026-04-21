@@ -1,4 +1,4 @@
-import eventBus from '../../../../utils/EventBus.ts';
+import { db } from '../../../../database';
 import {
     KAFKA_EVENTS,
     KAFKA_TOPICS,
@@ -6,7 +6,7 @@ import {
 import { logger } from '../../../../logger';
 
 /**
- * Publishes aggregated project count changes per user.
+ * Publishes aggregated project count changes per user using the Transactional Outbox.
  */
 export class UserProjectCountHandler {
     name = 'UserProjectCountHandler';
@@ -16,18 +16,19 @@ export class UserProjectCountHandler {
         if (userEntries.length === 0) return;
 
         logger.info(
-            `[${this.name}] Dispatching ${userEntries.length} per-user increment events`,
+            `[${this.name}] Signaling per-user project counts via Outbox: ${userEntries.length} users`,
         );
 
-        const eventsToPublish = userEntries.map(([userId, delta]) => ({
-            key: userId,
-            data: { userId, delta },
+        const outboxEntries = userEntries.map(([userId, delta]) => ({
+            kafka_topic: KAFKA_TOPICS.PROJECT_AGGREGATED,
+            kafka_key: userId,
+            payload: {
+                type: KAFKA_EVENTS.PROJECT_AGGREGATED.COUNTS_CHANGED,
+                userId,
+                delta,
+            },
         }));
 
-        await eventBus.publish(
-            KAFKA_TOPICS.PROJECT_AGGREGATED,
-            KAFKA_EVENTS.PROJECT_AGGREGATED.COUNTS_CHANGED,
-            eventsToPublish,
-        );
+        await db.insertInto('outbox_events').values(outboxEntries).execute();
     }
 }

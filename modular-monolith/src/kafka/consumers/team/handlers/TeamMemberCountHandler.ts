@@ -1,4 +1,4 @@
-import eventBus from '../../../../utils/EventBus.ts';
+import { db } from '../../../../database';
 import {
     KAFKA_EVENTS,
     KAFKA_TOPICS,
@@ -6,28 +6,29 @@ import {
 import { logger } from '../../../../logger';
 
 /**
- * Publishes aggregated member count changes per team.
+ * Publishes aggregated team member count changes using the Transactional Outbox.
  */
 export class TeamMemberCountHandler {
     name = 'TeamMemberCountHandler';
 
     async handle(teamIncrements: Map<string, number>): Promise<void> {
-        const entries = Array.from(teamIncrements.entries());
-        if (entries.length === 0) return;
+        const teamEntries = Array.from(teamIncrements.entries());
+        if (teamEntries.length === 0) return;
 
         logger.info(
-            `[${this.name}] Dispatching ${entries.length} per-team member increment events`,
+            `[${this.name}] Signaling team member counts via Outbox: ${teamEntries.length} teams`,
         );
 
-        const eventsToPublish = entries.map(([teamId, delta]) => ({
-            key: teamId,
-            data: { teamId, delta },
+        const outboxEntries = teamEntries.map(([teamId, delta]) => ({
+            kafka_topic: KAFKA_TOPICS.TEAM_AGGREGATED,
+            kafka_key: teamId,
+            payload: {
+                type: KAFKA_EVENTS.TEAM_AGGREGATED.TEAM_MEMBER_COUNTS_CHANGED,
+                teamId,
+                delta,
+            },
         }));
 
-        await eventBus.publish(
-            KAFKA_TOPICS.TEAM_AGGREGATED,
-            KAFKA_EVENTS.TEAM_AGGREGATED.TEAM_MEMBER_COUNTS_CHANGED,
-            eventsToPublish,
-        );
+        await db.insertInto('outbox_events').values(outboxEntries).execute();
     }
 }

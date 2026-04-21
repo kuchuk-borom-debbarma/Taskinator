@@ -26,7 +26,7 @@ export interface Bus {
         topic: string,
         groupId: string,
         handlers: Record<string, (data: any) => Promise<void>>,
-        options?: { batch?: boolean },
+        options?: { batch?: boolean; manualIdempotency?: boolean },
     ): Promise<void>;
 
     init(): Promise<void>;

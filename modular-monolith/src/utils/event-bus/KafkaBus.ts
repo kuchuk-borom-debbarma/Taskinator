@@ -66,7 +66,7 @@ export class KafkaBus implements Bus {
         topic: string,
         groupId: string,
         handlers: Record<string, (data: any) => Promise<void>>,
-        options?: { batch?: boolean },
+        options?: { batch?: boolean; manualIdempotency?: boolean },
     ) {
         await this.createConsumer(topic, groupId, handlers, options);
     }
@@ -86,7 +86,7 @@ export class KafkaBus implements Bus {
         topic: string,
         groupId: string,
         handlers: Record<string, (data: any) => Promise<void>>,
-        options?: { batch?: boolean },
+        options?: { batch?: boolean; manualIdempotency?: boolean },
     ) {
         const consumer = this.kafka.consumer({ groupId });
         await consumer.connect();
@@ -125,55 +125,32 @@ export class KafkaBus implements Bus {
                                     )
                                     .filter((e) => handlers[e.type]);
 
-                                // 2. Safe Execution using the Idempotency Wrapper
-                                await withIdempotency(
-                                    allEvents,
-                                    groupId,
-                                    async (unprocessed) => {
-                                        // Pre-filter: drop any events if the consumer was
-                                        // revoked mid-batch (rebalance / shutdown).
-                                        const live = unprocessed.filter(
-                                            () => isRunning() && !isStale(),
-                                        );
-
-                                        // Group events by type so that:
-                                        //   - Events of DIFFERENT types run concurrently (Promise.all)
-                                        //   - Events of the SAME type run in arrival order (serial)
-                                        //     to preserve per-type consistency.
-                                        const byType = new Map<
-                                            string,
-                                            DomainEvent[]
-                                        >();
-                                        for (const e of live) {
-                                            const bucket =
-                                                byType.get(e.type) ?? [];
-                                            bucket.push(e);
-                                            byType.set(e.type, bucket);
-                                        }
-
-                                        await Promise.all(
-                                            Array.from(byType.entries()).map(
-                                                async ([type, events]) => {
-                                                    const handler =
-                                                        handlers[type];
-                                                    if (!handler) return;
-
-                                                    if (options?.batch) {
-                                                        // Pass the entire array of events to the batch handler
-                                                        await handler(events);
-                                                    } else {
-                                                        // Maintain standard serial execution for non-batch handlers
-                                                        for (const e of events) {
-                                                            await handler(
-                                                                e.data,
-                                                            );
-                                                        }
-                                                    }
-                                                },
-                                            ),
-                                        );
-                                    },
-                                );
+                                // 2. Idempotency handling
+                                if (options?.manualIdempotency) {
+                                    // Bypassing global idempotency. The listener MUST call claimEventsAtomic.
+                                    await this.executeHandlers(
+                                        allEvents,
+                                        handlers,
+                                        options,
+                                        isRunning,
+                                        isStale,
+                                    );
+                                } else {
+                                    // Standard Global Idempotency (Non-Transactional)
+                                    await withIdempotency(
+                                        allEvents,
+                                        groupId,
+                                        async (unprocessed) => {
+                                            await this.executeHandlers(
+                                                unprocessed,
+                                                handlers,
+                                                options,
+                                                isRunning,
+                                                isStale,
+                                            );
+                                        },
+                                    );
+                                }
 
                                 // 3. Mark the Kafka batch as consumed to advance the offset
                                 for (const m of batch.messages)
@@ -189,5 +166,45 @@ export class KafkaBus implements Bus {
         });
 
         this.consumers.push(consumer);
+    }
+
+    private async executeHandlers(
+        events: DomainEvent[],
+        handlers: Record<string, (data: any) => Promise<void>>,
+        options: { batch?: boolean } | undefined,
+        isRunning: () => boolean,
+        isStale: () => boolean,
+    ) {
+        // Pre-filter: drop any events if the consumer was
+        // revoked mid-batch (rebalance / shutdown).
+        const live = events.filter(() => isRunning() && !isStale());
+
+        // Group events by type so that:
+        //   - Events of DIFFERENT types run concurrently (Promise.all)
+        //   - Events of the SAME type run in arrival order (serial)
+        //     to preserve per-type consistency.
+        const byType = new Map<string, DomainEvent[]>();
+        for (const e of live) {
+            const bucket = byType.get(e.type) ?? [];
+            bucket.push(e);
+            byType.set(e.type, bucket);
+        }
+
+        await Promise.all(
+            Array.from(byType.entries()).map(async ([type, events]) => {
+                const handler = handlers[type];
+                if (!handler) return;
+
+                if (options?.batch) {
+                    // Pass the entire array of events to the batch handler
+                    await handler(events);
+                } else {
+                    // Maintain standard serial execution for non-batch handlers
+                    for (const e of events) {
+                        await handler(e.data);
+                    }
+                }
+            }),
+        );
     }
 }

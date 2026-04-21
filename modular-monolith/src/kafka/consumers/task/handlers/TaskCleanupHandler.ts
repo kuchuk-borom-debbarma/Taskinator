@@ -1,4 +1,4 @@
-import eventBus from '../../../../utils/EventBus.ts';
+import { db } from '../../../../database';
 import {
     KAFKA_EVENTS,
     KAFKA_TOPICS,
@@ -6,7 +6,7 @@ import {
 import { logger } from '../../../../logger';
 
 /**
- * Publishes signaling events for Task cleanup after batch deletions.
+ * Publishes signaling events for Task cleanup using the Transactional Outbox.
  */
 export class TaskCleanupHandler {
     name = 'TaskCleanupHandler';
@@ -15,18 +15,21 @@ export class TaskCleanupHandler {
         if (taskIds.length === 0) return;
 
         logger.info(
-            `[${this.name}] Signaling cleanup for ${taskIds.length} deleted tasks`,
+            `[${this.name}] Signaling cleanup via Outbox: ${taskIds.length} tasks`,
         );
 
-        await eventBus.publish(
-            KAFKA_TOPICS.TASK_AGGREGATED,
-            KAFKA_EVENTS.TASK_AGGREGATED.DELETED,
-            [
+        await db
+            .insertInto('outbox_events')
+            .values([
                 {
-                    key: 'cleanup',
-                    data: { taskIds },
+                    kafka_topic: KAFKA_TOPICS.TASK_AGGREGATED,
+                    kafka_key: 'cleanup',
+                    payload: {
+                        type: KAFKA_EVENTS.TASK_AGGREGATED.DELETED,
+                        taskIds,
+                    },
                 },
-            ],
-        );
+            ])
+            .execute();
     }
 }

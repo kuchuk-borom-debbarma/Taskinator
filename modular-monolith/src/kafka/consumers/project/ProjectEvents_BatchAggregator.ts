@@ -143,14 +143,16 @@ export class ProjectEvents_BatchAggregator {
                         err,
                     );
                 }),
-            this.memberCleanupHandler
-                .handle(memberRemovals)
-                .catch((err: any) => {
-                    logger.error(
-                        '[Project Coordinator] Member cleanup handler failed:',
-                        err,
-                    );
-                }),
+            ...Array.from(memberRemovals.entries()).map(([pid, uids]) =>
+                this.memberCleanupHandler
+                    .handle(pid, uids)
+                    .catch((err: any) => {
+                        logger.error(
+                            '[Project Coordinator] Member cleanup handler failed:',
+                            err,
+                        );
+                    }),
+            ),
             this.cleanupHandler.handle(deletedProjectIds).catch((err: any) => {
                 logger.error(
                     '[Project Coordinator] Cleanup handler failed:',

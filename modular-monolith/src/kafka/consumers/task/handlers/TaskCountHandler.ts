@@ -1,4 +1,4 @@
-import eventBus from '../../../../utils/EventBus.ts';
+import { db } from '../../../../database';
 import {
     KAFKA_EVENTS,
     KAFKA_TOPICS,
@@ -6,7 +6,7 @@ import {
 import { logger } from '../../../../logger';
 
 /**
- * Publishes aggregated task count changes for Projects and Teams.
+ * Publishes aggregated task count changes for Projects and Teams using the Transactional Outbox.
  */
 export class TaskCountHandler {
     name = 'TaskCountHandler';
@@ -21,25 +21,33 @@ export class TaskCountHandler {
         if (pEntries.length === 0 && tEntries.length === 0) return;
 
         logger.info(
-            `[${this.name}] Dispatching counts: ${pEntries.length} projects, ${tEntries.length} teams`,
+            `[${this.name}] Signaling counts via Outbox: ${pEntries.length} projects, ${tEntries.length} teams`,
         );
 
-        const eventsToPublish = [
+        const outboxEntries = [
             ...pEntries.map(([projectId, delta]) => ({
-                key: projectId,
-                data: { projectId, delta, type: 'PROJECT' },
+                kafka_topic: KAFKA_TOPICS.TASK_AGGREGATED,
+                kafka_key: projectId,
+                payload: {
+                    type: KAFKA_EVENTS.TASK_AGGREGATED.COUNTS_CHANGED,
+                    projectId,
+                    delta,
+                    entityType: 'PROJECT',
+                },
             })),
             ...tEntries.map(([teamId, delta]) => ({
-                key: teamId,
-                data: { teamId, delta, type: 'TEAM' },
+                kafka_topic: KAFKA_TOPICS.TASK_AGGREGATED,
+                kafka_key: teamId,
+                payload: {
+                    type: KAFKA_EVENTS.TASK_AGGREGATED.COUNTS_CHANGED,
+                    teamId,
+                    delta,
+                    entityType: 'TEAM',
+                },
             })),
         ];
 
-        await eventBus.publish(
-            KAFKA_TOPICS.TASK_AGGREGATED,
-            KAFKA_EVENTS.TASK_AGGREGATED.COUNTS_CHANGED,
-            eventsToPublish,
-        );
+        await db.insertInto('outbox_events').values(outboxEntries).execute();
     }
 
     async handleMemberAssignments(
@@ -49,18 +57,19 @@ export class TaskCountHandler {
         if (entries.length === 0) return;
 
         logger.info(
-            `[${this.name}] Dispatching member assignment signals for ${entries.length} users`,
+            `[${this.name}] Signaling member assignment signals via Outbox for ${entries.length} users`,
         );
 
-        const eventsToPublish = entries.map(([userId, tasks]) => ({
-            key: userId,
-            data: { userId, tasks },
+        const outboxEntries = entries.map(([userId, tasks]) => ({
+            kafka_topic: KAFKA_TOPICS.TASK_AGGREGATED,
+            kafka_key: userId,
+            payload: {
+                type: KAFKA_EVENTS.TASK_AGGREGATED.MEMBERS_CHANGED,
+                userId,
+                tasks,
+            },
         }));
 
-        await eventBus.publish(
-            KAFKA_TOPICS.TASK_AGGREGATED,
-            KAFKA_EVENTS.TASK_AGGREGATED.MEMBERS_CHANGED,
-            eventsToPublish,
-        );
+        await db.insertInto('outbox_events').values(outboxEntries).execute();
     }
 }

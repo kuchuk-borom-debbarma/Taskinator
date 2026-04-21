@@ -1,4 +1,4 @@
-import eventBus from '../../../../utils/EventBus.ts';
+import { db } from '../../../../database';
 import {
     KAFKA_EVENTS,
     KAFKA_TOPICS,
@@ -6,31 +6,31 @@ import {
 import { logger } from '../../../../logger';
 
 /**
- * Handler for Project Member removals.
- * Dispatches targeted cleanup signals for cascading removal from teams/tasks.
+ * Signaling for Project Member removal cleanup via Transactional Outbox.
  */
 export class ProjectMemberCleanupHandler {
     name = 'ProjectMemberCleanupHandler';
 
-    async handle(memberRemovals: Map<string, string[]>) {
-        if (memberRemovals.size === 0) return;
+    async handle(projectId: string, userIds: string[]): Promise<void> {
+        if (userIds.length === 0) return;
 
         logger.info(
-            `[Project Aggregator -> MemberCleanup] Signaling membership removals for ${memberRemovals.size} projects`,
+            `[${this.name}] Signaling member cleanup via Outbox: ${userIds.length} users in project ${projectId}`,
         );
 
-        const eventsToPublish = Array.from(memberRemovals.entries()).map(
-            ([projectId, userIds]) => ({
-                key: projectId,
-                data: { projectId, userIds },
-            }),
-        );
-
-        // We publish these to the AGGREGATED topic for cascading execution
-        await eventBus.publish(
-            KAFKA_TOPICS.PROJECT_AGGREGATED,
-            KAFKA_EVENTS.PROJECT_AGGREGATED.MEMBER_REMOVED,
-            eventsToPublish,
-        );
+        await db
+            .insertInto('outbox_events')
+            .values([
+                {
+                    kafka_topic: KAFKA_TOPICS.PROJECT_AGGREGATED,
+                    kafka_key: projectId,
+                    payload: {
+                        type: KAFKA_EVENTS.PROJECT_AGGREGATED.MEMBER_REMOVED,
+                        projectId,
+                        userIds,
+                    },
+                },
+            ])
+            .execute();
     }
 }

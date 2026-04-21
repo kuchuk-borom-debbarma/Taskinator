@@ -6,7 +6,7 @@ import {
 import type { DomainEvent } from '../../../../utils/event-bus/types.ts';
 import { logger } from '../../../../logger';
 import { updateTaskDirectLinkCountsBatch } from '../TaskQueries.ts';
-import type { TaskDirectLinkDelta } from '../../../../kafka/consumers/task/handlers/TaskDirectLinkCountHandler.ts';
+import type { TaskDirectLinkDelta } from '../ReachabilityQueries.ts';
 
 /**
  * Execution Listener for Direct Task Link Counts.
