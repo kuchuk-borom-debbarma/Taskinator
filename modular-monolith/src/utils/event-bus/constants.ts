@@ -48,5 +48,7 @@ export const KAFKA_EVENTS = {
     },
     TASK_AGGREGATED: {
         COUNTS_CHANGED: 'task.aggregated.counts_changed',
+        MEMBERS_CHANGED: 'task.aggregated.members_changed',
+        DELETED: 'task.aggregated.deleted',
     },
 } as const;

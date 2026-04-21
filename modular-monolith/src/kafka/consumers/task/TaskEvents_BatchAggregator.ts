@@ -6,9 +6,11 @@ import {
 import type { DomainEvent } from '../../../utils/event-bus/types.ts';
 import { logger } from '../../../logger';
 import { TaskCountHandler } from './handlers/TaskCountHandler.ts';
+import { TaskCleanupHandler } from './handlers/TaskCleanupHandler.ts';
 
 export class TaskEvents_BatchAggregator {
     private countHandler = new TaskCountHandler();
+    private cleanupHandler = new TaskCleanupHandler();
 
     async init() {
         logger.info(
@@ -35,12 +37,16 @@ export class TaskEvents_BatchAggregator {
         );
 
         // 1. Semantic Folding & Count Delta Preparation
-        // We use a delta-based approach for counters
         const projectIncrements = new Map<string, number>();
         const teamIncrements = new Map<string, number>();
 
+        // userId -> { taskId, projectId, title, type }[]
+        const memberAssignments = new Map<string, any[]>();
+
+        const deletedTaskIds: string[] = [];
+
         for (const event of events) {
-            const { projectId } = event.data;
+            const { projectId, taskId } = event.data;
 
             switch (event.type) {
                 case KAFKA_EVENTS.TASK.CREATED:
@@ -61,11 +67,13 @@ export class TaskEvents_BatchAggregator {
                             (teamIncrements.get(event.data.teamId) || 0) - 1,
                         );
                     }
+                    deletedTaskIds.push(taskId);
                     break;
 
                 case KAFKA_EVENTS.TASK.UPDATED:
                     const { old, new: newState } = event.data;
-                    // If team changed, adjust counters
+
+                    // A. Team Lifecycle counters
                     if (old.teamId !== newState.teamId) {
                         if (old.teamId) {
                             teamIncrements.set(
@@ -80,15 +88,33 @@ export class TaskEvents_BatchAggregator {
                             );
                         }
                     }
+
+                    // B. Member assignment signals
+                    if (old.memberId !== newState.memberId) {
+                        if (newState.memberId) {
+                            const list =
+                                memberAssignments.get(newState.memberId) || [];
+                            list.push({
+                                taskId,
+                                projectId,
+                                title: newState.title,
+                                type: 'ASSIGNED',
+                            });
+                            memberAssignments.set(newState.memberId, list);
+                        }
+                        // Note: We could also track UNASSIGNED here if we want to notify on removal
+                    }
                     break;
             }
         }
 
-        // 3. Delegate to Handler
-        await this.countHandler
-            .handle(projectIncrements, teamIncrements)
-            .catch((err: any) => {
-                logger.error('[Task Coordinator] Count handler failed:', err);
-            });
+        // 3. Delegate to Handlers
+        await Promise.all([
+            this.countHandler.handle(projectIncrements, teamIncrements),
+            this.countHandler.handleMemberAssignments(memberAssignments),
+            this.cleanupHandler.handle(deletedTaskIds),
+        ]).catch((err: any) => {
+            logger.error('[Task Coordinator] Signal handlers failed:', err);
+        });
     }
 }

@@ -937,3 +937,25 @@ export const unassignTeamMembersFromTasks = async (
 
     return { updatedCount: result.rows.length };
 };
+
+export const deleteTaskLinksByTaskIds = async (
+    taskIds: string[],
+): Promise<void> => {
+    if (taskIds.length === 0) return;
+    await sql`
+        DELETE FROM task_link 
+        WHERE source_task_id = ANY(${taskIds}::uuid[]) 
+           OR target_task_id = ANY(${taskIds}::uuid[])
+    `.execute(db);
+};
+
+export const deleteReachabilityByTaskIds = async (
+    taskIds: string[],
+): Promise<void> => {
+    if (taskIds.length === 0) return;
+    await sql`
+        DELETE FROM task_reachability 
+        WHERE ancestor_task_id = ANY(${taskIds}::uuid[]) 
+           OR descendant_task_id = ANY(${taskIds}::uuid[])
+    `.execute(db);
+};

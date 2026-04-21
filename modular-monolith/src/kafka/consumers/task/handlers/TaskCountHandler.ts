@@ -41,4 +41,26 @@ export class TaskCountHandler {
             eventsToPublish,
         );
     }
+
+    async handleMemberAssignments(
+        assignments: Map<string, any[]>,
+    ): Promise<void> {
+        const entries = Array.from(assignments.entries());
+        if (entries.length === 0) return;
+
+        logger.info(
+            `[${this.name}] Dispatching member assignment signals for ${entries.length} users`,
+        );
+
+        const eventsToPublish = entries.map(([userId, tasks]) => ({
+            key: userId,
+            data: { userId, tasks },
+        }));
+
+        await eventBus.publish(
+            KAFKA_TOPICS.TASK_AGGREGATED,
+            KAFKA_EVENTS.TASK_AGGREGATED.MEMBERS_CHANGED,
+            eventsToPublish,
+        );
+    }
 }
