@@ -1,10 +1,7 @@
 import { logger } from '../../../../logger';
 import eventBus from '../../../../utils/EventBus.ts';
-import {
-    KAFKA_EVENTS,
-    KAFKA_TOPICS,
-} from '../../../../utils/event-bus/constants.ts';
-import type { DomainEvent } from '../../../../utils/event-bus/types.ts';
+import type { DomainEvent } from '../../../../utils/event-bus';
+import { KAFKA_EVENTS, KAFKA_TOPICS } from '../../../../utils/event-bus';
 import { updateUserProjectCountsBulk } from '../AuthQueries.ts';
 
 /**
@@ -13,7 +10,7 @@ import { updateUserProjectCountsBulk } from '../AuthQueries.ts';
  * This performs the actual bulk SQL updates against the 'users' table in the database
  * once the events have been aggregated and folded.
  */
-export class ProjectAggregated_ChangeUserProjectCount_SyncUserProjectCountListener {
+export class ProjectAggregated_ChangeUserProjectCount {
     async init() {
         logger.info(
             '[ProjectAggregated -> Auth] Initializing Listener for users project counts',
@@ -59,7 +56,6 @@ export class ProjectAggregated_ChangeUserProjectCount_SyncUserProjectCountListen
                 '[Auth Listener] Failed to update projects_count in bulk:',
                 err,
             );
-            // In a real system, we might want to throw to trigger Kafka retry
             throw err;
         }
     }

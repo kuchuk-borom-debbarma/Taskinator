@@ -1,5 +1,5 @@
 import { logger } from '../logger';
-import { ProjectAggregated_ChangeUserProjectCount_SyncUserProjectCountListener } from '../modules/auth/internal/listeners/ProjectAggregated_ChangeUserProjectCount_SyncUserProjectCountListener.ts';
+import { ProjectAggregated_ChangeUserProjectCount } from '../modules/auth/internal/listeners/ProjectAggregated_ChangeUserProjectCount.ts';
 import { TaskAggregated_MembersChanged_NotifyMemberAssignmentListener } from '../modules/internal-notification/internal/listeners/TaskAggregated_MembersChanged_NotifyMemberAssignmentListener.ts';
 import { ProjectAggregated_ChangeProjectMemberCount_SyncProjectMemberCountListener } from '../modules/project/internal/listeners/ProjectAggregated_ChangeProjectMemberCount_SyncProjectMemberCountListener.ts';
 import { ProjectAggregated_DeleteProjects_CleanupListener } from '../modules/project/internal/listeners/ProjectAggregated_DeleteProjects_CleanupListener.ts';
@@ -31,8 +31,7 @@ export async function startConsumers() {
 
     const projectAggregator = new ProjectEvents_BatchAggregator();
     const teamAggregator = new TeamEvents_BatchAggregator();
-    const authProjectListener =
-        new ProjectAggregated_ChangeUserProjectCount_SyncUserProjectCountListener();
+    const authProjectListener = new ProjectAggregated_ChangeUserProjectCount();
 
     // Decentralized Cleanup Pipeline (Triggers when a PROJECT is deleted)
     const p_taskCleanup =
