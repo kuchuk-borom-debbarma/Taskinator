@@ -593,8 +593,8 @@ export async function incrementUserProjectCountsBulk(
  * Bulk repair of Project Member counts.
  */
 export async function incrementProjectMemberCountsBulk(
-    trx: any,
     deltas: Map<string, number>,
+    trx?: Transaction<Database>,
 ): Promise<void> {
     const entries = Array.from(deltas.entries());
     if (entries.length === 0) return;
@@ -610,5 +610,36 @@ export async function incrementProjectMemberCountsBulk(
             SELECT * FROM UNNEST(${projectIds}::uuid[], ${deltaList}::int[])
         ) AS v(pid, delta)
         WHERE project.id = v.pid
-    `.execute(trx);
+    `.execute(trx || db);
 }
+
+/**
+ * Batch removes members from projects across multiple project IDs.
+ * Returns the list of project IDs where deletions actually occurred for counter repair.
+ */
+export const purgeProjectMembersBatch = async (
+    deltas: { projectId: string; userIds: string[] }[],
+    trx?: Transaction<Database>,
+): Promise<{ affectedProjectMemberCounts: Map<string, number> }> => {
+    if (deltas.length === 0) return { affectedProjectMemberCounts: new Map() };
+
+    const projectIds = deltas.map((d) => d.projectId);
+    const userIdsList = deltas.map((d) => d.userIds);
+
+    const result = await sql<{ projectId: string }>`
+        DELETE FROM project_member
+        USING (
+            SELECT unnest(${projectIds}::uuid[]) as pid, unnest(${userIdsList}::text[][]) as uids
+        ) AS V
+        WHERE project_member.fk_project_id = V.pid
+          AND project_member.fk_user_id = ANY(V.uids)
+        RETURNING project_member.fk_project_id AS "projectId"
+    `.execute(trx || db);
+
+    const counts = new Map<string, number>();
+    for (const row of result.rows) {
+        counts.set(row.projectId, (counts.get(row.projectId) || 0) + 1);
+    }
+
+    return { affectedProjectMemberCounts: counts };
+};

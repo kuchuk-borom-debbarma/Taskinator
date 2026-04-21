@@ -3,6 +3,7 @@ import { ProjectAggregated_ChangeUserProjectCount } from '../modules/auth/intern
 import { TaskAggregated_MembersChanged_NotifyMemberAssignmentListener } from '../modules/internal-notification/internal/listeners/TaskAggregated_MembersChanged_NotifyMemberAssignmentListener.ts';
 import { ProjectAggregated_ChangeProjectMemberCount } from '../modules/project/internal/listeners/ProjectAggregated_ChangeProjectMemberCount.ts';
 import { ProjectAggregated_DeleteProjects_CleanupListener } from '../modules/project/internal/listeners/ProjectAggregated_DeleteProjects_CleanupListener.ts';
+import { ProjectAggregated_RemoveProjectMember } from '../modules/project/internal/listeners/ProjectAggregated_RemoveProjectMember.ts';
 import { TaskAggregated_CountsChanged_SyncProjectTaskCountListener } from '../modules/project/internal/listeners/TaskAggregated_CountsChanged_SyncProjectTaskCountListener.ts';
 import { TeamAggregated_CountsChanged_SyncProjectTeamCountListener } from '../modules/project/internal/listeners/TeamAggregated_CountsChanged_SyncProjectTeamCountListener.ts';
 import { ProjectAggregated_DeleteProjects_TaskCleanupListener } from '../modules/task/internal/listeners/ProjectAggregated_DeleteProjects_TaskCleanupListener.ts';
@@ -13,7 +14,6 @@ import { TaskDeleted_TaskCleanupListener } from '../modules/task/internal/listen
 import { TeamAggregated_Deleted_UnassignTasksByTeamIdsListener } from '../modules/task/internal/listeners/TeamAggregated_Deleted_UnassignTasksByTeamIdsListener.ts';
 import { TeamAggregated_MemberRemoved_UnassignMemberFromTeamTasksListener } from '../modules/task/internal/listeners/TeamAggregated_MemberRemoved_UnassignMemberFromTeamTasksListener.ts';
 import { ProjectAggregated_DeleteProjects_TeamCleanupListener } from '../modules/team/internal/listeners/ProjectAggregated_DeleteProjects_TeamCleanupListener.ts';
-import { ProjectAggregated_RemoveProjectMember_RemoveMemberFromAllProjectTeamsListener } from '../modules/team/internal/listeners/ProjectAggregated_RemoveProjectMember_RemoveMemberFromAllProjectTeamsListener.ts';
 import { TaskAggregated_CountsChanged_SyncTeamTaskCountListener } from '../modules/team/internal/listeners/TaskAggregated_CountsChanged_SyncTeamTaskCountListener.ts';
 import { TeamAggregated_CountsChanged_SyncTeamMemberCountListener } from '../modules/team/internal/listeners/TeamAggregated_CountsChanged_SyncTeamMemberCountListener.ts';
 import { ProjectEvents_BatchAggregator } from './smart-aggregator-consumer/project/ProjectEvents_BatchAggregator.ts';
@@ -54,8 +54,7 @@ export async function startConsumers() {
     // Project Member Cascading Pipeline
     const p_memberCountListener =
         new ProjectAggregated_ChangeProjectMemberCount();
-    const p_memberTeamCleanupListener =
-        new ProjectAggregated_RemoveProjectMember_RemoveMemberFromAllProjectTeamsListener();
+    const p_memberRemovalListener = new ProjectAggregated_RemoveProjectMember();
     const p_memberTaskUnassignmentListener =
         new ProjectAggregated_RemoveProjectMember_UnassignMemberFromProjectTasksListener();
 
@@ -86,7 +85,7 @@ export async function startConsumers() {
         teamCleanupListener.init(),
         teamMemberTaskUnassignmentListener.init(),
         p_memberCountListener.init(),
-        p_memberTeamCleanupListener.init(),
+        p_memberRemovalListener.init(),
         p_memberTaskUnassignmentListener.init(),
         taskAggregator.init(),
         taskLinkAggregator.init(),
