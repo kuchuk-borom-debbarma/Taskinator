@@ -2,32 +2,35 @@ import type { Transaction } from 'kysely';
 import type { Database } from '../../../../database';
 import { logger } from '../../../../logger';
 import eventBus from '../../../../utils/EventBus.ts';
-import type { DomainEvent } from '../../../../utils/event-bus';
-import { KAFKA_EVENTS, KAFKA_TOPICS } from '../../../../utils/event-bus';
+import {
+    KAFKA_EVENTS,
+    KAFKA_TOPICS,
+} from '../../../../utils/event-bus/constants.ts';
+import type { DomainEvent } from '../../../../utils/event-bus/types.ts';
 import { purgeProjectMembersBatch } from '../ProjectQueries.ts';
 
 /**
- * Execution Listener for Project Member removal.
- * Deletes the member records and repairs project-level member counters.
+ * Execution Listener: Purge Project Members
+ * Specifically removes individual user memberships from a project.
  */
-export class ProjectAggregated_RemoveProjectMember {
+export class ProjectAggregated_PurgeProjectMembers {
     async init() {
         logger.info(
-            '[ProjectAggregated -> Project] Initializing Listener for Member Removal',
+            '[ProjectAggregated -> Project] Initializing Listener: Purge Members',
         );
 
         await eventBus.subscribe(
             KAFKA_TOPICS.PROJECT_AGGREGATED,
-            'project-member-removal-group',
+            'project-member-purge-group',
             {
-                [KAFKA_EVENTS.PROJECT_AGGREGATED.REMOVE_PROJECT_MEMBER]:
-                    this.handleMemberRemoved.bind(this),
+                [KAFKA_EVENTS.PROJECT_AGGREGATED.PURGE_PROJECT_MEMBERS]:
+                    this.handlePurgeMembers.bind(this),
             },
             { batch: true },
         );
     }
 
-    private async handleMemberRemoved(
+    private async handlePurgeMembers(
         events: DomainEvent<{ projectId: string; userIds: string[] }>[],
         trx?: Transaction<Database>,
     ) {
@@ -55,7 +58,6 @@ export class ProjectAggregated_RemoveProjectMember {
         );
 
         try {
-            // Purge memberships (The counter is repaired by a dedicated ChangeProjectMemberCount listener)
             const { affectedProjectMemberCounts } =
                 await purgeProjectMembersBatch(deltas, trx);
 
@@ -64,7 +66,7 @@ export class ProjectAggregated_RemoveProjectMember {
             );
         } catch (err) {
             logger.error(
-                '[ProjectAggregated -> Project] Failed to process project member removal:',
+                '[ProjectAggregated -> Project] Failed to process project member purge:',
                 err,
             );
             throw err;

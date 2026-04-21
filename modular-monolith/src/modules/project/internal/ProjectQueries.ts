@@ -643,3 +643,21 @@ export const purgeProjectMembersBatch = async (
 
     return { affectedProjectMemberCounts: counts };
 };
+
+/**
+ * Purges all membership records for specified projects.
+ * Used during full project decommissioning.
+ */
+export const purgeProjectMembersByProjectIdsBatch = async (
+    projectIds: string[],
+    trx?: Transaction<Database>,
+): Promise<{ affectedCount: number }> => {
+    if (projectIds.length === 0) return { affectedCount: 0 };
+
+    const result = await (trx || db)
+        .deleteFrom('project_member')
+        .where('fk_project_id', 'in', projectIds)
+        .executeTakeFirst();
+
+    return { affectedCount: Number(result.numDeletedRows) };
+};

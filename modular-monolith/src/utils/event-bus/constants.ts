@@ -32,6 +32,7 @@ export const KAFKA_EVENTS = {
             'project.aggregated.change_user_project_count',
         CHANGE_PROJECT_MEMBER_COUNT:
             'project.aggregated.change_project_member_count',
+        PURGE_PROJECT_MEMBERS: 'project.aggregated.purge_project_members',
         REMOVE_MEMBER_FROM_PROJECT_TEAMS:
             'project.aggregated.remove_member_from_project_teams',
         UNASSIGN_MEMBER_FROM_PROJECT_TASKS:

@@ -119,6 +119,22 @@ export class ProjectEvents_BatchAggregator {
             }
         }
 
+        /**
+         * --- ARCHITECTURAL NOTE: UNKEYED PARTITIONING ---
+         * We do NOT use specific kafka_keys (e.g., projectId) for these aggregated signals.
+         * RATIONALE:
+         * 1. Maximize Throughput: Allows Kafka to distribute signals across all partitions, preventing
+         *    hot-spotting on busy projects.
+         * 2. Commutative Deltas: Counters (+1/-1) are order-independent, so exact delivery sequence
+         *    does not matter for final consistency.
+         *
+         * ZOMBIE RISK:
+         * In-batch Semantic Folding (Step 1) covers most race conditions. However, cross-batch out-of-order
+         * delivery (e.g., a 'Remove' batch processed before a delayed 'Add' batch) can lead to "Zombie
+         * Memberships." This is accepted in favor of 10k RPS scalability, with the requirement of a
+         * background reconciliation/vacuum process in the future.
+         */
+
         // --- 3. Build all outbox entries (Pure Semantic Signals) ---
         // These events are handled by Execution Listeners in various modules (Project, Team, Task, Auth).
 
