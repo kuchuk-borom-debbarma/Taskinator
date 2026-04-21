@@ -27,9 +27,10 @@ export const insertTeam = async (param: {
         inserted_outbox AS (
             INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
             SELECT 
-                'team.created',
+                'team-events',
                 "projectId"::text,
                 jsonb_build_object(
+                    'type', 'team.created',
                     'teamId', id,
                     'projectId', "projectId",
                     'name', name,
@@ -395,9 +396,10 @@ export const deleteTeams = async (param: {
         inserted_outbox AS (
             INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
             SELECT 
-                'team.deleted',
+                'team-events',
                 id::text,
                 jsonb_build_object(
+                    'type', 'team.deleted',
                     'teamId', id,
                     'projectId', "projectId",
                     'name', name
@@ -444,14 +446,16 @@ export const insertTeamMembers = async (param: {
         inserted_outbox AS (
             INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
             SELECT 
-                'team.members_added',
-                ${param.teamId},
+                'team-events',
+                ${param.teamId}::text,
                 jsonb_build_object(
-                    'teamId', ${param.teamId},
-                    'projectId', ${param.projectId},
-                    'addedUserIds', (SELECT json_agg(fk_user_id) FROM inserted_members)
+                    'type', 'team.members_added',
+                    'teamId', ${param.teamId}::uuid,
+                    'projectId', ${param.projectId}::uuid,
+                    'addedUserIds', array_agg(fk_user_id)
                 )
-            WHERE EXISTS (SELECT 1 FROM inserted_members)
+            FROM inserted_members
+            GROUP BY 1
         )
         SELECT COUNT(*)::text AS "addedCount" FROM inserted_members
     `.execute(db);
@@ -493,14 +497,16 @@ export const deleteTeamMembers = async (param: {
         inserted_outbox AS (
             INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
             SELECT 
-                'team.members_removed',
-                ${param.teamId},
+                'team-events',
+                ${param.teamId}::text,
                 jsonb_build_object(
-                    'teamId', ${param.teamId},
-                    'projectId', ${param.projectId},
-                    'removedUserIds', (SELECT json_agg(fk_user_id) FROM deleted_members)
+                    'type', 'team.members_removed',
+                    'teamId', ${param.teamId}::uuid,
+                    'projectId', ${param.projectId}::uuid,
+                    'removedUserIds', array_agg(fk_user_id)
                 )
-            WHERE EXISTS (SELECT 1 FROM deleted_members)
+            FROM deleted_members
+            GROUP BY 1
         )
         SELECT COUNT(*)::text AS "removedCount" FROM deleted_members
     `.execute(db);
@@ -539,11 +545,12 @@ export const updateTeam = async (param: {
         inserted_outbox AS (
             INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
             SELECT 
-                'team.updated',
+                'team-events',
                 id::text,
                 jsonb_build_object(
+                    'type', 'team.updated',
                     'teamId', id,
-                    'projectId', projectId,
+                    'projectId', "projectId",
                     'name', name,
                     'version', version,
                     'actorId', ${param.actorId}
@@ -781,4 +788,22 @@ export async function incrementProjectTeamCountsBulk(
         ) AS v(pid, delta)
         WHERE project.id = v.pid
     `.execute(trx || db);
+}
+
+/**
+ * Bulk purge of team memberships.
+ * [Action]: PURGE_TEAM_MEMBERSHIPS
+ */
+export async function purgeTeamMembershipsByTeamIdsBatch(
+    teamIds: string[],
+    trx?: any,
+): Promise<{ affectedCount: number }> {
+    if (teamIds.length === 0) return { affectedCount: 0 };
+
+    const result = await (trx || db)
+        .deleteFrom('project_team_member')
+        .where('fk_team_id', 'in', teamIds)
+        .executeTakeFirst();
+
+    return { affectedCount: Number(result.numDeletedRows) };
 }
