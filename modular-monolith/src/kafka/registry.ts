@@ -19,6 +19,7 @@ import { TaskAggregated_CountsChanged_SyncTeamTaskCountListener } from '../modul
 import { TaskAggregated_MembersChanged_NotifyMemberAssignmentListener } from '../modules/internal-notification/internal/listeners/TaskAggregated_MembersChanged_NotifyMemberAssignmentListener.ts';
 import { TaskAggregated_Deleted_PurgeTaskNetworkListener } from '../modules/task/internal/listeners/TaskAggregated_Deleted_PurgeTaskNetworkListener.ts';
 import { TaskAggregated_DirectLinkCountsChanged_SyncTaskCountsListener } from '../modules/task/internal/listeners/TaskAggregated_DirectLinkCountsChanged_SyncTaskCountsListener.ts';
+import { TaskAggregated_Reachability_ExpandListener } from '../modules/task/internal/listeners/TaskAggregated_Reachability_ExpandListener.ts';
 import { logger } from '../logger';
 
 /**
@@ -75,6 +76,8 @@ export async function startConsumers() {
         new TaskAggregated_Deleted_PurgeTaskNetworkListener();
     const taskDirectLinkCountsListener =
         new TaskAggregated_DirectLinkCountsChanged_SyncTaskCountsListener();
+    const taskReachabilityExpandListener =
+        new TaskAggregated_Reachability_ExpandListener();
 
     await Promise.all([
         projectAggregator.init(),
@@ -98,6 +101,7 @@ export async function startConsumers() {
         taskMemberAssignmentListener.init(),
         taskIndividualCleanupListener.init(),
         taskDirectLinkCountsListener.init(),
+        taskReachabilityExpandListener.init(),
     ]);
 
     logger.info('[Registry] All domain consumers and listeners initialized');

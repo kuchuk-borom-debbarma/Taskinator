@@ -55,6 +55,7 @@ export const KAFKA_EVENTS = {
         COUNTS_CHANGED: 'task.aggregated.counts_changed',
         DIRECT_LINK_COUNTS_CHANGED:
             'task.aggregated.direct_link_counts_changed',
+        REACHABILITY_EXPAND: 'task.aggregated.reachability_expand',
         MEMBERS_CHANGED: 'task.aggregated.members_changed',
         DELETED: 'task.aggregated.deleted',
     },

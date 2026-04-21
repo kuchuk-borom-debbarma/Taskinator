@@ -9,6 +9,7 @@ import {
     TaskDirectLinkCountHandler,
     type TaskDirectLinkDelta,
 } from './handlers/TaskDirectLinkCountHandler.ts';
+import { ReachabilityExpansionHandler } from './handlers/ReachabilityExpansionHandler.ts';
 
 interface Edge {
     s: string;
@@ -23,6 +24,7 @@ interface Edge {
  */
 export class TaskLinkEvents_BatchAggregator {
     private directCountHandler = new TaskDirectLinkCountHandler();
+    private reachabilityExpansionHandler = new ReachabilityExpansionHandler();
 
     async init() {
         logger.info('[Task Module] Initializing Task Link Batch Aggregator');
@@ -155,6 +157,39 @@ export class TaskLinkEvents_BatchAggregator {
                     outgoingDelta: counts.out,
                 }))
                 .filter((d) => d.incomingDelta !== 0 || d.outgoingDelta !== 0);
+
+            // --- REACHABILITY TRIGGER ---
+            const addedEdges = Array.from(linkLifecycle.values())
+                .filter((s) => !s.existedBefore && s.existsAfter && s.final)
+                .map((s) => s.final!);
+
+            const removedEdges = Array.from(linkLifecycle.values())
+                .filter((s) => s.existedBefore && !s.existsAfter && s.initial)
+                .map((s) => s.initial!);
+
+            // Handle updates where endpoints changed ( Removal + Addition )
+            Array.from(linkLifecycle.values())
+                .filter(
+                    (s) =>
+                        s.existedBefore &&
+                        s.existsAfter &&
+                        s.initial &&
+                        s.final &&
+                        (s.initial.s !== s.final.s ||
+                            s.initial.t !== s.final.t),
+                )
+                .forEach((s) => {
+                    addedEdges.push(s.final!);
+                    removedEdges.push(s.initial!);
+                });
+
+            if (addedEdges.length > 0 || removedEdges.length > 0) {
+                await this.reachabilityExpansionHandler.triggerInitialExpansion(
+                    projectId,
+                    addedEdges,
+                    removedEdges,
+                );
+            }
 
             if (deltaList.length > 0) {
                 logger.info(
