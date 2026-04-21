@@ -501,6 +501,7 @@ export const getProjectsByActorIdAndProjectIds = async (
 
 export const updateProjectTeamCountsBulk = async (
     updates: Map<string, number>,
+    trx?: Transaction<Database>,
 ): Promise<void> => {
     const entries = Array.from(updates.entries());
     if (entries.length === 0) return;
@@ -516,7 +517,7 @@ export const updateProjectTeamCountsBulk = async (
             SELECT * FROM UNNEST(${ids}::uuid[], ${deltas}::int[])
         ) AS v(id, delta)
         WHERE project.id = v.id
-    `.execute(db);
+    `.execute(trx || db);
 };
 
 export const updateProjectMemberCountsBulk = async (
@@ -542,6 +543,7 @@ export const updateProjectMemberCountsBulk = async (
 
 export async function updateProjectTaskCountsBulk(
     updates: Map<string, number>,
+    trx?: Transaction<Database>,
 ): Promise<void> {
     const entries = Array.from(updates.entries());
     if (entries.length === 0) return;
@@ -557,7 +559,7 @@ export async function updateProjectTaskCountsBulk(
             SELECT * FROM UNNEST(${ids}::uuid[], ${deltas}::int[])
         ) AS v(id, delta)
         WHERE project.id = v.id
-    `.execute(db);
+    `.execute(trx || db);
 }
 
 /**
