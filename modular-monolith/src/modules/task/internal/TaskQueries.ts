@@ -971,3 +971,33 @@ export const deleteReachabilityByTaskIds = async (
            OR descendant_task_id = ANY(${taskIds}::uuid[])
     `.execute(db);
 };
+
+/**
+ * High-performance batch update for task link counters.
+ */
+export const updateTaskLinkCountsBatch = async (
+    projectId: string,
+    deltas: { taskId: string; incomingDelta: number; outgoingDelta: number }[],
+) => {
+    if (deltas.length === 0) return;
+
+    const taskIds = deltas.map((d) => d.taskId);
+    const incDeltas = deltas.map((d) => d.incomingDelta);
+    const outDeltas = deltas.map((d) => d.outgoingDelta);
+
+    await sql`
+        UPDATE project_task
+        SET 
+            direct_incoming_count = project_task.direct_incoming_count + V.inc,
+            direct_outgoing_count = project_task.direct_outgoing_count + V.out,
+            updated_at = CURRENT_TIMESTAMP
+        FROM (
+            SELECT 
+                unnest(${taskIds}::uuid[]) as tid,
+                unnest(${incDeltas}::integer[]) as inc,
+                unnest(${outDeltas}::integer[]) as out
+        ) AS V
+        WHERE project_task.id = V.tid
+          AND project_task.fk_project_id = ${projectId}::uuid
+    `.execute(db);
+};

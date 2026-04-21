@@ -5,21 +5,19 @@ import {
 } from '../../../../utils/event-bus/constants.ts';
 import type { DomainEvent } from '../../../../utils/event-bus/types.ts';
 import { logger } from '../../../../logger';
-import { ReachabilityHandler } from './handlers/ReachabilityHandler.ts';
 
-interface LinkState {
-    sourceId: string;
-    targetId: string;
-    exists: boolean;
+interface Edge {
+    s: string;
+    t: string;
 }
 
 /**
  * Aggregates task link events into net edge changes.
- * Handles Created, Updated, and Deleted events with semantic folding.
+ * Handles Created, Updated, and Deleted events with semantic folding and project isolation.
+ *
+ * Future: Will trigger Link Metrics and Reachability handlers.
  */
 export class TaskLinkEvents_BatchAggregator {
-    private reachabilityHandler = new ReachabilityHandler();
-
     async init() {
         logger.info('[Task Module] Initializing Task Link Batch Aggregator');
 
@@ -41,19 +39,28 @@ export class TaskLinkEvents_BatchAggregator {
     private async handleBatch(events: DomainEvent[]) {
         if (events.length === 0) return;
 
-        // linkId -> { initialEdge, finalEdge, existedBefore, existsAfter }
-        const linkLifecycle = new Map<
+        // Group by projectId first to ensure updates are isolated
+        const projectChanges = new Map<
             string,
-            {
-                initial?: { s: string; t: string };
-                final?: { s: string; t: string };
-                existedBefore: boolean;
-                existsAfter: boolean;
-            }
+            Map<
+                string,
+                {
+                    initial?: Edge;
+                    final?: Edge;
+                    existedBefore: boolean;
+                    existsAfter: boolean;
+                }
+            >
         >();
 
         for (const event of events) {
-            const { linkId } = event.data;
+            const { linkId, projectId } = event.data;
+
+            if (!projectChanges.has(projectId)) {
+                projectChanges.set(projectId, new Map());
+            }
+
+            const linkLifecycle = projectChanges.get(projectId)!;
             let entry = linkLifecycle.get(linkId);
 
             if (!entry) {
@@ -63,10 +70,6 @@ export class TaskLinkEvents_BatchAggregator {
 
             switch (event.type) {
                 case KAFKA_EVENTS.TASK_LINK.CREATED:
-                    if (!entry.initial && !entry.existedBefore) {
-                        // First time seeing it in batch, and it's a create
-                        entry.existedBefore = false;
-                    }
                     entry.existsAfter = true;
                     entry.final = {
                         s: event.data.sourceTaskId,
@@ -76,7 +79,6 @@ export class TaskLinkEvents_BatchAggregator {
 
                 case KAFKA_EVENTS.TASK_LINK.UPDATED:
                     if (!entry.initial && !entry.existedBefore) {
-                        // First time seeing it, it's an update -> MUST have existed before
                         entry.existedBefore = true;
                         entry.initial = {
                             s: event.data.oldSourceTaskId,
@@ -92,7 +94,6 @@ export class TaskLinkEvents_BatchAggregator {
 
                 case KAFKA_EVENTS.TASK_LINK.DELETED:
                     if (!entry.initial && !entry.existedBefore) {
-                        // First time seeing it, it's a delete -> MUST have existed before
                         entry.existedBefore = true;
                         entry.initial = {
                             s: event.data.sourceTaskId,
@@ -105,52 +106,37 @@ export class TaskLinkEvents_BatchAggregator {
             }
         }
 
-        const addedEdges: { s: string; t: string }[] = [];
-        const removedEdges: { s: string; t: string }[] = [];
+        // Process each project's net changes
+        for (const [projectId, linkLifecycle] of projectChanges.entries()) {
+            const addedEdges: Edge[] = [];
+            const removedEdges: Edge[] = [];
 
-        for (const [linkId, state] of linkLifecycle.entries()) {
-            const { initial, final, existedBefore, existsAfter } = state;
+            for (const state of linkLifecycle.values()) {
+                const { initial, final, existedBefore, existsAfter } = state;
 
-            // Scenario 1: Pure Addition
-            if (!existedBefore && existsAfter && final) {
-                addedEdges.push(final);
-                continue;
-            }
-
-            // Scenario 2: Pure Removal
-            if (existedBefore && !existsAfter && initial) {
-                removedEdges.push(initial);
-                continue;
-            }
-
-            // Scenario 3: Update (Remove old, Add new)
-            if (existedBefore && existsAfter && initial && final) {
-                if (initial.s !== final.s || initial.t !== final.t) {
-                    removedEdges.push(initial);
+                // Edge Additions
+                if (!existedBefore && existsAfter && final) {
                     addedEdges.push(final);
                 }
-                continue;
+                // Edge Removals
+                else if (existedBefore && !existsAfter && initial) {
+                    removedEdges.push(initial);
+                }
+                // Edge Updates (Folded into Remove/Add if endpoints changed)
+                else if (existedBefore && existsAfter && initial && final) {
+                    if (initial.s !== final.s || initial.t !== final.t) {
+                        removedEdges.push(initial);
+                        addedEdges.push(final);
+                    }
+                }
             }
 
-            // Scenario 0: Create then Delete in same batch -> Nop
-        }
-
-        if (addedEdges.length > 0 || removedEdges.length > 0) {
-            logger.info(
-                `[Task Link Aggregator] Processing ${addedEdges.length} additions and ${removedEdges.length} removals`,
-            );
-
-            try {
-                await this.reachabilityHandler.handleEdgeChanges({
-                    added: addedEdges,
-                    removed: removedEdges,
-                });
-            } catch (error) {
-                logger.error(
-                    '[Task Link Aggregator] Reachability update failed:',
-                    error,
+            if (addedEdges.length > 0 || removedEdges.length > 0) {
+                logger.info(
+                    `[Task Link Aggregator] Project ${projectId}: Folded ${addedEdges.length} additions and ${removedEdges.length} removals. (Handlers not yet implemented)`,
                 );
-                throw error;
+
+                // TODO: Emit LINK_COUNTS_CHANGED and REACHABILITY_CHANGED signals here.
             }
         }
     }
