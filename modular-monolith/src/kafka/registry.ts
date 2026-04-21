@@ -6,9 +6,9 @@ import { ProjectAggregated_DeleteProjectMember } from '../modules/project/intern
 import { ProjectAggregated_RemoveProjectMember } from '../modules/project/internal/listeners/ProjectAggregated_RemoveProjectMember.ts';
 import { TaskAggregated_CountsChanged_SyncProjectTaskCountListener } from '../modules/project/internal/listeners/TaskAggregated_CountsChanged_SyncProjectTaskCountListener.ts';
 import { TeamAggregated_CountsChanged_SyncProjectTeamCountListener } from '../modules/project/internal/listeners/TeamAggregated_CountsChanged_SyncProjectTeamCountListener.ts';
-import { ProjectAggregated_DeleteProjects_TaskCleanupListener } from '../modules/task/internal/listeners/ProjectAggregated_DeleteProjects_TaskCleanupListener.ts';
-import { ProjectAggregated_RemoveProjectMember_UnassignMemberFromProjectTasksListener } from '../modules/task/internal/listeners/ProjectAggregated_RemoveProjectMember_UnassignMemberFromProjectTasksListener.ts';
-import { TaskAggregated_DirectLinkCountsChanged_SyncTaskCountsListener } from '../modules/task/internal/listeners/TaskAggregated_DirectLinkCountsChanged_SyncTaskCountsListener.ts';
+import { ProjectAggregated_DeleteProjectTask } from '../modules/task/internal/listeners/ProjectAggregated_DeleteProjectTask.ts';
+import { ProjectAggregated_DeleteProjectTaskLink } from '../modules/task/internal/listeners/ProjectAggregated_DeleteProjectTaskLink.ts';
+import { ProjectAggregated_UnassignProjectTaskMember } from '../modules/task/internal/listeners/ProjectAggregated_UnassignProjectTaskMember.ts';
 import { TaskAggregated_Reachability_ExpandListener } from '../modules/task/internal/listeners/TaskAggregated_Reachability_ExpandListener.ts';
 import { TaskDeleted_TaskCleanupListener } from '../modules/task/internal/listeners/TaskDeleted_TaskCleanupListener.ts';
 import { ProjectAggregated_DeleteProjectTeam } from '../modules/team/internal/listeners/ProjectAggregated_DeleteProjectTeam.ts';
@@ -33,8 +33,8 @@ export async function startConsumers() {
     const authProjectListener = new ProjectAggregated_ChangeUserProjectCount();
 
     // Decentralized Cleanup Pipeline (Triggers when a PROJECT is deleted)
-    const p_taskCleanup =
-        new ProjectAggregated_DeleteProjects_TaskCleanupListener();
+    const p_taskCleanup = new ProjectAggregated_DeleteProjectTask();
+    const p_taskLinkCleanup = new ProjectAggregated_DeleteProjectTaskLink();
     const p_teamCleanup = new ProjectAggregated_DeleteProjectTeam();
     const p_teamMemberCleanup = new ProjectAggregated_DeleteProjectTeamMember();
     const p_projectCleanup = new ProjectAggregated_DeleteProjectMember();
@@ -51,7 +51,7 @@ export async function startConsumers() {
         new ProjectAggregated_ChangeProjectMemberCount();
     const p_memberRemovalListener = new ProjectAggregated_RemoveProjectMember();
     const p_memberTaskUnassignmentListener =
-        new ProjectAggregated_RemoveProjectMember_UnassignMemberFromProjectTasksListener();
+        new ProjectAggregated_UnassignProjectTaskMember();
 
     // Task Domain Aggregators & Listeners
     const taskAggregator = new TaskEvents_BatchAggregator();
@@ -73,6 +73,7 @@ export async function startConsumers() {
         teamAggregator.init(),
         authProjectListener.init(),
         p_taskCleanup.init(),
+        p_taskLinkCleanup.init(),
         p_teamCleanup.init(),
         p_teamMemberCleanup.init(),
         teamProjectMemberPurgeListener.init(),

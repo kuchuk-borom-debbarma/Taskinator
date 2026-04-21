@@ -1110,6 +1110,69 @@ export async function purgeLocalTaskDataByTaskIds(
 }
 
 /**
+ * Bulk unassigns project members from tasks across multiple projects.
+ * [Action]: UNASSIGN_PROJECT_TASK_MEMBER
+ */
+export const unassignProjectTaskMembersBatch = async (
+    deltas: { projectId: string; userIds: string[] }[],
+    trx?: Transaction<Database>,
+): Promise<{ affectedCount: number }> => {
+    if (deltas.length === 0) return { affectedCount: 0 };
+
+    const projectIds = deltas.map((d) => d.projectId);
+    const userIdsList = deltas.map((d) => d.userIds);
+
+    const result = await sql`
+        UPDATE project_task
+        SET fk_member_id = NULL,
+            updated_at = NOW()
+        FROM (
+            SELECT unnest(${projectIds}::uuid[]) as pid, unnest(${userIdsList}::text[][]) as uids
+        ) AS V
+        WHERE project_task.fk_project_id = V.pid
+          AND project_task.fk_member_id = ANY(V.uids)
+    `.execute(trx || db);
+
+    return { affectedCount: Number(result.numUpdatedRows) };
+};
+
+/**
+ * Bulk decommissions tasks for specified projects.
+ * [Action]: DELETE_PROJECT_TASK
+ */
+export async function deleteProjectTasksBatch(
+    projectIds: string[],
+    trx?: Transaction<Database>,
+): Promise<{ affectedCount: number }> {
+    if (projectIds.length === 0) return { affectedCount: 0 };
+
+    const result = await (trx || db)
+        .deleteFrom('project_task')
+        .where('fk_project_id', 'in', projectIds)
+        .executeTakeFirst();
+
+    return { affectedCount: Number(result.numDeletedRows) };
+}
+
+/**
+ * Bulk decommissions task links for specified projects.
+ * [Action]: DELETE_PROJECT_TASK_LINK
+ */
+export async function deleteProjectTaskLinksBatch(
+    projectIds: string[],
+    trx?: Transaction<Database>,
+): Promise<{ affectedCount: number }> {
+    if (projectIds.length === 0) return { affectedCount: 0 };
+
+    const result = await (trx || db)
+        .deleteFrom('task_link')
+        .where('fk_project_id', 'in', projectIds)
+        .executeTakeFirst();
+
+    return { affectedCount: Number(result.numDeletedRows) };
+}
+
+/**
  * Bulk repair of Project Task counts.
  */
 export async function incrementProjectTaskCountsBulk(
