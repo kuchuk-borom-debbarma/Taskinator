@@ -10,7 +10,7 @@ import { updateProjectTaskCountsBulk } from '../ProjectQueries.ts';
 /**
  * Listens for aggregated task count changes and updates project table.
  */
-export class TaskAggregated_ProjectCountListener {
+export class TaskAggregated_CountsChanged_SyncProjectTaskCountListener {
     async init() {
         logger.info(
             '[Project Module] Monitoring TASK_AGGREGATED.COUNTS_CHANGED',

@@ -11,7 +11,7 @@ import { unassignTasksByTeamIds } from '../TaskQueries.ts';
  * Execution Listener for Team deletion.
  * Triggered when a team is deleted.
  */
-export class TeamAggregated_TeamCleanupListener {
+export class TeamAggregated_Deleted_UnassignTasksByTeamIdsListener {
     async init() {
         logger.info(
             '[TeamAggregated -> Task] Initializing Listener for team-task orphaning',

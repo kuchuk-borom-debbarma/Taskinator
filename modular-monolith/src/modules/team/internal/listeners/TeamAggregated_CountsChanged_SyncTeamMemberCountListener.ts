@@ -11,7 +11,7 @@ import { updateTeamMemberCountsBulk } from '../TeamQueries.ts';
  * Execution Listener for Team Member counts.
  * Listens to aggregated signals from the Team aggregator.
  */
-export class TeamAggregated_TeamMemberCountListener {
+export class TeamAggregated_CountsChanged_SyncTeamMemberCountListener {
     async init() {
         logger.info(
             '[TeamAggregated -> Team] Initializing Listener for members_count updates',

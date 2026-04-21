@@ -5,21 +5,21 @@ import {
 } from '../../../../utils/event-bus/constants.ts';
 import type { DomainEvent } from '../../../../utils/event-bus/types.ts';
 import { logger } from '../../../../logger';
-import { removeMembersFromProjectTeams } from '../TeamQueries.ts';
+import { unassignMembersFromProjectTasks } from '../TaskQueries.ts';
 
 /**
- * Execution Listener for Project Member removal (Team Cascade).
- * Removes the user from all teams in the project.
+ * Execution Listener for Project Member removal (Task Cascade).
+ * Unassigns the user from all tasks in the project.
  */
-export class ProjectAggregated_MemberTeamCleanupListener {
+export class ProjectAggregated_MemberRemoved_UnassignMemberFromProjectTasksListener {
     async init() {
         logger.info(
-            '[ProjectAggregated -> Team] Initializing Listener for Member Removal cascade',
+            '[ProjectAggregated -> Task] Initializing Listener for Member Removal cascade',
         );
 
         await eventBus.subscribe(
             KAFKA_TOPICS.PROJECT_AGGREGATED,
-            'project-member-team-cleanup-group',
+            'project-member-task-cleanup-group',
             {
                 [KAFKA_EVENTS.PROJECT_AGGREGATED.MEMBER_REMOVED]:
                     this.handleMemberRemoved.bind(this),
@@ -37,19 +37,21 @@ export class ProjectAggregated_MemberTeamCleanupListener {
             const { projectId, userIds } = event.data;
 
             logger.info(
-                `[ProjectAggregated -> Team] Purging ${userIds.length} users from all teams in Project ${projectId}`,
+                `[ProjectAggregated -> Task] Unassigning ${userIds.length} users from all tasks in Project ${projectId}`,
             );
 
             try {
-                const { affectedTeamCount } =
-                    await removeMembersFromProjectTeams(projectId, userIds);
+                const { updatedCount } = await unassignMembersFromProjectTasks(
+                    projectId,
+                    userIds,
+                );
 
                 logger.info(
-                    `[ProjectAggregated -> Team] Successfully cascaded removal to ${affectedTeamCount} teams in Project ${projectId}`,
+                    `[ProjectAggregated -> Task] Successfully unassigned ${updatedCount} members from tasks in Project ${projectId}`,
                 );
             } catch (err) {
                 logger.error(
-                    '[ProjectAggregated -> Team] Failed to cascade member removal:',
+                    '[ProjectAggregated -> Task] Failed to unassign members from tasks:',
                     err,
                 );
                 throw err;

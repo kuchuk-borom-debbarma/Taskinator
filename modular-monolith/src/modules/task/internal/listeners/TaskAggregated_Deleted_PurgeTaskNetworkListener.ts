@@ -14,7 +14,7 @@ import {
  * Listens for aggregated task deletion signals and cleans up secondary tables.
  * Purges direct links and transitive reachability rows.
  */
-export class TaskAggregated_IndividualTaskCleanupListener {
+export class TaskAggregated_Deleted_PurgeTaskNetworkListener {
     async init() {
         logger.info(
             '[Task Module] Monitoring TASK_AGGREGATED.DELETED for cascading cleanups',

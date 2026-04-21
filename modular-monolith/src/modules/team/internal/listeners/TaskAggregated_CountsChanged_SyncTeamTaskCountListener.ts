@@ -8,9 +8,9 @@ import { logger } from '../../../../logger';
 import { updateTeamTaskCountsBulk } from '../TeamQueries.ts';
 
 /**
- * Listens for aggregated task count changes and updates project_team table.
+ * Listens for aggregated task count changes and updates team table.
  */
-export class TaskAggregated_TeamCountListener {
+export class TaskAggregated_CountsChanged_SyncTeamTaskCountListener {
     async init() {
         logger.info('[Team Module] Monitoring TASK_AGGREGATED.COUNTS_CHANGED');
 

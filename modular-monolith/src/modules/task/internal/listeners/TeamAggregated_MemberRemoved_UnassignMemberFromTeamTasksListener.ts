@@ -9,12 +9,12 @@ import { unassignTeamMembersFromTasks } from '../TaskQueries.ts';
 
 /**
  * Execution Listener for Team Member removal (Task Cascade).
- * Unassigns the user from all tasks specifically within that team.
+ * Unassigns the user from all tasks in the team.
  */
-export class TeamAggregated_MemberTaskUnassignmentListener {
+export class TeamAggregated_MemberRemoved_UnassignMemberFromTeamTasksListener {
     async init() {
         logger.info(
-            '[TeamAggregated -> Task] Initializing Listener for Team Member Removal cascade',
+            '[TeamAggregated -> Task] Initializing Listener for Member Removal cascade',
         );
 
         await eventBus.subscribe(

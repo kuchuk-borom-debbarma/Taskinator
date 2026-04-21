@@ -10,7 +10,7 @@ import { deleteProjectTaskLinksByProjectIds } from '../TaskQueries.ts';
 /**
  * Pure listener for Task Link cleanup.
  */
-export class ProjectAggregated_TaskLinkCleanupListener {
+export class ProjectAggregated_Deleted_DeleteTaskLinksByProjectIdsListener {
     async init() {
         logger.info(
             '[ProjectAggregated -> Task Link Cleanup] Initializing Listener for project_task_link table',
@@ -61,4 +61,3 @@ export class ProjectAggregated_TaskLinkCleanupListener {
         }
     }
 }
-//TODO batching to avoid db lock

@@ -11,7 +11,7 @@ import { updateProjectMemberCountsBulk } from '../ProjectQueries.ts';
  * Execution Listener for Project Member counts.
  * Listens to aggregated signals from the Project aggregator.
  */
-export class ProjectAggregated_MemberCountListener {
+export class ProjectAggregated_CountsChanged_SyncProjectMemberCountListener {
     async init() {
         logger.info(
             '[ProjectAggregated -> Project] Initializing Listener for members_count updates',

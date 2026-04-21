@@ -10,7 +10,7 @@ import { insertNotificationsBatch } from '../InternalNotificationQueries.ts';
 /**
  * Listens for aggregated task assignment signals and creates internal notifications.
  */
-export class TaskAggregated_MemberAssignmentListener {
+export class TaskAggregated_MembersChanged_NotifyMemberAssignmentListener {
     async init() {
         logger.info(
             '[Notification Module] Monitoring TASK_AGGREGATED.MEMBERS_CHANGED',

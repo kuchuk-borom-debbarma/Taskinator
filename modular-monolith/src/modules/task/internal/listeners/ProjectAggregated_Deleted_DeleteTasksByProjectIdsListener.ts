@@ -5,20 +5,20 @@ import {
 } from '../../../../utils/event-bus/constants.ts';
 import type { DomainEvent } from '../../../../utils/event-bus/types.ts';
 import { logger } from '../../../../logger';
-import { deleteProjectTeamMembersByProjectIds } from '../TeamQueries.ts';
+import { deleteProjectTasksByProjectIds } from '../TaskQueries.ts';
 
 /**
- * Pure listener for Team Member cleanup.
+ * Pure listener for Task cleanup.
  */
-export class ProjectAggregated_TeamMemberCleanupListener {
+export class ProjectAggregated_Deleted_DeleteTasksByProjectIdsListener {
     async init() {
         logger.info(
-            '[ProjectAggregated -> Team Member Cleanup] Initializing Listener for project_team_member table',
+            '[ProjectAggregated -> Task Cleanup] Initializing Listener for project_task table',
         );
 
         await eventBus.subscribe(
             KAFKA_TOPICS.PROJECT_AGGREGATED,
-            'team-member-project-cleanup-group',
+            'task-project-cleanup-group',
             {
                 [KAFKA_EVENTS.PROJECT_AGGREGATED.DELETED]:
                     this.handleProjectDeletions.bind(this),
@@ -43,22 +43,18 @@ export class ProjectAggregated_TeamMemberCleanupListener {
         if (projectIds.length === 0) return;
 
         logger.info(
-            `[Team Member Cleanup] Purging project_team_member for ${projectIds.length} projects`,
+            `[Task Cleanup] Purging project_task for ${projectIds.length} projects`,
         );
 
         try {
             const { deletedCount } =
-                await deleteProjectTeamMembersByProjectIds(projectIds);
+                await deleteProjectTasksByProjectIds(projectIds);
             logger.info(
-                `[Team Member Cleanup] Purged ${deletedCount} project_team_member rows`,
+                `[Task Cleanup] Purged ${deletedCount} project_task rows`,
             );
         } catch (err) {
-            logger.error(
-                '[Team Member Cleanup] Failed to purge project_team_member:',
-                err,
-            );
-            throw err;
+            logger.error('[Task Cleanup] Failed to purge project_task:', err);
+            throw err; // Propagate for retry (Critical if links are still present)
         }
     }
 }
-//TODO batching to avoid db lock

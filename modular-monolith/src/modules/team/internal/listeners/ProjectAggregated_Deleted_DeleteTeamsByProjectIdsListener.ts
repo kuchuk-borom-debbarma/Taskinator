@@ -5,20 +5,20 @@ import {
 } from '../../../../utils/event-bus/constants.ts';
 import type { DomainEvent } from '../../../../utils/event-bus/types.ts';
 import { logger } from '../../../../logger';
-import { deleteProjectTasksByProjectIds } from '../TaskQueries.ts';
+import { deleteTeamsByProjectIds } from '../TeamQueries.ts';
 
 /**
- * Pure listener for Task cleanup.
+ * Pure listener for Team cleanup.
  */
-export class ProjectAggregated_TaskCleanupListener {
+export class ProjectAggregated_Deleted_DeleteTeamsByProjectIdsListener {
     async init() {
         logger.info(
-            '[ProjectAggregated -> Task Cleanup] Initializing Listener for project_task table',
+            '[ProjectAggregated -> Team Cleanup] Initializing Listener for project_team table',
         );
 
         await eventBus.subscribe(
             KAFKA_TOPICS.PROJECT_AGGREGATED,
-            'task-project-cleanup-group',
+            'team-project-cleanup-group',
             {
                 [KAFKA_EVENTS.PROJECT_AGGREGATED.DELETED]:
                     this.handleProjectDeletions.bind(this),
@@ -43,19 +43,17 @@ export class ProjectAggregated_TaskCleanupListener {
         if (projectIds.length === 0) return;
 
         logger.info(
-            `[Task Cleanup] Purging project_task for ${projectIds.length} projects`,
+            `[Team Cleanup] Purging project_team for ${projectIds.length} projects`,
         );
 
         try {
-            const { deletedCount } =
-                await deleteProjectTasksByProjectIds(projectIds);
+            const { deletedCount } = await deleteTeamsByProjectIds(projectIds);
             logger.info(
-                `[Task Cleanup] Purged ${deletedCount} project_task rows`,
+                `[Team Cleanup] Purged ${deletedCount} project_team rows`,
             );
         } catch (err) {
-            logger.error('[Task Cleanup] Failed to purge project_task:', err);
-            throw err; // Propagate for retry (Critical if links are still present)
+            logger.error('[Team Cleanup] Failed to purge project_team:', err);
+            throw err; // Propagate for retry (Critical if members are still present)
         }
     }
 }
-//TODO batching to avoid db lock

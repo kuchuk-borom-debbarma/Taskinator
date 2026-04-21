@@ -11,7 +11,7 @@ import { updateProjectTeamCountsBulk } from '../ProjectQueries.ts';
  * Execution Listener for Project Team counts.
  * Listens to aggregated signals from the Team domain.
  */
-export class TeamAggregated_ProjectTeamCountListener {
+export class TeamAggregated_CountsChanged_SyncProjectTeamCountListener {
     async init() {
         logger.info(
             '[TeamAggregated -> Project] Initializing Listener for teams_count updates',

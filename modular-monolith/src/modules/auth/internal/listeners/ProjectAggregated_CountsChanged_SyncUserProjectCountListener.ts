@@ -13,7 +13,7 @@ import { updateUserProjectCountsBulk } from '../AuthQueries.ts';
  * This performs the actual bulk SQL updates against the 'users' table in the database
  * once the events have been aggregated and folded.
  */
-export class ProjectAggregated_AuthUserCountListener {
+export class ProjectAggregated_CountsChanged_SyncUserProjectCountListener {
     async init() {
         logger.info(
             '[ProjectAggregated -> Auth] Initializing Listener for users project counts',

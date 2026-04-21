@@ -5,20 +5,20 @@ import {
 } from '../../../../utils/event-bus/constants.ts';
 import type { DomainEvent } from '../../../../utils/event-bus/types.ts';
 import { logger } from '../../../../logger';
-import { deleteTeamsByProjectIds } from '../TeamQueries.ts';
+import { deleteProjectTeamMembersByProjectIds } from '../TeamQueries.ts';
 
 /**
- * Pure listener for Team cleanup.
+ * Pure listener for Team Member cleanup.
  */
-export class ProjectAggregated_TeamCleanupListener {
+export class ProjectAggregated_Deleted_DeleteTeamMembersByProjectIdsListener {
     async init() {
         logger.info(
-            '[ProjectAggregated -> Team Cleanup] Initializing Listener for project_team table',
+            '[ProjectAggregated -> Team Member Cleanup] Initializing Listener for project_team_member table',
         );
 
         await eventBus.subscribe(
             KAFKA_TOPICS.PROJECT_AGGREGATED,
-            'team-project-cleanup-group',
+            'team-member-project-cleanup-group',
             {
                 [KAFKA_EVENTS.PROJECT_AGGREGATED.DELETED]:
                     this.handleProjectDeletions.bind(this),
@@ -43,18 +43,21 @@ export class ProjectAggregated_TeamCleanupListener {
         if (projectIds.length === 0) return;
 
         logger.info(
-            `[Team Cleanup] Purging project_team for ${projectIds.length} projects`,
+            `[Team Member Cleanup] Purging project_team_member for ${projectIds.length} projects`,
         );
 
         try {
-            const { deletedCount } = await deleteTeamsByProjectIds(projectIds);
+            const { deletedCount } =
+                await deleteProjectTeamMembersByProjectIds(projectIds);
             logger.info(
-                `[Team Cleanup] Purged ${deletedCount} project_team rows`,
+                `[Team Member Cleanup] Purged ${deletedCount} project_team_member rows`,
             );
         } catch (err) {
-            logger.error('[Team Cleanup] Failed to purge project_team:', err);
-            throw err; // Propagate for retry (Critical if members are still present)
+            logger.error(
+                '[Team Member Cleanup] Failed to purge project_team_member:',
+                err,
+            );
+            throw err;
         }
     }
 }
-//TODO batching to avoid db lock
