@@ -688,6 +688,7 @@ export const removeProjectTeamMembersBatch = async (
 
 export async function updateTeamTaskCountsBulk(
     updates: Map<string, number>,
+    trx?: Transaction<Database>,
 ): Promise<void> {
     const entries = Array.from(updates.entries());
     if (entries.length === 0) return;
@@ -703,7 +704,7 @@ export async function updateTeamTaskCountsBulk(
             SELECT * FROM UNNEST(${ids}::uuid[], ${deltas}::int[])
         ) AS v(id, delta)
         WHERE project_team.id = v.id
-    `.execute(db);
+    `.execute(trx || db);
 }
 
 /**
