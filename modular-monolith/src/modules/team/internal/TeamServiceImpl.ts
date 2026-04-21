@@ -1,104 +1,120 @@
-import type {
-    AddTeamMembersParam,
-    CreateTeamsParam,
-    DeleteTeamMembersParam,
-    DeleteTeamsParam,
-    Team,
-    TeamMember,
-    TeamService,
-    UserResult,
-} from '../TeamService.ts';
-import eventBus, { KAFKA_EVENTS } from '../../../utils/EventBus.ts';
+import type { Team, TeamMember, TeamService } from '../TeamService.ts';
+import type { PaginationParams } from '../../../types/pagination.ts';
 import {
+    getTeamMembers,
+    getTeams,
+    getTeamsByActorIdAndIds,
+    getTeamsByIds as getTeamsByIdsQuery,
     insertTeam,
     deleteTeams,
     insertTeamMembers,
     deleteTeamMembers,
-    getTeams,
-    getTeamsByIds,
-    getTeamMembers,
+    updateTeam,
     searchTeamUsers,
 } from './TeamQueries.ts';
-import _ from 'lodash';
+import type { User } from '../../auth/AuthService.ts';
 
 export class TeamServiceImpl implements TeamService {
     async getTeams(
         userId: string,
-        projectId: string,
-        params?: { first?: number; after?: string; last?: number; before?: string; memberId?: string },
-    ): Promise<{ teams: Team[]; nextCursor: string | null; prevCursor: string | null }> {
-        return getTeams(userId, projectId || null, params);
-    }
-
-    async getTeamsByIds(userId: string, teamIds: string[]): Promise<Team[]> {
-        return getTeamsByIds(userId, teamIds);
+        projectId: string | null,
+        params?: PaginationParams & { memberId?: string },
+    ): Promise<{
+        teams: Team[];
+        nextCursor: string | null;
+        prevCursor: string | null;
+    }> {
+        return getTeams(userId, projectId, params);
     }
 
     async getTeamMembers(
         userId: string,
         projectId: string,
         teamId: string,
-        params?: { first?: number; after?: string; last?: number; before?: string },
-    ): Promise<{ members: TeamMember[]; nextCursor: string | null; prevCursor: string | null }> {
+        params?: PaginationParams,
+    ): Promise<{
+        members: TeamMember[];
+        nextCursor: string | null;
+        prevCursor: string | null;
+    }> {
         return getTeamMembers(userId, projectId, teamId, params);
     }
 
-    async searchTeamUsers(params: {
-        actorId: string;
-        projectId: string;
-        teamId: string;
-        search?: string;
-        first?: number;
-        after?: string;
-        last?: number;
-        before?: string;
-    }): Promise<{ users: UserResult[]; nextCursor: string | null; prevCursor: string | null }> {
+    async searchTeamUsers(
+        params: {
+            actorId: string;
+            projectId: string;
+            teamId: string;
+            search?: string;
+        } & PaginationParams,
+    ): Promise<{
+        users: User[];
+        nextCursor: string | null;
+        prevCursor: string | null;
+    }> {
         return searchTeamUsers(params);
     }
 
-    async addTeamMembers(data: AddTeamMembersParam): Promise<TeamMember[]> {
-        const added = await insertTeamMembers(data);
-
-        if (_.isEmpty(added)) {
-            throw new Error('Failed to add any team members');
-        }
-
-        return added;
+    async getTeamsByIds(teamIds: string[]): Promise<Team[]> {
+        return await getTeamsByIdsQuery(teamIds);
     }
 
-    async createTeams(data: CreateTeamsParam): Promise<Team[]> {
-        const added = await insertTeam(data);
-
-        return added;
+    async getTeamsByActorIdAndIds(
+        actorId: string,
+        teamIds: string[],
+    ): Promise<Team[]> {
+        return await getTeamsByActorIdAndIds(actorId, teamIds);
     }
 
-    async deleteTeamMembers(data: DeleteTeamMembersParam): Promise<string[]> {
-        const deleted = await deleteTeamMembers(data);
-
-        if (_.isEmpty(deleted)) {
-            throw new Error('Failed to delete any teamMembers');
-        }
-
-        return deleted;
+    async createTeam(param: {
+        actorId: string;
+        projectId: string;
+        name: string;
+    }): Promise<Team> {
+        return await insertTeam(param);
     }
 
-    async deleteTeams(data: DeleteTeamsParam): Promise<string[]> {
-        const deleted = await deleteTeams(data);
-
-        if (_.isEmpty(deleted)) {
-            throw new Error('Failed to delete any teams');
-        }
-
-        return deleted;
+    async deleteTeams(param: {
+        actorId: string;
+        projectId: string;
+        teamIds: string[];
+    }): Promise<{ deletedCount: number }> {
+        return await deleteTeams(param);
     }
 
-    async destroy(): Promise<void> {
-        console.log(`Disconnecting event bus ${this.constructor.name}`);
-        await eventBus.destroy();
+    async addTeamMembers(param: {
+        actorId: string;
+        projectId: string;
+        teamId: string;
+        userIds: string[];
+    }): Promise<{ addedCount: number }> {
+        return await insertTeamMembers(param);
+    }
+
+    async removeTeamMembers(param: {
+        actorId: string;
+        projectId: string;
+        teamId: string;
+        userIds: string[];
+    }): Promise<{ removedCount: number }> {
+        return await deleteTeamMembers(param);
+    }
+
+    async updateTeam(param: {
+        actorId: string;
+        projectId: string;
+        teamId: string;
+        name: string;
+        version: number;
+    }): Promise<Team> {
+        return await updateTeam(param);
     }
 
     async init(): Promise<void> {
-        console.log(`Initializing event bus ${this.constructor.name}`);
-        await eventBus.init();
+        console.log(`[TeamService] Initializing...`);
+    }
+
+    async destroy(): Promise<void> {
+        console.log(`[TeamService] Destroying...`);
     }
 }

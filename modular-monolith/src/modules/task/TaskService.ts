@@ -1,8 +1,9 @@
 import type { BaseService } from './index.ts';
+import type { PaginationParams as SharedPaginationParams } from '../../types/pagination.ts';
 
 export type TaskStatus = string;
 
-export type ProjectTask = {
+export type Task = {
     id: string;
     projectId: string;
     teamId: string | null;
@@ -34,47 +35,17 @@ export type TaskLink = {
     label: string;
     createdBy: string;
     createdAt: Date;
-    createdAtPrecision?: string;
+    updatedBy?: string;
+    updatedAt?: string;
 };
 
-export interface CreateTaskParam {
-    userId: string;
-    projectId: string;
-    teamId?: string | null;
-    memberId?: string | null;
-    title: string;
-    description?: string;
-    status?: TaskStatus;
-}
-
-export interface CreateLinkParam {
-    userId: string;
-    projectId: string;
-    sourceTaskId: string;
-    targetTaskId: string;
-    label: string;
-}
-
-export interface UpdateTaskParam {
-    userId: string;
-    taskId: string;
-    title?: string;
-    description?: string;
-    status?: TaskStatus;
-    priority?: number;
-}
-
-export interface PaginationParams {
-    first?: number;
-    after?: string;
-    last?: number;
-    before?: string;
+export type PaginationParams = SharedPaginationParams & {
     teamId?: string;
     memberId?: string;
-}
+};
 
 export interface TaskConnection {
-    tasks: ProjectTask[];
+    tasks: Task[];
     nextCursor: string | null;
     prevCursor: string | null;
 }
@@ -93,12 +64,6 @@ export interface GetTaskLinksParam {
 }
 
 export interface TaskService extends BaseService {
-    createTask(data: CreateTaskParam): Promise<ProjectTask>;
-    createLink(data: CreateLinkParam): Promise<TaskLink>;
-    updateTask(data: UpdateTaskParam): Promise<ProjectTask>;
-    deleteTask(userId: string, taskId: string): Promise<void>;
-    deleteLink(userId: string, linkId: string): Promise<void>;
-
     // Read Operations
     getTasks(
         userId: string,
@@ -106,7 +71,15 @@ export interface TaskService extends BaseService {
         params: PaginationParams,
     ): Promise<TaskConnection>;
 
-    getTasksByIds(userId: string, ids: string[]): Promise<ProjectTask[]>;
+    /**
+     * Unauthorized batch fetch for internal use.
+     */
+    getTasksByIds(ids: string[]): Promise<Task[]>;
+
+    /**
+     * Authorized batch fetch.
+     */
+    getTasksByActorIdAndIds(actorId: string, ids: string[]): Promise<Task[]>;
 
     getTaskLinks(
         params: GetTaskLinksParam,
@@ -114,12 +87,64 @@ export interface TaskService extends BaseService {
     ): Promise<LinkConnection>;
 
     getProjectLinks(
-        userId: string, 
+        userId: string,
         projectId: string,
-        pagination: PaginationParams
+        pagination: PaginationParams,
     ): Promise<LinkConnection>;
 
-    getTaskNeighbourhood(params: GetNeighbourhoodParam): Promise<TaskNeighbourhoodResult>;
+    getTaskNeighbourhood(
+        params: GetNeighbourhoodParam,
+    ): Promise<TaskNeighbourhoodResult>;
+
+    // Write Operations
+    createTask(param: {
+        actorId: string;
+        projectId: string;
+        title: string;
+        description?: string | null;
+        status?: string | null;
+    }): Promise<Task>;
+
+    updateTask(param: {
+        actorId: string;
+        projectId: string;
+        taskId: string;
+        version: number;
+        title?: string | null;
+        description?: string | null;
+        status?: string | null;
+        teamId?: string | null;
+        memberId?: string | null;
+    }): Promise<Task>;
+
+    deleteTask(param: {
+        actorId: string;
+        projectId: string;
+        taskId: string;
+    }): Promise<string>;
+
+    createTaskLink(param: {
+        actorId: string;
+        projectId: string;
+        sourceTaskId: string;
+        targetTaskId: string;
+        label: string;
+    }): Promise<TaskLink>;
+
+    deleteTaskLink(param: {
+        actorId: string;
+        projectId: string;
+        linkId: string;
+    }): Promise<string>;
+
+    updateTaskLink(param: {
+        actorId: string;
+        projectId: string;
+        linkId: string;
+        sourceTaskId?: string | null;
+        targetTaskId?: string | null;
+        label?: string | null;
+    }): Promise<TaskLink>;
 }
 
 // ─── Neighbourhood (Radial Graph View) ──────────────────────────────────────
@@ -131,7 +156,7 @@ export interface NeighbourRecord {
     taskId: string;
     depth: number;
     direction: NeighbourDirection;
-    task?: ProjectTask;
+    task?: Task;
 }
 
 export interface TaskNeighbourhoodResult {
@@ -143,13 +168,9 @@ export interface TaskNeighbourhoodResult {
     prevCursor: string | null;
 }
 
-export interface GetNeighbourhoodParam {
+export interface GetNeighbourhoodParam extends SharedPaginationParams {
     userId: string;
     projectId: string;
     taskId: string;
-    maxDepth?: number;   // default 3, hard cap 5
-    first?: number;
-    last?: number;
-    after?: string;
-    before?: string;
+    maxDepth?: number; // default 3, hard cap 5
 }

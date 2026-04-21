@@ -1,62 +1,69 @@
 import type {
-    AddProjectMembersParam,
-    CreateProjectParam,
-    DeleteProjectMembersParam,
-    DeleteProjectsParam,
     Project,
     ProjectMember,
     ProjectService,
 } from '../ProjectService.ts';
+import type { PaginationParams } from '../../../types/pagination.ts';
 import {
-    deleteProjectMembers,
-    deleteProjects,
-    getProject,
     getProjectMembers,
+    getProjectMembersByActorIdAndIds,
+    getProjectMembersByIds,
     getProjects,
+    getProjectsByActorIdAndProjectIds,
     getProjectsByIds,
-    getUserProjectIds,
-    insertProject,
-    insertProjectMembers,
-    insertProjects,
-    searchProjectMembers,
-    updateProject,
 } from './ProjectQueries.ts';
 
-import eventBus, { KAFKA_EVENTS } from '../../../utils/EventBus.ts';
+import * as queries from './ProjectQueries.ts';
+
+import eventBus from '../../../utils/EventBus.ts';
 
 export class ProjectServiceImpl implements ProjectService {
-    async getProjects(
+    async getProjectsOfUser(
         userId: string,
-        params?: { first?: number; after?: string; last?: number; before?: string },
-    ): Promise<{ projects: Project[]; nextCursor: string | null; prevCursor: string | null }> {
+        params?: PaginationParams,
+    ): Promise<{
+        projects: Project[];
+        nextCursor: string | null;
+        prevCursor: string | null;
+    }> {
         console.log(`[Project Service] Getting projects for userId: ${userId}`);
         return getProjects(userId, params);
-    }
-
-    async getProject(
-        userId: string,
-        projectId: string,
-    ): Promise<Project | null> {
-        return getProject(userId, projectId);
     }
 
     async getProjectMembers(
         userId: string,
         projectId: string,
-        params?: { first?: number; after?: string; last?: number; before?: string },
-    ): Promise<{ members: ProjectMember[]; nextCursor: string | null; prevCursor: string | null }> {
+        params?: PaginationParams,
+    ): Promise<{
+        members: ProjectMember[];
+        nextCursor: string | null;
+        prevCursor: string | null;
+    }> {
         return getProjectMembers(userId, projectId, params);
     }
 
-    async getUserProjectIds(userId: string): Promise<string[]> {
-        return getUserProjectIds(userId);
+    async getProjectMembersByIds(
+        memberIds: string[],
+    ): Promise<ProjectMember[]> {
+        return getProjectMembersByIds(memberIds);
     }
 
-    async getProjectsByIds(
+    async getProjectMembersByActorIdAndIds(
+        userId: string,
+        memberIds: string[],
+    ): Promise<ProjectMember[]> {
+        return getProjectMembersByActorIdAndIds(userId, memberIds);
+    }
+
+    async getProjectsByIds(ids: string[]): Promise<Project[]> {
+        return getProjectsByIds(ids);
+    }
+
+    async getProjectsByActorIdAndProjectIds(
         userId: string,
         projectIds: string[],
     ): Promise<Project[]> {
-        return getProjectsByIds(userId, projectIds);
+        return getProjectsByActorIdAndProjectIds(userId, projectIds);
     }
 
     async destroy(): Promise<void> {
@@ -69,96 +76,49 @@ export class ProjectServiceImpl implements ProjectService {
         await eventBus.init();
     }
 
-    async deleteProjectMembers(data: DeleteProjectMembersParam): Promise<void> {
-        const deleted = await deleteProjectMembers(data);
-
-        if (!deleted.length) {
-            throw new Error('Failed to delete any project members');
-        }
+    async createProject(param: {
+        actorId: string;
+        name: string;
+        description?: string;
+    }): Promise<Project | null> {
+        const { actorId, name, description } = param;
+        return await queries.insertProject({
+            userId: actorId,
+            name,
+            description,
+        });
     }
 
-    async deleteProjects(data: DeleteProjectsParam): Promise<void> {
-        const deleted = await deleteProjects(data);
-
-        if (!deleted.length) {
-            throw new Error('Failed to delete any project');
-        }
+    async updateProject(param: {
+        actorId: string;
+        id: string;
+        version: number;
+        name?: string;
+        description?: string;
+    }): Promise<Project | null> {
+        return await queries.updateProject(param);
     }
 
-    async addProjectMembers(
-        data: AddProjectMembersParam,
-    ): Promise<ProjectMember[]> {
-        const added = await insertProjectMembers(data);
-
-        if (!added.length) {
-            throw new Error('Failed to add any project members');
-        }
-
-        return added;
+    async deleteProjects(param: {
+        actorId: string;
+        projectIds: string[];
+    }): Promise<{ success: boolean; deletedCount: number }> {
+        return await queries.deleteProjects(param);
     }
 
-    async createProject(data: CreateProjectParam): Promise<Project | null> {
-        const project = await insertProject(data);
-
-        if (!project) {
-            throw new Error('Failed to create project');
-        }
-
-        return project;
-    }
-
-    async createProjects(data: CreateProjectParam[]): Promise<Project[]> {
-        const projects = await insertProjects(data);
-
-        if (!projects.length) {
-            throw new Error('Failed to create projects');
-        }
-
-        return projects;
-    }
-
-    async searchProjectMembers(params: {
+    async addProjectMembers(param: {
         actorId: string;
         projectId: string;
-        search?: string;
-        first?: number;
-        after?: string;
-        last?: number;
-        before?: string;
-    }): Promise<{
-        users: { id: string; username: string; email: string }[];
-        nextCursor: string | null;
-        prevCursor: string | null;
-    }> {
-        return searchProjectMembers(params);
+        userIds: string[];
+    }): Promise<boolean> {
+        return await queries.insertProjectMembers(param);
     }
 
-    async updateProject(data: {
-        userId: string;
+    async removeProjectMembers(param: {
+        actorId: string;
         projectId: string;
-        name?: string;
-        description?: string | null;
-    }): Promise<Project | null> {
-        const project = await updateProject(data);
-        if (!project)
-            throw new Error('Failed to update project or unauthorized');
-        return project;
-    }
-
-    async getProjectStats(userId: string, projectId: string): Promise<{
-        teamCount: number;
-        taskCount: number;
-        memberCount: number;
-        taskLabelCounts: { label: string; count: number }[];
-    }> {
-        return (await import('./ProjectQueries.ts')).getProjectStats(userId, projectId);
-    }
-
-    async getWorkspaceStats(userId: string): Promise<{
-        projectCount: number;
-        teamCount: number;
-        assignedTaskCount: number;
-    }> {
-        return (await import('./ProjectQueries.ts')).getWorkspaceStats(userId);
+        userIds: string[];
+    }): Promise<boolean> {
+        return await queries.deleteProjectMembers(param);
     }
 }

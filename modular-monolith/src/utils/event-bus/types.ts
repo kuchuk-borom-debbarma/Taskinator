@@ -11,6 +11,7 @@ export interface Bus {
      * Publish one or more events. Routing to topics is handled automatically based on type.
      */
     publish(
+        topic: string,
         type: string,
         payload:
             | { id?: string; key: string; data: any }
@@ -22,8 +23,10 @@ export interface Bus {
      * Idempotency is handled automatically using the eventId.
      */
     subscribe(
+        topic: string,
         groupId: string,
         handlers: Record<string, (data: any) => Promise<void>>,
+        options?: { batch?: boolean; manualIdempotency?: boolean },
     ): Promise<void>;
 
     init(): Promise<void>;

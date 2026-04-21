@@ -18,13 +18,16 @@ import {
     addTeamMember,
 } from '../../../../__tests__/helpers/factories.ts';
 import {
+    getTeams,
+    getTeamMembers,
     insertTeam,
     deleteTeams,
     insertTeamMembers,
     deleteTeamMembers,
-    getTeams,
-    getTeamMembers,
+    updateTeam,
 } from '../TeamQueries.ts';
+import { sql } from 'kysely';
+import { NotFoundError, ConflictError } from '../../../../graphql/errors.ts';
 
 describe('TeamQueries — Integration (Real DB + wCTE)', () => {
     let ownerId: string;
@@ -41,225 +44,6 @@ describe('TeamQueries — Integration (Real DB + wCTE)', () => {
     afterAll(async () => {
         await cleanupDb();
         await destroyDb();
-    });
-
-    // ─── insertTeam ─────────────────────────────────────────────────────────────
-
-    describe('insertTeam', () => {
-        it('creates multiple teams and returns them', async () => {
-            const result = await insertTeam({
-                userId: ownerId,
-                projectId,
-                teams: ['Backend', 'Frontend'],
-            });
-
-            expect(result).toHaveLength(2);
-            const names = result.map((t) => t.name).sort();
-            expect(names).toEqual(['Backend', 'Frontend']);
-            expect(result[0]!.projectId).toBe(projectId);
-        });
-
-        it('writes one outbox_events row per team created', async () => {
-            await insertTeam({
-                userId: ownerId,
-                projectId,
-                teams: ['Alpha', 'Beta'],
-            });
-
-            const outbox = await db
-                .selectFrom('outbox_events')
-                .selectAll()
-                .where('kafka_topic', '=', 'project.team.created')
-                .execute();
-
-            expect(outbox).toHaveLength(2);
-            expect((outbox[0]!.payload as any).projectId).toBe(projectId);
-        });
-
-        it('returns empty array if caller is not authorized', async () => {
-            const attacker = await createUser();
-
-            const result = await insertTeam({
-                userId: attacker.id,
-                projectId,
-                teams: ['Hackers'],
-            });
-
-            // Auth check blocks INSERT — no rows returned
-            expect(result).toHaveLength(0);
-        });
-
-        it('allows a project member (non-owner) to create teams', async () => {
-            const member = await createUser();
-            await addProjectMember(projectId, member.id);
-
-            const result = await insertTeam({
-                userId: member.id,
-                projectId,
-                teams: ['Member Team'],
-            });
-
-            expect(result).toHaveLength(1);
-        });
-    });
-
-    // ─── deleteTeams ─────────────────────────────────────────────────────────────
-
-    describe('deleteTeams', () => {
-        it('deletes own teams and writes outbox events', async () => {
-            const teams = await insertTeam({
-                userId: ownerId,
-                projectId,
-                teams: ['To Delete'],
-            });
-            const teamId = teams[0]!.id;
-
-            // Clear outbox from insertTeam call
-            await db.deleteFrom('outbox_events').execute();
-
-            const deleted = await deleteTeams({
-                userId: ownerId,
-                projectId,
-                teamIds: [teamId],
-            });
-
-            expect(deleted).toHaveLength(1);
-            expect(deleted[0]).toBe(teamId);
-
-            const outbox = await db
-                .selectFrom('outbox_events')
-                .selectAll()
-                .where('kafka_topic', '=', 'project.team.deleted')
-                .execute();
-
-            expect(outbox).toHaveLength(1);
-            expect((outbox[0]!.payload as any).teamId).toBe(teamId);
-        });
-
-        it('throws when trying to delete a team from another project', async () => {
-            const otherUser = await createUser();
-            const otherProject = await createProject(otherUser.id);
-            const foreignTeams = await insertTeam({
-                userId: otherUser.id,
-                projectId: otherProject.id,
-                teams: ['Foreign Team'],
-            });
-
-            await expect(
-                deleteTeams({
-                    userId: ownerId,
-                    projectId,
-                    teamIds: [foreignTeams[0]!.id],
-                }),
-            ).rejects.toThrow('Unauthorized or some teams not found');
-        });
-    });
-
-    // ─── insertTeamMembers ───────────────────────────────────────────────────────
-
-    describe('insertTeamMembers', () => {
-        it('adds project members to a team', async () => {
-            const team = await createTeam(projectId, ownerId);
-            const user = await createUser();
-            await addProjectMember(projectId, user.id);
-
-            const result = await insertTeamMembers({
-                userId: ownerId,
-                projectId,
-                teamId: team.id,
-                members: [user.id],
-            });
-
-            expect(result).toHaveLength(1);
-            expect(result[0]!.userId).toBe(user.id);
-            expect(result[0]!.teamId).toBe(team.id);
-        });
-
-        it('writes outbox_events row for each member added', async () => {
-            const team = await createTeam(projectId, ownerId);
-            const memberA = await createUser();
-            const memberB = await createUser();
-            await addProjectMember(projectId, memberA.id);
-            await addProjectMember(projectId, memberB.id);
-
-            await db.deleteFrom('outbox_events').execute();
-
-            await insertTeamMembers({
-                userId: ownerId,
-                projectId,
-                teamId: team.id,
-                members: [memberA.id, memberB.id],
-            });
-
-            const outbox = await db
-                .selectFrom('outbox_events')
-                .selectAll()
-                .where('kafka_topic', '=', 'project.team.member.added')
-                .execute();
-
-            expect(outbox).toHaveLength(2);
-        });
-
-        it('throws if user is not part of the project', async () => {
-            const team = await createTeam(projectId, ownerId);
-            const outsider = await createUser(); // NOT added to project
-
-            await expect(
-                insertTeamMembers({
-                    userId: ownerId,
-                    projectId,
-                    teamId: team.id,
-                    members: [outsider.id],
-                }),
-            ).rejects.toThrow();
-        });
-    });
-
-    // ─── deleteTeamMembers ───────────────────────────────────────────────────────
-
-    describe('deleteTeamMembers', () => {
-        it('removes team members and writes outbox events', async () => {
-            const team = await createTeam(projectId, ownerId);
-            const member = await createUser();
-            await addProjectMember(projectId, member.id);
-            await addTeamMember(projectId, team.id, member.id);
-
-            await db.deleteFrom('outbox_events').execute();
-
-            const deleted = await deleteTeamMembers({
-                userId: ownerId,
-                projectId,
-                teamId: team.id,
-                members: [member.id],
-            });
-
-            expect(deleted).toHaveLength(1);
-            expect(deleted[0]).toBe(member.id);
-
-            const outbox = await db
-                .selectFrom('outbox_events')
-                .selectAll()
-                .where('kafka_topic', '=', 'project.team.member.deleted')
-                .execute();
-
-            expect(outbox).toHaveLength(1);
-        });
-
-        it('throws if trying to delete members that are not in the team', async () => {
-            const team = await createTeam(projectId, ownerId);
-            const ghost = await createUser();
-            await addProjectMember(projectId, ghost.id);
-            // ghost added to project but NOT to team
-
-            await expect(
-                deleteTeamMembers({
-                    userId: ownerId,
-                    projectId,
-                    teamId: team.id,
-                    members: [ghost.id],
-                }),
-            ).rejects.toThrow('Unauthorized or some members not found');
-        });
     });
 
     // ─── getTeams / getTeamMembers ───────────────────────────────────────────────
@@ -292,6 +76,183 @@ describe('TeamQueries — Integration (Real DB + wCTE)', () => {
             const result = await getTeamMembers(ownerId, projectId, team.id);
             expect(result.members).toHaveLength(1);
             expect(result.members[0]!.userId).toBe(m.id);
+        });
+    });
+
+    // ─── insertTeam ─────────────────────────────────────────────────────────────
+    describe('insertTeam', () => {
+        it('allows project owner to create a team', async () => {
+            const team = await insertTeam({
+                actorId: ownerId,
+                projectId: projectId,
+                name: 'Owner Team',
+            });
+
+            expect(team.name).toBe('Owner Team');
+            expect(team.projectId).toBe(projectId);
+
+            // Verify outbox
+            const outbox =
+                await sql<any>`SELECT * FROM outbox_events WHERE kafka_topic = 'team.created'`.execute(
+                    db,
+                );
+            expect(outbox.rows).toHaveLength(1);
+            expect(outbox.rows[0].payload.teamId).toBe(team.id);
+        });
+
+        it('allows project member to create a team', async () => {
+            const member = await createUser();
+            await addProjectMember(projectId, member.id);
+
+            const team = await insertTeam({
+                actorId: member.id,
+                projectId: projectId,
+                name: 'Member Team',
+            });
+
+            expect(team.name).toBe('Member Team');
+        });
+
+        it('throws NotFoundError for non-members', async () => {
+            const stranger = await createUser();
+            await expect(
+                insertTeam({
+                    actorId: stranger.id,
+                    projectId: projectId,
+                    name: 'Rogue Team',
+                }),
+            ).rejects.toThrow('Project with ID');
+        });
+    });
+
+    describe('deleteTeams', () => {
+        it('deletes teams and logs outbox events', async () => {
+            const t1 = await createTeam(projectId, ownerId);
+            const t2 = await createTeam(projectId, ownerId);
+
+            const { deletedCount } = await deleteTeams({
+                actorId: ownerId,
+                projectId,
+                teamIds: [t1.id, t2.id],
+            });
+
+            expect(deletedCount).toBe(2);
+
+            const remaining = await getTeams(ownerId, projectId);
+            expect(remaining).toHaveLength(0);
+
+            const outbox =
+                await sql<any>`SELECT * FROM outbox_events WHERE kafka_topic = 'team.deleted'`.execute(
+                    db,
+                );
+            expect(outbox.rows).toHaveLength(2);
+        });
+    });
+
+    describe('addTeamMembers', () => {
+        it('adds members and logs outbox event', async () => {
+            const team = await createTeam(projectId, ownerId);
+            const u1 = await createUser();
+            const u2 = await createUser();
+            await addProjectMember(projectId, u1.id);
+            await addProjectMember(projectId, u2.id);
+
+            const { addedCount } = await insertTeamMembers({
+                actorId: ownerId,
+                projectId,
+                teamId: team.id,
+                userIds: [u1.id, u2.id],
+            });
+
+            expect(addedCount).toBe(2);
+
+            const members = await getTeamMembers(ownerId, projectId, team.id);
+            expect(members.members).toHaveLength(2);
+
+            const outbox =
+                await sql<any>`SELECT * FROM outbox_events WHERE kafka_topic = 'team.members_added'`.execute(
+                    db,
+                );
+            expect(outbox.rows).toHaveLength(1);
+            expect(outbox.rows[0].payload.userIds).toContain(u1.id);
+        });
+    });
+
+    describe('removeTeamMembers', () => {
+        it('removes members and logs outbox event', async () => {
+            const team = await createTeam(projectId, ownerId);
+            const u1 = await createUser();
+            await addProjectMember(projectId, u1.id);
+            await addTeamMember(projectId, team.id, u1.id);
+
+            const { removedCount } = await deleteTeamMembers({
+                actorId: ownerId,
+                projectId,
+                teamId: team.id,
+                userIds: [u1.id],
+            });
+
+            expect(removedCount).toBe(1);
+
+            const members = await getTeamMembers(ownerId, projectId, team.id);
+            expect(members.members).toHaveLength(0);
+
+            const outbox =
+                await sql<any>`SELECT * FROM outbox_events WHERE kafka_topic = 'team.members_removed'`.execute(
+                    db,
+                );
+            expect(outbox.rows).toHaveLength(1);
+        });
+    });
+
+    describe('updateTeam', () => {
+        it('updates team name and increments version', async () => {
+            const team = await createTeam(projectId, ownerId, 'Old Name');
+
+            const updated = await updateTeam({
+                actorId: ownerId,
+                projectId,
+                teamId: team.id,
+                name: 'New Name',
+                version: team.version,
+            });
+
+            expect(updated.name).toBe('New Name');
+            expect(updated.version).toBe(team.version + 1);
+
+            const outbox =
+                await sql<any>`SELECT * FROM outbox_events WHERE kafka_topic = 'team.updated'`.execute(
+                    db,
+                );
+            expect(outbox.rows).toHaveLength(1);
+            expect(outbox.rows[0].payload.name).toBe('New Name');
+        });
+
+        it('throws ConflictError on version mismatch', async () => {
+            const team = await createTeam(projectId, ownerId);
+
+            await expect(
+                updateTeam({
+                    actorId: ownerId,
+                    projectId,
+                    teamId: team.id,
+                    name: 'Stale Update',
+                    version: team.version - 1, // Wrong version
+                }),
+            ).rejects.toThrow(ConflictError);
+        });
+
+        it('throws NotFoundError for non-existent team', async () => {
+            const randomId = '00000000-0000-0000-0000-000000000000';
+            await expect(
+                updateTeam({
+                    actorId: ownerId,
+                    projectId,
+                    teamId: randomId,
+                    name: 'Ghost Team',
+                    version: 0,
+                }),
+            ).rejects.toThrow(NotFoundError);
         });
     });
 });

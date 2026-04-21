@@ -45,6 +45,9 @@ export async function createProject(
         lastEventId: string | null;
         createdAt: Date;
         updatedAt: any;
+        membersCount: number;
+        tasksCount: number;
+        teamsCount: number;
     }>`
         INSERT INTO project (name, description, fk_user_id)
         VALUES (
@@ -60,7 +63,10 @@ export async function createProject(
             version,
             last_event_id AS "lastEventId",
             created_at AS "createdAt",
-            updated_at AS "updatedAt"
+            updated_at AS "updatedAt",
+            members_count AS "membersCount",
+            tasks_count AS "tasksCount",
+            teams_count AS "teamsCount"
     `.execute(db);
 
     return result.rows[0]!;
@@ -96,7 +102,6 @@ export async function addProjectMember(
     return result.rows[0]!;
 }
 
-
 /**
  * Creates a team directly via INSERT (no auth check, no outbox).
  */
@@ -116,7 +121,9 @@ export async function createTeam(
             version,
             last_event_id AS "lastEventId",
             created_at AS "createdAt",
-            updated_at AS "updatedAt"
+            updated_at AS "updatedAt",
+            members_count AS "membersCount",
+            tasks_count AS "tasksCount"
     `.execute(db);
     return result.rows[0]!;
 }

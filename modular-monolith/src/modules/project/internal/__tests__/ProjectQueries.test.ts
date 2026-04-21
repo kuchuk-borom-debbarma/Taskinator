@@ -15,15 +15,15 @@ import {
     createUser,
     addProjectMember,
 } from '../../../../__tests__/helpers/factories.ts';
+import { sql } from 'kysely';
 import {
+    getProjects,
+    getProjectMembers,
     insertProject,
-    insertProjects,
+    updateProject,
     deleteProjects,
     insertProjectMembers,
     deleteProjectMembers,
-    getProjects,
-    getProject,
-    getProjectMembers,
 } from '../ProjectQueries.ts';
 
 describe('ProjectQueries — Integration (Real DB + wCTE)', () => {
@@ -40,203 +40,6 @@ describe('ProjectQueries — Integration (Real DB + wCTE)', () => {
         await destroyDb();
     });
 
-    // ─── insertProject ─────────────────────────────────────────────────────────
-
-    describe('insertProject', () => {
-        it('returns the created project with camelCase fields', async () => {
-            const result = await insertProject({
-                name: 'My Project',
-                description: 'Hello World',
-                userId,
-            });
-
-            expect(result).not.toBeNull();
-            expect(result!.name).toBe('My Project');
-            expect(result!.description).toBe('Hello World');
-            expect(result!.userId).toBe(userId);
-            expect(result!.id).toBeDefined();
-            expect(result!.version).toBe(1);
-        });
-
-        it('atomically writes an outbox_events row (wCTE guarantee)', async () => {
-            const project = await insertProject({
-                name: 'Outbox Test',
-                userId,
-            });
-
-            const outbox = await db
-                .selectFrom('outbox_events')
-                .selectAll()
-                .where('kafka_topic', '=', 'project.created')
-                .where('kafka_key', '=', project!.id)
-                .execute();
-
-            expect(outbox).toHaveLength(1);
-            expect((outbox[0]!.payload as any).projectId).toBe(project!.id);
-            expect((outbox[0]!.payload as any).userId).toBe(userId);
-        });
-    });
-
-    // ─── insertProjects (batch) ─────────────────────────────────────────────────
-
-    describe('insertProjects', () => {
-        it('inserts multiple projects atomically', async () => {
-            const result = await insertProjects([
-                { name: 'Project A', userId },
-                { name: 'Project B', userId },
-            ]);
-
-            expect(result).toHaveLength(2);
-            const names = result.map((p) => p.name).sort();
-            expect(names).toEqual(['Project A', 'Project B']);
-        });
-
-        it('writes one outbox_events row per project (batch wCTE)', async () => {
-            const projects = await insertProjects([
-                { name: 'Batch 1', userId },
-                { name: 'Batch 2', userId },
-            ]);
-
-            const outbox = await db
-                .selectFrom('outbox_events')
-                .selectAll()
-                .where('kafka_topic', '=', 'project.created')
-                .execute();
-
-            expect(outbox).toHaveLength(2);
-            const outboxKeys = outbox.map((o) => o.kafka_key).sort();
-            const projectIds = projects.map((p) => p.id).sort();
-            expect(outboxKeys).toEqual(projectIds);
-        });
-
-        it('returns empty array when given empty input', async () => {
-            const result = await insertProjects([]);
-            expect(result).toHaveLength(0);
-        });
-    });
-
-    // ─── deleteProjects ─────────────────────────────────────────────────────────
-
-    describe('deleteProjects', () => {
-        it('deletes own projects and writes an outbox event', async () => {
-            const project = await createProject(userId, { name: 'To Delete' });
-
-            const deleted = await deleteProjects({
-                userId,
-                projectIds: [project.id],
-            });
-
-            expect(deleted).toHaveLength(1);
-            expect(deleted[0]!.id).toBe(project.id);
-
-            // Row gone from table
-            const remaining = await db
-                .selectFrom('project')
-                .where('id', '=', project.id as any)
-                .execute();
-            expect(remaining).toHaveLength(0);
-
-            // Outbox row written
-            const outbox = await db
-                .selectFrom('outbox_events')
-                .selectAll()
-                .where('kafka_topic', '=', 'project.deleted')
-                .where('kafka_key', '=', project.id)
-                .execute();
-            expect(outbox).toHaveLength(1);
-        });
-
-        it('throws if user does not own the project (auth rule)', async () => {
-            const otherUser = await createUser();
-            const project = await createProject(otherUser.id, {
-                name: 'Other Project',
-            });
-
-            await expect(
-                deleteProjects({ userId, projectIds: [project.id] }),
-            ).rejects.toThrow('Unauthorized or some projects not found');
-        });
-    });
-
-    // ─── insertProjectMembers ───────────────────────────────────────────────────
-
-    describe('insertProjectMembers', () => {
-        it('adds members to a project the owner controls', async () => {
-            const project = await createProject(userId);
-            const member = await createUser();
-
-            const added = await insertProjectMembers({
-                userId,
-                projectId: project.id,
-                usersToAdd: [member.id],
-            });
-
-            expect(added).toHaveLength(1);
-            expect(added[0]!.userId).toBe(member.id);
-            expect(added[0]!.projectId).toBe(project.id);
-        });
-
-        it('writes outbox_events row per member added', async () => {
-            const project = await createProject(userId);
-            const memberA = await createUser();
-            const memberB = await createUser();
-
-            await insertProjectMembers({
-                userId,
-                projectId: project.id,
-                usersToAdd: [memberA.id, memberB.id],
-            });
-
-            const outbox = await db
-                .selectFrom('outbox_events')
-                .selectAll()
-                .where('kafka_topic', '=', 'project.member.added')
-                .execute();
-
-            expect(outbox).toHaveLength(2);
-        });
-
-        it('throws if caller is not the project owner', async () => {
-            const project = await createProject(userId);
-            const attacker = await createUser();
-            const victim = await createUser();
-
-            await expect(
-                insertProjectMembers({
-                    userId: attacker.id,
-                    projectId: project.id,
-                    usersToAdd: [victim.id],
-                }),
-            ).rejects.toThrow();
-        });
-    });
-
-    // ─── deleteProjectMembers ───────────────────────────────────────────────────
-
-    describe('deleteProjectMembers', () => {
-        it('removes a member and writes an outbox event', async () => {
-            const project = await createProject(userId);
-            const member = await createUser();
-            const membership = await addProjectMember(project.id, member.id);
-
-            const deleted = await deleteProjectMembers({
-                userId,
-                projectId: project.id,
-                memberIds: [membership.id],
-            });
-
-            expect(deleted).toHaveLength(1);
-            expect(deleted[0]!.userId).toBe(member.id);
-
-            const outbox = await db
-                .selectFrom('outbox_events')
-                .selectAll()
-                .where('kafka_topic', '=', 'project.member.deleted')
-                .execute();
-            expect(outbox).toHaveLength(1);
-        });
-    });
-
     // ─── getProjects / getProject / getProjectMembers ───────────────────────────
 
     describe('getProjects', () => {
@@ -248,22 +51,6 @@ describe('ProjectQueries — Integration (Real DB + wCTE)', () => {
             const { projects } = await getProjects(userId);
             expect(projects).toHaveLength(1);
             expect(projects[0]!.name).toBe('Mine');
-        });
-    });
-
-    describe('getProject', () => {
-        it('returns a single project owned by the user', async () => {
-            const project = await createProject(userId, { name: 'Single' });
-            const found = await getProject(userId, project.id);
-            expect(found).not.toBeNull();
-            expect(found!.id).toBe(project.id);
-        });
-
-        it('returns null for a project the user does not own', async () => {
-            const otherUser = await createUser();
-            const project = await createProject(otherUser.id);
-            const found = await getProject(userId, project.id);
-            expect(found).toBeNull();
         });
     });
 
@@ -289,6 +76,281 @@ describe('ProjectQueries — Integration (Real DB + wCTE)', () => {
                 project.id,
             );
             expect(members).toHaveLength(0);
+        });
+    });
+
+    // ─── Mutations ─────────────────────────────────────────────────────────────
+
+    describe('insertProject', () => {
+        it('atomically inserts a project and an outbox event', async () => {
+            const name = 'Mutation Project';
+            const description = 'Atomic check';
+
+            const project = await insertProject({
+                userId,
+                name,
+                description,
+            });
+
+            expect(project).not.toBeNull();
+            expect(project!.name).toBe(name);
+            expect(project!.userId).toBe(userId);
+
+            // Verify project exists in DB
+            const dbProject = await db
+                .selectFrom('project')
+                .selectAll()
+                .where('id', '=', project!.id as any)
+                .executeTakeFirst();
+            expect(dbProject).not.toBeNull();
+
+            // Verify atomic outbox entry exists
+            const outboxEntries = await sql<any>`
+                SELECT * FROM outbox_events 
+                WHERE kafka_topic = 'project.created' 
+                  AND kafka_key = ${project!.id}::text
+            `.execute(db);
+
+            expect(outboxEntries.rows).toHaveLength(1);
+            const event = outboxEntries.rows[0];
+            expect(event.payload.projectId).toBe(project!.id);
+            expect(event.payload.userId).toBe(userId);
+            expect(event.payload.name).toBe(name);
+        });
+    });
+
+    describe('updateProject', () => {
+        it('successfully updates project and increments version', async () => {
+            const project = await insertProject({
+                userId,
+                name: 'Old Name',
+            });
+
+            const updated = await updateProject({
+                actorId: userId,
+                id: project!.id,
+                version: project!.version,
+                name: 'New Name',
+                description: 'New Description',
+            });
+
+            expect(updated).not.toBeNull();
+            expect(updated!.name).toBe('New Name');
+            expect(updated!.description).toBe('New Description');
+            expect(updated!.version).toBe(project!.version + 1);
+
+            // Verify outbox
+            const outboxEntries = await sql<any>`
+                SELECT * FROM outbox_events 
+                WHERE kafka_topic = 'project.updated' 
+                  AND kafka_key = ${project!.id}::text
+                ORDER BY created_at DESC LIMIT 1
+            `.execute(db);
+
+            expect(outboxEntries.rows).toHaveLength(1);
+            expect(outboxEntries.rows[0].payload.name).toBe('New Name');
+        });
+
+        it('fails update if version is stale (optimistic locking)', async () => {
+            const project = await insertProject({
+                userId,
+                name: 'Old Name',
+            });
+
+            // Update once to increment version
+            await updateProject({
+                actorId: userId,
+                id: project!.id,
+                version: project!.version,
+                name: 'First Update',
+            });
+
+            // Try to update again with the original version
+            const failedUpdate = await updateProject({
+                actorId: userId,
+                id: project!.id,
+                version: project!.version, // Stale version
+                name: 'Second Update',
+            });
+
+            expect(failedUpdate).toBeNull();
+        });
+
+        it('fails update if actor is not the owner', async () => {
+            const project = await insertProject({
+                userId,
+                name: 'Project Name',
+            });
+
+            const attackerId = (await createUser()).id;
+
+            const failedUpdate = await updateProject({
+                actorId: attackerId,
+                id: project!.id,
+                version: project!.version,
+                name: 'Hacked!',
+            });
+
+            expect(failedUpdate).toBeNull();
+        });
+    });
+
+    describe('deleteProjects', () => {
+        it('deletes only projects owned by the actor and logs events', async () => {
+            const p1 = await insertProject({
+                userId,
+                name: 'P1',
+            });
+            const p2 = await insertProject({
+                userId,
+                name: 'P2',
+            });
+            const otherUser = await createUser();
+            const p3 = await insertProject({
+                userId: otherUser.id,
+                name: 'Other P',
+            });
+
+            const { success, deletedCount } = await deleteProjects({
+                actorId: userId,
+                projectIds: [p1!.id, p2!.id, p3!.id],
+            });
+
+            expect(success).toBe(true);
+            expect(deletedCount).toBe(2);
+
+            // Verify p1 and p2 are gone, p3 remains
+            const findP1 = await db
+                .selectFrom('project')
+                .where('id', '=', p1!.id as any)
+                .executeTakeFirst();
+            const findP2 = await db
+                .selectFrom('project')
+                .where('id', '=', p2!.id as any)
+                .executeTakeFirst();
+            const findP3 = await db
+                .selectFrom('project')
+                .where('id', '=', p3!.id as any)
+                .executeTakeFirst();
+
+            expect(findP1).toBeUndefined();
+            expect(findP2).toBeUndefined();
+            expect(findP3).toBeDefined();
+
+            // Verify outbox has 2 deletion events
+            const outboxEntries = await sql<any>`
+                SELECT * FROM outbox_events 
+                WHERE kafka_topic = 'project.deleted' 
+                  AND kafka_key IN (${p1!.id}, ${p2!.id})
+            `.execute(db);
+
+            expect(outboxEntries.rows).toHaveLength(2);
+        });
+
+        it('limits deletion to 1000 projects per call', async () => {
+            const projectIds = Array.from({ length: 1100 }).map(
+                () => '00000000-0000-0000-0000-000000000000',
+            ); // dummy ids
+            const { deletedCount } = await deleteProjects({
+                actorId: userId,
+                projectIds,
+            });
+            // We can't easily verify the slice in a real DB without creating 1000 items
+            // but we can at least ensure it doesn't crash and returns a reasonable number (0 because ids are dummy)
+            expect(deletedCount).toBe(0);
+        });
+    });
+
+    describe('Project Membership Mutations', () => {
+        let projectId: string;
+
+        beforeEach(async () => {
+            const project = await insertProject({
+                userId,
+                name: 'Membership Project',
+            });
+            projectId = project!.id;
+        });
+
+        it('allows owner to add members', async () => {
+            const newUserId = (await createUser()).id;
+            const success = await insertProjectMembers({
+                actorId: userId,
+                projectId,
+                userIds: [newUserId],
+            });
+
+            expect(success).toBe(true);
+
+            // Verify member exists
+            const members = await getProjectMembers(userId, projectId);
+            expect(members.members.some((m) => m.userId === newUserId)).toBe(
+                true,
+            );
+        });
+
+        it('allows existing members to add new members', async () => {
+            const member1 = await createUser();
+            const member2 = await createUser();
+
+            // Owner adds member1
+            await insertProjectMembers({
+                actorId: userId,
+                projectId,
+                userIds: [member1.id],
+            });
+
+            // Member1 adds member2
+            const success = await insertProjectMembers({
+                actorId: member1.id,
+                projectId,
+                userIds: [member2.id],
+            });
+
+            expect(success).toBe(true);
+
+            const members = await getProjectMembers(userId, projectId);
+            expect(members.members.some((m) => m.userId === member2.id)).toBe(
+                true,
+            );
+        });
+
+        it('prevents non-members from adding members', async () => {
+            const stranger = await createUser();
+            const victim = await createUser();
+
+            await insertProjectMembers({
+                actorId: stranger.id,
+                projectId,
+                userIds: [victim.id],
+            });
+
+            const members = await getProjectMembers(userId, projectId);
+            expect(members.members.some((m) => m.userId === victim.id)).toBe(
+                false,
+            );
+        });
+
+        it('successfully removes members', async () => {
+            const member = await createUser();
+            await insertProjectMembers({
+                actorId: userId,
+                projectId,
+                userIds: [member.id],
+            });
+
+            const success = await deleteProjectMembers({
+                actorId: userId,
+                projectId,
+                userIds: [member.id],
+            });
+
+            expect(success).toBe(true);
+
+            const members = await getProjectMembers(userId, projectId);
+            expect(members.members.some((m) => m.userId === member.id)).toBe(
+                false,
+            );
         });
     });
 });

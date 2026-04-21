@@ -1,61 +1,47 @@
 import type {
-    CreateLinkParam,
-    CreateTaskParam,
     GetNeighbourhoodParam,
     GetTaskLinksParam,
     LinkConnection,
     PaginationParams,
-    ProjectTask,
-    TaskConnection,
+    Task,
     TaskLink,
+    TaskConnection,
     TaskNeighbourhoodResult,
     TaskService,
-    UpdateTaskParam,
 } from '../TaskService.ts';
 import {
-    deleteLinkQuery,
-    deleteTaskQuery,
     getNeighbourhood,
     getProjectTaskLinksPage,
     getTaskLinksPage,
+    getTasksByActorIdAndIds,
     getTasksByIds as getTasksByIdsQuery,
     getTasksPage,
-    insertLink,
     insertTask,
-    updateTaskQuery,
+    updateTask,
+    deleteTask,
+    insertTaskLink,
+    deleteTaskLink,
+    updateTaskLink,
 } from './TaskQueries.ts';
 
 export class TaskServiceImpl implements TaskService {
-    async createTask(data: CreateTaskParam): Promise<ProjectTask> {
-        return await insertTask(data);
-    }
-
-    async createLink(data: CreateLinkParam): Promise<TaskLink> {
-        return await insertLink(data);
-    }
-
-    async updateTask(data: UpdateTaskParam): Promise<ProjectTask> {
-        return await updateTaskQuery(data);
-    }
-
-    async deleteTask(userId: string, taskId: string): Promise<void> {
-        await deleteTaskQuery(userId, taskId);
-    }
-
-    async deleteLink(userId: string, linkId: string): Promise<void> {
-        await deleteLinkQuery(userId, linkId);
-    }
-
     async getTasks(
         userId: string,
         projectId: string | null,
         params: PaginationParams,
     ): Promise<TaskConnection> {
-        return getTasksPage(userId, projectId || null, params);
+        return getTasksPage(userId, projectId, params);
     }
 
-    async getTasksByIds(userId: string, ids: string[]): Promise<ProjectTask[]> {
-        return await getTasksByIdsQuery(userId, ids);
+    async getTasksByIds(ids: string[]): Promise<Task[]> {
+        return await getTasksByIdsQuery(ids);
+    }
+
+    async getTasksByActorIdAndIds(
+        actorId: string,
+        ids: string[],
+    ): Promise<Task[]> {
+        return await getTasksByActorIdAndIds(actorId, ids);
     }
 
     async getTaskLinks(
@@ -77,10 +63,71 @@ export class TaskServiceImpl implements TaskService {
         return await getNeighbourhood(params);
     }
 
+    async createTask(param: {
+        actorId: string;
+        projectId: string;
+        title: string;
+        description?: string | null;
+        status?: string | null;
+    }): Promise<Task> {
+        return await insertTask(param);
+    }
+
+    async updateTask(param: {
+        actorId: string;
+        projectId: string;
+        taskId: string;
+        version: number;
+        title?: string | null;
+        description?: string | null;
+        status?: string | null;
+        teamId?: string | null;
+        memberId?: string | null;
+    }): Promise<Task> {
+        return await updateTask(param);
+    }
+
+    async deleteTask(param: {
+        actorId: string;
+        projectId: string;
+        taskId: string;
+    }): Promise<string> {
+        return await deleteTask(param);
+    }
+
+    async createTaskLink(param: {
+        actorId: string;
+        projectId: string;
+        sourceTaskId: string;
+        targetTaskId: string;
+        label: string;
+    }): Promise<TaskLink> {
+        return await insertTaskLink(param);
+    }
+
+    async deleteTaskLink(param: {
+        actorId: string;
+        projectId: string;
+        linkId: string;
+    }): Promise<string> {
+        return await deleteTaskLink(param);
+    }
+
+    async updateTaskLink(param: {
+        actorId: string;
+        projectId: string;
+        linkId: string;
+        sourceTaskId?: string | null;
+        targetTaskId?: string | null;
+        label?: string | null;
+    }): Promise<TaskLink> {
+        return await updateTaskLink(param);
+    }
+
     async getProjectLinks(
-        userId: string, 
+        userId: string,
         projectId: string,
-        pagination: PaginationParams
+        pagination: PaginationParams,
     ): Promise<LinkConnection> {
         return await getProjectTaskLinksPage(userId, projectId, pagination);
     }

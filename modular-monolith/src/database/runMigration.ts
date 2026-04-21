@@ -5,7 +5,29 @@ async function run() {
     console.log('[Migration] Starting denormalization migration...');
 
     try {
-        // 1. Add Columns
+        // 1. Add Denormalized Count Columns to Project, Team, and User
+        console.log(
+            '[Migration] Adding count columns to project, project_team, and users...',
+        );
+        await sql`
+            ALTER TABLE project 
+            ADD COLUMN IF NOT EXISTS members_count INTEGER NOT NULL DEFAULT 0,
+            ADD COLUMN IF NOT EXISTS tasks_count INTEGER NOT NULL DEFAULT 0,
+            ADD COLUMN IF NOT EXISTS teams_count INTEGER NOT NULL DEFAULT 0
+        `.execute(db);
+
+        await sql`
+            ALTER TABLE project_team 
+            ADD COLUMN IF NOT EXISTS members_count INTEGER NOT NULL DEFAULT 0,
+            ADD COLUMN IF NOT EXISTS tasks_count INTEGER NOT NULL DEFAULT 0
+        `.execute(db);
+
+        await sql`
+            ALTER TABLE users 
+            ADD COLUMN IF NOT EXISTS projects_count INTEGER NOT NULL DEFAULT 0
+        `.execute(db);
+
+        // 2. Add Columns to project_task
         console.log('[Migration] Adding columns to project_task...');
         await sql`
             ALTER TABLE project_task 

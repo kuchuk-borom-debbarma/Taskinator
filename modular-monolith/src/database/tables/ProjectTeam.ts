@@ -15,6 +15,8 @@ export interface ProjectTeamTable {
     version: Generated<number>;
     created_at: ColumnType<Date, string | undefined, never>;
     updated_at: ColumnType<Date, undefined>;
+    members_count: Generated<number>;
+    tasks_count: Generated<number>;
 }
 
 export type ProjectTeam = Selectable<ProjectTeamTable>;

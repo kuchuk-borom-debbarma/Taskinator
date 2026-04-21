@@ -3,10 +3,10 @@ import { teamService } from './modules/team';
 import { authService } from './modules/auth/index.ts';
 import { externalNotificationService } from './modules/external-notification/index.ts';
 import { internalNotificationService } from './modules/internal-notification/index.ts';
-import { startConsumers } from './kafka/registry.ts';
-import { startRestServer } from './restful';
+import { yoga } from './graphql';
 import { startOutboxRelay } from './utils/event-bus/OutboxRelay';
 import { startRedisBridge } from './redis/RealtimeRedisBridge';
+import { startConsumers } from './kafka/registry.ts';
 import eventBus from './utils/EventBus';
 
 /**
@@ -15,7 +15,7 @@ import eventBus from './utils/EventBus';
  * Order is critical:
  * 1. Global Event Bus (Connect producer + auto-create Kafka topics)
  * 2. Domain Services & Consumer Groups (Join Kafka and initialize internal state)
- * 3. REST / GraphQL Endpoint (Only start accepting traffic once ready)
+ * 3. GraphQL Endpoint (Only start accepting traffic once ready)
  * 4. Background Relay (Once everything is up, start the outbox poller)
  */
 async function bootstrap() {
@@ -38,9 +38,14 @@ async function bootstrap() {
         ]);
         console.log('[Boot] Phase 2: Domain modules and listeners ready');
 
-        // Phase 3: Public API
-        await startRestServer(3000);
-        console.log('[Boot] Phase 3: Public API layer available');
+        // Phase 3: Public API (GraphQL)
+        const server = Bun.serve({
+            fetch: (req) => yoga(req),
+            port: 3000,
+        });
+        console.log(
+            `[Boot] Phase 3: GraphQL API layer available at ${server.url}`,
+        );
 
         // Phase 4: Background Processing
         startOutboxRelay();

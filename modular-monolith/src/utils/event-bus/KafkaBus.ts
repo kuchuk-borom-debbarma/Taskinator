@@ -1,5 +1,5 @@
 import { Kafka, Partitioners, type Producer, type Consumer } from 'kafkajs';
-import { EVENT_TO_TOPIC, KAFKA_TOPICS } from './constants.ts';
+import { KAFKA_TOPICS } from './constants.ts';
 import type { Bus, DomainEvent } from './types.ts';
 import { createEvent, withIdempotency } from './idempotency.ts';
 import { context, propagation, trace } from '@opentelemetry/api';
@@ -51,38 +51,24 @@ export class KafkaBus implements Bus {
     }
 
     async publish(
+        topic: string,
         type: string,
         payload:
             | { id?: string; key: string; data: any }
             | Array<{ id?: string; key: string; data: any }>,
     ) {
         const items = Array.isArray(payload) ? payload : [payload];
-        const topic = EVENT_TO_TOPIC[type];
-        if (!topic) throw new Error(`Unknown event type: ${type}`);
         const events = items.map((i) => createEvent(type, i.key, i.data, i.id));
         await this.emit(events, topic);
     }
 
     async subscribe(
+        topic: string,
         groupId: string,
         handlers: Record<string, (data: any) => Promise<void>>,
+        options?: { batch?: boolean; manualIdempotency?: boolean },
     ) {
-        // Group handlers by their Kafka topic, then spin up one consumer per topic.
-        const byTopic: Record<
-            string,
-            Record<string, (data: any) => Promise<void>>
-        > = {};
-        for (const [eventType, handler] of Object.entries(handlers)) {
-            const topic = EVENT_TO_TOPIC[eventType];
-            if (!topic) continue;
-            byTopic[topic] ??= {};
-            byTopic[topic]![eventType] = handler;
-        }
-        await Promise.all(
-            Object.entries(byTopic).map(([topic, topicHandlers]) =>
-                this.createConsumer(topic, groupId, topicHandlers),
-            ),
-        );
+        await this.createConsumer(topic, groupId, handlers, options);
     }
 
     private async emit(events: DomainEvent[], topic: string) {
@@ -100,6 +86,7 @@ export class KafkaBus implements Bus {
         topic: string,
         groupId: string,
         handlers: Record<string, (data: any) => Promise<void>>,
+        options?: { batch?: boolean; manualIdempotency?: boolean },
     ) {
         const consumer = this.kafka.consumer({ groupId });
         await consumer.connect();
@@ -138,46 +125,32 @@ export class KafkaBus implements Bus {
                                     )
                                     .filter((e) => handlers[e.type]);
 
-                                // 2. Safe Execution using the Idempotency Wrapper
-                                await withIdempotency(
-                                    allEvents,
-                                    groupId,
-                                    async (unprocessed) => {
-                                        // Pre-filter: drop any events if the consumer was
-                                        // revoked mid-batch (rebalance / shutdown).
-                                        const live = unprocessed.filter(
-                                            () => isRunning() && !isStale(),
-                                        );
-
-                                        // Group events by type so that:
-                                        //   - Events of DIFFERENT types run concurrently (Promise.all)
-                                        //   - Events of the SAME type run in arrival order (serial)
-                                        //     to preserve per-type consistency.
-                                        const byType = new Map<
-                                            string,
-                                            DomainEvent[]
-                                        >();
-                                        for (const e of live) {
-                                            const bucket =
-                                                byType.get(e.type) ?? [];
-                                            bucket.push(e);
-                                            byType.set(e.type, bucket);
-                                        }
-
-                                        await Promise.all(
-                                            Array.from(byType.entries()).map(
-                                                async ([type, events]) => {
-                                                    const handler =
-                                                        handlers[type];
-                                                    if (!handler) return;
-                                                    for (const e of events) {
-                                                        await handler(e.data);
-                                                    }
-                                                },
-                                            ),
-                                        );
-                                    },
-                                );
+                                // 2. Idempotency handling
+                                if (options?.manualIdempotency) {
+                                    // Bypassing global idempotency. The listener MUST call claimEventsAtomic.
+                                    await this.executeHandlers(
+                                        allEvents,
+                                        handlers,
+                                        options,
+                                        isRunning,
+                                        isStale,
+                                    );
+                                } else {
+                                    // Standard Global Idempotency (Non-Transactional)
+                                    await withIdempotency(
+                                        allEvents,
+                                        groupId,
+                                        async (unprocessed) => {
+                                            await this.executeHandlers(
+                                                unprocessed,
+                                                handlers,
+                                                options,
+                                                isRunning,
+                                                isStale,
+                                            );
+                                        },
+                                    );
+                                }
 
                                 // 3. Mark the Kafka batch as consumed to advance the offset
                                 for (const m of batch.messages)
@@ -193,5 +166,45 @@ export class KafkaBus implements Bus {
         });
 
         this.consumers.push(consumer);
+    }
+
+    private async executeHandlers(
+        events: DomainEvent[],
+        handlers: Record<string, (data: any) => Promise<void>>,
+        options: { batch?: boolean } | undefined,
+        isRunning: () => boolean,
+        isStale: () => boolean,
+    ) {
+        // Pre-filter: drop any events if the consumer was
+        // revoked mid-batch (rebalance / shutdown).
+        const live = events.filter(() => isRunning() && !isStale());
+
+        // Group events by type so that:
+        //   - Events of DIFFERENT types run concurrently (Promise.all)
+        //   - Events of the SAME type run in arrival order (serial)
+        //     to preserve per-type consistency.
+        const byType = new Map<string, DomainEvent[]>();
+        for (const e of live) {
+            const bucket = byType.get(e.type) ?? [];
+            bucket.push(e);
+            byType.set(e.type, bucket);
+        }
+
+        await Promise.all(
+            Array.from(byType.entries()).map(async ([type, events]) => {
+                const handler = handlers[type];
+                if (!handler) return;
+
+                if (options?.batch) {
+                    // Pass the entire array of events to the batch handler
+                    await handler(events);
+                } else {
+                    // Maintain standard serial execution for non-batch handlers
+                    for (const e of events) {
+                        await handler(e.data);
+                    }
+                }
+            }),
+        );
     }
 }

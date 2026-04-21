@@ -1,41 +1,40 @@
 import type { GraphQLContext } from '../context.ts';
+import type { Team, TeamMember } from '../../modules/team/TeamService.ts';
+import type { Project } from '../../modules/project/ProjectService.ts';
+import { NotFoundError, UnauthorizedError } from '../errors.ts';
 import { teamService } from '../../modules/team';
-import { resolveTeam, buildRef } from './helpers.ts';
-import { UnauthorizedError } from '../errors';
+import { taskService } from '../../modules/task';
 import { encodeCursor } from '../../utils/utils.ts';
+import type { PaginationParams } from '../../types/pagination.ts';
 
 export const teamResolvers = {
     Team: {
-        id: (t: any) => t.id,
-        projectId: (t: any) => t.projectId,
-        createdBy: (t: any) => t.createdBy,
-        name: async (t: any, _: any, context: GraphQLContext) => {
-            const team = await resolveTeam(t, context);
-            return team?.name;
+        id: (parent: Team) => parent.id,
+        name: (parent: Team) => parent.name,
+        project: (parent: Team, _args: any, context: GraphQLContext) => {
+            // Internal hydration — using trust-based byId
+            return context.loaders.project.byId.load(parent.projectId);
         },
-        createdAt: async (t: any) => {
-            const team = await resolveTeam(t, null as any);
-            const date = team?.createdAt ?? t.createdAt;
-            return date instanceof Date ? date.toISOString() : date;
-        },
-        updatedAt: async (t: any) => {
-            const team = await resolveTeam(t, null as any);
-            const date = team?.updatedAt ?? t.updatedAt;
-            return date instanceof Date ? date.toISOString() : date;
-        },
-        creator: (t: any) => buildRef(t.createdBy, 'User'),
-        project: (t: any) => buildRef(t.projectId, 'Project'),
+        members: async (
+            parent: Team,
+            args: PaginationParams,
+            context: GraphQLContext,
+        ) => {
+            if (!context.userId) throw new UnauthorizedError();
 
-        // Connections
-        members: async (t: any, args: any, context: GraphQLContext) => {
-            const { members, nextCursor, prevCursor } = await teamService.getTeamMembers(
-                context.userId!,
-                t.projectId,
-                t.id,
-                args
-            );
+            const { members, nextCursor, prevCursor } =
+                await teamService.getTeamMembers(
+                    context.userId,
+                    parent.projectId,
+                    parent.id,
+                    args,
+                );
+
             return {
-                edges: members.map((m) => ({ node: m, cursor: m.id })),
+                edges: members.map((m: any) => ({
+                    node: m,
+                    cursor: m.id,
+                })),
                 pageInfo: {
                     hasNextPage: !!nextCursor,
                     hasPreviousPage: !!prevCursor,
@@ -44,16 +43,107 @@ export const teamResolvers = {
                 },
             };
         },
-        tasks: async (t: any, args: any, context: GraphQLContext) => {
-            const { tasks, nextCursor, prevCursor } = await (await import('../../modules/task')).taskService.getTasks(
-                context.userId!,
-                t.projectId,
-                { ...args, teamId: t.id }
-            );
+        tasks: async (
+            parent: Team,
+            args: PaginationParams,
+            context: GraphQLContext,
+        ) => {
+            if (!context.userId) throw new UnauthorizedError();
+
+            const { tasks, nextCursor, prevCursor } =
+                await taskService.getTasks(context.userId, parent.projectId, {
+                    ...args,
+                    teamId: parent.id,
+                });
+
             return {
-                edges: tasks.map((tk: any) => ({
-                    node: tk,
-                    cursor: encodeCursor(tk.epochPrecision, tk.id),
+                edges: tasks.map((t: any) => ({
+                    node: t,
+                    cursor: encodeCursor(
+                        t.epochPrecision || t.createdAt.toISOString(),
+                        t.id,
+                    ),
+                })),
+                pageInfo: {
+                    hasNextPage: !!nextCursor,
+                    hasPreviousPage: !!prevCursor,
+                    startCursor: prevCursor,
+                    endCursor: nextCursor,
+                },
+            };
+        },
+        createdBy: async (
+            parent: Team,
+            _args: any,
+            context: GraphQLContext,
+        ) => {
+            const user = await context.loaders.user.byId.load(parent.createdBy);
+            if (!user) {
+                throw new NotFoundError(
+                    `Creator User with ID ${parent.createdBy} not found for team ${parent.id}`,
+                );
+            }
+            return user;
+        },
+        createdAt: (parent: Team) => parent.createdAt.toISOString(),
+        updatedAt: (parent: Team) => parent.updatedAt?.toISOString() || null,
+        version: (parent: Team) => parent.version,
+        lastEventId: (parent: Team) => parent.lastEventId,
+        membersCount: (parent: Team) => parent.membersCount || 0,
+        tasksCount: (parent: Team) => parent.tasksCount || 0,
+    },
+
+    TeamMember: {
+        id: (parent: TeamMember) => parent.id,
+        user: async (
+            parent: TeamMember,
+            _args: any,
+            context: GraphQLContext,
+        ) => {
+            const user = await context.loaders.user.byId.load(parent.userId);
+            if (!user) {
+                throw new NotFoundError(
+                    `User with ID ${parent.userId} not found for team member ${parent.id}`,
+                );
+            }
+            return user;
+        },
+        team: async (
+            parent: TeamMember,
+            _args: any,
+            context: GraphQLContext,
+        ) => {
+            // Authorized lookup for cross-domain link
+            const team = await context.loaders.team.byActorIdAndId.load({
+                actorId: context.userId || '',
+                id: parent.teamId,
+            });
+            if (!team) {
+                throw new NotFoundError(
+                    `Team with ID ${parent.teamId} not found for member ${parent.id}`,
+                );
+            }
+            return team;
+        },
+        createdAt: (parent: TeamMember) => parent.createdAt.toISOString(),
+        version: (parent: TeamMember) => parent.version,
+    },
+
+    Project: {
+        teams: async (
+            parent: Project,
+            args: PaginationParams,
+            context: GraphQLContext,
+        ) => {
+            if (!context.userId) throw new UnauthorizedError();
+
+            const { teams, nextCursor, prevCursor } =
+                await teamService.getTeams(context.userId, parent.id, args);
+
+            return {
+                edges: teams.map((t: any) => ({
+                    node: t,
+                    cursor: t.id,
                 })),
                 pageInfo: {
                     hasNextPage: !!nextCursor,
@@ -64,72 +154,52 @@ export const teamResolvers = {
             };
         },
     },
-    TeamMember: {
-        id: (m: any) => m.id,
-        teamId: (m: any) => m.teamId,
-        userId: (m: any) => m.userId,
-        createdAt: (m: any) =>
-            m.createdAt instanceof Date ? m.createdAt.toISOString() : m.createdAt,
-        user: (m: any) => buildRef(m.userId, 'User'),
-        team: (m: any) => buildRef(m.teamId, 'Team'),
-    },
+
     Query: {
-        teams: async (_: any, { projectId, memberId, ...args }: any, context: GraphQLContext) => {
-            if (!context.userId) throw new UnauthorizedError();
-            const { teams, nextCursor, prevCursor } = await teamService.getTeams(
-                context.userId,
-                projectId,
-                { ...args, memberId },
+        team: (
+            _parent: any,
+            { id }: { id: string },
+            context: GraphQLContext,
+        ) => {
+            return context.loaders.team.byActorIdAndId.load({
+                actorId: context.userId || '',
+                id: id,
+            });
+        },
+        teams: async (
+            _parent: any,
+            { ids }: { ids?: string[] },
+            context: GraphQLContext,
+        ) => {
+            if (!ids || ids.length === 0) return [];
+            const actorId = context.userId || '';
+            const results = await context.loaders.team.byActorIdAndId.loadMany(
+                ids.map((id) => ({ actorId, id })),
             );
-            return {
-                edges: teams.map((t) => ({ node: t, cursor: t.id })),
-                pageInfo: {
-                    hasNextPage: !!nextCursor,
-                    hasPreviousPage: !!prevCursor,
-                    startCursor: prevCursor,
-                    endCursor: nextCursor,
-                },
-            };
+            return results.filter(
+                (res): res is Team => res !== null && !(res instanceof Error),
+            );
         },
         teamMembers: async (
-            _: any,
+            _parent: any,
             { projectId, teamId, first, after, last, before }: any,
             context: GraphQLContext,
         ) => {
             if (!context.userId) throw new UnauthorizedError();
-            const { members, nextCursor, prevCursor } = await teamService.getTeamMembers(
-                context.userId,
-                projectId,
-                teamId,
-                { first, after, last, before },
-            );
+
+            const { members, nextCursor, prevCursor } =
+                await teamService.getTeamMembers(
+                    context.userId,
+                    projectId,
+                    teamId,
+                    { first, after, last, before },
+                );
+
             return {
-                edges: members.map((m) => ({ node: m, cursor: m.id })),
-                pageInfo: {
-                    hasNextPage: !!nextCursor,
-                    hasPreviousPage: !!prevCursor,
-                    startCursor: prevCursor,
-                    endCursor: nextCursor,
-                },
-            };
-        },
-        searchTeamUsers: async (
-            _: any,
-            { projectId, teamId, search, first, after, last, before }: any,
-            context: GraphQLContext,
-        ) => {
-            const { users, nextCursor, prevCursor } = await teamService.searchTeamUsers({
-                actorId: context.userId!,
-                projectId,
-                teamId,
-                search,
-                first,
-                after,
-                last,
-                before,
-            });
-            return {
-                edges: users.map((u) => ({ node: u, cursor: u.id })),
+                edges: members.map((m: any) => ({
+                    node: m,
+                    cursor: m.id,
+                })),
                 pageInfo: {
                     hasNextPage: !!nextCursor,
                     hasPreviousPage: !!prevCursor,
@@ -139,69 +209,125 @@ export const teamResolvers = {
             };
         },
     },
+
     Mutation: {
         createTeam: async (
-            _: any,
-            { projectId, name }: any,
+            _parent: any,
+            { projectId, name }: { projectId: string; name: string },
             context: GraphQLContext,
         ) => {
             if (!context.userId) throw new UnauthorizedError();
-            const team = await teamService.createTeams({
-                userId: context.userId,
+
+            const team = await teamService.createTeam({
+                actorId: context.userId,
                 projectId,
-                teams: [name],
+                name,
             });
+
             return {
                 success: true,
-                team: team[0],
+                team,
             };
         },
         deleteTeams: async (
-            _: any,
-            { projectId, teamIds }: any,
+            _parent: any,
+            { projectId, teamIds }: { projectId: string; teamIds: string[] },
             context: GraphQLContext,
         ) => {
-            if (!context.userId) throw new UnauthorizedError();
-            await teamService.deleteTeams({
+            if (!context.userId) {
+                return { success: false, deletedCount: 0 };
+            }
+
+            const { deletedCount } = await teamService.deleteTeams({
+                actorId: context.userId,
                 projectId,
                 teamIds,
-                userId: context.userId,
             });
+
             return {
                 success: true,
-                deletedCount: teamIds.length,
-                project: { id: projectId },
+                deletedCount,
             };
         },
         addTeamMembers: async (
-            _: any,
-            { projectId, teamId, userIds }: any,
-            context: GraphQLContext,
-        ) => {
-            if (!context.userId) throw new UnauthorizedError();
-            await teamService.addTeamMembers({
+            _parent: any,
+            {
                 projectId,
                 teamId,
-                members: userIds,
-                userId: context.userId,
+                userIds,
+            }: { projectId: string; teamId: string; userIds: string[] },
+            context: GraphQLContext,
+        ) => {
+            if (!context.userId) {
+                throw new Error('Unauthorized');
+            }
+
+            const { addedCount } = await teamService.addTeamMembers({
+                actorId: context.userId,
+                projectId,
+                teamId,
+                userIds,
             });
+
             return {
                 success: true,
-                team: { id: teamId },
+                addedCount,
             };
         },
         removeTeamMembers: async (
-            _: any,
-            { projectId, teamId, userIds }: any,
+            _parent: any,
+            {
+                projectId,
+                teamId,
+                userIds,
+            }: { projectId: string; teamId: string; userIds: string[] },
+            context: GraphQLContext,
+        ) => {
+            if (!context.userId) {
+                throw new Error('Unauthorized');
+            }
+
+            const { removedCount } = await teamService.removeTeamMembers({
+                actorId: context.userId,
+                projectId,
+                teamId,
+                userIds,
+            });
+
+            return {
+                success: true,
+                removedCount,
+            };
+        },
+        updateTeam: async (
+            _parent: any,
+            {
+                projectId,
+                teamId,
+                name,
+                version,
+            }: {
+                projectId: string;
+                teamId: string;
+                name: string;
+                version: number;
+            },
             context: GraphQLContext,
         ) => {
             if (!context.userId) throw new UnauthorizedError();
-            return teamService.deleteTeamMembers({
-                userId: context.userId,
+
+            const team = await teamService.updateTeam({
+                actorId: context.userId,
                 projectId,
                 teamId,
-                members: userIds,
+                name,
+                version,
             });
+
+            return {
+                success: true,
+                team,
+            };
         },
     },
 };

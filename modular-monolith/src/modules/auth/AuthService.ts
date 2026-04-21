@@ -9,19 +9,18 @@ export interface SignInParam {
     password_raw: string;
 }
 
-export interface UserResult {
+export interface User {
     id: string;
     username: string;
     email: string;
+    projectsCount: number;
 }
 
-export interface SearchUsersParam {
+import type { PaginationParams } from '../../types/pagination.ts';
+
+export interface SearchUsersParam extends PaginationParams {
     /** Exact username match OR exact UUID match */
     search?: string;
-    first?: number;
-    after?: string;
-    last?: number;
-    before?: string;
     /** ID of the user performing the search (to exclude from results) */
     actorId?: string;
 }
@@ -37,16 +36,14 @@ export interface AuthService {
 
     signIn(data: SignInParam): Promise<{ token: string } | null>;
 
-    /**
-     * Cursor-paginated user search.
-     * Matches username exactly OR id exactly.
-     */
-    searchUsers(
-        params: SearchUsersParam,
-    ): Promise<{ users: UserResult[]; nextCursor: string | null; prevCursor: string | null }>;
+    searchUsers(params: SearchUsersParam): Promise<{
+        users: User[];
+        nextCursor: string | null;
+        prevCursor: string | null;
+    }>;
 
     /**
-     * Batch fetch users by IDs. Used by DataLoaders.
+     * Batch fetch users by IDs.
      */
-    getUsersByIds(ids: string[]): Promise<UserResult[]>;
+    getUsersByIds(ids: string[]): Promise<User[]>;
 }

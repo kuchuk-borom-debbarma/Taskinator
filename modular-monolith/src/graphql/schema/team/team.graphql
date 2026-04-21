@@ -1,0 +1,203 @@
+# ─────────────────────────────────────────────
+# Team
+# ─────────────────────────────────────────────
+
+"""
+A group of users collaborating within a project.
+"""
+type Team {
+    """
+    Unique identifier for the team.
+    """
+    id: ID!
+
+    """
+    Display name of the team.
+    """
+    name: String!
+
+    """
+    Project this team belongs to.
+    """
+    project: Project
+
+    """
+    Paginated list of members belonging to this team.
+    """
+    members(
+        """
+        Forward pagination — return the first N members.
+        """
+        first: Int
+        """
+        Forward pagination — return members after this cursor.
+        """
+        after: String
+        """
+        Backward pagination — return the last N members.
+        """
+        last: Int
+        """
+        Backward pagination — return members before this cursor.
+        """
+        before: String
+    ): TeamMemberConnection!
+
+    """
+    Paginated list of tasks assigned to this team.
+    """
+    tasks(
+        """
+        Forward pagination — return the first N tasks.
+        """
+        first: Int
+        """
+        Forward pagination — return tasks after this cursor.
+        """
+        after: String
+        """
+        Backward pagination — return the last N tasks.
+        """
+        last: Int
+        """
+        Backward pagination — return tasks before this cursor.
+        """
+        before: String
+    ): TaskConnection!
+
+    """
+    User who created this team.
+    """
+    createdBy: User!
+
+    """
+    ISO 8601 creation timestamp.
+    """
+    createdAt: String!
+
+    """
+    ISO 8601 last-updated timestamp.
+    """
+    updatedAt: String
+
+    """
+    Optimistic-concurrency version counter.
+    Incremented on every write. Use to detect stale updates.
+    """
+    version: Int!
+
+    """
+    ID of the most recent event applied to this team.
+    Useful for event-sourcing consumers.
+    """
+    lastEventId: ID
+
+    """
+    Number of members in the team.
+    """
+    membersCount: Int!
+
+    """
+    Number of tasks assigned to the team.
+    """
+    tasksCount: Int!
+}
+
+"""
+A membership record joining a user to a team.
+"""
+type TeamMember {
+    """
+    Unique identifier for this membership record.
+    """
+    id: ID!
+
+    """
+    The user who is a member of the team.
+    """
+    user: User
+
+    """
+    The team this membership belongs to.
+    """
+    team: Team
+
+    """
+    ISO 8601 timestamp of when the user joined the team.
+    """
+    createdAt: String!
+
+    """
+    Optimistic-concurrency version counter.
+    Incremented on every write. Use to detect stale updates.
+    """
+    version: Int!
+}
+
+"""
+Relay-style paginated list of teams.
+"""
+type TeamConnection {
+    edges: [TeamEdge!]!
+    pageInfo: PageInfo!
+}
+
+type TeamEdge {
+    node: Team!
+    cursor: String!
+}
+
+"""
+Relay-style paginated list of team members.
+"""
+type TeamMemberConnection {
+    edges: [TeamMemberEdge!]!
+    pageInfo: PageInfo!
+}
+
+type TeamMemberEdge {
+    node: TeamMember!
+    cursor: String!
+}
+
+# Mutation payloads
+
+type CreateTeamPayload {
+    success: Boolean!
+    """
+    The newly created team.
+    """
+    team: Team
+}
+
+type DeleteTeamsPayload {
+    success: Boolean!
+    """
+    Number of teams successfully deleted.
+    """
+    deletedCount: Int!
+}
+
+type AddTeamMembersPayload {
+    success: Boolean!
+    """
+    Number of members successfully added.
+    """
+    addedCount: Int!
+}
+
+type RemoveTeamMembersPayload {
+    success: Boolean!
+    """
+    Number of members successfully removed.
+    """
+    removedCount: Int!
+}
+
+type UpdateTeamPayload {
+    success: Boolean!
+    """
+    The updated team.
+    """
+    team: Team
+}

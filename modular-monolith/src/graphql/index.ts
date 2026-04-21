@@ -9,7 +9,9 @@ export const yoga = createYoga<GraphQLContext>({
     schema,
     context: async (initialContext) => {
         const headers = initialContext.request.headers;
-        const authHeader = headers.get('authorization') || (initialContext as any).req?.headers?.['authorization'];
+        const authHeader =
+            headers.get('authorization') ||
+            (initialContext as any).req?.headers?.['authorization'];
         let token: string | undefined;
 
         if (authHeader && authHeader.startsWith('Bearer ')) {
@@ -24,9 +26,14 @@ export const yoga = createYoga<GraphQLContext>({
             try {
                 const decoded = jwt.verify(token, JWT_SECRET) as any;
                 userId = decoded.id;
-                console.log(`[GraphQL] Context initialized for user: ${userId}`);
+                console.log(
+                    `[GraphQL] Context initialized for user: ${userId}`,
+                );
             } catch (err) {
-                console.warn('[GraphQL] JWT verification failed:', (err as Error).message);
+                console.warn(
+                    '[GraphQL] JWT verification failed:',
+                    (err as Error).message,
+                );
             }
         } else {
             console.log('[GraphQL] Context initialized for anonymous user');
@@ -42,12 +49,15 @@ export const yoga = createYoga<GraphQLContext>({
                 return {
                     onNext({ result }: any) {
                         if (result.errors) {
-                            console.error(`[GQL] Execution Errors in ${operationName}:`, JSON.stringify(result.errors, null, 2));
+                            console.error(
+                                `[GQL] Execution Errors in ${operationName}:`,
+                                JSON.stringify(result.errors, null, 2),
+                            );
                         }
-                    }
+                    },
                 };
             },
-        }
+        },
     ],
     maskedErrors: false,
     graphiql: true,

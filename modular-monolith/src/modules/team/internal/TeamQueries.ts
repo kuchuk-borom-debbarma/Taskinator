@@ -1,225 +1,79 @@
+import type { Team, TeamMember } from '../TeamService.ts';
 import { db } from '../../../database';
-import type {
-    AddTeamMembersParam,
-    CreateTeamsParam,
-    DeleteTeamMembersParam,
-    DeleteTeamsParam,
-    Team,
-    TeamMember,
-} from '../TeamService.ts';
-import { getTimeString } from '../../../utils/utils.ts';
+import { decodeCursor, encodeCursor } from '../../../utils/utils.ts';
 import { sql } from 'kysely';
+import type { PaginationParams } from '../../../types/pagination.ts';
+import type { User } from '../../auth/AuthService.ts';
+import { NotFoundError, ConflictError } from '../../../graphql/errors.ts';
 
-export const insertTeam = async (data: CreateTeamsParam): Promise<Team[]> => {
-    const added = await sql<Team>`
-        WITH auth_check AS (
-            SELECT 1 FROM project WHERE id = ${data.projectId}::uuid AND fk_user_id = ${data.userId}
+export const insertTeam = async (param: {
+    actorId: string;
+    projectId: string;
+    name: string;
+}): Promise<Team> => {
+    const result = await sql<Team>`
+        WITH authorized AS (
+            SELECT 1 FROM project WHERE id = ${param.projectId}::uuid AND fk_user_id = ${param.actorId}::text
             UNION ALL
-            SELECT 1 FROM project_member WHERE fk_project_id = ${data.projectId}::uuid AND fk_user_id = ${data.userId}
+            SELECT 1 FROM project_member WHERE fk_project_id = ${param.projectId}::uuid AND fk_user_id = ${param.actorId}::text
             LIMIT 1
         ),
-        inserted_teams AS (
-            INSERT INTO project_team (fk_project_id, name, created_at, fk_user_id)
-            SELECT ${data.projectId}::uuid,
-                   unnest(${data.teams}::text[]),
-                   ${getTimeString()},
-                   ${data.userId}
-            WHERE EXISTS (SELECT 1 FROM auth_check)
-            RETURNING *
+        inserted_team AS (
+            INSERT INTO project_team (name, fk_project_id, fk_user_id)
+            SELECT ${param.name}, ${param.projectId}::uuid, ${param.actorId}
+            WHERE EXISTS (SELECT 1 FROM authorized)
+            RETURNING id, name, fk_project_id AS "projectId", fk_user_id AS "createdBy", version, last_event_id AS "lastEventId", created_at AS "createdAt", updated_at AS "updatedAt"
         ),
         inserted_outbox AS (
             INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
-            SELECT 'project.team.created',
-                   fk_project_id::text,
-                   jsonb_build_object(
-                       'projectId', fk_project_id,
-                       'userId', fk_user_id,
-                       'teamId', id,
-                       'name', name
-                   )
-            FROM inserted_teams
+            SELECT 
+                'team.created',
+                "projectId"::text,
+                jsonb_build_object(
+                    'teamId', id,
+                    'projectId', "projectId",
+                    'name', name,
+                    'createdBy', "createdBy"
+                )
+            FROM inserted_team
         )
-        SELECT
-            id, name, fk_project_id AS "projectId", fk_user_id AS "createdBy", version, last_event_id AS "lastEventId", created_at AS "createdAt", updated_at AS "updatedAt"
-        FROM inserted_teams
-    `.execute(db);
-    return added.rows;
-};
-
-export const deleteTeams = async (
-    data: DeleteTeamsParam,
-): Promise<string[]> => {
-    const result = await sql<{ id: string }>`
-        WITH auth_check AS (
-            SELECT 1 FROM project WHERE id = ${data.projectId}::uuid AND fk_user_id = ${data.userId}
-        ),
-        deleted_teams AS (
-            DELETE FROM project_team
-            WHERE fk_project_id = ${data.projectId}::uuid
-              AND id = ANY (${data.teamIds}::uuid[])
-              AND (
-                fk_user_id = ${data.userId}
-                OR EXISTS (SELECT 1 FROM auth_check)
-              )
-            RETURNING *
-        ),
-        inserted_outbox AS (
-            INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
-            SELECT 'project.team.deleted',
-                   fk_project_id::text,
-                   jsonb_build_object(
-                       'projectId', fk_project_id,
-                       'userId', ${data.userId}::text,
-                       'teamId', id
-                   )
-            FROM deleted_teams
-        )
-        SELECT id FROM deleted_teams
-    `.execute(db);
-    if (result.rows.length !== data.teamIds.length) {
-        throw new Error('Unauthorized or some teams not found');
-    }
-    return result.rows.map((r) => r.id);
-};
-
-export const insertTeamMembers = async (
-    data: AddTeamMembersParam,
-): Promise<TeamMember[]> => {
-    const result = await sql<TeamMember>`
-        WITH auth_check AS (
-            SELECT 1 FROM project WHERE id = ${data.projectId}::uuid AND fk_user_id = ${data.userId}
-            UNION ALL
-            SELECT 1 FROM project_team WHERE id = ${data.teamId}::uuid AND fk_project_id = ${data.projectId}::uuid AND fk_user_id = ${data.userId}
-            UNION ALL
-            SELECT 1 FROM project_team_member WHERE fk_team_id = ${data.teamId}::uuid AND fk_user_id = ${data.userId}
-            LIMIT 1
-        ),
-        valid_users AS (
-            SELECT id::text AS user_id
-            FROM users
-            WHERE id::text = ANY(${data.members}::text[])
-        ),
-        inserted_members AS (
-            INSERT INTO project_team_member (fk_team_id, fk_user_id, fk_project_id)
-            SELECT ${data.teamId}::uuid,
-                   v.user_id,
-                   ${data.projectId}::uuid
-            FROM valid_users v
-            WHERE EXISTS (SELECT 1 FROM auth_check)
-              AND (
-                EXISTS (SELECT 1 FROM project WHERE id = ${data.projectId}::uuid AND fk_user_id = v.user_id)
-                OR
-                EXISTS (SELECT 1 FROM project_member WHERE fk_project_id = ${data.projectId}::uuid AND fk_user_id = v.user_id)
-              )
-            RETURNING *
-        ),
-        inserted_outbox AS (
-            INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
-            SELECT 'project.team.member.added',
-                   fk_project_id::text,
-                   jsonb_build_object(
-                       'projectId', fk_project_id,
-                       'teamId', fk_team_id,
-                       'userId', fk_user_id,
-                       'actorId', ${data.userId}::text,
-                       'memberId', id
-                   )
-            FROM inserted_members
-        )
-        SELECT
-            id, fk_team_id AS "teamId", fk_user_id AS "userId", fk_project_id AS "projectId", version, last_event_id AS "lastEventId", created_at AS "createdAt", updated_at AS "updatedAt"
-        FROM inserted_members
+        SELECT * FROM inserted_team
     `.execute(db);
 
-    if (result.rows.length === 0)
-        throw new Error(
-            'Unauthorized, team not found, or members are not part of the project',
+    const team = result.rows[0];
+    if (!team) {
+        throw new NotFoundError(
+            `Project with ID ${param.projectId} not found or you are not authorized to create a team in it.`,
         );
-
-    return result.rows;
-};
-
-export const deleteTeamMembers = async (
-    data: DeleteTeamMembersParam,
-): Promise<string[]> => {
-    const result = await sql<{ userId: string }>`
-        WITH auth_check AS (
-            SELECT 1 FROM project WHERE id = ${data.projectId}::uuid AND fk_user_id = ${data.userId}
-            UNION ALL
-            SELECT 1 FROM project_team WHERE id = ${data.teamId}::uuid AND fk_project_id = ${data.projectId}::uuid AND fk_user_id = ${data.userId}
-            UNION ALL
-            SELECT 1 FROM project_team_member WHERE fk_team_id = ${data.teamId}::uuid AND fk_user_id = ${data.userId}
-            LIMIT 1
-        ),
-        deleted_members AS (
-            DELETE FROM project_team_member
-            WHERE fk_team_id = ${data.teamId}::uuid
-              AND fk_project_id = ${data.projectId}::uuid
-              AND fk_user_id = ANY (${data.members}::text[])
-              AND EXISTS (SELECT 1 FROM auth_check)
-            RETURNING *
-        ),
-        inserted_outbox AS (
-            INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
-            SELECT 'project.team.member.deleted',
-                   fk_project_id::text,
-                   jsonb_build_object(
-                       'projectId', fk_project_id,
-                       'teamId', fk_team_id,
-                       'userId', fk_user_id,
-                       'actorId', ${data.userId}::text,
-                       'memberId', id
-                   )
-            FROM deleted_members
-        )
-        SELECT fk_user_id AS "userId" FROM deleted_members
-    `.execute(db);
-    if (result.rows.length !== data.members.length) {
-        throw new Error('Unauthorized or some members not found');
     }
-    return result.rows.map((r) => r.userId);
-};
 
-export const deleteAllProjectTeams = async (projectId: string) => {
-    await db
-        .deleteFrom('project_team')
-        .where('fk_project_id', '=', sql`${projectId}::uuid` as any)
-        .execute();
-};
-
-export const removeUserFromAllTeams = async (
-    projectId: string,
-    userId: string,
-) => {
-    await db
-        .deleteFrom('project_team_member')
-        .where('fk_project_id', '=', sql`${projectId}::uuid` as any)
-        .where('fk_user_id', '=', userId)
-        .execute();
-};
-
-export const deleteAllTeamMembers = async (
-    projectId: string,
-    teamId: string,
-) => {
-    await db
-        .deleteFrom('project_team_member')
-        .where('fk_project_id', '=', sql`${projectId}::uuid` as any)
-        .where('fk_team_id', '=', sql`${teamId}::uuid` as any)
-        .execute();
+    return team;
 };
 
 export const getTeams = async (
     userId: string,
-    projectId: string,
-    params: { first?: number; after?: string; last?: number; before?: string; memberId?: string } = {},
-): Promise<{ teams: Team[]; nextCursor: string | null; prevCursor: string | null }> => {
+    projectId: string | null,
+    params: PaginationParams & { memberId?: string } = {},
+): Promise<{
+    teams: Team[];
+    nextCursor: string | null;
+    prevCursor: string | null;
+}> => {
     const limit = Math.min(params.first || params.last || 10, 50);
     const { after, before, memberId } = params;
     const isBackward = !!before;
     const cursor = before || after;
 
-    const result = await sql<Team>`
+    let cursorEpoch: string | null = null;
+    let cursorId: string | null = null;
+
+    if (cursor) {
+        const decoded = decodeCursor(cursor);
+        cursorEpoch = decoded.timeValue;
+        cursorId = decoded.id;
+    }
+
+    const result = await sql<Team & { epochPrecision: string }>`
         WITH auth_check AS (
             SELECT 1 WHERE ${projectId}::text IS NULL AND ${memberId ?? null}::text IS NOT NULL
             UNION ALL
@@ -236,27 +90,27 @@ export const getTeams = async (
             t.version, 
             t.last_event_id AS "lastEventId", 
             t.created_at AS "createdAt", 
+            t.created_at::text as "epochPrecision",
             t.updated_at AS "updatedAt"
         FROM project_team t
-        WHERE (${projectId}::uuid IS NULL OR t.fk_project_id = ${projectId}::uuid)
-          AND EXISTS (SELECT 1 FROM auth_check)
+        WHERE EXISTS (SELECT 1 FROM auth_check)
           AND (
-              ${memberId ?? null}::text IS NULL
-              OR EXISTS (
-                  SELECT 1 FROM project_team_member ptm 
-                  WHERE ptm.fk_team_id = t.id AND ptm.fk_user_id = ${memberId}
-              )
+            (${projectId}::uuid IS NULL AND EXISTS (SELECT 1 FROM project_team_member ptm WHERE ptm.fk_team_id = t.id AND ptm.fk_user_id = ${memberId}))
+            OR (t.fk_project_id = ${projectId}::uuid)
           )
           AND (
-              ${cursor ?? null}::uuid IS NULL
-              OR (
-                  CASE 
-                    WHEN ${isBackward} THEN t.id < ${cursor}::uuid
-                    ELSE t.id > ${cursor}::uuid
-                  END
-              )
+            ${memberId ?? null}::text IS NULL OR EXISTS (SELECT 1 FROM project_team_member ptm WHERE ptm.fk_team_id = t.id AND ptm.fk_user_id = ${memberId})
           )
-        ORDER BY t.id ${sql.raw(isBackward ? 'DESC' : 'ASC')}
+          AND (
+            ${cursorEpoch}::text IS NULL
+            OR (
+                CASE 
+                  WHEN ${isBackward} THEN (t.created_at > ${cursorEpoch}::timestamptz OR (t.created_at = ${cursorEpoch}::timestamptz AND t.id > ${cursorId}::uuid))
+                  ELSE (t.created_at < ${cursorEpoch}::timestamptz OR (t.created_at = ${cursorEpoch}::timestamptz AND t.id < ${cursorId}::uuid))
+                END
+            )
+          )
+        ORDER BY t.created_at ${sql.raw(isBackward ? 'ASC' : 'DESC')}, t.id ${sql.raw(isBackward ? 'ASC' : 'DESC')}
         LIMIT ${limit + 1}
     `.execute(db);
 
@@ -276,13 +130,15 @@ export const getTeams = async (
     if (teams.length > 0) {
         const first = teams[0]!;
         const last = teams[teams.length - 1]!;
+        const firstEpoch = (first as any).epochPrecision;
+        const lastEpoch = (last as any).epochPrecision;
 
         if (isBackward) {
-            nextCursor = last.id;
-            prevCursor = hasMore ? first.id : null;
+            nextCursor = encodeCursor(lastEpoch, last.id);
+            prevCursor = hasMore ? encodeCursor(firstEpoch, first.id) : null;
         } else {
-            nextCursor = hasMore ? last.id : null;
-            prevCursor = after ? first.id : null;
+            nextCursor = hasMore ? encodeCursor(lastEpoch, last.id) : null;
+            prevCursor = after ? encodeCursor(firstEpoch, first.id) : null;
         }
     }
 
@@ -293,14 +149,27 @@ export const getTeamMembers = async (
     userId: string,
     projectId: string,
     teamId: string,
-    params: { first?: number; after?: string; last?: number; before?: string } = {},
-): Promise<{ members: TeamMember[]; nextCursor: string | null; prevCursor: string | null }> => {
-    const limit = Math.min(params.first || params.last || 10, 50);
+    params: PaginationParams = {},
+): Promise<{
+    members: TeamMember[];
+    nextCursor: string | null;
+    prevCursor: string | null;
+}> => {
+    const limit = Math.min(params.first || params.last || 15, 50);
     const { after, before } = params;
     const isBackward = !!before;
     const cursor = before || after;
 
-    const result = await sql<TeamMember>`
+    let cursorEpoch: string | null = null;
+    let cursorId: string | null = null;
+
+    if (cursor) {
+        const decoded = decodeCursor(cursor);
+        cursorEpoch = decoded.timeValue;
+        cursorId = decoded.id;
+    }
+
+    const result = await sql<TeamMember & { epochPrecision: string }>`
         WITH auth_check AS (
             SELECT 1 FROM project WHERE id = ${projectId}::uuid AND fk_user_id = ${userId}::text
             UNION ALL
@@ -309,27 +178,27 @@ export const getTeamMembers = async (
         )
         SELECT 
             id, 
+            fk_project_id AS "projectId", 
             fk_team_id AS "teamId", 
             fk_user_id AS "userId", 
-            fk_project_id AS "projectId", 
             version, 
             last_event_id AS "lastEventId", 
             created_at AS "createdAt", 
+            created_at::text as "epochPrecision",
             updated_at AS "updatedAt"
         FROM project_team_member
         WHERE fk_team_id = ${teamId}::uuid
-          AND fk_project_id = ${projectId}::uuid
           AND EXISTS (SELECT 1 FROM auth_check)
           AND (
-              ${cursor ?? null}::uuid IS NULL
+              ${cursorEpoch}::text IS NULL
               OR (
                   CASE 
-                    WHEN ${isBackward} THEN id < ${cursor ?? null}::uuid
-                    ELSE id > ${cursor ?? null}::uuid
+                    WHEN ${isBackward} THEN (created_at > ${cursorEpoch}::timestamptz OR (created_at = ${cursorEpoch}::timestamptz AND id > ${cursorId}::uuid))
+                    ELSE (created_at < ${cursorEpoch}::timestamptz OR (created_at = ${cursorEpoch}::timestamptz AND id < ${cursorId}::uuid))
                   END
               )
           )
-        ORDER BY id ${sql.raw(isBackward ? 'DESC' : 'ASC')}
+        ORDER BY created_at ${sql.raw(isBackward ? 'ASC' : 'DESC')}, id ${sql.raw(isBackward ? 'ASC' : 'DESC')}
         LIMIT ${limit + 1}
     `.execute(db);
 
@@ -349,31 +218,30 @@ export const getTeamMembers = async (
     if (members.length > 0) {
         const first = members[0]!;
         const last = members[members.length - 1]!;
+        const firstEpoch = (first as any).epochPrecision;
+        const lastEpoch = (last as any).epochPrecision;
 
         if (isBackward) {
-            nextCursor = last.id;
-            prevCursor = hasMore ? first.id : null;
+            nextCursor = encodeCursor(lastEpoch, last.id);
+            prevCursor = hasMore ? encodeCursor(firstEpoch, first.id) : null;
         } else {
-            nextCursor = hasMore ? last.id : null;
-            prevCursor = after ? first.id : null;
+            nextCursor = hasMore ? encodeCursor(lastEpoch, last.id) : null;
+            prevCursor = after ? encodeCursor(firstEpoch, first.id) : null;
         }
     }
 
     return { members, nextCursor, prevCursor };
 };
 
-export const searchTeamUsers = async (params: {
-    actorId: string;
-    projectId: string;
-    teamId: string;
-    search?: string;
-    /** Cursor for pagination (uuid) */
-    after?: string;
-    first?: number;
-    last?: number;
-    before?: string;
-}): Promise<{
-    users: { id: string; username: string; email: string }[];
+export const searchTeamUsers = async (
+    params: {
+        actorId: string;
+        projectId: string;
+        teamId: string;
+        search?: string;
+    } & PaginationParams,
+): Promise<{
+    users: User[];
     nextCursor: string | null;
     prevCursor: string | null;
 }> => {
@@ -381,38 +249,51 @@ export const searchTeamUsers = async (params: {
     const { after, before } = params;
     const isBackward = !!before;
     const cursor = before || after;
-    const limit = Math.min(params.first || params.last || 20, 50);
+    const limit = Math.min(params.first || params.last || 5, 50);
 
-    const cursorVal = cursor || null;
+    let cursorEpoch: string | null = null;
+    let cursorId: string | null = null;
 
-    const rows = await sql<{ id: string; username: string; email: string }>`
+    if (cursor) {
+        const decoded = decodeCursor(cursor);
+        cursorEpoch = decoded.timeValue;
+        cursorId = decoded.id;
+    }
+
+    const rows = await sql<User & { epochPrecision: string }>`
         WITH auth_check AS (
             SELECT 1 FROM project WHERE id = ${params.projectId}::uuid AND fk_user_id = ${params.actorId}
             UNION ALL
             SELECT 1 FROM project_member WHERE fk_project_id = ${params.projectId}::uuid AND fk_user_id = ${params.actorId}
             LIMIT 1
+        ),
+        team_users AS (
+            SELECT u.id, u.username, u.email, ptm.created_at
+            FROM project_team_member ptm
+            JOIN users u ON u.id::text = ptm.fk_user_id
+            WHERE ptm.fk_team_id = ${params.teamId}::uuid
         )
-        SELECT u.id, u.username, u.email
-        FROM project_team_member tm
-        JOIN users u ON u.id::text = tm.fk_user_id
-        WHERE tm.fk_team_id    = ${params.teamId}::uuid
-          AND tm.fk_project_id = ${params.projectId}::uuid
-          AND EXISTS (SELECT 1 FROM auth_check)
+        SELECT 
+            id, username, email,
+            created_at AS "createdAt",
+            created_at::text as "epochPrecision"
+        FROM team_users
+        WHERE EXISTS (SELECT 1 FROM auth_check)
           AND (
-              ${search} = ''
-              OR u.username ILIKE '%' || ${search} || '%'
-              OR u.id::text = ${search}
+            ${search} = ''
+            OR username ILIKE '%' || ${search} || '%'
+            OR id::text = ${search}
           )
           AND (
-              ${cursorVal}::uuid IS NULL
-              OR (
-                  CASE 
-                    WHEN ${isBackward} THEN u.id < ${cursorVal}::uuid
-                    ELSE u.id > ${cursorVal}::uuid
-                  END
-              )
+            ${cursorEpoch}::text IS NULL
+            OR (
+                CASE 
+                  WHEN ${isBackward} THEN (created_at > ${cursorEpoch}::timestamptz OR (created_at = ${cursorEpoch}::timestamptz AND id > ${cursorId}::uuid))
+                  ELSE (created_at < ${cursorEpoch}::timestamptz OR (created_at = ${cursorEpoch}::timestamptz AND id < ${cursorId}::uuid))
+                END
+            )
           )
-        ORDER BY u.id ${sql.raw(isBackward ? 'DESC' : 'ASC')}
+        ORDER BY created_at ${sql.raw(isBackward ? 'ASC' : 'DESC')}, id ${sql.raw(isBackward ? 'ASC' : 'DESC')}
         LIMIT ${limit + 1}
     `.execute(db);
 
@@ -430,26 +311,26 @@ export const searchTeamUsers = async (params: {
     let prevCursor: string | null = null;
 
     if (users.length > 0) {
-        const firstUser = users[0]!;
-        const lastUser = users[users.length - 1]!;
+        const first = users[0]!;
+        const last = users[users.length - 1]!;
+        const firstEpoch = (first as any).epochPrecision;
+        const lastEpoch = (last as any).epochPrecision;
 
         if (isBackward) {
-            nextCursor = lastUser.id;
-            prevCursor = hasMore ? firstUser.id : null;
+            nextCursor = encodeCursor(lastEpoch, last.id);
+            prevCursor = hasMore ? encodeCursor(firstEpoch, first.id) : null;
         } else {
-            nextCursor = hasMore ? lastUser.id : null;
-            prevCursor = after ? firstUser.id : null;
+            nextCursor = hasMore ? encodeCursor(lastEpoch, last.id) : null;
+            prevCursor = after ? encodeCursor(firstEpoch, first.id) : null;
         }
     }
 
     return { users, nextCursor, prevCursor };
 };
 
-export const getTeamsByIds = async (
-    userId: string,
-    teamIds: string[],
-): Promise<Team[]> => {
+export const getTeamsByIds = async (teamIds: string[]): Promise<Team[]> => {
     if (teamIds.length === 0) return [];
+
     const result = await sql<Team>`
         SELECT 
             id, 
@@ -461,29 +342,419 @@ export const getTeamsByIds = async (
             created_at AS "createdAt", 
             updated_at AS "updatedAt"
         FROM project_team
-        WHERE id = ANY (${teamIds}::uuid[])
-          AND (
-              fk_user_id = ${userId}
-              OR EXISTS (
-                  SELECT 1 FROM project_member 
-                  WHERE fk_project_id = project_team.fk_project_id 
-                    AND fk_user_id = ${userId}
-              )
-              OR EXISTS (
-                  SELECT 1 FROM project 
-                  WHERE id = project_team.fk_project_id 
-                    AND fk_user_id = ${userId}
-              )
-          )
+        WHERE id = ANY(${teamIds}::uuid[])
     `.execute(db);
+
     return result.rows;
 };
 
-export const getTeamCreator = async (
-    teamId: string,
-): Promise<string | null> => {
-    const result = await sql<{ fk_user_id: string }>`
-        SELECT fk_user_id FROM project_team WHERE id = ${teamId}::uuid
+export const getTeamsByActorIdAndIds = async (
+    actorId: string,
+    teamIds: string[],
+): Promise<Team[]> => {
+    if (teamIds.length === 0) return [];
+
+    const result = await sql<Team>`
+        SELECT 
+            id, 
+            name, 
+            fk_project_id AS "projectId", 
+            fk_user_id AS "createdBy", 
+            version, 
+            last_event_id AS "lastEventId", 
+            created_at AS "createdAt", 
+            updated_at AS "updatedAt"
+        FROM project_team
+        WHERE id = ANY(${teamIds}::uuid[])
+          AND EXISTS (
+              SELECT 1 FROM project p 
+              LEFT JOIN project_member pm ON pm.fk_project_id = p.id
+              WHERE p.id = project_team.fk_project_id
+                AND (p.fk_user_id = ${actorId}::text OR pm.fk_user_id = ${actorId}::text)
+          )
     `.execute(db);
-    return result.rows[0]?.fk_user_id ?? null;
+
+    return result.rows;
 };
+export const deleteTeams = async (param: {
+    actorId: string;
+    projectId: string;
+    teamIds: string[];
+}): Promise<{ deletedCount: number }> => {
+    const ids = param.teamIds.slice(0, 1000); // Batch protection
+    if (ids.length === 0) return { deletedCount: 0 };
+
+    const result = await sql<{ deletedCount: string }>`
+        WITH authorized AS (
+            SELECT 1 FROM project WHERE id = ${param.projectId}::uuid AND fk_user_id = ${param.actorId}::text
+            LIMIT 1
+        ),
+        deleted_teams AS (
+            DELETE FROM project_team
+            WHERE id = ANY(${ids}::uuid[])
+              AND fk_project_id = ${param.projectId}::uuid
+              AND EXISTS (SELECT 1 FROM authorized)
+            RETURNING id, name, fk_project_id AS "projectId"
+        ),
+        inserted_outbox AS (
+            INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
+            SELECT 
+                'team.deleted',
+                id::text,
+                jsonb_build_object(
+                    'teamId', id,
+                    'projectId', "projectId",
+                    'name', name
+                )
+            FROM deleted_teams
+        )
+        SELECT COUNT(*)::text AS "deletedCount" FROM deleted_teams
+    `.execute(db);
+
+    const deletedCount = parseInt(result.rows[0]?.deletedCount ?? '0', 10);
+    return { deletedCount };
+};
+
+export const insertTeamMembers = async (param: {
+    actorId: string;
+    projectId: string;
+    teamId: string;
+    userIds: string[];
+}): Promise<{ addedCount: number }> => {
+    const ids = param.userIds.slice(0, 1000);
+    if (ids.length === 0) return { addedCount: 0 };
+
+    const result = await sql<{ addedCount: string }>`
+        WITH authorized AS (
+            SELECT 1 FROM project WHERE id = ${param.projectId}::uuid AND fk_user_id = ${param.actorId}::text
+            UNION ALL
+            SELECT 1 FROM project_member WHERE fk_project_id = ${param.projectId}::uuid AND fk_user_id = ${param.actorId}::text
+            LIMIT 1
+        ),
+        valid_users AS (
+            SELECT fk_user_id 
+            FROM project_member 
+            WHERE fk_project_id = ${param.projectId}::uuid 
+              AND fk_user_id = ANY(${ids}::text[])
+        ),
+        inserted_members AS (
+            INSERT INTO project_team_member (fk_team_id, fk_project_id, fk_user_id)
+            SELECT ${param.teamId}::uuid, ${param.projectId}::uuid, vu.fk_user_id
+            FROM valid_users vu
+            WHERE EXISTS (SELECT 1 FROM authorized)
+            ON CONFLICT DO NOTHING
+            RETURNING fk_user_id
+        ),
+        inserted_outbox AS (
+            INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
+            SELECT 
+                'team.members_added',
+                ${param.teamId},
+                jsonb_build_object(
+                    'teamId', ${param.teamId},
+                    'projectId', ${param.projectId},
+                    'addedUserIds', (SELECT json_agg(fk_user_id) FROM inserted_members)
+                )
+            WHERE EXISTS (SELECT 1 FROM inserted_members)
+        )
+        SELECT COUNT(*)::text AS "addedCount" FROM inserted_members
+    `.execute(db);
+
+    const addedCount = parseInt(result.rows[0]?.addedCount ?? '0', 10);
+    if (addedCount === 0 && ids.length > 0) {
+        // Double check if team exists or if it was auth failure
+        const team = await getTeamsByIds([param.teamId]);
+        if (!team[0]) throw new NotFoundError('Team not found');
+        // If team exists but 0 added, it could be auth failure OR users already in team
+    }
+
+    return { addedCount };
+};
+
+export const deleteTeamMembers = async (param: {
+    actorId: string;
+    projectId: string;
+    teamId: string;
+    userIds: string[];
+}): Promise<{ removedCount: number }> => {
+    const ids = param.userIds.slice(0, 1000);
+    if (ids.length === 0) return { removedCount: 0 };
+
+    const result = await sql<{ removedCount: string }>`
+        WITH authorized AS (
+            SELECT 1 FROM project WHERE id = ${param.projectId}::uuid AND fk_user_id = ${param.actorId}::text
+            UNION ALL
+            SELECT 1 FROM project_member WHERE fk_project_id = ${param.projectId}::uuid AND fk_user_id = ${param.actorId}::text
+            LIMIT 1
+        ),
+        deleted_members AS (
+            DELETE FROM project_team_member
+            WHERE fk_team_id = ${param.teamId}::uuid
+              AND fk_user_id = ANY(${ids}::text[])
+              AND EXISTS (SELECT 1 FROM authorized)
+            RETURNING fk_user_id
+        ),
+        inserted_outbox AS (
+            INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
+            SELECT 
+                'team.members_removed',
+                ${param.teamId},
+                jsonb_build_object(
+                    'teamId', ${param.teamId},
+                    'projectId', ${param.projectId},
+                    'removedUserIds', (SELECT json_agg(fk_user_id) FROM deleted_members)
+                )
+            WHERE EXISTS (SELECT 1 FROM deleted_members)
+        )
+        SELECT COUNT(*)::text AS "removedCount" FROM deleted_members
+    `.execute(db);
+
+    const removedCount = parseInt(result.rows[0]?.removedCount ?? '0', 10);
+    return { removedCount };
+};
+
+export const updateTeam = async (param: {
+    actorId: string;
+    projectId: string;
+    teamId: string;
+    name: string;
+    version: number;
+}): Promise<Team> => {
+    const result = await sql<Team>`
+        WITH authorized AS (
+            SELECT 1 FROM project WHERE id = ${param.projectId}::uuid AND fk_user_id = ${param.actorId}::text
+            UNION ALL
+            SELECT 1 FROM project_member WHERE fk_project_id = ${param.projectId}::uuid AND fk_user_id = ${param.actorId}::text
+            LIMIT 1
+        ),
+        updated AS (
+            UPDATE project_team
+            SET 
+                name = ${param.name},
+                version = version + 1,
+                updated_at = NOW()
+            WHERE id = ${param.teamId}::uuid
+              AND fk_project_id = ${param.projectId}::uuid
+              AND version = ${param.version}
+              AND EXISTS (SELECT 1 FROM authorized)
+            RETURNING id, name, fk_project_id AS "projectId", fk_user_id AS "createdBy", 
+                      version, last_event_id AS "lastEventId", created_at AS "createdAt", updated_at AS "updatedAt"
+        ),
+        inserted_outbox AS (
+            INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
+            SELECT 
+                'team.updated',
+                id::text,
+                jsonb_build_object(
+                    'teamId', id,
+                    'projectId', projectId,
+                    'name', name,
+                    'version', version,
+                    'actorId', ${param.actorId}
+                )
+            FROM updated
+        )
+        SELECT * FROM updated
+    `.execute(db);
+
+    const team = result.rows[0];
+    if (!team) {
+        // Distinguish between Not Found / Unauthorized vs Version Conflict
+        const currentTeamResult = await sql<{ version: number }>`
+            SELECT version FROM project_team WHERE id = ${param.teamId}::uuid
+        `.execute(db);
+
+        const currentTeam = currentTeamResult.rows[0];
+        if (!currentTeam) {
+            throw new NotFoundError(
+                `Team with ID ${param.teamId} not found or you are not authorized.`,
+            );
+        }
+
+        if (currentTeam.version !== param.version) {
+            throw new ConflictError(
+                `Team version mismatch. Current version is ${currentTeam.version}, but you provided ${param.version}.`,
+            );
+        }
+
+        // If version matches but update failed, it was probably authorization
+        throw new NotFoundError(
+            `Team with ID ${param.teamId} not found or you are not authorized to update it.`,
+        );
+    }
+
+    return team;
+};
+
+export const deleteTeamsByProjectIds = async (
+    projectIds: string[],
+): Promise<{ deletedCount: number }> => {
+    if (projectIds.length === 0) return { deletedCount: 0 };
+
+    const result = await sql<{ deletedCount: string }>`
+        DELETE FROM project_team
+        WHERE fk_project_id = ANY(${projectIds}::uuid[])
+        RETURNING id
+    `.execute(db);
+
+    return { deletedCount: result.rows.length };
+};
+
+export const deleteProjectTeamMembersByProjectIds = async (
+    projectIds: string[],
+): Promise<{ deletedCount: number }> => {
+    if (projectIds.length === 0) return { deletedCount: 0 };
+
+    const result = await sql<{ id: string }>`
+        DELETE FROM project_team_member
+        WHERE fk_project_id = ANY(${projectIds}::uuid[])
+        RETURNING id
+    `.execute(db);
+
+    return { deletedCount: result.rows.length };
+};
+
+export const updateTeamMemberCountsBulk = async (
+    updates: Map<string, number>,
+): Promise<void> => {
+    const entries = Array.from(updates.entries());
+    if (entries.length === 0) return;
+
+    const ids = entries.map(([id]) => id);
+    const deltas = entries.map(([_, delta]) => delta);
+
+    await sql`
+        UPDATE project_team SET 
+            members_count = project_team.members_count + v.delta,
+            updated_at = NOW()
+        FROM (
+            SELECT * FROM UNNEST(${ids}::uuid[], ${deltas}::int[])
+        ) AS v(id, delta)
+        WHERE project_team.id = v.id
+    `.execute(db);
+};
+
+/**
+ * Batch removes members from project teams across multiple projects.
+ * Also performs bulk counter repair for affected teams.
+ */
+export const removeMembersFromProjectTeamsBatch = async (
+    deltas: { projectId: string; userIds: string[] }[],
+): Promise<{ affectedTeamCount: number }> => {
+    if (deltas.length === 0) return { affectedTeamCount: 0 };
+
+    const projectIds = deltas.map((d) => d.projectId);
+    const userIdsList = deltas.map((d) => d.userIds);
+
+    // 1. Purge members and identify affected teams using UNNEST
+    const affectedTeams = await sql<{ teamId: string }>`
+        DELETE FROM project_team_member
+        USING (
+            SELECT unnest(${projectIds}::uuid[]) as pid, unnest(${userIdsList}::text[][]) as uids
+        ) AS V
+        WHERE project_team_member.fk_project_id = V.pid
+          AND project_team_member.fk_user_id = ANY(V.uids)
+        RETURNING project_team_member.fk_team_id AS "teamId"
+    `.execute(db);
+
+    if (affectedTeams.rows.length === 0) return { affectedTeamCount: 0 };
+
+    // 2. Aggregate deltas for Counter Repair
+    const teamDeltas = new Map<string, number>();
+    for (const row of affectedTeams.rows) {
+        teamDeltas.set(row.teamId, (teamDeltas.get(row.teamId) || 0) - 1);
+    }
+
+    // 3. Batch Update Counters
+    await updateTeamMemberCountsBulk(teamDeltas);
+
+    return { affectedTeamCount: teamDeltas.size };
+};
+
+export async function updateTeamTaskCountsBulk(
+    updates: Map<string, number>,
+): Promise<void> {
+    const entries = Array.from(updates.entries());
+    if (entries.length === 0) return;
+
+    const ids = entries.map(([id]) => id);
+    const deltas = entries.map(([, delta]) => delta);
+
+    await sql`
+        UPDATE project_team SET 
+            tasks_count = project_team.tasks_count + v.delta,
+            updated_at = NOW()
+        FROM (
+            SELECT * FROM UNNEST(${ids}::uuid[], ${deltas}::int[])
+        ) AS v(id, delta)
+        WHERE project_team.id = v.id
+    `.execute(db);
+}
+
+/**
+ * Atomic removal of all team-related data for specific projects.
+ */
+export async function purgeTeamDataByProjectIds(
+    trx: any,
+    projectIds: string[],
+): Promise<void> {
+    if (projectIds.length === 0) return;
+
+    await trx
+        .deleteFrom('project_team_member')
+        .where('fk_project_id', 'in', projectIds)
+        .execute();
+
+    await trx
+        .deleteFrom('project_team')
+        .where('fk_project_id', 'in', projectIds)
+        .execute();
+}
+
+/**
+ * Bulk repair of Team Member counts.
+ */
+export async function incrementTeamMemberCountsBulk(
+    trx: any,
+    deltas: Map<string, number>,
+): Promise<void> {
+    const entries = Array.from(deltas.entries());
+    if (entries.length === 0) return;
+
+    const teamIds = entries.map(([tid]) => tid);
+    const deltaList = entries.map(([, d]) => d);
+
+    await sql`
+        UPDATE project_team SET 
+            members_count = project_team.members_count + v.delta,
+            updated_at = NOW()
+        FROM (
+            SELECT * FROM UNNEST(${teamIds}::uuid[], ${deltaList}::int[])
+        ) AS v(tid, delta)
+        WHERE project_team.id = v.tid
+    `.execute(trx);
+}
+
+/**
+ * Bulk repair of Project Team counts.
+ */
+export async function incrementProjectTeamCountsBulk(
+    trx: any,
+    deltas: Map<string, number>,
+): Promise<void> {
+    const entries = Array.from(deltas.entries());
+    if (entries.length === 0) return;
+
+    const projectIds = entries.map(([pid]) => pid);
+    const deltaList = entries.map(([, d]) => d);
+
+    await sql`
+        UPDATE project SET 
+            teams_count = project.teams_count + v.delta,
+            updated_at = NOW()
+        FROM (
+            SELECT * FROM UNNEST(${projectIds}::uuid[], ${deltaList}::int[])
+        ) AS v(pid, delta)
+        WHERE project.id = v.pid
+    `.execute(trx);
+}

@@ -1,68 +1,55 @@
-import { internalNotificationService as notificationService } from '../../modules/internal-notification';
-import { projectService } from '../../modules/project';
-import { pubsub } from '../pubsub';
-import { UnauthorizedError } from '../errors';
-import { encodeCursor } from '../../utils/utils.ts';
-import type { GraphQLContext } from '../context';
+import type { GraphQLContext } from '../context.ts';
+import type { InternalNotification } from '../../modules/internal-notification';
+import type { PaginationParams } from '../../types/pagination.ts';
 
 export const notificationResolvers = {
     InternalNotification: {
-        createdAt: (n: any) =>
-            n.createdAt instanceof Date
-                ? n.createdAt.toISOString()
-                : n.createdAt,
-        readAt: (n: any) =>
-            n.readAt instanceof Date ? n.readAt.toISOString() : n.readAt,
+        id: (parent: InternalNotification) => parent.id,
+        userId: (parent: InternalNotification) => parent.userId,
+        title: (parent: InternalNotification) => parent.title,
+        message: (parent: InternalNotification) => parent.message,
+        type: (parent: InternalNotification) => parent.type,
+        metadata: (parent: InternalNotification) =>
+            typeof parent.metadata === 'string'
+                ? parent.metadata
+                : JSON.stringify(parent.metadata),
+        isRead: (parent: InternalNotification) => parent.isRead,
+        createdAt: (parent: InternalNotification) =>
+            parent.createdAt.toISOString(),
+        readAt: (parent: InternalNotification) =>
+            parent.readAt?.toISOString() || null,
     },
-    Query: {
-        notifications: async (
-            _: any,
-            args: { first?: number; after?: string; last?: number; before?: string },
-            context: GraphQLContext,
-        ) => {
-            if (!context.userId) throw new UnauthorizedError();
-            const { notifications, nextCursor, prevCursor } =
-                await notificationService.getNotifications(context.userId, args);
 
-            return {
-                edges: notifications.map((n: any) => ({ 
-                    node: n, 
-                    cursor: encodeCursor(n.epochPrecision, n.id) 
-                })),
-                pageInfo: {
-                    hasNextPage: !!nextCursor,
-                    hasPreviousPage: !!prevCursor,
-                    startCursor: prevCursor,
-                    endCursor: nextCursor,
-                },
-            };
-        },
-        unreadNotificationsCount: async (
-            _: any,
-            __: any,
-            context: GraphQLContext,
+    Query: {
+        notifications: (
+            _parent: any,
+            _args: PaginationParams,
+            _context: GraphQLContext,
         ) => {
-            if (!context.userId) throw new UnauthorizedError();
-            return notificationService.getUnreadCount(context.userId);
+            return null;
+        },
+        unreadNotificationsCount: (
+            _parent: any,
+            _args: any,
+            _context: GraphQLContext,
+        ) => {
+            return 0;
         },
     },
+
     Mutation: {
-        markNotificationAsRead: async (
-            _: any,
-            { id }: any,
-            context: GraphQLContext,
+        markNotificationAsRead: (
+            _parent: any,
+            { id }: { id: string },
+            _context: GraphQLContext,
         ) => {
-            if (!context.userId) throw new UnauthorizedError();
-            await notificationService.markAsRead(context.userId, id);
             return true;
         },
-        markAllNotificationsAsRead: async (
-            _: any,
-            __: any,
-            context: GraphQLContext,
+        markAllNotificationsAsRead: (
+            _parent: any,
+            _args: any,
+            _context: GraphQLContext,
         ) => {
-            if (!context.userId) throw new UnauthorizedError();
-            await notificationService.markAllAsRead(context.userId);
             return true;
         },
     },

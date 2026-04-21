@@ -1,0 +1,224 @@
+# ─────────────────────────────────────────────
+# Task
+# ─────────────────────────────────────────────
+
+"""
+A single unit of work within a project.
+"""
+type Task {
+    """
+    Unique identifier for the task.
+    """
+    id: ID!
+
+    """
+    Short, human-readable title.
+    """
+    title: String!
+
+    """
+    Full description of the task's goal or acceptance criteria.
+    """
+    description: String!
+
+    """
+    Current lifecycle status (e.g. "todo", "in_progress", "done").
+    """
+    status: String!
+
+    """
+    Numeric priority. Lower values indicate higher urgency.
+    """
+    priority: Int!
+
+    """
+    Optional ISO 8601 due date.
+    """
+    dueDate: String
+
+    """
+    Project this task belongs to.
+    """
+    project: Project
+
+    """
+    Team responsible for this task.
+    """
+    team: Team
+
+    """
+    Individual user assigned to this task.
+    """
+    assignedMember: User
+
+    """
+    All task links connected to this task up to a given depth.
+    Use `direction` to filter to incoming or outgoing links only.
+    The client is responsible for building the graph from the returned edges.
+    """
+    neighbourLinks(
+        """
+        Filter to incoming, outgoing, or both directions. Defaults to both.
+        """
+        direction: NeighbourDirection = both
+
+        """
+        Maximum hop depth to traverse from this task.
+        1 = direct neighbours only. Server may enforce a hard maximum.
+        """
+        depthLimit: Int = 1
+
+        """
+        Forward pagination — return the first N links.
+        """
+        first: Int
+        """
+        Forward pagination — return links after this cursor.
+        """
+        after: String
+        """
+        Backward pagination — return the last N links.
+        """
+        last: Int
+        """
+        Backward pagination — return results before this cursor.
+        """
+        before: String
+    ): TaskLinkConnection!
+
+    """
+    Optimistic-concurrency version counter.
+    Incremented on every write. Use to detect stale updates.
+    """
+    version: Int!
+
+    """
+    ID of the most recent event applied to this task.
+    Useful for event-sourcing consumers.
+    """
+    lastEventId: ID
+
+    """
+    User who created this task.
+    """
+    createdBy: User!
+
+    """
+    User who last modified this task.
+    """
+    updatedBy: User!
+
+    """
+    ISO 8601 creation timestamp.
+    """
+    createdAt: String!
+
+    """
+    ISO 8601 last-updated timestamp.
+    """
+    updatedAt: String!
+}
+
+"""
+A directed, labelled edge between two tasks. Represents a dependency or relationship.
+"""
+type TaskLink {
+    """
+    Unique identifier for the link.
+    """
+    id: ID!
+
+    """
+    Project this link belongs to.
+    """
+    project: Project
+
+    """
+    The originating task (dependency source).
+    """
+    source: Task!
+
+    """
+    The destination task (dependency target).
+    """
+    target: Task!
+
+    """
+    Semantic label describing the relationship (e.g. "blocks", "relates to").
+    """
+    label: String!
+
+    """
+    User who created this link.
+    """
+    createdBy: User!
+
+    """
+    ISO 8601 creation timestamp.
+    """
+    createdAt: String!
+
+    """
+    User who last modified this link.
+    """
+    updatedBy: User!
+
+    """
+    ISO 8601 last-updated timestamp.
+    """
+    updatedAt: String
+}
+
+"""
+Direction of a link relative to the focused task.
+"""
+enum NeighbourDirection {
+    """
+    Links where this task is the target.
+    """
+    incoming
+
+    """
+    Links where this task is the source.
+    """
+    outgoing
+
+    """
+    Links in either direction.
+    """
+    both
+}
+
+"""
+Relay-style paginated list of tasks.
+"""
+type TaskConnection {
+    edges: [TaskEdge!]!
+    pageInfo: PageInfo!
+}
+
+type TaskEdge {
+    node: Task!
+    cursor: String!
+}
+
+"""
+Relay-style paginated list of task links.
+"""
+type TaskLinkConnection {
+    edges: [TaskLinkEdge!]!
+    pageInfo: PageInfo!
+}
+
+type TaskLinkEdge {
+    node: TaskLink!
+    cursor: String!
+}
+
+"""
+Aggregated count of a link label across a set of tasks. Useful for summarising dependency types in list views.
+"""
+type TaskLabelCount {
+    label: String!
+    count: Int!
+}

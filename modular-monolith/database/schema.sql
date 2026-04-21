@@ -71,7 +71,7 @@ CREATE TABLE project_task (
     total_outgoing_count INTEGER NOT NULL DEFAULT 0,
     incoming_label_counts JSONB NOT NULL DEFAULT '{}',
     outgoing_label_counts JSONB NOT NULL DEFAULT '{}',
-    CONSTRAINT fk_task_project FOREIGN KEY (fk_project_id) REFERENCES project(id) ON DELETE CASCADE
+    CONSTRAINT fk_task_project_id CHECK (fk_project_id IS NOT NULL)
 );
 
 -- Task Link (Direct Edge) Table
@@ -83,9 +83,6 @@ CREATE TABLE task_link (
     label TEXT NOT NULL,
     created_by TEXT NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_task_link_project FOREIGN KEY (fk_project_id) REFERENCES project(id) ON DELETE CASCADE,
-    CONSTRAINT fk_task_link_source FOREIGN KEY (source_task_id) REFERENCES project_task(id) ON DELETE CASCADE,
-    CONSTRAINT fk_task_link_target FOREIGN KEY (target_task_id) REFERENCES project_task(id) ON DELETE CASCADE,
     CONSTRAINT chk_task_link_not_self CHECK (source_task_id <> target_task_id),
     CONSTRAINT chk_task_link_label_valid CHECK (length(trim(label)) BETWEEN 1 AND 50)
 );
@@ -98,10 +95,7 @@ CREATE TABLE task_reachability (
     min_depth INTEGER NOT NULL,
     path_count INTEGER NOT NULL DEFAULT 1,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (fk_project_id, ancestor_task_id, descendant_task_id),
-    CONSTRAINT fk_reach_project FOREIGN KEY (fk_project_id) REFERENCES project(id) ON DELETE CASCADE,
-    CONSTRAINT fk_reach_anc FOREIGN KEY (ancestor_task_id) REFERENCES project_task(id) ON DELETE CASCADE,
-    CONSTRAINT fk_reach_desc FOREIGN KEY (descendant_task_id) REFERENCES project_task(id) ON DELETE CASCADE
+    PRIMARY KEY (fk_project_id, ancestor_task_id, descendant_task_id)
 );
 
 -- Performance Indexes for Task Graph

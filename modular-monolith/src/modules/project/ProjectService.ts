@@ -1,4 +1,5 @@
 import type { BaseService } from './index.ts';
+import type { PaginationParams } from '../../types/pagination.ts';
 
 export type Project = {
     id: string;
@@ -7,123 +8,102 @@ export type Project = {
     description: string | null;
     version: number;
     lastEventId: string | null;
-    isOwner?: boolean;
     createdAt: Date;
-    createdAtPrecision?: string;
+    epochPrecision?: string; // High-precision string for cursor pagination
     updatedAt?: Date;
+    membersCount: number;
+    tasksCount: number;
+    teamsCount: number;
 };
 
 export type ProjectMember = {
     id: string;
-    projectId: string;
     userId: string;
+    projectId: string;
     version: number;
     lastEventId: string | null;
     createdAt: Date;
+    epochPrecision?: string;
     updatedAt: Date;
 };
 
-export interface CreateProjectParam {
-    name: string;
-    description?: string;
-    userId: string;
-}
-
-export interface DeleteProjectsParam {
-    userId: string;
-    projectIds: string[];
-    // Version is omitted for bulk deletes but could be added for single project updates in future.
-}
-
-export interface AddProjectMembersParam {
-    userId: string;
-    projectId: string;
-    usersToAdd: string[];
-}
-
-export interface DeleteProjectMembersParam {
-    userId: string;
-    projectId: string;
-    memberIds: string[];
-}
-
 export interface ProjectService extends BaseService {
-    /**
-     * Create single project
-     */
-    createProject(data: CreateProjectParam): Promise<Project | null>;
-
-    /**
-     * Create Multiple project
-     */
-    createProjects(data: CreateProjectParam[]): Promise<Project[]>;
-
-    updateProject(data: {
-        userId: string;
-        projectId: string;
-        name?: string;
-        description?: string | null;
-    }): Promise<Project | null>;
-
-    deleteProjects(data: DeleteProjectsParam): Promise<void>;
-
-    /**
-     * Add members to a project
-     */
-    addProjectMembers(data: AddProjectMembersParam): Promise<ProjectMember[]>;
-
-    deleteProjectMembers(data: DeleteProjectMembersParam): Promise<void>;
-
     /**
      * Get projects for a user (owned and joined)
      */
-    getProjects(
+    getProjectsOfUser(
         userId: string,
-        params?: { first?: number; after?: string; last?: number; before?: string },
-    ): Promise<{ projects: Project[]; nextCursor: string | null; prevCursor: string | null }>;
-
-    getProject(userId: string, projectId: string): Promise<Project | null>;
-
-    getProjectMembers(
-        userId: string,
-        projectId: string,
-        params?: { first?: number; after?: string; last?: number; before?: string },
-    ): Promise<{ members: ProjectMember[]; nextCursor: string | null; prevCursor: string | null }>;
-
-    /**
-     * Get all project IDs where user is owner or member.
-     */
-    getUserProjectIds(userId: string): Promise<string[]>;
-
-    /**
-     * Batch fetch projects by IDs. Used by DataLoaders.
-     */
-    getProjectsByIds(userId: string, projectIds: string[]): Promise<Project[]>;
-
-    searchProjectMembers(params: {
-        actorId: string;
-        projectId: string;
-        search?: string;
-        first?: number;
-        after?: string;
-        last?: number;
-        before?: string;
-    }): Promise<{
-        users: { id: string; username: string; email: string }[];
+        params?: PaginationParams,
+    ): Promise<{
+        projects: Project[];
         nextCursor: string | null;
         prevCursor: string | null;
     }>;
 
-    getProjectStats(userId: string, projectId: string): Promise<{
-        teamCount: number;
-        taskCount: number;
-        memberCount: number;
-        taskLabelCounts: { label: string; count: number }[];
+    getProjectMembers(
+        userId: string,
+        projectId: string,
+        params?: PaginationParams,
+    ): Promise<{
+        members: ProjectMember[];
+        nextCursor: string | null;
+        prevCursor: string | null;
     }>;
 
-    getWorkspaceStats(userId: string): Promise<{
-        projectCount: number;
-        teamCount: number;
-        assignedTaskCount: number;
-    }>;
+    /**
+     * Unauthorized batch fetch for internal use.
+     */
+    getProjectMembersByIds(memberIds: string[]): Promise<ProjectMember[]>;
+
+    /**
+     * Authorized batch fetch.
+     */
+    getProjectMembersByActorIdAndIds(
+        userId: string,
+        memberIds: string[],
+    ): Promise<ProjectMember[]>;
+
+    /**
+     * Unauthorized batch fetch for internal use.
+     */
+    getProjectsByIds(ids: string[]): Promise<Project[]>;
+
+    /**
+     * Authorized batch fetch.
+     */
+    getProjectsByActorIdAndProjectIds(
+        userId: string,
+        projectIds: string[],
+    ): Promise<Project[]>;
+
+    createProject(param: {
+        actorId: string;
+        name: string;
+        description?: string;
+    }): Promise<Project | null>;
+
+    updateProject(param: {
+        actorId: string;
+        id: string;
+        version: number;
+        name?: string;
+        description?: string;
+    }): Promise<Project | null>;
+
+    deleteProjects(param: {
+        actorId: string;
+        projectIds: string[];
+    }): Promise<{ success: boolean; deletedCount: number }>;
+
+    addProjectMembers(param: {
+        actorId: string;
+        projectId: string;
+        userIds: string[];
+    }): Promise<boolean>;
+
+    removeProjectMembers(param: {
+        actorId: string;
+        projectId: string;
+        userIds: string[];
+    }): Promise<boolean>;
 }

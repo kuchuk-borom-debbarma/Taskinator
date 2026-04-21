@@ -1,0 +1,56 @@
+extend type User {
+    """
+    All projects the user is a member of.
+    """
+    projects: ProjectConnection!
+}
+
+extend type Query {
+    """
+    Fetches a single project by ID. Returns null if not found or not authorized.
+    """
+    project(id: ID!): Project
+
+    """
+    Fetches multiple projects by ID. Returns only those the user is authorized to view.
+    """
+    projects(ids: [ID!]): [Project!]!
+}
+
+extend type Mutation {
+    """
+    Creates a new project. Returns the created project.
+    """
+    createProject(name: String!, description: String): Project
+
+    """
+    Updates a project's name or description. Returns the updated project.
+    """
+    updateProject(
+        id: ID!
+        version: Int!
+        name: String
+        description: String
+    ): Project
+
+    """
+    Permanently deletes one or more projects.
+    """
+    deleteProjects(projectIds: [ID!]!): DeleteProjectsPayload!
+
+    """
+    Adds one or more users as members of a project.
+    """
+    addProjectMembers(
+        projectId: ID!
+        userIds: [ID!]!
+    ): AddProjectMembersPayload!
+
+    """
+    Removes one or more members from a project.
+    """
+    removeProjectMembers(
+        projectId: ID!
+        memberIds: [ID!]!
+    ): RemoveProjectMembersPayload!
+}

@@ -1,341 +1,882 @@
-type User {
-  id: ID!
-  username: String!
-  email: String!
-  projects(first: Int, after: String, last: Int, before: String): ProjectConnection!
-  teams(first: Int, after: String, last: Int, before: String): TeamConnection!
-  assignedTasks(first: Int, after: String, last: Int, before: String): ProjectTaskConnection!
-}
-
-type UserSearchResultEdge {
-  node: User!
-  cursor: String!
-}
-
-type UserSearchResultConnection {
-  edges: [UserSearchResultEdge!]!
-  pageInfo: PageInfo!
-}
-
-type Query {
-  me: User
-  searchUsers(search: String, first: Int, after: String, last: Int, before: String): UserSearchResultConnection!
-  searchTeamUsers(projectId: ID!, teamId: ID!, search: String, first: Int, after: String, last: Int, before: String): UserSearchResultConnection!
-  _empty: String
-  projectTasks(projectId: ID!, teamId: ID, memberId: String, first: Int, after: String, last: Int, before: String): ProjectTaskConnection!
-  task(id: ID!): ProjectTask
-  taskNeighbourhood(projectId: ID!, taskId: ID!, maxDepth: Int, first: Int, after: String, last: Int, before: String): TaskNeighbourhood!
-  projectTaskLinks(projectId: ID!, first: Int, after: String, last: Int, before: String): TaskLinkConnection!
-  projects(first: Int, after: String, last: Int, before: String): ProjectConnection!
-  project(id: ID!): Project
-  projectMembers(projectId: ID!, first: Int, after: String, last: Int, before: String): ProjectMemberConnection!
-  workspaceStats: WorkspaceStats!
-  notifications(first: Int, after: String, last: Int, before: String): NotificationConnection!
-  unreadNotificationsCount: Int!
-  teams(projectId: ID!, memberId: ID, first: Int, after: String, last: Int, before: String): TeamConnection!
-  teamMembers(projectId: ID!, teamId: ID!, first: Int, after: String, last: Int, before: String): TeamMemberConnection!
-}
-
 union RealtimeEvent = InternalNotification
 
 type Subscription {
-  """
-  A unified real-time stream for all events relevant to the authenticated user.
-  Automatically filters notifications by userId.
-  """
-  realtimeStream(projectId: String): RealtimeEvent!
-  _empty: String
+    """
+    A unified real-time stream for all events relevant to the authenticated user.
+    Automatically filters notifications by userId.
+    """
+    realtimeStream(projectId: String): RealtimeEvent!
+    _empty: String
 }
 
-type PageInfo {
-  hasNextPage: Boolean!
-  hasPreviousPage: Boolean!
-  startCursor: String
-  endCursor: String
+type Query {
+    _empty: String
+    notifications(
+        first: Int
+        after: String
+        last: Int
+        before: String
+    ): NotificationConnection!
+    unreadNotificationsCount: Int!
+    """
+    Returns the currently authenticated user. Returns null if unauthenticated.
+    """
+    me: User
+    """
+    Fetches a single user by ID.
+    """
+    user(id: ID!): User
+    """
+    Fetches multiple users by ID.
+    """
+    users(ids: [ID!]!): [User!]!
+    """
+    Fetches a single project by ID. Returns null if not found or not authorized.
+    """
+    project(id: ID!): Project
+    """
+    Fetches multiple projects by ID. Returns only those the user is authorized to view.
+    """
+    projects(ids: [ID!]): [Project!]!
+    """
+    Fetches a single team by ID.
+    """
+    team(id: ID!): Team
+    """
+    Fetches multiple teams by ID.
+    """
+    teams(ids: [ID!]): [Team!]!
+    """
+    Fetches a paginated list of members for a given team.
+    """
+    teamMembers(
+        projectId: ID!
+        teamId: ID!
+        """
+        Forward pagination — return the first N members.
+        """
+        first: Int
+        """
+        Forward pagination — return members after this cursor.
+        """
+        after: String
+        """
+        Backward pagination — return the last N members.
+        """
+        last: Int
+        """
+        Backward pagination — return members before this cursor.
+        """
+        before: String
+    ): TeamMemberConnection!
+    """
+    Fetches a single task by ID. Returns null if not found or not authorized.
+    """
+    task(id: ID!): Task
+    """
+    Fetches multiple tasks by ID. Returns only those the user is authorized to view.
+    """
+    tasks(ids: [ID!]!): [Task!]!
 }
 
 type Mutation {
-  _empty: String
-  createTask(projectId: ID!, teamId: ID, memberId: ID, title: String!, description: String, status: String): ProjectTask!
-  updateTask(taskId: ID!, title: String, description: String, status: String): ProjectTask!
-  deleteTask(taskId: ID!): ID!
-  createTaskLink(projectId: ID!, sourceTaskId: ID!, targetTaskId: ID!, label: String!): TaskLink!
-  deleteTaskLink(linkId: ID!): ID!
-  createProject(name: String!, description: String): Project
-  updateProject(id: ID!, name: String, description: String): Project
-  deleteProjects(projectIds: [ID!]!): DeleteProjectsPayload
-  addProjectMembers(projectId: ID!, userIds: [String!]!): AddProjectMembersPayload
-  removeProjectMembers(projectId: ID!, memberIds: [ID!]!): RemoveProjectMembersPayload
-  markNotificationAsRead(id: ID!): Boolean
-  markAllNotificationsAsRead: Boolean
-  createTeam(projectId: ID!, name: String!): CreateTeamPayload
-  deleteTeams(projectId: ID!, teamIds: [ID!]!): DeleteTeamsPayload
-  addTeamMembers(projectId: ID!, teamId: ID!, userIds: [String!]!): AddTeamMembersPayload
-  removeTeamMembers(projectId: ID!, teamId: ID!, userIds: [String!]!): RemoveTeamMembersPayload
+    _empty: String
+    markNotificationAsRead(id: ID!): Boolean
+    markAllNotificationsAsRead: Boolean
+    """
+    Creates a new project. Returns the created project.
+    """
+    createProject(name: String!, description: String): Project
+    """
+    Updates a project's name or description. Returns the updated project.
+    """
+    updateProject(id: ID!, name: String, description: String): Project
+    """
+    Permanently deletes one or more projects.
+    """
+    deleteProjects(projectIds: [ID!]!): DeleteProjectsPayload!
+    """
+    Adds one or more users as members of a project.
+    """
+    addProjectMembers(
+        projectId: ID!
+        userIds: [ID!]!
+    ): AddProjectMembersPayload!
+    """
+    Removes one or more members from a project.
+    """
+    removeProjectMembers(
+        projectId: ID!
+        memberIds: [ID!]!
+    ): RemoveProjectMembersPayload!
+    """
+    Creates a new team within a project.
+    """
+    createTeam(projectId: ID!, name: String!): CreateTeamPayload!
+    """
+    Permanently deletes one or more teams within a project.
+    """
+    deleteTeams(projectId: ID!, teamIds: [ID!]!): DeleteTeamsPayload!
+    """
+    Adds one or more users as members of a team.
+    """
+    addTeamMembers(
+        projectId: ID!
+        teamId: ID!
+        userIds: [ID!]!
+    ): AddTeamMembersPayload!
+    """
+    Removes one or more members from a team.
+    """
+    removeTeamMembers(
+        projectId: ID!
+        teamId: ID!
+        userIds: [ID!]!
+    ): RemoveTeamMembersPayload!
+    task: TaskMutation!
 }
 
-type TaskLink {
-  id: ID!
-  projectId: ID!
-  sourceTaskId: ID!
-  targetTaskId: ID!
-  label: String!
-  createdBy: ID!
-  createdAt: String!
-  sourceTask: ProjectTask
-  targetTask: ProjectTask
-}
-
-type TaskLinkEdge {
-  node: TaskLink!
-  cursor: String!
-}
-
-type TaskLinkConnection {
-  edges: [TaskLinkEdge!]!
-  pageInfo: PageInfo!
-}
-
-enum NeighbourDirection {
-  incoming
-  outgoing
-  both
-}
-
-type NeighbourhoodNode {
-  task: ProjectTask!
-  depth: Int!
-  direction: NeighbourDirection!
-}
-
-type NeighbourhoodNodeEdge {
-  node: NeighbourhoodNode!
-  cursor: String!
-}
-
-type NeighbourhoodNodeConnection {
-  edges: [NeighbourhoodNodeEdge!]!
-  pageInfo: PageInfo!
-}
-
-type TaskNeighbourhood {
-  focusedTask: ProjectTask!
-  nodes(first: Int, after: String, last: Int, before: String): NeighbourhoodNodeConnection!
-  edges(first: Int, after: String, last: Int, before: String): TaskLinkConnection!
-  pageInfo: PageInfo!
-}
-
-type TaskLabelCount {
-  label: String!
-  count: Int!
-}
-
-type ProjectTask {
-  id: ID!
-  projectId: ID!
-  teamId: ID
-  memberId: ID
-  title: String!
-  description: String!
-  status: String!
-  priority: Int!
-  dueDate: String
-  version: Int!
-  lastEventId: ID
-  createdBy: ID!
-  updatedBy: ID!
-  createdAt: String!
-  updatedAt: String!
-  totalIncomingLinksCount: Int!
-  totalOutgoingLinksCount: Int!
-  directIncomingLinksCount: Int!
-  directOutgoingLinksCount: Int!
-  incomingLabelCounts: [TaskLabelCount!]!
-  outgoingLabelCounts: [TaskLabelCount!]!
-  project: Project
-  team: Team
-  member: User
-  assignee: User
-  creator: User
-  updater: User
-  incomingLinks(first: Int, after: String, last: Int, before: String): TaskLinkConnection!
-  outgoingLinks(first: Int, after: String, last: Int, before: String): TaskLinkConnection!
-}
-
-type ProjectTaskEdge {
-  node: ProjectTask!
-  cursor: String!
-}
-
-type ProjectTaskConnection {
-  edges: [ProjectTaskEdge!]!
-  pageInfo: PageInfo!
-}
-
-type Project {
-  id: ID!
-  name: String!
-  description: String
-  userId: String!
-  creator: User
-  isOwner: Boolean
-  createdAt: String!
-  updatedAt: String
-  version: Int!
-  teamCount: Int!
-  taskCount: Int!
-  memberCount: Int!
-  taskLabelCounts: [TaskLabelCount!]!
-  teams(first: Int, after: String, last: Int, before: String): TeamConnection!
-  tasks(first: Int, after: String, last: Int, before: String): ProjectTaskConnection!
-  members(first: Int, after: String, last: Int, before: String): ProjectMemberConnection!
-  myTeams(first: Int, after: String, last: Int, before: String): TeamConnection!
-  myTasks(first: Int, after: String, last: Int, before: String): ProjectTaskConnection!
-}
-
-type ProjectEdge {
-  node: Project!
-  cursor: String!
-}
-
-type ProjectConnection {
-  edges: [ProjectEdge!]!
-  pageInfo: PageInfo!
-  totalCount: Int
-}
-
-type ProjectMember {
-  id: ID!
-  projectId: ID!
-  userId: String!
-  user: User
-  project: Project
-  createdAt: String!
-  version: Int!
-  assignedTasks(first: Int, after: String, last: Int, before: String): ProjectTaskConnection!
-}
-
-type ProjectMemberEdge {
-  node: ProjectMember!
-  cursor: String!
-}
-
-type ProjectMemberConnection {
-  edges: [ProjectMemberEdge!]!
-  pageInfo: PageInfo!
-}
-
-type WorkspaceStats {
-  projectCount: Int!
-  teamCount: Int!
-  assignedTaskCount: Int!
-}
-
-type AddProjectMembersPayload {
-  success: Boolean!
-  project: Project
-}
-
-type RemoveProjectMembersPayload {
-  success: Boolean!
-  removedCount: Int!
-  project: Project
-}
-
-type DeleteProjectsPayload {
-  success: Boolean!
-  deletedCount: Int!
+"""
+Relay cursor-based pagination metadata returned on every connection.
+"""
+type PageInfo {
+    """
+    Whether there are more results after the current page.
+    """
+    hasNextPage: Boolean!
+    """
+    Whether there are more results before the current page.
+    """
+    hasPreviousPage: Boolean!
+    """
+    Cursor of the first edge in the current page. Use with `before` to paginate backwards.
+    """
+    startCursor: String
+    """
+    Cursor of the last edge in the current page. Use with `after` to paginate forwards.
+    """
+    endCursor: String
 }
 
 type InternalNotification {
-  id: ID!
-  userId: String!
-  title: String!
-  message: String!
-  type: String!
-  metadata: String
-  isRead: Boolean!
-  createdAt: String!
-  readAt: String
+    id: ID!
+    userId: String!
+    title: String!
+    message: String!
+    type: String!
+    metadata: String
+    isRead: Boolean!
+    createdAt: String!
+    readAt: String
 }
 
 type NotificationEdge {
-  node: InternalNotification!
-  cursor: String!
+    node: InternalNotification!
+    cursor: String!
 }
 
 type NotificationConnection {
-  edges: [NotificationEdge!]!
-  pageInfo: PageInfo!
+    edges: [NotificationEdge!]!
+    pageInfo: PageInfo!
 }
 
+"""
+An authenticated user of the application.
+"""
+type User {
+    """
+    Unique identifier for the user.
+    """
+    id: ID!
+    """
+    The user's unique username.
+    """
+    username: String!
+    """
+    All projects the user is a member of.
+    """
+    projects: ProjectConnection!
+}
+
+"""
+Relay-style paginated list of users.
+"""
+type UserConnection {
+    edges: [UserEdge!]!
+    pageInfo: PageInfo!
+}
+
+type UserEdge {
+    node: User!
+    cursor: String!
+}
+
+"""
+A workspace that groups tasks, teams, and members together.
+"""
+type Project {
+    """
+    Unique identifier for the project.
+    """
+    id: ID!
+    """
+    Display name of the project.
+    """
+    name: String!
+    """
+    Optional description of the project's purpose or scope.
+    """
+    description: String
+    """
+    User who created this project.
+    """
+    creator: User!
+    """
+    Paginated list of members belonging to this project.
+    """
+    projectMembers(
+        """
+        Forward pagination — return the first N members.
+        """
+        first: Int
+        """
+        Forward pagination — return members after this cursor.
+        """
+        after: String
+        """
+        Backward pagination — return the last N members.
+        """
+        last: Int
+        """
+        Backward pagination — return members before this cursor.
+        """
+        before: String
+    ): ProjectMemberConnection!
+    """
+    ISO 8601 creation timestamp.
+    """
+    createdAt: String!
+    """
+    ISO 8601 last-updated timestamp.
+    """
+    updatedAt: String
+    """
+    Optimistic-concurrency version counter.
+    Incremented on every write. Use to detect stale updates.
+    """
+    version: Int!
+    """
+    ID of the most recent event applied to this project.
+    Useful for event-sourcing consumers.
+    """
+    lastEventId: ID
+    """
+    Paginated list of teams within this project.
+    """
+    teams(
+        """
+        Forward pagination — return the first N teams.
+        """
+        first: Int
+        """
+        Forward pagination — return teams after this cursor.
+        """
+        after: String
+        """
+        Backward pagination — return the last N teams.
+        """
+        last: Int
+        """
+        Backward pagination — return members before this cursor.
+        """
+        before: String
+    ): TeamConnection!
+    """
+    Paginated list of all tasks in this project.
+    Optionally filtered by team or assigned member.
+    """
+    projectTasks(
+        teamId: ID
+        memberId: ID
+        """
+        Forward pagination — return the first N tasks.
+        """
+        first: Int
+        """
+        Forward pagination — return tasks after this cursor.
+        """
+        after: String
+        """
+        Backward pagination — return the last N tasks.
+        """
+        last: Int
+        """
+        Backward pagination — return results before this cursor.
+        """
+        before: String
+    ): TaskConnection!
+    """
+    Tasks assigned to the currently authenticated user within this project.
+    """
+    assignedTasks(
+        """
+        Forward pagination — return the first N tasks.
+        """
+        first: Int
+        """
+        Forward pagination — return tasks after this cursor.
+        """
+        after: String
+        """
+        Backward pagination — return the last N tasks.
+        """
+        last: Int
+        """
+        Backward pagination — return results before this cursor.
+        """
+        before: String
+    ): TaskConnection!
+}
+
+"""
+A membership record joining a user to a project.
+"""
+type ProjectMember {
+    """
+    Unique identifier for this membership record.
+    """
+    id: ID!
+    """
+    The project this membership belongs to.
+    """
+    project: Project!
+    """
+    The user who is a member of the project.
+    """
+    user: User
+    """
+    ISO 8601 timestamp of when the user joined the project.
+    """
+    createdAt: String!
+    """
+    Optimistic-concurrency version counter.
+    Incremented on every write. Use to detect stale updates.
+    """
+    version: Int!
+}
+
+"""
+Relay-style paginated list of projects.
+"""
+type ProjectConnection {
+    edges: [ProjectEdge!]!
+    pageInfo: PageInfo!
+    """
+    Total number of projects matching the query, regardless of pagination.
+    """
+    totalCount: Int
+}
+
+type ProjectEdge {
+    node: Project!
+    cursor: String!
+}
+
+"""
+Relay-style paginated list of project members.
+"""
+type ProjectMemberConnection {
+    edges: [ProjectMemberEdge!]!
+    pageInfo: PageInfo!
+}
+
+type ProjectMemberEdge {
+    node: ProjectMember!
+    cursor: String!
+}
+
+type AddProjectMembersPayload {
+    success: Boolean!
+    """
+    The updated project after members were added.
+    """
+    project: Project
+}
+
+type RemoveProjectMembersPayload {
+    success: Boolean!
+    """
+    Number of members successfully removed.
+    """
+    removedCount: Int!
+    """
+    The updated project after members were removed.
+    """
+    project: Project
+}
+
+type DeleteProjectsPayload {
+    success: Boolean!
+    """
+    Number of projects successfully deleted.
+    """
+    deletedCount: Int!
+}
+
+"""
+A group of users collaborating within a project.
+"""
 type Team {
-  id: ID!
-  name: String!
-  projectId: ID!
-  createdBy: String!
-  creator: User
-  createdAt: String!
-  updatedAt: String
-  version: Int!
-  project: Project
-  members(first: Int, after: String, last: Int, before: String): TeamMemberConnection!
-  tasks(first: Int, after: String, last: Int, before: String): ProjectTaskConnection!
+    """
+    Unique identifier for the team.
+    """
+    id: ID!
+    """
+    Display name of the team.
+    """
+    name: String!
+    """
+    Project this team belongs to.
+    """
+    project: Project
+    """
+    Paginated list of members belonging to this team.
+    """
+    members(
+        """
+        Forward pagination — return the first N members.
+        """
+        first: Int
+        """
+        Forward pagination — return members after this cursor.
+        """
+        after: String
+        """
+        Backward pagination — return the last N members.
+        """
+        last: Int
+        """
+        Backward pagination — return members before this cursor.
+        """
+        before: String
+    ): TeamMemberConnection!
+    """
+    Paginated list of tasks assigned to this team.
+    """
+    tasks(
+        """
+        Forward pagination — return the first N tasks.
+        """
+        first: Int
+        """
+        Forward pagination — return tasks after this cursor.
+        """
+        after: String
+        """
+        Backward pagination — return the last N tasks.
+        """
+        last: Int
+        """
+        Backward pagination — return tasks before this cursor.
+        """
+        before: String
+    ): TaskConnection!
+    """
+    User who created this team.
+    """
+    createdBy: User!
+    """
+    ISO 8601 creation timestamp.
+    """
+    createdAt: String!
+    """
+    ISO 8601 last-updated timestamp.
+    """
+    updatedAt: String
+    """
+    Optimistic-concurrency version counter.
+    Incremented on every write. Use to detect stale updates.
+    """
+    version: Int!
+    """
+    ID of the most recent event applied to this team.
+    Useful for event-sourcing consumers.
+    """
+    lastEventId: ID
 }
 
+"""
+A membership record joining a user to a team.
+"""
 type TeamMember {
-  id: ID!
-  teamId: ID!
-  userId: String!
-  user: User
-  team: Team
-  createdAt: String!
-  version: Int!
+    """
+    Unique identifier for this membership record.
+    """
+    id: ID!
+    """
+    The user who is a member of the team.
+    """
+    user: User
+    """
+    The team this membership belongs to.
+    """
+    team: Team
+    """
+    ISO 8601 timestamp of when the user joined the team.
+    """
+    createdAt: String!
+    """
+    Optimistic-concurrency version counter.
+    Incremented on every write. Use to detect stale updates.
+    """
+    version: Int!
+}
+
+"""
+Relay-style paginated list of teams.
+"""
+type TeamConnection {
+    edges: [TeamEdge!]!
+    pageInfo: PageInfo!
 }
 
 type TeamEdge {
-  node: Team!
-  cursor: String!
+    node: Team!
+    cursor: String!
 }
 
-type TeamConnection {
-  edges: [TeamEdge!]!
-  pageInfo: PageInfo!
+"""
+Relay-style paginated list of team members.
+"""
+type TeamMemberConnection {
+    edges: [TeamMemberEdge!]!
+    pageInfo: PageInfo!
 }
 
 type TeamMemberEdge {
-  node: TeamMember!
-  cursor: String!
-}
-
-type TeamMemberConnection {
-  edges: [TeamMemberEdge!]!
-  pageInfo: PageInfo!
+    node: TeamMember!
+    cursor: String!
 }
 
 type CreateTeamPayload {
-  success: Boolean!
-  team: Team
+    success: Boolean!
+    """
+    The newly created team.
+    """
+    team: Team
 }
 
 type DeleteTeamsPayload {
-  success: Boolean!
-  deletedCount: Int!
-  project: Project
+    success: Boolean!
+    """
+    Number of teams successfully deleted.
+    """
+    deletedCount: Int!
+    """
+    The project the teams belonged to.
+    """
+    project: Project
 }
 
 type AddTeamMembersPayload {
-  success: Boolean!
-  team: Team
+    success: Boolean!
+    """
+    The updated team after members were added.
+    """
+    team: Team
 }
 
 type RemoveTeamMembersPayload {
-  success: Boolean!
-  team: Team
+    success: Boolean!
+    """
+    The updated team after members were removed.
+    """
+    team: Team
+}
+
+input CreateTaskInput {
+    """
+    Project to create the task in.
+    """
+    projectId: ID!
+    """
+    Short, human-readable title.
+    """
+    title: String!
+    """
+    Full description of the task's goal or acceptance criteria.
+    """
+    description: String
+    """
+    Initial lifecycle status. Defaults to server-defined value if omitted.
+    """
+    status: String
+    """
+    Team to assign this task to.
+    """
+    teamId: ID
+    """
+    Member to assign this task to.
+    """
+    memberId: ID
+}
+
+input UpdateTaskInput {
+    """
+    Updated title. Omit to leave unchanged.
+    """
+    title: String
+    """
+    Updated description. Omit to leave unchanged.
+    """
+    description: String
+    """
+    Updated status. Omit to leave unchanged.
+    """
+    status: String
+}
+
+input CreateTaskLinkInput {
+    """
+    Project both tasks belong to.
+    """
+    projectId: ID!
+    """
+    The originating task (dependency source).
+    """
+    sourceTaskId: ID!
+    """
+    The destination task (dependency target).
+    """
+    targetTaskId: ID!
+    """
+    Semantic label for the relationship (e.g. "blocks", "relates to").
+    """
+    label: String!
+}
+
+"""
+Namespaced task mutations.
+"""
+type TaskMutation {
+    """
+    Creates a new task in the given project.
+    """
+    create(input: CreateTaskInput!): Task!
+    """
+    Partially updates a task. Only supplied fields are changed; omitted fields are left as-is.
+    """
+    update(taskId: ID!, input: UpdateTaskInput!): Task!
+    """
+    Permanently deletes a task. Returns the ID of the deleted task.
+    """
+    delete(taskId: ID!): ID!
+    """
+    Creates a directed, labelled link between two tasks.
+    """
+    createLink(input: CreateTaskLinkInput!): TaskLink!
+    """
+    Removes a task link by ID. Returns the ID of the deleted link.
+    """
+    deleteLink(linkId: ID!): ID!
+}
+
+"""
+A single unit of work within a project.
+"""
+type Task {
+    """
+    Unique identifier for the task.
+    """
+    id: ID!
+    """
+    Short, human-readable title.
+    """
+    title: String!
+    """
+    Full description of the task's goal or acceptance criteria.
+    """
+    description: String!
+    """
+    Current lifecycle status (e.g. "todo", "in_progress", "done").
+    """
+    status: String!
+    """
+    Numeric priority. Lower values indicate higher urgency.
+    """
+    priority: Int!
+    """
+    Optional ISO 8601 due date.
+    """
+    dueDate: String
+    """
+    Project this task belongs to.
+    """
+    project: Project
+    """
+    Team responsible for this task.
+    """
+    team: Team
+    """
+    Individual user assigned to this task.
+    """
+    assignedMember: User
+    """
+    All task links connected to this task up to a given depth.
+    Use `direction` to filter to incoming or outgoing links only.
+    The client is responsible for building the graph from the returned edges.
+    """
+    neighbourLinks(
+        """
+        Filter to incoming, outgoing, or both directions. Defaults to both.
+        """
+        direction: NeighbourDirection = both
+        """
+        Maximum hop depth to traverse from this task.
+        1 = direct neighbours only. Server may enforce a hard maximum.
+        """
+        depthLimit: Int = 1
+        """
+        Forward pagination — return the first N links.
+        """
+        first: Int
+        """
+        Forward pagination — return links after this cursor.
+        """
+        after: String
+        """
+        Backward pagination — return the last N links.
+        """
+        last: Int
+        """
+        Backward pagination — return results before this cursor.
+        """
+        before: String
+    ): TaskLinkConnection!
+    """
+    Optimistic-concurrency version counter.
+    Incremented on every write. Use to detect stale updates.
+    """
+    version: Int!
+    """
+    ID of the most recent event applied to this task.
+    Useful for event-sourcing consumers.
+    """
+    lastEventId: ID
+    """
+    User who created this task.
+    """
+    createdBy: User!
+    """
+    User who last modified this task.
+    """
+    updatedBy: User!
+    """
+    ISO 8601 creation timestamp.
+    """
+    createdAt: String!
+    """
+    ISO 8601 last-updated timestamp.
+    """
+    updatedAt: String!
+}
+
+"""
+A directed, labelled edge between two tasks. Represents a dependency or relationship.
+"""
+type TaskLink {
+    """
+    Unique identifier for the link.
+    """
+    id: ID!
+    """
+    Project this link belongs to.
+    """
+    project: Project
+    """
+    The originating task (dependency source).
+    """
+    source: Task!
+    """
+    The destination task (dependency target).
+    """
+    target: Task!
+    """
+    Semantic label describing the relationship (e.g. "blocks", "relates to").
+    """
+    label: String!
+    """
+    User who created this link.
+    """
+    createdBy: User!
+    """
+    ISO 8601 creation timestamp.
+    """
+    createdAt: String!
+    """
+    User who last modified this link.
+    """
+    updatedBy: User!
+    """
+    ISO 8601 last-updated timestamp.
+    """
+    updatedAt: String
+}
+
+"""
+Direction of a link relative to the focused task.
+"""
+enum NeighbourDirection {
+    """
+    Links where this task is the target.
+    """
+    incoming
+    """
+    Links where this task is the source.
+    """
+    outgoing
+    """
+    Links in either direction.
+    """
+    both
+}
+
+"""
+Relay-style paginated list of tasks.
+"""
+type TaskConnection {
+    edges: [TaskEdge!]!
+    pageInfo: PageInfo!
+}
+
+type TaskEdge {
+    node: Task!
+    cursor: String!
+}
+
+"""
+Relay-style paginated list of task links.
+"""
+type TaskLinkConnection {
+    edges: [TaskLinkEdge!]!
+    pageInfo: PageInfo!
+}
+
+type TaskLinkEdge {
+    node: TaskLink!
+    cursor: String!
+}
+
+"""
+Aggregated count of a link label across a set of tasks. Useful for summarising dependency types in list views.
+"""
+type TaskLabelCount {
+    label: String!
+    count: Int!
 }
 
 schema {
-  query: Query
-  mutation: Mutation
-  subscription: Subscription
+    query: Query
+    mutation: Mutation
+    subscription: Subscription
 }

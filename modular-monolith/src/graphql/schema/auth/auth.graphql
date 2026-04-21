@@ -1,0 +1,36 @@
+# ─────────────────────────────────────────────
+# User
+# ─────────────────────────────────────────────
+
+"""
+An authenticated user of the application.
+"""
+type User {
+    """
+    Unique identifier for the user.
+    """
+    id: ID!
+
+    """
+    The user's unique username.
+    """
+    username: String!
+
+    """
+    The number of projects the user is a member of.
+    """
+    projectsCount: Int!
+}
+
+"""
+Relay-style paginated list of users.
+"""
+type UserConnection {
+    edges: [UserEdge!]!
+    pageInfo: PageInfo!
+}
+
+type UserEdge {
+    node: User!
+    cursor: String!
+}

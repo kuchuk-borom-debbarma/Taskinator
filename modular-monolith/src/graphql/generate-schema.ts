@@ -9,14 +9,19 @@ import { typeDefs } from './schema.ts';
 async function generateSchema() {
     try {
         console.log('[Schema] Generating unified schema.graphql...');
-        
+
         // typeDefs is already merged via mergeTypeDefs in schema.ts
         const schemaString = print(typeDefs);
-        
-        const outputPath = join(import.meta.dirname, '..', '..', 'schema.graphql');
-        
+
+        const outputPath = join(
+            import.meta.dirname,
+            '..',
+            '..',
+            'schema.graphql',
+        );
+
         writeFileSync(outputPath, schemaString, 'utf8');
-        
+
         console.log(`[Schema] Successfully generated: ${outputPath}`);
     } catch (err) {
         console.error('[Schema] Failed to generate schema:', err);

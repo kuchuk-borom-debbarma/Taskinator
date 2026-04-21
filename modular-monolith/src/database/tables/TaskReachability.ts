@@ -1,9 +1,4 @@
-import type {
-    ColumnType,
-    Generated,
-    Insertable,
-    Selectable,
-} from 'kysely';
+import type { ColumnType, Generated, Insertable, Selectable } from 'kysely';
 
 export interface TaskReachabilityTable {
     fk_project_id: string;
