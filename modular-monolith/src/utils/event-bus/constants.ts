@@ -32,18 +32,17 @@ export const KAFKA_EVENTS = {
             'project.aggregated.change_user_project_count',
         CHANGE_PROJECT_MEMBER_COUNT:
             'project.aggregated.change_project_member_count',
-        PURGE_PROJECT_MEMBERS: 'project.aggregated.purge_project_members',
-        REMOVE_MEMBER_FROM_PROJECT_TEAMS:
-            'project.aggregated.remove_member_from_project_teams',
-        UNASSIGN_MEMBER_FROM_PROJECT_TASKS:
-            'project.aggregated.unassign_member_from_project_tasks',
-        DELETE_PROJECT_MEMBERS: 'project.aggregated.delete_project_members',
-        DELETE_PROJECT_TEAMS: 'project.aggregated.delete_project_teams',
-        DELETE_PROJECT_TEAM_MEMBERS:
-            'project.aggregated.delete_project_team_members',
-        DELETE_PROJECT_TASKS: 'project.aggregated.delete_project_tasks',
-        DELETE_PROJECT_TASK_LINKS:
-            'project.aggregated.delete_project_task_links',
+        REMOVE_PROJECT_MEMBER: 'project.aggregated.remove_project_member',
+        REMOVE_PROJECT_TEAM_MEMBER:
+            'project.aggregated.remove_project_team_member',
+        UNASSIGN_PROJECT_TASK_MEMBER:
+            'project.aggregated.unassign_project_task_member',
+        DELETE_PROJECT_MEMBER: 'project.aggregated.delete_project_member',
+        DELETE_PROJECT_TEAM: 'project.aggregated.delete_project_team',
+        DELETE_PROJECT_TEAM_MEMBER:
+            'project.aggregated.delete_project_team_member',
+        DELETE_PROJECT_TASK: 'project.aggregated.delete_project_task',
+        DELETE_PROJECT_TASK_LINK: 'project.aggregated.delete_project_task_link',
     },
     TEAM_AGGREGATED: {
         PROJECT_TEAM_COUNTS_CHANGED:

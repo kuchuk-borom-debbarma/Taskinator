@@ -177,12 +177,22 @@ export class ProjectEvents_BatchAggregator {
          * Signaling: Explicit instructions for downstream modules to purge user-specific data.
          */
         for (const [projectId, userIds] of memberRemovals.entries()) {
+            // [Project Module] Instruction to purge the specific membership records
+            outboxEntries.push({
+                kafka_topic: KAFKA_TOPICS.PROJECT_AGGREGATED,
+                payload: {
+                    type: KAFKA_EVENTS.PROJECT_AGGREGATED.REMOVE_PROJECT_MEMBER,
+                    projectId,
+                    userIds,
+                },
+            });
+
             // [Team Module] Instruction to purge the user from all project teams
             outboxEntries.push({
                 kafka_topic: KAFKA_TOPICS.PROJECT_AGGREGATED,
                 payload: {
                     type: KAFKA_EVENTS.PROJECT_AGGREGATED
-                        .REMOVE_MEMBER_FROM_PROJECT_TEAMS,
+                        .REMOVE_PROJECT_TEAM_MEMBER,
                     projectId,
                     userIds,
                 },
@@ -193,7 +203,7 @@ export class ProjectEvents_BatchAggregator {
                 kafka_topic: KAFKA_TOPICS.PROJECT_AGGREGATED,
                 payload: {
                     type: KAFKA_EVENTS.PROJECT_AGGREGATED
-                        .UNASSIGN_MEMBER_FROM_PROJECT_TASKS,
+                        .UNASSIGN_PROJECT_TASK_MEMBER,
                     projectId,
                     userIds,
                 },
@@ -210,8 +220,7 @@ export class ProjectEvents_BatchAggregator {
             outboxEntries.push({
                 kafka_topic: KAFKA_TOPICS.PROJECT_AGGREGATED,
                 payload: {
-                    type: KAFKA_EVENTS.PROJECT_AGGREGATED
-                        .DELETE_PROJECT_MEMBERS,
+                    type: KAFKA_EVENTS.PROJECT_AGGREGATED.DELETE_PROJECT_MEMBER,
                     projectIds: deletedProjectIds,
                 },
             });
@@ -220,7 +229,7 @@ export class ProjectEvents_BatchAggregator {
             outboxEntries.push({
                 kafka_topic: KAFKA_TOPICS.PROJECT_AGGREGATED,
                 payload: {
-                    type: KAFKA_EVENTS.PROJECT_AGGREGATED.DELETE_PROJECT_TEAMS,
+                    type: KAFKA_EVENTS.PROJECT_AGGREGATED.DELETE_PROJECT_TEAM,
                     projectIds: deletedProjectIds,
                 },
             });
@@ -230,7 +239,7 @@ export class ProjectEvents_BatchAggregator {
                 kafka_topic: KAFKA_TOPICS.PROJECT_AGGREGATED,
                 payload: {
                     type: KAFKA_EVENTS.PROJECT_AGGREGATED
-                        .DELETE_PROJECT_TEAM_MEMBERS,
+                        .DELETE_PROJECT_TEAM_MEMBER,
                     projectIds: deletedProjectIds,
                 },
             });
@@ -239,7 +248,7 @@ export class ProjectEvents_BatchAggregator {
             outboxEntries.push({
                 kafka_topic: KAFKA_TOPICS.PROJECT_AGGREGATED,
                 payload: {
-                    type: KAFKA_EVENTS.PROJECT_AGGREGATED.DELETE_PROJECT_TASKS,
+                    type: KAFKA_EVENTS.PROJECT_AGGREGATED.DELETE_PROJECT_TASK,
                     projectIds: deletedProjectIds,
                 },
             });
@@ -249,7 +258,7 @@ export class ProjectEvents_BatchAggregator {
                 kafka_topic: KAFKA_TOPICS.PROJECT_AGGREGATED,
                 payload: {
                     type: KAFKA_EVENTS.PROJECT_AGGREGATED
-                        .DELETE_PROJECT_TASK_LINKS,
+                        .DELETE_PROJECT_TASK_LINK,
                     projectIds: deletedProjectIds,
                 },
             });

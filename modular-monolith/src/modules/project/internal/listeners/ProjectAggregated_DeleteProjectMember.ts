@@ -10,27 +10,27 @@ import type { DomainEvent } from '../../../../utils/event-bus/types.ts';
 import { purgeProjectMembersByProjectIdsBatch } from '../ProjectQueries.ts';
 
 /**
- * Execution Listener: Delete Project Members
+ * Execution Listener: Delete Project Member
  * Handles the full decommissioning of all members for specified project IDs.
  */
-export class ProjectAggregated_DeleteProjectMembers {
+export class ProjectAggregated_DeleteProjectMember {
     async init() {
         logger.info(
-            '[ProjectAggregated -> Project] Initializing Listener: Delete Project Members (Decommissioning)',
+            '[ProjectAggregated -> Project] Initializing Listener: Delete Member (Decommissioning)',
         );
 
         await eventBus.subscribe(
             KAFKA_TOPICS.PROJECT_AGGREGATED,
             'project-decommissioning-group',
             {
-                [KAFKA_EVENTS.PROJECT_AGGREGATED.DELETE_PROJECT_MEMBERS]:
-                    this.handleDeleteProjectMembers.bind(this),
+                [KAFKA_EVENTS.PROJECT_AGGREGATED.DELETE_PROJECT_MEMBER]:
+                    this.handleDeleteProjectMember.bind(this),
             },
             { batch: true },
         );
     }
 
-    private async handleDeleteProjectMembers(
+    private async handleDeleteProjectMember(
         events: DomainEvent<{ projectIds: string[] }>[],
         trx?: Transaction<Database>,
     ) {

@@ -2,8 +2,8 @@ import { logger } from '../logger';
 import { ProjectAggregated_ChangeUserProjectCount } from '../modules/auth/internal/listeners/ProjectAggregated_ChangeUserProjectCount.ts';
 import { TaskAggregated_MembersChanged_NotifyMemberAssignmentListener } from '../modules/internal-notification/internal/listeners/TaskAggregated_MembersChanged_NotifyMemberAssignmentListener.ts';
 import { ProjectAggregated_ChangeProjectMemberCount } from '../modules/project/internal/listeners/ProjectAggregated_ChangeProjectMemberCount.ts';
-import { ProjectAggregated_DeleteProjectMembers } from '../modules/project/internal/listeners/ProjectAggregated_DeleteProjectMembers.ts';
-import { ProjectAggregated_PurgeProjectMembers } from '../modules/project/internal/listeners/ProjectAggregated_PurgeProjectMembers.ts';
+import { ProjectAggregated_DeleteProjectMember } from '../modules/project/internal/listeners/ProjectAggregated_DeleteProjectMember.ts';
+import { ProjectAggregated_RemoveProjectMember } from '../modules/project/internal/listeners/ProjectAggregated_RemoveProjectMember.ts';
 import { TaskAggregated_CountsChanged_SyncProjectTaskCountListener } from '../modules/project/internal/listeners/TaskAggregated_CountsChanged_SyncProjectTaskCountListener.ts';
 import { TeamAggregated_CountsChanged_SyncProjectTeamCountListener } from '../modules/project/internal/listeners/TeamAggregated_CountsChanged_SyncProjectTeamCountListener.ts';
 import { ProjectAggregated_DeleteProjects_TaskCleanupListener } from '../modules/task/internal/listeners/ProjectAggregated_DeleteProjects_TaskCleanupListener.ts';
@@ -38,7 +38,7 @@ export async function startConsumers() {
         new ProjectAggregated_DeleteProjects_TaskCleanupListener();
     const p_teamCleanup =
         new ProjectAggregated_DeleteProjects_TeamCleanupListener();
-    const p_projectCleanup = new ProjectAggregated_DeleteProjectMembers();
+    const p_projectCleanup = new ProjectAggregated_DeleteProjectMember();
 
     // Team Smart Aggregation Pipeline (Triggers on TEAM/MEMBER events)
     const teamProjectCountListener =
@@ -53,7 +53,7 @@ export async function startConsumers() {
     // Project Member Cascading Pipeline
     const p_memberCountListener =
         new ProjectAggregated_ChangeProjectMemberCount();
-    const p_memberRemovalListener = new ProjectAggregated_PurgeProjectMembers();
+    const p_memberRemovalListener = new ProjectAggregated_RemoveProjectMember();
     const p_memberTaskUnassignmentListener =
         new ProjectAggregated_RemoveProjectMember_UnassignMemberFromProjectTasksListener();
 

@@ -10,27 +10,27 @@ import type { DomainEvent } from '../../../../utils/event-bus/types.ts';
 import { purgeProjectMembersBatch } from '../ProjectQueries.ts';
 
 /**
- * Execution Listener: Purge Project Members
+ * Execution Listener: Remove Project Member
  * Specifically removes individual user memberships from a project.
  */
-export class ProjectAggregated_PurgeProjectMembers {
+export class ProjectAggregated_RemoveProjectMember {
     async init() {
         logger.info(
-            '[ProjectAggregated -> Project] Initializing Listener: Purge Members',
+            '[ProjectAggregated -> Project] Initializing Listener: Remove Member',
         );
 
         await eventBus.subscribe(
             KAFKA_TOPICS.PROJECT_AGGREGATED,
-            'project-member-purge-group',
+            'project-member-removal-group',
             {
-                [KAFKA_EVENTS.PROJECT_AGGREGATED.PURGE_PROJECT_MEMBERS]:
-                    this.handlePurgeMembers.bind(this),
+                [KAFKA_EVENTS.PROJECT_AGGREGATED.REMOVE_PROJECT_MEMBER]:
+                    this.handleRemoveMember.bind(this),
             },
             { batch: true },
         );
     }
 
-    private async handlePurgeMembers(
+    private async handleRemoveMember(
         events: DomainEvent<{ projectId: string; userIds: string[] }>[],
         trx?: Transaction<Database>,
     ) {
@@ -54,7 +54,7 @@ export class ProjectAggregated_PurgeProjectMembers {
         );
 
         logger.info(
-            `[ProjectAggregated -> Project] Performing batch member purging for ${deltas.length} projects`,
+            `[ProjectAggregated -> Project] Performing batch member removal for ${deltas.length} projects`,
         );
 
         try {
@@ -62,11 +62,11 @@ export class ProjectAggregated_PurgeProjectMembers {
                 await purgeProjectMembersBatch(deltas, trx);
 
             logger.info(
-                `[ProjectAggregated -> Project] Successfully purged ${affectedProjectMemberCounts.size} membership types across ${deltas.length} projects`,
+                `[ProjectAggregated -> Project] Successfully removed ${affectedProjectMemberCounts.size} membership types across ${deltas.length} projects`,
             );
         } catch (err) {
             logger.error(
-                '[ProjectAggregated -> Project] Failed to process project member purge:',
+                '[ProjectAggregated -> Project] Failed to process project member removal:',
                 err,
             );
             throw err;
