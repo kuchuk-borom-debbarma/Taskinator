@@ -11,11 +11,10 @@ import { ProjectAggregated_RemoveProjectMember_UnassignMemberFromProjectTasksLis
 import { TaskAggregated_DirectLinkCountsChanged_SyncTaskCountsListener } from '../modules/task/internal/listeners/TaskAggregated_DirectLinkCountsChanged_SyncTaskCountsListener.ts';
 import { TaskAggregated_Reachability_ExpandListener } from '../modules/task/internal/listeners/TaskAggregated_Reachability_ExpandListener.ts';
 import { TaskDeleted_TaskCleanupListener } from '../modules/task/internal/listeners/TaskDeleted_TaskCleanupListener.ts';
-import { TeamAggregated_Deleted_UnassignTasksByTeamIdsListener } from '../modules/task/internal/listeners/TeamAggregated_Deleted_UnassignTasksByTeamIdsListener.ts';
-import { TeamAggregated_MemberRemoved_UnassignMemberFromTeamTasksListener } from '../modules/task/internal/listeners/TeamAggregated_MemberRemoved_UnassignMemberFromTeamTasksListener.ts';
-import { ProjectAggregated_DeleteProjects_TeamCleanupListener } from '../modules/team/internal/listeners/ProjectAggregated_DeleteProjects_TeamCleanupListener.ts';
+import { ProjectAggregated_DeleteProjectTeam } from '../modules/team/internal/listeners/ProjectAggregated_DeleteProjectTeam.ts';
+import { ProjectAggregated_DeleteProjectTeamMember } from '../modules/team/internal/listeners/ProjectAggregated_DeleteProjectTeamMember.ts';
+import { ProjectAggregated_RemoveProjectTeamMember } from '../modules/team/internal/listeners/ProjectAggregated_RemoveProjectTeamMember.ts';
 import { TaskAggregated_CountsChanged_SyncTeamTaskCountListener } from '../modules/team/internal/listeners/TaskAggregated_CountsChanged_SyncTeamTaskCountListener.ts';
-import { TeamAggregated_CountsChanged_SyncTeamMemberCountListener } from '../modules/team/internal/listeners/TeamAggregated_CountsChanged_SyncTeamMemberCountListener.ts';
 import { ProjectEvents_BatchAggregator } from './smart-aggregator-consumer/project/ProjectEvents_BatchAggregator.ts';
 import { TaskEvents_BatchAggregator } from './smart-aggregator-consumer/task/TaskEvents_BatchAggregator.ts';
 import { TaskLinkEvents_BatchAggregator } from './smart-aggregator-consumer/task/TaskLinkEvents_BatchAggregator.ts';
@@ -36,19 +35,16 @@ export async function startConsumers() {
     // Decentralized Cleanup Pipeline (Triggers when a PROJECT is deleted)
     const p_taskCleanup =
         new ProjectAggregated_DeleteProjects_TaskCleanupListener();
-    const p_teamCleanup =
-        new ProjectAggregated_DeleteProjects_TeamCleanupListener();
+    const p_teamCleanup = new ProjectAggregated_DeleteProjectTeam();
+    const p_teamMemberCleanup = new ProjectAggregated_DeleteProjectTeamMember();
     const p_projectCleanup = new ProjectAggregated_DeleteProjectMember();
 
     // Team Smart Aggregation Pipeline (Triggers on TEAM/MEMBER events)
     const teamProjectCountListener =
         new TeamAggregated_CountsChanged_SyncProjectTeamCountListener();
-    const teamMemberCountListener =
-        new TeamAggregated_CountsChanged_SyncTeamMemberCountListener();
     const teamCleanupListener =
         new TeamAggregated_Deleted_UnassignTasksByTeamIdsListener();
-    const teamMemberTaskUnassignmentListener =
-        new TeamAggregated_MemberRemoved_UnassignMemberFromTeamTasksListener();
+    const teamProjectMemberPurgeListener = new ProjectAggregated_RemoveProjectTeamMember();
 
     // Project Member Cascading Pipeline
     const p_memberCountListener =
@@ -78,22 +74,14 @@ export async function startConsumers() {
         authProjectListener.init(),
         p_taskCleanup.init(),
         p_teamCleanup.init(),
-        p_projectCleanup.init(),
-        teamProjectCountListener.init(),
-        teamMemberCountListener.init(),
-        teamCleanupListener.init(),
-        teamMemberTaskUnassignmentListener.init(),
-        p_memberCountListener.init(),
-        p_memberRemovalListener.init(),
+        p_teamMemberCleanup.init(),
+        teamProjectMemberPurgeListener.init(),
         p_memberTaskUnassignmentListener.init(),
         taskAggregator.init(),
         taskLinkAggregator.init(),
         taskProjectCountListener.init(),
         taskTeamCountListener.init(),
         taskCleanupListener.init(),
-        taskDirectLinkCountsListener.init(),
-        taskReachabilityExpandListener.init(),
-    ]);
-
-    logger.info('[Registry] All domain consumers and listeners initialized');
-}
+        teamProjectMemberPurgeListener.init(),
+        logger.info('[Registry] All domain consumers and listeners initialized');
+    }

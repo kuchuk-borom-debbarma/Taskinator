@@ -1,3 +1,5 @@
+import type { Transaction } from 'kysely';
+import type { Database } from '../../../../database';
 import { logger } from '../../../../logger';
 import eventBus from '../../../../utils/EventBus.ts';
 import {
@@ -5,38 +7,38 @@ import {
     KAFKA_TOPICS,
 } from '../../../../utils/event-bus/constants.ts';
 import type { DomainEvent } from '../../../../utils/event-bus/types.ts';
-import { removeMembersFromProjectTeamsBatch } from '../TeamQueries.ts';
+import { removeProjectTeamMembersBatch } from '../TeamQueries.ts';
 
 /**
- * Execution Listener for Project Member removal (Team Cascade).
- * Removes the user from all teams in the project.
- * Optimized for single-operation batch execution.
+ * Execution Listener: Remove Project Team Member
+ * Purges specific users from all teams within a project and repairs the team's member count.
+ * [Action]: REMOVE_PROJECT_TEAM_MEMBER
  */
-export class ProjectAggregated_RemoveProjectMember_RemoveMemberFromAllProjectTeamsListener {
+export class ProjectAggregated_RemoveProjectTeamMember {
     async init() {
         logger.info(
-            '[ProjectAggregated -> Team] Initializing Listener for Member Removal cascade',
+            '[ProjectAggregated -> Team] Initializing Listener: Remove Project Team Member',
         );
 
         await eventBus.subscribe(
             KAFKA_TOPICS.PROJECT_AGGREGATED,
-            'project-member-team-cleanup-group',
+            'team-project-member-purge-group',
             {
-                [KAFKA_EVENTS.PROJECT_AGGREGATED.REMOVE_PROJECT_MEMBER]:
-                    this.handleMemberRemoved.bind(this),
+                [KAFKA_EVENTS.PROJECT_AGGREGATED.REMOVE_PROJECT_TEAM_MEMBER]:
+                    this.handleRemoveProjectTeamMember.bind(this),
             },
             { batch: true },
         );
     }
 
-    private async handleMemberRemoved(
+    private async handleRemoveProjectTeamMember(
         events: DomainEvent<{ projectId: string; userIds: string[] }>[],
+        trx?: Transaction<Database>,
     ) {
         if (events.length === 0) return;
 
-        // Grouping to ensure unique projectId entries for the batch query
+        // Grouping events for batch processing efficiency
         const projectMap = new Map<string, Set<string>>();
-
         for (const event of events) {
             const { projectId, userIds } = event.data;
             const existing = projectMap.get(projectId) || new Set<string>();
@@ -52,19 +54,19 @@ export class ProjectAggregated_RemoveProjectMember_RemoveMemberFromAllProjectTea
         );
 
         logger.info(
-            `[ProjectAggregated -> Team] Performing batch member-team purging for ${deltas.length} projects in a single call`,
+            `[ProjectAggregated -> Team] Executing consolidated batch removal of memberships for ${deltas.length} projects`,
         );
 
         try {
-            const { affectedTeamCount } =
-                await removeMembersFromProjectTeamsBatch(deltas);
+            const { affectedProjectCount, affectedTeamCount } =
+                await removeProjectTeamMembersBatch(deltas, trx);
 
             logger.info(
-                `[ProjectAggregated -> Team] Successfully cascaded removal to ${affectedTeamCount} teams across ${deltas.length} projects`,
+                `[ProjectAggregated -> Team] Successfully purged memberships across ${affectedProjectCount} projects and repaired ${affectedTeamCount} team counters`,
             );
         } catch (err) {
             logger.error(
-                '[ProjectAggregated -> Team] Failed to cascade member removal:',
+                '[ProjectAggregated -> Team] Failed to process project team member removal:',
                 err,
             );
             throw err;

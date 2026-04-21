@@ -634,15 +634,22 @@ export const updateTeamMemberCountsBulk = async (
  * Batch removes members from project teams across multiple projects.
  * Also performs bulk counter repair for affected teams.
  */
-export const removeMembersFromProjectTeamsBatch = async (
+/**
+ * Batch removes members from project teams across multiple projects.
+ * This is a consolidated action that also performs the counter repair.
+ * [Action]: REMOVE_PROJECT_TEAM_MEMBER
+ */
+export const removeProjectTeamMembersBatch = async (
     deltas: { projectId: string; userIds: string[] }[],
-): Promise<{ affectedTeamCount: number }> => {
-    if (deltas.length === 0) return { affectedTeamCount: 0 };
+    trx?: Transaction<Database>,
+): Promise<{ affectedProjectCount: number; affectedTeamCount: number }> => {
+    if (deltas.length === 0)
+        return { affectedProjectCount: 0, affectedTeamCount: 0 };
 
     const projectIds = deltas.map((d) => d.projectId);
     const userIdsList = deltas.map((d) => d.userIds);
 
-    // 1. Purge members and identify affected teams using UNNEST
+    // 1. Purge members and identify affected teams using RETURNING
     const affectedTeams = await sql<{ teamId: string }>`
         DELETE FROM project_team_member
         USING (
@@ -651,9 +658,11 @@ export const removeMembersFromProjectTeamsBatch = async (
         WHERE project_team_member.fk_project_id = V.pid
           AND project_team_member.fk_user_id = ANY(V.uids)
         RETURNING project_team_member.fk_team_id AS "teamId"
-    `.execute(db);
+    `.execute(trx || db);
 
-    if (affectedTeams.rows.length === 0) return { affectedTeamCount: 0 };
+    if (affectedTeams.rows.length === 0) {
+        return { affectedProjectCount: deltas.length, affectedTeamCount: 0 };
+    }
 
     // 2. Aggregate deltas for Counter Repair
     const teamDeltas = new Map<string, number>();
@@ -661,10 +670,13 @@ export const removeMembersFromProjectTeamsBatch = async (
         teamDeltas.set(row.teamId, (teamDeltas.get(row.teamId) || 0) - 1);
     }
 
-    // 3. Batch Update Counters
-    await updateTeamMemberCountsBulk(teamDeltas);
+    // 3. Perform atomic counter update within the SAME transaction
+    await incrementTeamMemberCountsBulk(trx || db, teamDeltas);
 
-    return { affectedTeamCount: teamDeltas.size };
+    return {
+        affectedProjectCount: deltas.length,
+        affectedTeamCount: teamDeltas.size,
+    };
 };
 
 export async function updateTeamTaskCountsBulk(
@@ -688,23 +700,39 @@ export async function updateTeamTaskCountsBulk(
 }
 
 /**
- * Atomic removal of all team-related data for specific projects.
+ * Bulk decommissions team membership records for specified projects.
+ * [Action]: DELETE_PROJECT_TEAM_MEMBER
  */
-export async function purgeTeamDataByProjectIds(
-    trx: any,
+export async function deleteProjectTeamMemberBatch(
     projectIds: string[],
-): Promise<void> {
-    if (projectIds.length === 0) return;
+    trx?: Transaction<Database>,
+): Promise<{ affectedCount: number }> {
+    if (projectIds.length === 0) return { affectedCount: 0 };
 
-    await trx
+    const result = await (trx || db)
         .deleteFrom('project_team_member')
         .where('fk_project_id', 'in', projectIds)
-        .execute();
+        .executeTakeFirst();
 
-    await trx
+    return { affectedCount: Number(result.numDeletedRows) };
+}
+
+/**
+ * Bulk decommissions team entities for specified projects.
+ * [Action]: DELETE_PROJECT_TEAM
+ */
+export async function deleteProjectTeamBatch(
+    projectIds: string[],
+    trx?: Transaction<Database>,
+): Promise<{ affectedCount: number }> {
+    if (projectIds.length === 0) return { affectedCount: 0 };
+
+    const result = await (trx || db)
         .deleteFrom('project_team')
         .where('fk_project_id', 'in', projectIds)
-        .execute();
+        .executeTakeFirst();
+
+    return { affectedCount: Number(result.numDeletedRows) };
 }
 
 /**
