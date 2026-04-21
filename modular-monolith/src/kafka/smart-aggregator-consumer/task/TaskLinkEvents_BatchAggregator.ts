@@ -1,18 +1,14 @@
 import { db } from '../../../database';
+import { logger } from '../../../logger';
+import type { ReachabilityExpansionStep } from '../../../modules/task/internal/ReachabilityQueries.ts';
 import eventBus from '../../../utils/EventBus.ts';
 import {
     KAFKA_EVENTS,
     KAFKA_TOPICS,
 } from '../../../utils/event-bus/constants.ts';
-import type { DomainEvent } from '../../../utils/event-bus/types.ts';
-import { logger } from '../../../logger';
-import {
-    type ReachabilityExpansionStep,
-    type TaskDirectLinkDelta,
-} from '../../../modules/task/internal/ReachabilityQueries.ts';
 import { claimEventsAtomic } from '../../../utils/event-bus/idempotency.ts';
-
 import { appendEventsToOutbox } from '../../../utils/event-bus/OutboxQueries.ts';
+import type { DomainEvent } from '../../../utils/event-bus/types.ts';
 
 interface Edge {
     s: string;

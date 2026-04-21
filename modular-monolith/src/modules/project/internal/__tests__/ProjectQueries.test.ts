@@ -8,22 +8,22 @@
  *  3. Auth rules are enforced (wrong user cannot delete another user's project)
  */
 import { afterAll, beforeEach, describe, expect, it } from '@jest/globals';
-import { db } from '../../../../database/index.ts';
+import { sql } from 'kysely';
 import { cleanupDb, destroyDb } from '../../../../__tests__/helpers/db.ts';
 import {
+    addProjectMember,
     createProject,
     createUser,
-    addProjectMember,
 } from '../../../../__tests__/helpers/factories.ts';
-import { sql } from 'kysely';
+import { db } from '../../../../database/index.ts';
 import {
-    getProjects,
-    getProjectMembers,
-    insertProject,
-    updateProject,
-    deleteProjects,
-    insertProjectMembers,
     deleteProjectMembers,
+    deleteProjects,
+    getProjectMembers,
+    getProjects,
+    insertProject,
+    insertProjectMembers,
+    updateProject,
 } from '../ProjectQueries.ts';
 
 describe('ProjectQueries — Integration (Real DB + wCTE)', () => {
@@ -50,7 +50,7 @@ describe('ProjectQueries — Integration (Real DB + wCTE)', () => {
 
             const { projects } = await getProjects(userId);
             expect(projects).toHaveLength(1);
-            expect(projects[0]!.name).toBe('Mine');
+            expect(projects[0]?.name).toBe('Mine');
         });
     });
 
@@ -93,14 +93,14 @@ describe('ProjectQueries — Integration (Real DB + wCTE)', () => {
             });
 
             expect(project).not.toBeNull();
-            expect(project!.name).toBe(name);
-            expect(project!.userId).toBe(userId);
+            expect(project?.name).toBe(name);
+            expect(project?.userId).toBe(userId);
 
             // Verify project exists in DB
             const dbProject = await db
                 .selectFrom('project')
                 .selectAll()
-                .where('id', '=', project!.id as any)
+                .where('id', '=', project?.id as any)
                 .executeTakeFirst();
             expect(dbProject).not.toBeNull();
 
@@ -108,12 +108,12 @@ describe('ProjectQueries — Integration (Real DB + wCTE)', () => {
             const outboxEntries = await sql<any>`
                 SELECT * FROM outbox_events 
                 WHERE kafka_topic = 'project.created' 
-                  AND kafka_key = ${project!.id}::text
+                  AND kafka_key = ${project?.id}::text
             `.execute(db);
 
             expect(outboxEntries.rows).toHaveLength(1);
             const event = outboxEntries.rows[0];
-            expect(event.payload.projectId).toBe(project!.id);
+            expect(event.payload.projectId).toBe(project?.id);
             expect(event.payload.userId).toBe(userId);
             expect(event.payload.name).toBe(name);
         });
@@ -128,22 +128,22 @@ describe('ProjectQueries — Integration (Real DB + wCTE)', () => {
 
             const updated = await updateProject({
                 actorId: userId,
-                id: project!.id,
-                version: project!.version,
+                id: project?.id,
+                version: project?.version,
                 name: 'New Name',
                 description: 'New Description',
             });
 
             expect(updated).not.toBeNull();
-            expect(updated!.name).toBe('New Name');
-            expect(updated!.description).toBe('New Description');
-            expect(updated!.version).toBe(project!.version + 1);
+            expect(updated?.name).toBe('New Name');
+            expect(updated?.description).toBe('New Description');
+            expect(updated?.version).toBe(project?.version + 1);
 
             // Verify outbox
             const outboxEntries = await sql<any>`
                 SELECT * FROM outbox_events 
                 WHERE kafka_topic = 'project.updated' 
-                  AND kafka_key = ${project!.id}::text
+                  AND kafka_key = ${project?.id}::text
                 ORDER BY created_at DESC LIMIT 1
             `.execute(db);
 
@@ -160,16 +160,16 @@ describe('ProjectQueries — Integration (Real DB + wCTE)', () => {
             // Update once to increment version
             await updateProject({
                 actorId: userId,
-                id: project!.id,
-                version: project!.version,
+                id: project?.id,
+                version: project?.version,
                 name: 'First Update',
             });
 
             // Try to update again with the original version
             const failedUpdate = await updateProject({
                 actorId: userId,
-                id: project!.id,
-                version: project!.version, // Stale version
+                id: project?.id,
+                version: project?.version, // Stale version
                 name: 'Second Update',
             });
 
@@ -186,8 +186,8 @@ describe('ProjectQueries — Integration (Real DB + wCTE)', () => {
 
             const failedUpdate = await updateProject({
                 actorId: attackerId,
-                id: project!.id,
-                version: project!.version,
+                id: project?.id,
+                version: project?.version,
                 name: 'Hacked!',
             });
 
@@ -213,7 +213,7 @@ describe('ProjectQueries — Integration (Real DB + wCTE)', () => {
 
             const { success, deletedCount } = await deleteProjects({
                 actorId: userId,
-                projectIds: [p1!.id, p2!.id, p3!.id],
+                projectIds: [p1?.id, p2?.id, p3?.id],
             });
 
             expect(success).toBe(true);
@@ -222,15 +222,15 @@ describe('ProjectQueries — Integration (Real DB + wCTE)', () => {
             // Verify p1 and p2 are gone, p3 remains
             const findP1 = await db
                 .selectFrom('project')
-                .where('id', '=', p1!.id as any)
+                .where('id', '=', p1?.id as any)
                 .executeTakeFirst();
             const findP2 = await db
                 .selectFrom('project')
-                .where('id', '=', p2!.id as any)
+                .where('id', '=', p2?.id as any)
                 .executeTakeFirst();
             const findP3 = await db
                 .selectFrom('project')
-                .where('id', '=', p3!.id as any)
+                .where('id', '=', p3?.id as any)
                 .executeTakeFirst();
 
             expect(findP1).toBeUndefined();
@@ -241,7 +241,7 @@ describe('ProjectQueries — Integration (Real DB + wCTE)', () => {
             const outboxEntries = await sql<any>`
                 SELECT * FROM outbox_events 
                 WHERE kafka_topic = 'project.deleted' 
-                  AND kafka_key IN (${p1!.id}, ${p2!.id})
+                  AND kafka_key IN (${p1?.id}, ${p2?.id})
             `.execute(db);
 
             expect(outboxEntries.rows).toHaveLength(2);
@@ -269,7 +269,7 @@ describe('ProjectQueries — Integration (Real DB + wCTE)', () => {
                 userId,
                 name: 'Membership Project',
             });
-            projectId = project!.id;
+            projectId = project?.id;
         });
 
         it('allows owner to add members', async () => {

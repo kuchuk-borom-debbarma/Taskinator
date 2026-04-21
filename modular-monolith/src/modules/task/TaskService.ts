@@ -1,5 +1,5 @@
-import type { BaseService } from './index.ts';
 import type { PaginationParams as SharedPaginationParams } from '../../types/pagination.ts';
+import type { BaseService } from './index.ts';
 
 export type TaskStatus = string;
 

@@ -1,5 +1,5 @@
 import DataLoader from 'dataloader';
-import { projectService, type ProjectMember } from '../../modules/project';
+import { type ProjectMember, projectService } from '../../modules/project';
 
 /**
  * Standard DataLoader for fetching ProjectMembers by ID.

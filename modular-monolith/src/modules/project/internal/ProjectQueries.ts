@@ -1,12 +1,12 @@
-import type { Project, ProjectMember } from '../ProjectService.ts';
-import { db } from '../../../database';
-import { decodeCursor, encodeCursor } from '../../../utils/utils.ts';
 import { sql } from 'kysely';
+import { db } from '../../../database';
 import type { PaginationParams } from '../../../types/pagination.ts';
 import {
-    KAFKA_TOPICS,
     KAFKA_EVENTS,
+    KAFKA_TOPICS,
 } from '../../../utils/event-bus/constants.ts';
+import { decodeCursor, encodeCursor } from '../../../utils/utils.ts';
+import type { Project, ProjectMember } from '../ProjectService.ts';
 
 export async function insertProject(param: {
     userId: string;

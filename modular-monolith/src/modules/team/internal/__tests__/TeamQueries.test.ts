@@ -8,26 +8,26 @@
  *  3. Auth rules prevent unauthorized operations
  */
 import { afterAll, beforeEach, describe, expect, it } from '@jest/globals';
-import { db } from '../../../../database/index.ts';
+import { sql } from 'kysely';
 import { cleanupDb, destroyDb } from '../../../../__tests__/helpers/db.ts';
 import {
-    createUser,
-    createProject,
     addProjectMember,
-    createTeam,
     addTeamMember,
+    createProject,
+    createTeam,
+    createUser,
 } from '../../../../__tests__/helpers/factories.ts';
+import { db } from '../../../../database/index.ts';
+import { ConflictError, NotFoundError } from '../../../../graphql/errors.ts';
 import {
-    getTeams,
-    getTeamMembers,
-    insertTeam,
-    deleteTeams,
-    insertTeamMembers,
     deleteTeamMembers,
+    deleteTeams,
+    getTeamMembers,
+    getTeams,
+    insertTeam,
+    insertTeamMembers,
     updateTeam,
 } from '../TeamQueries.ts';
-import { sql } from 'kysely';
-import { NotFoundError, ConflictError } from '../../../../graphql/errors.ts';
 
 describe('TeamQueries — Integration (Real DB + wCTE)', () => {
     let ownerId: string;
@@ -75,7 +75,7 @@ describe('TeamQueries — Integration (Real DB + wCTE)', () => {
 
             const result = await getTeamMembers(ownerId, projectId, team.id);
             expect(result.members).toHaveLength(1);
-            expect(result.members[0]!.userId).toBe(m.id);
+            expect(result.members[0]?.userId).toBe(m.id);
         });
     });
 

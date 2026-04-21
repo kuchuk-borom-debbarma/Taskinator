@@ -1,5 +1,5 @@
-import { db } from './src/database';
 import { sql } from 'kysely';
+import { db } from './src/database';
 
 async function checkTasks() {
     const projectId = 'e26df1ec-7f32-4fa1-9d74-9831d8067235';

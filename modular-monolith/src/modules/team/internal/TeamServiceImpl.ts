@@ -1,18 +1,18 @@
-import type { Team, TeamMember, TeamService } from '../TeamService.ts';
 import type { PaginationParams } from '../../../types/pagination.ts';
+import type { User } from '../../auth/AuthService.ts';
+import type { Team, TeamMember, TeamService } from '../TeamService.ts';
 import {
+    deleteTeamMembers,
+    deleteTeams,
     getTeamMembers,
     getTeams,
     getTeamsByActorIdAndIds,
     getTeamsByIds as getTeamsByIdsQuery,
     insertTeam,
-    deleteTeams,
     insertTeamMembers,
-    deleteTeamMembers,
-    updateTeam,
     searchTeamUsers,
+    updateTeam,
 } from './TeamQueries.ts';
-import type { User } from '../../auth/AuthService.ts';
 
 export class TeamServiceImpl implements TeamService {
     async getTeams(

@@ -1,19 +1,15 @@
+import { sql } from 'kysely';
+import { db } from '../../../database';
+import { ConflictError, NotFoundError } from '../../../graphql/errors.ts';
+import { KAFKA_EVENTS } from '../../../utils/event-bus/constants.ts';
+import { decodeCursor, encodeCursor } from '../../../utils/utils.ts';
 import type {
     GetNeighbourhoodParam,
-    NeighbourRecord,
     PaginationParams,
     Task,
     TaskLink,
     TaskNeighbourhoodResult,
 } from '../TaskService.ts';
-import { db } from '../../../database';
-import { decodeCursor, encodeCursor } from '../../../utils/utils.ts';
-import {
-    KAFKA_EVENTS,
-    KAFKA_TOPICS,
-} from '../../../utils/event-bus/constants.ts';
-import { sql } from 'kysely';
-import { NotFoundError, ConflictError } from '../../../graphql/errors.ts';
 
 export const getTasksPage = async (
     userId: string,

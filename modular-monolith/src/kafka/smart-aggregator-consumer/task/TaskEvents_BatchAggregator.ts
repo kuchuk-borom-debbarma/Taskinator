@@ -1,12 +1,12 @@
+import { logger } from '../../../logger';
 import eventBus from '../../../utils/EventBus.ts';
 import {
     KAFKA_EVENTS,
     KAFKA_TOPICS,
 } from '../../../utils/event-bus/constants.ts';
 import type { DomainEvent } from '../../../utils/event-bus/types.ts';
-import { logger } from '../../../logger';
-import { TaskCountHandler } from './handlers/TaskCountHandler.ts';
 import { TaskCleanupHandler } from './handlers/TaskCleanupHandler.ts';
+import { TaskCountHandler } from './handlers/TaskCountHandler.ts';
 
 export class TaskEvents_BatchAggregator {
     private countHandler = new TaskCountHandler();
@@ -70,7 +70,7 @@ export class TaskEvents_BatchAggregator {
                     deletedTaskIds.push(taskId);
                     break;
 
-                case KAFKA_EVENTS.TASK.UPDATED:
+                case KAFKA_EVENTS.TASK.UPDATED: {
                     const { old, new: newState } = event.data;
 
                     // A. Team Lifecycle counters
@@ -105,6 +105,7 @@ export class TaskEvents_BatchAggregator {
                         // Note: We could also track UNASSIGNED here if we want to notify on removal
                     }
                     break;
+                }
             }
         }
 

@@ -1,6 +1,6 @@
+import type { PoolClient } from 'pg';
 import { db, pool } from '../../database';
 import eventBus from '../EventBus.ts';
-import type { PoolClient } from 'pg';
 
 let isRunning = false;
 let timeoutId: ReturnType<typeof setTimeout> | null = null;
@@ -43,7 +43,7 @@ const dispatchToEventBus = async (
             groups.set(groupKey, { topic, type, payloads: [] });
         }
 
-        groups.get(groupKey)!.payloads.push({
+        groups.get(groupKey)?.payloads.push({
             id: event.id,
             key: event.kafka_key,
             data: event.payload,

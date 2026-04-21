@@ -6,14 +6,13 @@
  * 2. Reactive Outbox Relay (Postgres LISTEN/NOTIFY)
  */
 import { afterAll, beforeAll, describe, expect, it, jest } from '@jest/globals';
-import { db, pool } from '../database/index.ts';
-import { cleanupDb, destroyDb } from './helpers/db.ts';
 import { sql } from 'kysely';
+import { db } from '../database/index.ts';
 import {
     startOutboxRelay,
     stopOutboxRelay,
 } from '../utils/event-bus/OutboxRelay.ts';
-import eventBus from '../utils/EventBus.ts';
+import { destroyDb } from './helpers/db.ts';
 
 async function robustCleanup() {
     console.log('[Test] Robust cleanup starting...');

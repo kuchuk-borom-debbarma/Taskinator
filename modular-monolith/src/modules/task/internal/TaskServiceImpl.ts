@@ -4,12 +4,14 @@ import type {
     LinkConnection,
     PaginationParams,
     Task,
-    TaskLink,
     TaskConnection,
+    TaskLink,
     TaskNeighbourhoodResult,
     TaskService,
 } from '../TaskService.ts';
 import {
+    deleteTask,
+    deleteTaskLink,
     getNeighbourhood,
     getProjectTaskLinksPage,
     getTaskLinksPage,
@@ -17,10 +19,8 @@ import {
     getTasksByIds as getTasksByIdsQuery,
     getTasksPage,
     insertTask,
-    updateTask,
-    deleteTask,
     insertTaskLink,
-    deleteTaskLink,
+    updateTask,
     updateTaskLink,
 } from './TaskQueries.ts';
 

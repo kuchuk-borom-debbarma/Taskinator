@@ -1,5 +1,5 @@
 import DataLoader from 'dataloader';
-import { taskService, type Task } from '../../modules/task';
+import { type Task, taskService } from '../../modules/task';
 
 /**
  * Standard DataLoader for fetching Tasks by ID.

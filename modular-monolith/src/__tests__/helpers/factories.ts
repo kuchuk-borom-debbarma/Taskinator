@@ -1,5 +1,5 @@
-import { db } from '../../database/index.ts';
 import { sql } from 'kysely';
+import { db } from '../../database/index.ts';
 import type {
     Project,
     ProjectMember,

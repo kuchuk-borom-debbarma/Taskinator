@@ -1,5 +1,5 @@
-import { db } from '../src/database';
 import { sql } from 'kysely';
+import { db } from '../src/database';
 
 const projectId = 'fc51639b-1619-44a1-a72a-eb639e34418a';
 

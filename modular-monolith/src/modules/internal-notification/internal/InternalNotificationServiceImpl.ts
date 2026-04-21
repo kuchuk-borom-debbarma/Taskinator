@@ -1,11 +1,11 @@
+import type { PaginationParams } from '../../../types/pagination.ts';
+import eventBus from '../../../utils/EventBus.ts';
 import type {
     CreateNotificationParam,
     InternalNotification,
     InternalNotificationService,
 } from '../InternalNotificationService.ts';
-import type { PaginationParams } from '../../../types/pagination.ts';
 import * as Queries from './InternalNotificationQueries.ts';
-import eventBus from '../../../utils/EventBus.ts';
 
 export class InternalNotificationServiceImpl
     implements InternalNotificationService

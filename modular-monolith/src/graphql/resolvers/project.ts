@@ -1,14 +1,14 @@
-import type { GraphQLContext } from '../context.ts';
+import type { User } from '../../modules/auth';
 import type { Project, ProjectMember } from '../../modules/project';
-import { authService, type User } from '../../modules/auth';
+import { projectService } from '../../modules/project';
+import type { PaginationParams } from '../../types/pagination.ts';
+import { encodeCursor } from '../../utils/utils.ts';
+import type { GraphQLContext } from '../context.ts';
 import {
     MutationFailedError,
     NotFoundError,
     UnauthorizedError,
 } from '../errors.ts';
-import { projectService } from '../../modules/project';
-import { encodeCursor } from '../../utils/utils.ts';
-import type { PaginationParams } from '../../types/pagination.ts';
 
 export const projectResolvers = {
     Project: {

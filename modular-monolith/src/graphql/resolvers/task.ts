@@ -1,10 +1,10 @@
-import type { GraphQLContext } from '../context.ts';
-import type { Task, TaskLink } from '../../modules/task/TaskService.ts';
 import type { Project } from '../../modules/project/ProjectService.ts';
-import { NotFoundError, UnauthorizedError } from '../errors.ts';
 import { taskService } from '../../modules/task';
-import { encodeCursor } from '../../utils/utils.ts';
+import type { Task, TaskLink } from '../../modules/task/TaskService.ts';
 import type { PaginationParams } from '../../types/pagination.ts';
+import { encodeCursor } from '../../utils/utils.ts';
+import type { GraphQLContext } from '../context.ts';
+import { NotFoundError, UnauthorizedError } from '../errors.ts';
 
 interface CreateTaskInput {
     projectId: string;
@@ -182,7 +182,11 @@ export const taskResolvers = {
             return user;
         },
         createdAt: (parent: TaskLink) => parent.createdAt.toISOString(),
-        updatedBy: (parent: TaskLink, _args: any, _context: GraphQLContext) => {
+        updatedBy: (
+            _parent: TaskLink,
+            _args: any,
+            _context: GraphQLContext,
+        ) => {
             return null;
         },
         updatedAt: (parent: TaskLink) =>

@@ -1,5 +1,5 @@
-import type { ExternalNotificationService } from '../ExternalNotificationService.ts';
 import { logger } from '../../../logger';
+import type { ExternalNotificationService } from '../ExternalNotificationService.ts';
 
 export class ExternalNotificationServiceImpl
     implements ExternalNotificationService

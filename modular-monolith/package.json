@@ -43,7 +43,8 @@
         "winston": "^3.19.0"
     },
     "scripts": {
-        "format": "biome format --write .",
+        "format": "biome check --write --unsafe .",
+        "clean-format": "biome check --write --unsafe .",
         "check-types": "bun x tsc --noEmit",
         "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand --testMatch=\"**/*.test.ts\"",
         "start": "bun --preload ./src/instrumentation.ts src/index.ts",

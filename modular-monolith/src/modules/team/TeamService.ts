@@ -1,6 +1,6 @@
-import type { BaseService } from '../project';
-import type { User } from '../auth/AuthService.ts';
 import type { PaginationParams } from '../../types/pagination.ts';
+import type { User } from '../auth/AuthService.ts';
+import type { BaseService } from '../project';
 
 export type Team = {
     id: string;

@@ -1,5 +1,5 @@
-import type { BaseService } from '../project';
 import type { PaginationParams } from '../../types/pagination.ts';
+import type { BaseService } from '../project';
 
 export interface InternalNotification {
     id: string;

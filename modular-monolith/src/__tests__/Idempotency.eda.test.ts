@@ -17,11 +17,11 @@ import {
     jest,
 } from '@jest/globals';
 import { db } from '../database/index.ts';
-import { cleanupDb, destroyDb } from './helpers/db.ts';
 import {
-    withIdempotency,
     createEvent,
+    withIdempotency,
 } from '../utils/event-bus/idempotency.ts';
+import { cleanupDb, destroyDb } from './helpers/db.ts';
 
 describe('withIdempotency — Real DB Integration', () => {
     beforeEach(async () => {

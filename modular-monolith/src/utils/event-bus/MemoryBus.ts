@@ -1,7 +1,6 @@
-import { EventEmitter } from 'events';
-import type { Bus, DomainEvent } from './types.ts';
+import { EventEmitter } from 'node:events';
 import { createEvent } from './idempotency.ts';
-import { KAFKA_TOPICS } from './constants.ts';
+import type { Bus } from './types.ts';
 
 export class MemoryBus implements Bus {
     private emitter = new EventEmitter();
@@ -32,9 +31,9 @@ export class MemoryBus implements Bus {
 
     async subscribe(
         topic: string,
-        groupId: string,
+        _groupId: string,
         handlers: Record<string, (data: any) => Promise<void>>,
-        options?: { batch?: boolean },
+        _options?: { batch?: boolean },
     ) {
         for (const [eventType, handler] of Object.entries(handlers)) {
             this.emitter.on(`${topic}:${eventType}`, handler);

@@ -1,6 +1,6 @@
-import type { GraphQLContext } from '../context.ts';
 import type { InternalNotification } from '../../modules/internal-notification';
 import type { PaginationParams } from '../../types/pagination.ts';
+import type { GraphQLContext } from '../context.ts';
 
 export const notificationResolvers = {
     InternalNotification: {

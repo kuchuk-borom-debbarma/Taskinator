@@ -1,5 +1,5 @@
 import DataLoader from 'dataloader';
-import { teamService, type Team } from '../../modules/team';
+import { type Team, teamService } from '../../modules/team';
 
 /**
  * Standard DataLoader for fetching Teams by ID.

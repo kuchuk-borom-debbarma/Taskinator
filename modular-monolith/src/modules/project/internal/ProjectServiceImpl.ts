@@ -1,9 +1,12 @@
+import type { PaginationParams } from '../../../types/pagination.ts';
+import eventBus from '../../../utils/EventBus.ts';
 import type {
     Project,
     ProjectMember,
     ProjectService,
 } from '../ProjectService.ts';
-import type { PaginationParams } from '../../../types/pagination.ts';
+
+import * as queries from './ProjectQueries.ts';
 import {
     getProjectMembers,
     getProjectMembersByActorIdAndIds,
@@ -12,10 +15,6 @@ import {
     getProjectsByActorIdAndProjectIds,
     getProjectsByIds,
 } from './ProjectQueries.ts';
-
-import * as queries from './ProjectQueries.ts';
-
-import eventBus from '../../../utils/EventBus.ts';
 
 export class ProjectServiceImpl implements ProjectService {
     async getProjectsOfUser(

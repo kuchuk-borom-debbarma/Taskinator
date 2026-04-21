@@ -1,7 +1,7 @@
 import { createYoga } from 'graphql-yoga';
-import { schema } from './schema';
-import { createContext, type GraphQLContext } from './context';
 import jwt from 'jsonwebtoken';
+import { createContext, type GraphQLContext } from './context';
+import { schema } from './schema';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-jwt-key';
 
@@ -11,10 +11,10 @@ export const yoga = createYoga<GraphQLContext>({
         const headers = initialContext.request.headers;
         const authHeader =
             headers.get('authorization') ||
-            (initialContext as any).req?.headers?.['authorization'];
+            (initialContext as any).req?.headers?.authorization;
         let token: string | undefined;
 
-        if (authHeader && authHeader.startsWith('Bearer ')) {
+        if (authHeader?.startsWith('Bearer ')) {
             token = authHeader.split(' ')[1];
         } else {
             const url = new URL(initialContext.request.url);

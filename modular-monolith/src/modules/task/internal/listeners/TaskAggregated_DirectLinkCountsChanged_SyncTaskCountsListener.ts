@@ -1,12 +1,12 @@
+import { logger } from '../../../../logger';
 import eventBus from '../../../../utils/EventBus.ts';
 import {
     KAFKA_EVENTS,
     KAFKA_TOPICS,
 } from '../../../../utils/event-bus/constants.ts';
 import type { DomainEvent } from '../../../../utils/event-bus/types.ts';
-import { logger } from '../../../../logger';
-import { updateTaskDirectLinkCountsBatch } from '../TaskQueries.ts';
 import type { TaskDirectLinkDelta } from '../ReachabilityQueries.ts';
+import { updateTaskDirectLinkCountsBatch } from '../TaskQueries.ts';
 
 /**
  * Execution Listener for Direct Task Link Counts.

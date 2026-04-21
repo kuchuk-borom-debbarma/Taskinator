@@ -1,21 +1,21 @@
+import jwt from 'jsonwebtoken';
+import { v4 as uuidv4 } from 'uuid';
+import { db } from '../../../database';
+import { logger } from '../../../logger';
 import type {
     AuthService,
-    StartSignUpParam,
-    SignInParam,
     SearchUsersParam,
+    SignInParam,
+    StartSignUpParam,
     User,
 } from '../AuthService.ts';
-import { db } from '../../../database';
-import { v4 as uuidv4 } from 'uuid';
-import jwt from 'jsonwebtoken';
-import { logger } from '../../../logger';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-jwt-key';
 
 import { sql } from 'kysely';
 import {
-    KAFKA_TOPICS,
     KAFKA_EVENTS,
+    KAFKA_TOPICS,
 } from '../../../utils/event-bus/constants.ts';
 
 export class AuthServiceImpl implements AuthService {
@@ -83,7 +83,7 @@ export class AuthServiceImpl implements AuthService {
                 throw new Error('Pending user not found');
             }
 
-            logger.info(`User created with email ${result.rows[0]!.email}`);
+            logger.info(`User created with email ${result.rows[0]?.email}`);
         } catch (error) {
             logger.error('Failed to finish signup:', error);
             throw error;

@@ -20,14 +20,14 @@ import {
     jest,
 } from '@jest/globals';
 import { db } from '../database/index.ts';
-import { cleanupDb, destroyDb } from './helpers/db.ts';
+import eventBus from '../utils/EventBus.ts';
+import { KAFKA_EVENTS, KAFKA_TOPICS } from '../utils/event-bus/constants.ts';
 import {
     startOutboxRelay,
     stopOutboxRelay,
 } from '../utils/event-bus/OutboxRelay.ts';
-import eventBus from '../utils/EventBus.ts';
+import { cleanupDb, destroyDb } from './helpers/db.ts';
 import { waitFor } from './helpers/waitFor.ts';
-import { KAFKA_TOPICS, KAFKA_EVENTS } from '../utils/event-bus/constants.ts';
 
 describe('OutboxRelay — EDA Integration (MemoryBus)', () => {
     beforeEach(async () => {
@@ -148,7 +148,7 @@ describe('OutboxRelay — EDA Integration (MemoryBus)', () => {
                     c.topic === KAFKA_TOPICS.PROJECT &&
                     c.type === KAFKA_EVENTS.PROJECT.CREATED,
             );
-            expect(projectCreatedCall!.payloads).toHaveLength(2);
+            expect(projectCreatedCall?.payloads).toHaveLength(2);
         });
 
         // All rows cleaned up

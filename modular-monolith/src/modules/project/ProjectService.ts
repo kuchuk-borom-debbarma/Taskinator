@@ -1,5 +1,5 @@
-import type { BaseService } from './index.ts';
 import type { PaginationParams } from '../../types/pagination.ts';
+import type { BaseService } from './index.ts';
 
 export type Project = {
     id: string;

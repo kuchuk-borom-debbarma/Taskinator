@@ -1,11 +1,11 @@
-import type { GraphQLContext } from '../context.ts';
-import type { Team, TeamMember } from '../../modules/team/TeamService.ts';
 import type { Project } from '../../modules/project/ProjectService.ts';
-import { NotFoundError, UnauthorizedError } from '../errors.ts';
-import { teamService } from '../../modules/team';
 import { taskService } from '../../modules/task';
-import { encodeCursor } from '../../utils/utils.ts';
+import { teamService } from '../../modules/team';
+import type { Team, TeamMember } from '../../modules/team/TeamService.ts';
 import type { PaginationParams } from '../../types/pagination.ts';
+import { encodeCursor } from '../../utils/utils.ts';
+import type { GraphQLContext } from '../context.ts';
+import { NotFoundError, UnauthorizedError } from '../errors.ts';
 
 export const teamResolvers = {
     Team: {

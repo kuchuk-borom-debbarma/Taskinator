@@ -1,4 +1,4 @@
-import type { Request, Response, NextFunction } from 'express';
+import type { NextFunction, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-jwt-key';
@@ -15,7 +15,7 @@ export const requireAuth = (
     const authHeader = req.headers.authorization;
     let token: string | undefined;
 
-    if (authHeader && authHeader.startsWith('Bearer ')) {
+    if (authHeader?.startsWith('Bearer ')) {
         token = authHeader.split(' ')[1];
     } else if (req.query.token) {
         token = req.query.token as string;

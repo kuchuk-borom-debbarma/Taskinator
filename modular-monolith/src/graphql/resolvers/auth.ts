@@ -1,6 +1,6 @@
+import type { User } from '../../modules/auth';
 import type { GraphQLContext } from '../context.ts';
 import { NotFoundError } from '../errors.ts';
-import type { User } from '../../modules/auth';
 
 export const authResolvers = {
     User: {

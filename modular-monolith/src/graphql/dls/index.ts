@@ -1,8 +1,8 @@
-import * as userLoaders from './user';
 import * as projectLoaders from './project';
-import * as teamLoaders from './team';
-import * as taskLoaders from './task';
 import * as projectMemberLoaders from './projectMember';
+import * as taskLoaders from './task';
+import * as teamLoaders from './team';
+import * as userLoaders from './user';
 
 /**
  * Aggregates and creates all DataLoaders for a given request context.

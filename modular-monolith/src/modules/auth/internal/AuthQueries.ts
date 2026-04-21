@@ -1,5 +1,5 @@
-import { db } from '../../../database';
 import { sql } from 'kysely';
+import { db } from '../../../database';
 
 /**
  * Repository for Auth-related database operations.

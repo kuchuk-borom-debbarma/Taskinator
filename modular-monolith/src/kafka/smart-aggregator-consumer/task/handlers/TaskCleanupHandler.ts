@@ -1,5 +1,6 @@
 import { db } from '../../../../database';
 import { logger } from '../../../../logger';
+import { findLinksForTaskRepair } from '../../../../modules/task/internal/TaskQueries.ts';
 import {
     KAFKA_EVENTS,
     KAFKA_TOPICS,
@@ -8,7 +9,6 @@ import {
     appendEventsToOutbox,
     type OutboxEntry,
 } from '../../../../utils/event-bus/OutboxQueries.ts';
-import { findLinksForTaskRepair } from '../../../../modules/task/internal/TaskQueries.ts';
 
 /**
  * Publishes signaling events for Task cleanup using the Transactional Outbox.

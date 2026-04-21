@@ -1,5 +1,5 @@
+import os from 'node:os';
 import Redis from 'ioredis';
-import os from 'os';
 import { v4 as uuidv4 } from 'uuid';
 import { logger } from '../logger';
 

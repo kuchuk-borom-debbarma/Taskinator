@@ -1,7 +1,7 @@
+import { v4 as uuid } from 'uuid';
 import { db } from '../../database/index.ts';
 import { getTimeString } from '../utils.ts';
 import type { DomainEvent } from './types.ts';
-import { v4 as uuid } from 'uuid';
 
 /**
  * Optimised batch idempotency engine.

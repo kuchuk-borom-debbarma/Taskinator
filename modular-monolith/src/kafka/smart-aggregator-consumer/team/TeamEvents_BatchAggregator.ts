@@ -1,14 +1,14 @@
+import { logger } from '../../../logger';
 import eventBus from '../../../utils/EventBus.ts';
 import {
     KAFKA_EVENTS,
     KAFKA_TOPICS,
 } from '../../../utils/event-bus/constants.ts';
 import type { DomainEvent } from '../../../utils/event-bus/types.ts';
-import { logger } from '../../../logger';
 import { ProjectTeamCountHandler } from './handlers/ProjectTeamCountHandler.ts';
-import { TeamMemberCountHandler } from './handlers/TeamMemberCountHandler.ts';
-import { TeamMemberCleanupHandler } from './handlers/TeamMemberCleanupHandler.ts';
 import { TeamCleanupHandler } from './handlers/TeamCleanupHandler.ts';
+import { TeamMemberCleanupHandler } from './handlers/TeamMemberCleanupHandler.ts';
+import { TeamMemberCountHandler } from './handlers/TeamMemberCountHandler.ts';
 
 /**
  * Coordinator for Team Domain events.
@@ -82,11 +82,12 @@ export class TeamEvents_BatchAggregator {
                     current.membershipBalance +=
                         event.data.addedUserIds?.length || 0;
                     break;
-                case KAFKA_EVENTS.TEAM.MEMBERS_REMOVED:
+                case KAFKA_EVENTS.TEAM.MEMBERS_REMOVED: {
                     const removed = event.data.removedUserIds || [];
                     current.membershipBalance -= removed.length;
                     current.removedUserIds.push(...removed);
                     break;
+                }
             }
 
             teamStates.set(teamId, current);

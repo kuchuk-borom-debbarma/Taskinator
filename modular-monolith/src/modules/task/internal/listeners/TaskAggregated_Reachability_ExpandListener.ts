@@ -1,16 +1,16 @@
+import { db } from '../../../../database';
+import { logger } from '../../../../logger';
 import eventBus from '../../../../utils/EventBus.ts';
 import {
     KAFKA_EVENTS,
     KAFKA_TOPICS,
 } from '../../../../utils/event-bus/constants.ts';
+import { claimEventsAtomic } from '../../../../utils/event-bus/idempotency.ts';
 import type { DomainEvent } from '../../../../utils/event-bus/types.ts';
-import { logger } from '../../../../logger';
-import { db } from '../../../../database';
 import {
     expandReachabilityFrontierBatch,
     type ReachabilityExpansionStep,
 } from '../ReachabilityQueries.ts';
-import { claimEventsAtomic } from '../../../../utils/event-bus/idempotency.ts';
 
 /**
  * High-Resilience Recursive Worker for Task Reachability.

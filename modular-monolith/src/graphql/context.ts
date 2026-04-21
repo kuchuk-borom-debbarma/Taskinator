@@ -1,4 +1,4 @@
-import { type YogaInitialContext } from 'graphql-yoga';
+import type { YogaInitialContext } from 'graphql-yoga';
 import { createLoaders, type DataLoaders } from './dls';
 
 export interface GraphQLContext extends YogaInitialContext {

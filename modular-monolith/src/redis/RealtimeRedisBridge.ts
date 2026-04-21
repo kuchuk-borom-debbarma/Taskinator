@@ -1,6 +1,6 @@
-import { redisSubscriber, INSTANCE_ID } from './index';
 import { pubsub } from '../graphql/pubsub';
 import { logger } from '../logger';
+import { INSTANCE_ID, redisSubscriber } from './index';
 
 /**
  * The RealtimeRedisBridge listens specifically for payloads routed directly
@@ -13,7 +13,7 @@ import { logger } from '../logger';
 export const startRedisBridge = async () => {
     const channel = `instance:${INSTANCE_ID}`;
 
-    await redisSubscriber.subscribe(channel, (err, count) => {
+    await redisSubscriber.subscribe(channel, (err, _count) => {
         if (err) {
             logger.error(
                 `[Redis Bridge] Failed to subscribe to ${channel}: %s`,

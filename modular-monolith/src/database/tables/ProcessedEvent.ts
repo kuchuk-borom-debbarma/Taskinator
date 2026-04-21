@@ -1,4 +1,4 @@
-import type { ColumnType, Generated } from 'kysely';
+import type { ColumnType } from 'kysely';
 
 /**
  * Idempotency tracking table for Kafka events.

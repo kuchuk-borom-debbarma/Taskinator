@@ -1,8 +1,8 @@
-import { Kafka, Partitioners, type Producer, type Consumer } from 'kafkajs';
-import { KAFKA_TOPICS } from './constants.ts';
-import type { Bus, DomainEvent } from './types.ts';
-import { createEvent, withIdempotency } from './idempotency.ts';
 import { context, propagation, trace } from '@opentelemetry/api';
+import { type Consumer, Kafka, Partitioners, type Producer } from 'kafkajs';
+import { KAFKA_TOPICS } from './constants.ts';
+import { createEvent, withIdempotency } from './idempotency.ts';
+import type { Bus, DomainEvent } from './types.ts';
 
 export class KafkaBus implements Bus {
     private kafka = new Kafka({

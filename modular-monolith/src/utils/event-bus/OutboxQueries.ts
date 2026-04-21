@@ -1,6 +1,3 @@
-import type { Transaction } from 'kysely';
-import { db } from '../../database';
-
 export interface OutboxEntry {
     kafka_topic: string;
     kafka_key: string;

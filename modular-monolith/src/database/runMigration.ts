@@ -1,5 +1,5 @@
-import { db } from './index.ts';
 import { sql } from 'kysely';
+import { db } from './index.ts';
 
 async function run() {
     console.log('[Migration] Starting denormalization migration...');

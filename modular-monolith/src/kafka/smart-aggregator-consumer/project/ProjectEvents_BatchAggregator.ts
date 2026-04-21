@@ -1,15 +1,12 @@
-import eventBus from '../../../utils/EventBus.ts';
-import {
-    KAFKA_EVENTS,
-    KAFKA_TOPICS,
-} from '../../../utils/event-bus/constants.ts';
-import type { DomainEvent } from '../../../utils/event-bus/types.ts';
 import { logger } from '../../../logger';
-import type { ProjectState } from './types.ts';
-import { UserProjectCountHandler } from './handlers/UserProjectCountHandler.ts';
-import { ProjectMemberCountHandler } from './handlers/ProjectMemberCountHandler.ts';
-import { ProjectMemberCleanupHandler } from './handlers/ProjectMemberCleanupHandler.ts';
+import eventBus from '../../../utils/EventBus.ts';
+import type { DomainEvent } from '../../../utils/event-bus';
+import { KAFKA_EVENTS, KAFKA_TOPICS } from '../../../utils/event-bus';
 import { ProjectCleanupHandler } from './handlers/ProjectCleanupHandler.ts';
+import { ProjectMemberCleanupHandler } from './handlers/ProjectMemberCleanupHandler.ts';
+import { ProjectMemberCountHandler } from './handlers/ProjectMemberCountHandler.ts';
+import { UserProjectCountHandler } from './handlers/UserProjectCountHandler.ts';
+import type { ProjectState } from './types.ts';
 
 export class ProjectEvents_BatchAggregator {
     private countHandler = new UserProjectCountHandler();
@@ -77,11 +74,12 @@ export class ProjectEvents_BatchAggregator {
                     current.membershipBalance +=
                         event.data.addedUserIds?.length || 0;
                     break;
-                case KAFKA_EVENTS.PROJECT.MEMBERS_REMOVED:
+                case KAFKA_EVENTS.PROJECT.MEMBERS_REMOVED: {
                     const removed = event.data.removedUserIds || [];
                     current.membershipBalance -= removed.length;
                     current.removedUserIds.push(...removed);
                     break;
+                }
             }
 
             projectStates.set(projectId, current);

@@ -1,13 +1,13 @@
-import { projectService } from './modules/project';
-import { teamService } from './modules/team';
+import { yoga } from './graphql';
+import { startConsumers } from './kafka/registry.ts';
 import { authService } from './modules/auth/index.ts';
 import { externalNotificationService } from './modules/external-notification/index.ts';
 import { internalNotificationService } from './modules/internal-notification/index.ts';
-import { yoga } from './graphql';
-import { startOutboxRelay } from './utils/event-bus/OutboxRelay';
+import { projectService } from './modules/project';
+import { teamService } from './modules/team';
 import { startRedisBridge } from './redis/RealtimeRedisBridge';
-import { startConsumers } from './kafka/registry.ts';
 import eventBus from './utils/EventBus';
+import { startOutboxRelay } from './utils/event-bus/OutboxRelay';
 
 /**
  * Main Application Boot Sequence

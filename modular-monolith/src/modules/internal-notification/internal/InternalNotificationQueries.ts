@@ -1,15 +1,15 @@
-import { db } from '../../../database';
 import { sql } from 'kysely';
+import { db } from '../../../database';
 import type { PaginationParams } from '../../../types/pagination.ts';
-import type {
-    CreateNotificationParam,
-    InternalNotification,
-} from '../InternalNotificationService.ts';
 import {
     decodeCursor,
     encodeCursor,
     getTimeString,
 } from '../../../utils/utils.ts';
+import type {
+    CreateNotificationParam,
+    InternalNotification,
+} from '../InternalNotificationService.ts';
 
 export const insertNotificationsBatch = async (
     rows: CreateNotificationParam[],
@@ -171,5 +171,5 @@ export const getUnreadCount = async (userId: string): Promise<number> => {
         FROM internal_notification
         WHERE fk_user_id = ${userId} AND is_read = FALSE
     `.execute(db);
-    return parseInt(result.rows[0]?.count ?? '0');
+    return parseInt(result.rows[0]?.count ?? '0', 10);
 };
