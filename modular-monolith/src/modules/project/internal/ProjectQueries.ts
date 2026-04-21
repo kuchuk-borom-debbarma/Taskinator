@@ -1,10 +1,7 @@
-import { sql } from 'kysely';
-import { db } from '../../../database';
+import { sql, type Transaction } from 'kysely';
+import { type Database, db } from '../../../database';
 import type { PaginationParams } from '../../../types/pagination.ts';
-import {
-    KAFKA_EVENTS,
-    KAFKA_TOPICS,
-} from '../../../utils/event-bus/constants.ts';
+import { KAFKA_EVENTS, KAFKA_TOPICS } from '../../../utils/event-bus';
 import { decodeCursor, encodeCursor } from '../../../utils/utils.ts';
 import type { Project, ProjectMember } from '../ProjectService.ts';
 
@@ -512,6 +509,7 @@ export const updateProjectTeamCountsBulk = async (
 
 export const updateProjectMemberCountsBulk = async (
     updates: Map<string, number>,
+    trx?: Transaction<Database>,
 ): Promise<void> => {
     const entries = Array.from(updates.entries());
     if (entries.length === 0) return;
@@ -527,7 +525,7 @@ export const updateProjectMemberCountsBulk = async (
             SELECT * FROM UNNEST(${ids}::uuid[], ${deltas}::int[])
         ) AS v(id, delta)
         WHERE project.id = v.id
-    `.execute(db);
+    `.execute(trx || db);
 };
 
 export async function updateProjectTaskCountsBulk(

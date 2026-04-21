@@ -1,17 +1,16 @@
+import type { Transaction } from 'kysely';
+import type { Database } from '../../../../database';
 import { logger } from '../../../../logger';
 import eventBus from '../../../../utils/EventBus.ts';
-import {
-    KAFKA_EVENTS,
-    KAFKA_TOPICS,
-} from '../../../../utils/event-bus/constants.ts';
-import type { DomainEvent } from '../../../../utils/event-bus/types.ts';
+import type { DomainEvent } from '../../../../utils/event-bus';
+import { KAFKA_EVENTS, KAFKA_TOPICS } from '../../../../utils/event-bus';
 import { updateProjectMemberCountsBulk } from '../ProjectQueries.ts';
 
 /**
  * Execution Listener for Project Member counts.
  * Listens to aggregated signals from the Project aggregator.
  */
-export class ProjectAggregated_ChangeProjectMemberCount_SyncProjectMemberCountListener {
+export class ProjectAggregated_ChangeProjectMemberCount {
     async init() {
         logger.info(
             '[ProjectAggregated -> Project] Initializing Listener for members_count updates',
@@ -30,6 +29,7 @@ export class ProjectAggregated_ChangeProjectMemberCount_SyncProjectMemberCountLi
 
     private async handleMemberCountsChanged(
         events: DomainEvent<{ projectId: string; delta: number }>[],
+        trx?: Transaction<Database>,
     ) {
         if (events.length === 0) return;
 
@@ -44,7 +44,7 @@ export class ProjectAggregated_ChangeProjectMemberCount_SyncProjectMemberCountLi
         );
 
         try {
-            await updateProjectMemberCountsBulk(updates);
+            await updateProjectMemberCountsBulk(updates, trx);
         } catch (err) {
             logger.error(
                 '[ProjectAggregated -> Project] Failed to update member counts:',
