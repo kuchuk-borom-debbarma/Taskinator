@@ -7,6 +7,8 @@ import { TeamAggregated_SyncProjectTeamCountListener } from '../modules/project/
 import { ProjectAggregated_DeleteProjectTask } from '../modules/task/internal/listeners/ProjectAggregated_DeleteProjectTask.ts';
 import { ProjectAggregated_DeleteProjectTaskLink } from '../modules/task/internal/listeners/ProjectAggregated_DeleteProjectTaskLink.ts';
 import { ProjectAggregated_UnassignProjectTaskMember } from '../modules/task/internal/listeners/ProjectAggregated_UnassignProjectTaskMember.ts';
+import { TeamAggregated_OrphanTeamTasksListener } from '../modules/task/internal/listeners/TeamAggregated_OrphanTeamTasksListener.ts';
+import { TeamAggregated_UnassignMemberFromTeamTasksListener } from '../modules/task/internal/listeners/TeamAggregated_UnassignMemberFromTeamTasksListener.ts';
 import { ProjectAggregated_DeleteProjectTeam } from '../modules/team/internal/listeners/ProjectAggregated_DeleteProjectTeam.ts';
 import { ProjectAggregated_DeleteProjectTeamMember } from '../modules/team/internal/listeners/ProjectAggregated_DeleteProjectTeamMember.ts';
 import { ProjectAggregated_RemoveProjectTeamMember } from '../modules/team/internal/listeners/ProjectAggregated_RemoveProjectTeamMember.ts';
@@ -56,6 +58,11 @@ export async function startConsumers() {
     const teamMembershipPurgeListener =
         new TeamAggregated_PurgeTeamMembershipsListener();
 
+    const teamTaskOrphaningListener =
+        new TeamAggregated_OrphanTeamTasksListener();
+    const teamTaskUnassignmentListener =
+        new TeamAggregated_UnassignMemberFromTeamTasksListener();
+
     // Task Domain Aggregators
     const taskAggregator = new TaskEvents_BatchAggregator();
     const taskLinkAggregator = new TaskLinkEvents_BatchAggregator();
@@ -76,6 +83,8 @@ export async function startConsumers() {
         teamProjectTeamCountListener.init(),
         teamMemberCountListener.init(),
         teamMembershipPurgeListener.init(),
+        teamTaskOrphaningListener.init(),
+        teamTaskUnassignmentListener.init(),
         taskAggregator.init(),
         taskLinkAggregator.init(),
     ]);

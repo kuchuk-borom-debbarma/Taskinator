@@ -444,11 +444,12 @@ export const insertTask = async (param: {
         inserted_outbox AS (
             INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
             SELECT 
-                'task.created',
+                'task-events',
                 id::text,
                 jsonb_build_object(
+                    'type', 'task.created',
                     'taskId', id,
-                    'projectId', projectId,
+                    'projectId', "projectId",
                     'title', title,
                     'actorId', ${param.actorId}
                 )
@@ -644,9 +645,10 @@ export const deleteTask = async (param: {
         inserted_outbox AS (
             INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
             SELECT 
-                'task.deleted',
+                'task-events',
                 id::text,
                 jsonb_build_object(
+                    'type', 'task.deleted',
                     'taskId', id,
                     'projectId', projectId,
                     'teamId', "teamId",
@@ -1214,4 +1216,43 @@ export async function findLinksForTaskRepair(
             ]),
         )
         .execute();
+}
+/**
+ * Surgically unassign users from tasks within a specific team.
+ * [Action]: UNASSIGN_MEMBER_FROM_TEAM_TASKS
+ */
+export async function unassignMembersFromTeamTasksBatch(
+    teamId: string,
+    userIds: string[],
+    trx?: any,
+): Promise<{ affectedCount: number }> {
+    if (userIds.length === 0) return { affectedCount: 0 };
+
+    const result = await (trx || db)
+        .updateTable('project_task')
+        .set({ fk_member_id: null })
+        .where('fk_team_id', '=', teamId)
+        .where('fk_member_id', 'in', userIds)
+        .executeTakeFirst();
+
+    return { affectedCount: Number(result.numUpdatedRows) };
+}
+
+/**
+ * Orphan tasks when teams are deleted (keep tasks, but remove team/member associations).
+ * [Action]: ORPHAN_TEAM_TASKS
+ */
+export async function orphanTasksByTeamIdsBatch(
+    teamIds: string[],
+    trx?: any,
+): Promise<{ affectedCount: number }> {
+    if (teamIds.length === 0) return { affectedCount: 0 };
+
+    const result = await (trx || db)
+        .updateTable('project_task')
+        .set({ fk_team_id: null, fk_member_id: null })
+        .where('fk_team_id', 'in', teamIds)
+        .executeTakeFirst();
+
+    return { affectedCount: Number(result.numUpdatedRows) };
 }
