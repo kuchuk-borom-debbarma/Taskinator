@@ -8,8 +8,12 @@ import type {
 } from '../TaskService.ts';
 import { db } from '../../../database';
 import { decodeCursor, encodeCursor } from '../../../utils/utils.ts';
+import {
+    KAFKA_EVENTS,
+    KAFKA_TOPICS,
+} from '../../../utils/event-bus/constants.ts';
 import { sql } from 'kysely';
-import { NotFoundError, ConflictError } from '../../../graphql/errors.ts';
+import { NotFoundError, ConflictError } from '../../../utils/errors.ts';
 
 export const getTasksPage = async (
     userId: string,
@@ -710,7 +714,7 @@ export const insertTaskLink = async (param: {
         inserted_outbox AS (
             INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
             SELECT 
-                'task_link.created',
+                ${KAFKA_EVENTS.TASK_LINK.CREATED},
                 id::text,
                 jsonb_build_object(
                     'linkId', id,
@@ -753,16 +757,22 @@ export const deleteTaskLink = async (param: {
             WHERE id = ${param.linkId}::uuid
               AND fk_project_id = ${param.projectId}::uuid
               AND EXISTS (SELECT 1 FROM authorized)
-            RETURNING id, fk_project_id AS "projectId"
+            RETURNING 
+                id, 
+                fk_project_id AS "projectId",
+                source_task_id AS "sourceTaskId",
+                target_task_id AS "targetTaskId"
         ),
         inserted_outbox AS (
             INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
             SELECT 
-                'task_link.deleted',
+                ${KAFKA_EVENTS.TASK_LINK.DELETED},
                 id::text,
                 jsonb_build_object(
                     'linkId', id,
                     'projectId', projectId,
+                    'sourceTaskId', sourceTaskId,
+                    'targetTaskId', targetTaskId,
                     'actorId', ${param.actorId}
                 )
             FROM deleted_link
@@ -829,13 +839,15 @@ export const updateTaskLink = async (param: {
         inserted_outbox AS (
             INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
             SELECT 
-                'task_link.updated',
+                ${KAFKA_EVENTS.TASK_LINK.UPDATED},
                 id::text,
                 jsonb_build_object(
                     'linkId', id,
                     'projectId', projectId,
-                    'sourceTaskId', sourceTaskId,
-                    'targetTaskId', targetTaskId,
+                    'oldSourceTaskId', (SELECT source_task_id FROM current_link),
+                    'oldTargetTaskId', (SELECT target_task_id FROM current_link),
+                    'newSourceTaskId', sourceTaskId,
+                    'newTargetTaskId', targetTaskId,
                     'label', label,
                     'actorId', ${param.actorId}
                 )

@@ -46,6 +46,11 @@ export const KAFKA_EVENTS = {
         UPDATED: 'task.updated',
         DELETED: 'task.deleted',
     },
+    TASK_LINK: {
+        CREATED: 'task_link.created',
+        UPDATED: 'task_link.updated',
+        DELETED: 'task_link.deleted',
+    },
     TASK_AGGREGATED: {
         COUNTS_CHANGED: 'task.aggregated.counts_changed',
         MEMBERS_CHANGED: 'task.aggregated.members_changed',

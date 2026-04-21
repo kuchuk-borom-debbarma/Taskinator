@@ -13,6 +13,7 @@ import { ProjectAggregated_CountsChanged_SyncProjectMemberCountListener } from '
 import { ProjectAggregated_MemberRemoved_RemoveMemberFromAllProjectTeamsListener } from '../modules/team/internal/listeners/ProjectAggregated_MemberRemoved_RemoveMemberFromAllProjectTeamsListener.ts';
 import { ProjectAggregated_MemberRemoved_UnassignMemberFromProjectTasksListener } from '../modules/task/internal/listeners/ProjectAggregated_MemberRemoved_UnassignMemberFromProjectTasksListener.ts';
 import { TaskEvents_BatchAggregator } from './consumers/task/TaskEvents_BatchAggregator.ts';
+import { TaskLinkEvents_BatchAggregator } from './consumers/task/TaskLinkEvents_BatchAggregator.ts';
 import { TaskAggregated_CountsChanged_SyncProjectTaskCountListener } from '../modules/project/internal/listeners/TaskAggregated_CountsChanged_SyncProjectTaskCountListener.ts';
 import { TaskAggregated_CountsChanged_SyncTeamTaskCountListener } from '../modules/team/internal/listeners/TaskAggregated_CountsChanged_SyncTeamTaskCountListener.ts';
 import { TaskAggregated_MembersChanged_NotifyMemberAssignmentListener } from '../modules/internal-notification/internal/listeners/TaskAggregated_MembersChanged_NotifyMemberAssignmentListener.ts';
@@ -62,6 +63,7 @@ export async function startConsumers() {
 
     // Task Domain Aggregators & Listeners
     const taskAggregator = new TaskEvents_BatchAggregator();
+    const taskLinkAggregator = new TaskLinkEvents_BatchAggregator();
     const taskProjectCountListener =
         new TaskAggregated_CountsChanged_SyncProjectTaskCountListener();
     const taskTeamCountListener =
@@ -87,6 +89,7 @@ export async function startConsumers() {
         p_memberTeamCleanupListener.init(),
         p_memberTaskUnassignmentListener.init(),
         taskAggregator.init(),
+        taskLinkAggregator.init(),
         taskProjectCountListener.init(),
         taskTeamCountListener.init(),
         taskMemberAssignmentListener.init(),
