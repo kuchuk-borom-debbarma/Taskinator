@@ -3,6 +3,7 @@ import { ProjectAggregated_ChangeUserProjectCount } from '../modules/auth/intern
 import { ProjectAggregated_ChangeProjectMemberCount } from '../modules/project/internal/listeners/ProjectAggregated_ChangeProjectMemberCount.ts';
 import { ProjectAggregated_DeleteProjectMember } from '../modules/project/internal/listeners/ProjectAggregated_DeleteProjectMember.ts';
 import { ProjectAggregated_RemoveProjectMember } from '../modules/project/internal/listeners/ProjectAggregated_RemoveProjectMember.ts';
+import { TaskAggregated_SyncProjectTaskCountListener } from '../modules/project/internal/listeners/TaskAggregated_SyncProjectTaskCountListener.ts';
 import { TeamAggregated_SyncProjectTeamCountListener } from '../modules/project/internal/listeners/TeamAggregated_SyncProjectTeamCountListener.ts';
 import { ProjectAggregated_DeleteProjectTask } from '../modules/task/internal/listeners/ProjectAggregated_DeleteProjectTask.ts';
 import { ProjectAggregated_DeleteProjectTaskLink } from '../modules/task/internal/listeners/ProjectAggregated_DeleteProjectTaskLink.ts';
@@ -64,6 +65,8 @@ export async function startConsumers() {
 
     // Task Domain Aggregator
     const taskAggregator = new TaskEvents_BatchAggregator();
+    const taskProjectSyncListener =
+        new TaskAggregated_SyncProjectTaskCountListener();
 
     await Promise.all([
         projectAggregator.init(),
@@ -84,6 +87,7 @@ export async function startConsumers() {
         teamTaskOrphaningListener.init(),
         teamTaskUnassignmentListener.init(),
         taskAggregator.init(),
+        taskProjectSyncListener.init(),
     ]);
 
     logger.info('[Registry] All domain consumers and listeners initialized');
