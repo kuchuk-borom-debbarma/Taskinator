@@ -22,7 +22,7 @@ export const insertTeam = async (param: {
             INSERT INTO project_team (name, fk_project_id, fk_user_id)
             SELECT ${param.name}, ${param.projectId}::uuid, ${param.actorId}
             WHERE EXISTS (SELECT 1 FROM authorized)
-            RETURNING id, name, fk_project_id AS "projectId", fk_user_id AS "createdBy", version, last_event_id AS "lastEventId", created_at AS "createdAt", updated_at AS "updatedAt"
+            RETURNING id, name, fk_project_id AS "projectId", fk_user_id AS "createdBy", version, created_at AS "createdAt", updated_at AS "updatedAt"
         ),
         inserted_outbox AS (
             INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
@@ -88,7 +88,6 @@ export const getTeams = async (
             t.fk_project_id AS "projectId", 
             t.fk_user_id AS "createdBy", 
             t.version, 
-            t.last_event_id AS "lastEventId", 
             t.created_at AS "createdAt", 
             t.created_at::text as "epochPrecision",
             t.updated_at AS "updatedAt"
@@ -182,7 +181,6 @@ export const getTeamMembers = async (
             fk_team_id AS "teamId", 
             fk_user_id AS "userId", 
             version, 
-            last_event_id AS "lastEventId", 
             created_at AS "createdAt", 
             created_at::text as "epochPrecision",
             updated_at AS "updatedAt"
@@ -338,7 +336,6 @@ export const getTeamsByIds = async (teamIds: string[]): Promise<Team[]> => {
             fk_project_id AS "projectId", 
             fk_user_id AS "createdBy", 
             version, 
-            last_event_id AS "lastEventId", 
             created_at AS "createdAt", 
             updated_at AS "updatedAt"
         FROM project_team
@@ -361,7 +358,6 @@ export const getTeamsByActorIdAndIds = async (
             fk_project_id AS "projectId", 
             fk_user_id AS "createdBy", 
             version, 
-            last_event_id AS "lastEventId", 
             created_at AS "createdAt", 
             updated_at AS "updatedAt"
         FROM project_team
@@ -538,7 +534,7 @@ export const updateTeam = async (param: {
               AND version = ${param.version}
               AND EXISTS (SELECT 1 FROM authorized)
             RETURNING id, name, fk_project_id AS "projectId", fk_user_id AS "createdBy", 
-                      version, last_event_id AS "lastEventId", created_at AS "createdAt", updated_at AS "updatedAt"
+                      version, created_at AS "createdAt", updated_at AS "updatedAt"
         ),
         inserted_outbox AS (
             INSERT INTO outbox_events (kafka_topic, kafka_key, payload)

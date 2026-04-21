@@ -99,7 +99,6 @@ export const taskResolvers = {
             };
         },
         version: (parent: Task) => parent.version,
-        lastEventId: (parent: Task) => parent.lastEventId,
         createdBy: async (
             parent: Task,
             _args: any,

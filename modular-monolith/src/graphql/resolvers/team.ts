@@ -88,7 +88,6 @@ export const teamResolvers = {
         createdAt: (parent: Team) => parent.createdAt.toISOString(),
         updatedAt: (parent: Team) => parent.updatedAt?.toISOString() || null,
         version: (parent: Team) => parent.version,
-        lastEventId: (parent: Team) => parent.lastEventId,
         membersCount: (parent: Team) => parent.membersCount || 0,
         tasksCount: (parent: Team) => parent.tasksCount || 0,
     },

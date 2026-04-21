@@ -7,7 +7,6 @@ CREATE TABLE project (
     name TEXT NOT NULL,
     description TEXT,
     fk_user_id TEXT NOT NULL,
-    last_event_id UUID,
     version INTEGER NOT NULL DEFAULT 1,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
@@ -18,7 +17,6 @@ CREATE TABLE project_member (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     fk_project_id UUID NOT NULL,
     fk_user_id TEXT NOT NULL,
-    last_event_id UUID,
     version INTEGER NOT NULL DEFAULT 1,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
@@ -31,7 +29,6 @@ CREATE TABLE project_team (
     name TEXT NOT NULL,
     fk_project_id UUID NOT NULL,
     fk_user_id TEXT NOT NULL, -- Creator
-    last_event_id UUID,
     version INTEGER NOT NULL DEFAULT 1,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
@@ -43,7 +40,6 @@ CREATE TABLE project_team_member (
     fk_project_id UUID NOT NULL,
     fk_team_id UUID NOT NULL,
     fk_user_id TEXT NOT NULL,
-    last_event_id UUID,
     version INTEGER NOT NULL DEFAULT 1,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
@@ -59,7 +55,6 @@ CREATE TABLE project_task (
     title TEXT NOT NULL,
     description TEXT NOT NULL DEFAULT '',
     status TEXT NOT NULL DEFAULT 'TODO',
-    last_event_id UUID,
     version INTEGER NOT NULL DEFAULT 1,
     created_by TEXT NOT NULL,
     updated_by TEXT NOT NULL,

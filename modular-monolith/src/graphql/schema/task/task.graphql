@@ -86,17 +86,7 @@ type Task {
         before: String
     ): TaskLinkConnection!
 
-    """
-    Optimistic-concurrency version counter.
-    Incremented on every write. Use to detect stale updates.
-    """
     version: Int!
-
-    """
-    ID of the most recent event applied to this task.
-    Useful for event-sourcing consumers.
-    """
-    lastEventId: ID
 
     """
     User who created this task.

@@ -80,17 +80,7 @@ type Team {
     """
     updatedAt: String
 
-    """
-    Optimistic-concurrency version counter.
-    Incremented on every write. Use to detect stale updates.
-    """
     version: Int!
-
-    """
-    ID of the most recent event applied to this team.
-    Useful for event-sourcing consumers.
-    """
-    lastEventId: ID
 
     """
     Number of members in the team.

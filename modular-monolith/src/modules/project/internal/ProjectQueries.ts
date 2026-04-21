@@ -23,7 +23,6 @@ export async function insertProject(param: {
                 description, 
                 fk_user_id AS "userId", 
                 version, 
-                last_event_id AS "lastEventId", 
                 created_at AS "createdAt", 
                 created_at::text AS "epochPrecision",
                 updated_at AS "updatedAt"
@@ -71,7 +70,6 @@ export async function updateProject(param: {
                 description, 
                 fk_user_id AS "userId", 
                 version, 
-                last_event_id AS "lastEventId", 
                 created_at AS "createdAt", 
                 created_at::text AS "epochPrecision",
                 updated_at AS "updatedAt"
@@ -256,7 +254,6 @@ export const getProjects = async (
             description,
             fk_user_id AS "userId",
             version,
-            last_event_id AS "lastEventId",
             created_at AS "createdAt",
             created_at::text as "epochPrecision",
             updated_at AS "updatedAt",
@@ -341,7 +338,6 @@ export const getProjectMembers = async (
             fk_user_id AS "userId", 
             fk_project_id AS "projectId", 
             version, 
-            last_event_id AS "lastEventId", 
             created_at AS "createdAt", 
             created_at::text as "epochPrecision",
             updated_at AS "updatedAt"
@@ -403,7 +399,6 @@ export const getProjectMembersByIds = async (
             pm.fk_user_id AS "userId", 
             pm.fk_project_id AS "projectId", 
             pm.version, 
-            pm.last_event_id AS "lastEventId", 
             pm.created_at AS "createdAt", 
             pm.created_at::text AS "epochPrecision",
             pm.updated_at AS "updatedAt"
@@ -426,7 +421,6 @@ export const getProjectMembersByActorIdAndIds = async (
             pm.fk_user_id AS "userId", 
             pm.fk_project_id AS "projectId", 
             pm.version, 
-            pm.last_event_id AS "lastEventId", 
             pm.created_at AS "createdAt", 
             pm.created_at::text AS "epochPrecision",
             pm.updated_at AS "updatedAt"
@@ -455,7 +449,6 @@ export const getProjectsByIds = async (
             description,
             fk_user_id AS "userId",
             version,
-            last_event_id AS "lastEventId",
             created_at AS "createdAt",
             created_at::text AS "epochPrecision",
             updated_at AS "updatedAt"
@@ -479,7 +472,6 @@ export const getProjectsByActorIdAndProjectIds = async (
             description,
             fk_user_id AS "userId",
             version,
-            last_event_id AS "lastEventId",
             created_at AS "createdAt",
             created_at::text AS "epochPrecision",
             updated_at AS "updatedAt"

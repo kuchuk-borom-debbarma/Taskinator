@@ -11,7 +11,6 @@ export interface ProjectTable {
     name: string;
     description: string | null;
     fk_user_id: string;
-    last_event_id: string | null;
     version: Generated<number>;
     created_at: ColumnType<Date, string | undefined, never>;
     updated_at: ColumnType<Date, undefined>;
@@ -34,7 +33,6 @@ export interface ProjectMemberTable {
     id: Generated<string>;
     fk_project_id: string;
     fk_user_id: string;
-    last_event_id: string | null;
     version: Generated<number>;
     created_at: ColumnType<Date, string | undefined, never>;
     updated_at: ColumnType<Date, undefined>;

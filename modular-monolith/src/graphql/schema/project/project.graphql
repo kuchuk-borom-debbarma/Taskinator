@@ -58,17 +58,7 @@ type Project {
     """
     updatedAt: String
 
-    """
-    Optimistic-concurrency version counter.
-    Incremented on every write. Use to detect stale updates.
-    """
     version: Int!
-
-    """
-    ID of the most recent event applied to this project.
-    Useful for event-sourcing consumers.
-    """
-    lastEventId: ID
 
     projectMembersCount: Int!
 
