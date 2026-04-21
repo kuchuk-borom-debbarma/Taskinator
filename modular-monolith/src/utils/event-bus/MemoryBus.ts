@@ -15,8 +15,8 @@ export class MemoryBus implements Bus {
         topic: string,
         type: string,
         payload:
-            | { id?: string; key: string; data: any }
-            | Array<{ id?: string; key: string; data: any }>,
+            | { id?: string; key: string | null; data: any }
+            | Array<{ id?: string; key: string | null; data: any }>,
     ) {
         const items = Array.isArray(payload) ? payload : [payload];
         const events = items.map((i) => createEvent(type, i.key, i.data, i.id));

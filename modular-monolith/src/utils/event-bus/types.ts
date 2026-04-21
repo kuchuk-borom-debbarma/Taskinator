@@ -1,7 +1,7 @@
 export interface DomainEvent<T = any> {
     eventId: string;
     type: string;
-    key: string;
+    key: string | null;
     data: T;
     timestamp: string;
 }
@@ -14,8 +14,8 @@ export interface Bus {
         topic: string,
         type: string,
         payload:
-            | { id?: string; key: string; data: any }
-            | Array<{ id?: string; key: string; data: any }>,
+            | { id?: string; key: string | null; data: any }
+            | Array<{ id?: string; key: string | null; data: any }>,
     ): Promise<void>;
 
     /**

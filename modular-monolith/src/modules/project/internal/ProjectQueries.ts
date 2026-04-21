@@ -71,6 +71,18 @@ export async function updateProject(param: {
                 created_at::text AS "epochPrecision",
                 updated_at AS "updatedAt"
         ),
+        inserted_outbox AS (
+            INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
+            SELECT 
+                ${KAFKA_TOPICS.PROJECT},
+                id::text,
+                jsonb_build_object(
+                    'type', ${KAFKA_EVENTS.PROJECT.UPDATED},
+                    'projectId', id,
+                    'actorId', ${param.actorId},
+                    'name', name
+                )
+            FROM updated_project
         )
         SELECT * FROM updated_project
     `.execute(db);

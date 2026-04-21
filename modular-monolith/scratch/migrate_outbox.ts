@@ -1,5 +1,5 @@
 import { sql } from 'kysely';
-import { db } from './src/database';
+import { db } from '../src/database';
 
 async function migrate() {
     console.log('Migrating outbox_events table...');

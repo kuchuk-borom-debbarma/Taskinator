@@ -34,7 +34,8 @@ export async function startConsumers() {
     const p_projectCleanup = new ProjectAggregated_DeleteProjectMember();
 
     // Team Smart Aggregation Pipeline (Triggers on TEAM/MEMBER events)
-    const teamProjectMemberPurgeListener = new ProjectAggregated_RemoveProjectTeamMember();
+    const teamProjectMemberPurgeListener =
+        new ProjectAggregated_RemoveProjectTeamMember();
 
     // Project Member Cascading Pipeline
     const p_memberCountListener =
@@ -59,5 +60,7 @@ export async function startConsumers() {
         p_memberTaskUnassignmentListener.init(),
         taskAggregator.init(),
         taskLinkAggregator.init(),
-        logger.info('[Registry] All domain consumers and listeners initialized');
-    }
+    ]);
+
+    logger.info('[Registry] All domain consumers and listeners initialized');
+}

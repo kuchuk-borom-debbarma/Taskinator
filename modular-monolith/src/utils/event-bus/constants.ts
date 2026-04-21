@@ -16,12 +16,14 @@ export const KAFKA_EVENTS = {
         DELETED: 'project.deleted',
         MEMBERS_ADDED: 'project.members_added',
         MEMBERS_REMOVED: 'project.members_removed',
+        UPDATED: 'project.updated',
     },
     TEAM: {
         CREATED: 'team.created',
         DELETED: 'team.deleted',
         MEMBERS_ADDED: 'team.members_added',
         MEMBERS_REMOVED: 'team.members_removed',
+        UPDATED: 'team.updated',
     },
     AUTH: {
         SIGNUP_STARTED: 'auth.signup.started',
@@ -45,12 +47,12 @@ export const KAFKA_EVENTS = {
         DELETE_PROJECT_TASK_LINK: 'project.aggregated.delete_project_task_link',
     },
     TEAM_AGGREGATED: {
-        PROJECT_TEAM_COUNTS_CHANGED:
-            'team.aggregated.project_team_counts_changed',
-        TEAM_MEMBER_COUNTS_CHANGED:
-            'team.aggregated.team_member_counts_changed',
-        DELETED: 'team.aggregated.deleted',
-        MEMBER_REMOVED: 'team.aggregated.member_removed',
+        SYNC_PROJECT_TEAM_COUNT: 'team.aggregated.sync_project_team_count',
+        SYNC_TEAM_MEMBER_COUNT: 'team.aggregated.sync_team_member_count',
+        UNASSIGN_MEMBER_FROM_TEAM_TASKS:
+            'team.aggregated.unassign_member_from_team_tasks',
+        PURGE_TEAM_MEMBERSHIPS: 'team.aggregated.purge_team_memberships',
+        ORPHAN_TEAM_TASKS: 'team.aggregated.orphan_team_tasks',
     },
     TASK: {
         CREATED: 'task.created',

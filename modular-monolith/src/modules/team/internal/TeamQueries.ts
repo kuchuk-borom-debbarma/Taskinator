@@ -1,5 +1,5 @@
-import { sql } from 'kysely';
-import { db } from '../../../database';
+import { sql, type Transaction } from 'kysely';
+import { type Database, db } from '../../../database';
 import { ConflictError, NotFoundError } from '../../../graphql/errors.ts';
 import type { PaginationParams } from '../../../types/pagination.ts';
 import { decodeCursor, encodeCursor } from '../../../utils/utils.ts';

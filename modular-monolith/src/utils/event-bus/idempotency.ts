@@ -87,7 +87,7 @@ export async function claimEventsAtomic(
 
 export function createEvent(
     type: string,
-    key: string,
+    key: string | null,
     data: any,
     id?: string,
 ): DomainEvent {

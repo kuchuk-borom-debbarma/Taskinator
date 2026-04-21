@@ -1,5 +1,5 @@
-import { sql } from 'kysely';
-import { db } from '../../../database';
+import { sql, type Transaction } from 'kysely';
+import { type Database, db } from '../../../database';
 import { ConflictError, NotFoundError } from '../../../graphql/errors.ts';
 import { KAFKA_EVENTS } from '../../../utils/event-bus/constants.ts';
 import { decodeCursor, encodeCursor } from '../../../utils/utils.ts';
@@ -1133,7 +1133,7 @@ export const unassignProjectTaskMembersBatch = async (
           AND project_task.fk_member_id = ANY(V.uids)
     `.execute(trx || db);
 
-    return { affectedCount: Number(result.numUpdatedRows) };
+    return { affectedCount: Number((result as any).numUpdatedRows ?? 0) };
 };
 
 /**
