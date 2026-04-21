@@ -1,9 +1,10 @@
 import { db } from '../../../../database';
+import { logger } from '../../../../logger';
 import {
     KAFKA_EVENTS,
     KAFKA_TOPICS,
 } from '../../../../utils/event-bus/constants.ts';
-import { logger } from '../../../../logger';
+import { appendEventsToOutbox } from '../../../../utils/event-bus/OutboxQueries.ts';
 
 /**
  * Publishes aggregated task count changes for Projects and Teams using the Transactional Outbox.
@@ -47,7 +48,7 @@ export class TaskCountHandler {
             })),
         ];
 
-        await db.insertInto('outbox_events').values(outboxEntries).execute();
+        await appendEventsToOutbox(db, outboxEntries);
     }
 
     async handleMemberAssignments(
@@ -70,6 +71,6 @@ export class TaskCountHandler {
             },
         }));
 
-        await db.insertInto('outbox_events').values(outboxEntries).execute();
+        await appendEventsToOutbox(db, outboxEntries);
     }
 }

@@ -1,10 +1,9 @@
 import { ProjectEvents_BatchAggregator } from './consumers/project/ProjectEvents_BatchAggregator.ts';
 import { TeamEvents_BatchAggregator } from './consumers/team/TeamEvents_BatchAggregator.ts';
 import { ProjectAggregated_CountsChanged_SyncUserProjectCountListener } from '../modules/auth/internal/listeners/ProjectAggregated_CountsChanged_SyncUserProjectCountListener.ts';
-import { ProjectAggregated_Deleted_DeleteTeamsByProjectIdsListener } from '../modules/team/internal/listeners/ProjectAggregated_Deleted_DeleteTeamsByProjectIdsListener.ts';
-import { ProjectAggregated_Deleted_DeleteTeamMembersByProjectIdsListener } from '../modules/team/internal/listeners/ProjectAggregated_Deleted_DeleteTeamMembersByProjectIdsListener.ts';
-import { ProjectAggregated_Deleted_DeleteTasksByProjectIdsListener } from '../modules/task/internal/listeners/ProjectAggregated_Deleted_DeleteTasksByProjectIdsListener.ts';
-import { ProjectAggregated_Deleted_DeleteTaskLinksByProjectIdsListener } from '../modules/task/internal/listeners/ProjectAggregated_Deleted_DeleteTaskLinksByProjectIdsListener.ts';
+import { ProjectDeleted_TeamCleanupListener } from '../modules/team/internal/listeners/ProjectDeleted_TeamCleanupListener.ts';
+import { ProjectDeleted_TaskCleanupListener } from '../modules/task/internal/listeners/ProjectDeleted_TaskCleanupListener.ts';
+import { ProjectDeleted_ProjectCleanupListener } from '../modules/project/internal/listeners/ProjectDeleted_ProjectCleanupListener.ts';
 import { TeamAggregated_CountsChanged_SyncProjectTeamCountListener } from '../modules/project/internal/listeners/TeamAggregated_CountsChanged_SyncProjectTeamCountListener.ts';
 import { TeamAggregated_CountsChanged_SyncTeamMemberCountListener } from '../modules/team/internal/listeners/TeamAggregated_CountsChanged_SyncTeamMemberCountListener.ts';
 import { TeamAggregated_Deleted_UnassignTasksByTeamIdsListener } from '../modules/task/internal/listeners/TeamAggregated_Deleted_UnassignTasksByTeamIdsListener.ts';
@@ -17,7 +16,7 @@ import { TaskLinkEvents_BatchAggregator } from './consumers/task/TaskLinkEvents_
 import { TaskAggregated_CountsChanged_SyncProjectTaskCountListener } from '../modules/project/internal/listeners/TaskAggregated_CountsChanged_SyncProjectTaskCountListener.ts';
 import { TaskAggregated_CountsChanged_SyncTeamTaskCountListener } from '../modules/team/internal/listeners/TaskAggregated_CountsChanged_SyncTeamTaskCountListener.ts';
 import { TaskAggregated_MembersChanged_NotifyMemberAssignmentListener } from '../modules/internal-notification/internal/listeners/TaskAggregated_MembersChanged_NotifyMemberAssignmentListener.ts';
-import { TaskAggregated_Deleted_PurgeTaskNetworkListener } from '../modules/task/internal/listeners/TaskAggregated_Deleted_PurgeTaskNetworkListener.ts';
+import { TaskDeleted_TaskCleanupListener } from '../modules/task/internal/listeners/TaskDeleted_TaskCleanupListener.ts';
 import { TaskAggregated_DirectLinkCountsChanged_SyncTaskCountsListener } from '../modules/task/internal/listeners/TaskAggregated_DirectLinkCountsChanged_SyncTaskCountsListener.ts';
 import { TaskAggregated_Reachability_ExpandListener } from '../modules/task/internal/listeners/TaskAggregated_Reachability_ExpandListener.ts';
 import { logger } from '../logger';
@@ -35,15 +34,10 @@ export async function startConsumers() {
     const authProjectListener =
         new ProjectAggregated_CountsChanged_SyncUserProjectCountListener();
 
-    // Project Deletion Pipeline (Triggers when a PROJECT is deleted)
-    const p_teamCleanup =
-        new ProjectAggregated_Deleted_DeleteTeamsByProjectIdsListener();
-    const p_teamMemberCleanup =
-        new ProjectAggregated_Deleted_DeleteTeamMembersByProjectIdsListener();
-    const p_taskCleanup =
-        new ProjectAggregated_Deleted_DeleteTasksByProjectIdsListener();
-    const p_taskLinkCleanup =
-        new ProjectAggregated_Deleted_DeleteTaskLinksByProjectIdsListener();
+    // Decentralized Cleanup Pipeline (Triggers when a PROJECT is deleted)
+    const p_taskCleanup = new ProjectDeleted_TaskCleanupListener();
+    const p_teamCleanup = new ProjectDeleted_TeamCleanupListener();
+    const p_projectCleanup = new ProjectDeleted_ProjectCleanupListener();
 
     // Team Smart Aggregation Pipeline (Triggers on TEAM/MEMBER events)
     const teamProjectCountListener =
@@ -72,8 +66,7 @@ export async function startConsumers() {
         new TaskAggregated_CountsChanged_SyncTeamTaskCountListener();
     const taskMemberAssignmentListener =
         new TaskAggregated_MembersChanged_NotifyMemberAssignmentListener();
-    const taskIndividualCleanupListener =
-        new TaskAggregated_Deleted_PurgeTaskNetworkListener();
+    const taskCleanupListener = new TaskDeleted_TaskCleanupListener();
     const taskDirectLinkCountsListener =
         new TaskAggregated_DirectLinkCountsChanged_SyncTaskCountsListener();
     const taskReachabilityExpandListener =
@@ -83,10 +76,9 @@ export async function startConsumers() {
         projectAggregator.init(),
         teamAggregator.init(),
         authProjectListener.init(),
-        p_teamCleanup.init(),
-        p_teamMemberCleanup.init(),
         p_taskCleanup.init(),
-        p_taskLinkCleanup.init(),
+        p_teamCleanup.init(),
+        p_projectCleanup.init(),
         teamProjectCountListener.init(),
         teamMemberCountListener.init(),
         teamCleanupListener.init(),
@@ -98,8 +90,7 @@ export async function startConsumers() {
         taskLinkAggregator.init(),
         taskProjectCountListener.init(),
         taskTeamCountListener.init(),
-        taskMemberAssignmentListener.init(),
-        taskIndividualCleanupListener.init(),
+        taskCleanupListener.init(),
         taskDirectLinkCountsListener.init(),
         taskReachabilityExpandListener.init(),
     ]);

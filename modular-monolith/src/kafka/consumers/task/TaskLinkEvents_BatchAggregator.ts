@@ -12,6 +12,8 @@ import {
 } from '../../../modules/task/internal/ReachabilityQueries.ts';
 import { claimEventsAtomic } from '../../../utils/event-bus/idempotency.ts';
 
+import { appendEventsToOutbox } from '../../../utils/event-bus/OutboxQueries.ts';
+
 interface Edge {
     s: string;
     t: string;
@@ -169,8 +171,6 @@ export class TaskLinkEvents_BatchAggregator {
             // 3. Atomicaly Signal results via Transactional Outbox
             await db.transaction().execute(async (trx) => {
                 // [NEW] ATOMIC CLAIM: Deduplicate events at the database level.
-                // This ensures that if the server crashes before this transaction commits,
-                // the events are NOT marked as processed.
                 const projectEvents = events.filter(
                     (e) => e.data.projectId === projectId,
                 );
@@ -181,9 +181,6 @@ export class TaskLinkEvents_BatchAggregator {
                 );
 
                 if (approvedEvents.length === 0) {
-                    logger.info(
-                        `[Task Link Aggregator] Project ${projectId}: Skipping redundant/retried batch`,
-                    );
                     return;
                 }
 
@@ -230,10 +227,7 @@ export class TaskLinkEvents_BatchAggregator {
                     logger.info(
                         `[Task Link Aggregator] Project ${projectId}: Atomically signaling ${outboxEntries.length} outbox events`,
                     );
-                    await trx
-                        .insertInto('outbox_events')
-                        .values(outboxEntries)
-                        .execute();
+                    await appendEventsToOutbox(trx, outboxEntries);
                 }
             });
         }

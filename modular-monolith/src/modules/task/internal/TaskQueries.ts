@@ -1060,3 +1060,104 @@ export const updateTaskLinkCountsBatch = async (
           AND project_task.fk_project_id = ${projectId}::uuid
     `.execute(db);
 };
+
+/**
+ * Atomic removal of all task-related data for specific projects.
+ */
+export async function purgeTaskDataByProjectIds(
+    trx: any,
+    projectIds: string[],
+): Promise<void> {
+    if (projectIds.length === 0) return;
+
+    await trx
+        .deleteFrom('task_reachability')
+        .where('fk_project_id', 'in', projectIds)
+        .execute();
+
+    await trx
+        .deleteFrom('task_link')
+        .where('fk_project_id', 'in', projectIds)
+        .execute();
+
+    await trx
+        .deleteFrom('project_task')
+        .where('fk_project_id', 'in', projectIds)
+        .execute();
+}
+
+/**
+ * Atomic removal of specific tasks and their incident links/reachability.
+ */
+export async function purgeLocalTaskDataByTaskIds(
+    trx: any,
+    taskIds: string[],
+): Promise<void> {
+    if (taskIds.length === 0) return;
+
+    await trx
+        .deleteFrom('task_reachability')
+        .where((eb: any) =>
+            eb.or([
+                eb('ancestor_task_id', 'in', taskIds),
+                eb('descendant_task_id', 'in', taskIds),
+            ]),
+        )
+        .execute();
+
+    await trx
+        .deleteFrom('task_link')
+        .where((eb: any) =>
+            eb.or([
+                eb('source_task_id', 'in', taskIds),
+                eb('target_task_id', 'in', taskIds),
+            ]),
+        )
+        .execute();
+
+    await trx.deleteFrom('project_task').where('id', 'in', taskIds).execute();
+}
+
+/**
+ * Bulk repair of Project Task counts.
+ */
+export async function incrementProjectTaskCountsBulk(
+    trx: any,
+    deltas: Map<string, number>,
+): Promise<void> {
+    const entries = Array.from(deltas.entries());
+    if (entries.length === 0) return;
+
+    const projectIds = entries.map(([pid]) => pid);
+    const deltaList = entries.map(([, d]) => d);
+
+    await sql`
+        UPDATE project SET 
+            tasks_count = project.tasks_count + v.delta,
+            updated_at = NOW()
+        FROM (
+            SELECT * FROM UNNEST(${projectIds}::uuid[], ${deltaList}::int[])
+        ) AS v(pid, delta)
+        WHERE project.id = v.pid
+    `.execute(trx);
+}
+
+/**
+ * Finds all links associated with specific tasks for repair signaling.
+ */
+export async function findLinksForTaskRepair(
+    taskIds: string[],
+): Promise<any[]> {
+    if (taskIds.length === 0) return [];
+
+    return await db
+        .selectFrom('task_link')
+        .select(['id', 'fk_project_id', 'source_task_id', 'target_task_id'])
+        .where((eb) =>
+            eb.or([
+                eb('source_task_id', 'in', taskIds),
+                eb('target_task_id', 'in', taskIds),
+            ]),
+        )
+        .execute();
+}

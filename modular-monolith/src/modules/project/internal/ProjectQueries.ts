@@ -557,3 +557,68 @@ export async function updateProjectTaskCountsBulk(
         WHERE project.id = v.id
     `.execute(db);
 }
+
+/**
+ * Atomic removal of project members and the project record itself.
+ */
+export async function purgeProjectCoreAndMembersByProjectIds(
+    trx: any,
+    projectIds: string[],
+): Promise<void> {
+    if (projectIds.length === 0) return;
+
+    // Ordered deletion to prevent potential reference issues even without FKs
+    await trx
+        .deleteFrom('project_member')
+        .where('fk_project_id', 'in', projectIds)
+        .execute();
+
+    await trx.deleteFrom('project').where('id', 'in', projectIds).execute();
+}
+
+/**
+ * Bulk repair of User Project counts.
+ */
+export async function incrementUserProjectCountsBulk(
+    trx: any,
+    deltas: Map<string, number>,
+): Promise<void> {
+    const entries = Array.from(deltas.entries());
+    if (entries.length === 0) return;
+
+    const userIds = entries.map(([uid]) => uid);
+    const deltaList = entries.map(([, d]) => d);
+
+    await sql`
+        UPDATE users SET 
+            projects_count = users.projects_count + v.delta
+        FROM (
+            SELECT * FROM UNNEST(${userIds}::text[], ${deltaList}::int[])
+        ) AS v(uid, delta)
+        WHERE users.id = v.uid
+    `.execute(trx);
+}
+
+/**
+ * Bulk repair of Project Member counts.
+ */
+export async function incrementProjectMemberCountsBulk(
+    trx: any,
+    deltas: Map<string, number>,
+): Promise<void> {
+    const entries = Array.from(deltas.entries());
+    if (entries.length === 0) return;
+
+    const projectIds = entries.map(([pid]) => pid);
+    const deltaList = entries.map(([, d]) => d);
+
+    await sql`
+        UPDATE project SET 
+            members_count = project.members_count + v.delta,
+            updated_at = NOW()
+        FROM (
+            SELECT * FROM UNNEST(${projectIds}::uuid[], ${deltaList}::int[])
+        ) AS v(pid, delta)
+        WHERE project.id = v.pid
+    `.execute(trx);
+}
