@@ -739,7 +739,7 @@ export async function deleteProjectTeamBatch(
  * Bulk repair of Team Member counts.
  */
 export async function incrementTeamMemberCountsBulk(
-    trx: any,
+    trx: Transaction<Database> | null,
     deltas: Map<string, number>,
 ): Promise<void> {
     const entries = Array.from(deltas.entries());
@@ -756,7 +756,7 @@ export async function incrementTeamMemberCountsBulk(
             SELECT * FROM UNNEST(${teamIds}::uuid[], ${deltaList}::int[])
         ) AS v(tid, delta)
         WHERE project_team.id = v.tid
-    `.execute(trx);
+    `.execute(trx || db);
 }
 
 /**
@@ -780,5 +780,5 @@ export async function incrementProjectTeamCountsBulk(
             SELECT * FROM UNNEST(${projectIds}::uuid[], ${deltaList}::int[])
         ) AS v(pid, delta)
         WHERE project.id = v.pid
-    `.execute(trx);
+    `.execute(trx || db);
 }

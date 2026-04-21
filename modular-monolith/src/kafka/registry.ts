@@ -10,6 +10,7 @@ import { ProjectAggregated_UnassignProjectTaskMember } from '../modules/task/int
 import { ProjectAggregated_DeleteProjectTeam } from '../modules/team/internal/listeners/ProjectAggregated_DeleteProjectTeam.ts';
 import { ProjectAggregated_DeleteProjectTeamMember } from '../modules/team/internal/listeners/ProjectAggregated_DeleteProjectTeamMember.ts';
 import { ProjectAggregated_RemoveProjectTeamMember } from '../modules/team/internal/listeners/ProjectAggregated_RemoveProjectTeamMember.ts';
+import { TeamAggregated_SyncTeamMemberCountListener } from '../modules/team/internal/listeners/TeamAggregated_SyncTeamMemberCountListener.ts';
 import { ProjectEvents_BatchAggregator } from './smart-aggregator-consumer/project/ProjectEvents_BatchAggregator.ts';
 import { TaskEvents_BatchAggregator } from './smart-aggregator-consumer/task/TaskEvents_BatchAggregator.ts';
 import { TaskLinkEvents_BatchAggregator } from './smart-aggregator-consumer/task/TaskLinkEvents_BatchAggregator.ts';
@@ -48,6 +49,9 @@ export async function startConsumers() {
     const teamProjectTeamCountListener =
         new TeamAggregated_SyncProjectTeamCountListener();
 
+    const teamMemberCountListener =
+        new TeamAggregated_SyncTeamMemberCountListener();
+
     // Task Domain Aggregators
     const taskAggregator = new TaskEvents_BatchAggregator();
     const taskLinkAggregator = new TaskLinkEvents_BatchAggregator();
@@ -63,6 +67,7 @@ export async function startConsumers() {
         teamProjectMemberPurgeListener.init(),
         p_memberTaskUnassignmentListener.init(),
         teamProjectTeamCountListener.init(),
+        teamMemberCountListener.init(),
         taskAggregator.init(),
         taskLinkAggregator.init(),
     ]);
