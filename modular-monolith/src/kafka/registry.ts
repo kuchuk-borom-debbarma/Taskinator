@@ -16,7 +16,6 @@ import { TeamAggregated_PurgeTeamMembershipsListener } from '../modules/team/int
 import { TeamAggregated_SyncTeamMemberCountListener } from '../modules/team/internal/listeners/TeamAggregated_SyncTeamMemberCountListener.ts';
 import { ProjectEvents_BatchAggregator } from './smart-aggregator-consumer/project/ProjectEvents_BatchAggregator.ts';
 import { TaskEvents_BatchAggregator } from './smart-aggregator-consumer/task/TaskEvents_BatchAggregator.ts';
-import { TaskLinkEvents_BatchAggregator } from './smart-aggregator-consumer/task/TaskLinkEvents_BatchAggregator.ts';
 import { TeamEvents_BatchAggregator } from './smart-aggregator-consumer/team/TeamEvents_BatchAggregator.ts';
 
 /**
@@ -63,9 +62,8 @@ export async function startConsumers() {
     const teamTaskUnassignmentListener =
         new TeamAggregated_UnassignMemberFromTeamTasksListener();
 
-    // Task Domain Aggregators
+    // Task Domain Aggregator
     const taskAggregator = new TaskEvents_BatchAggregator();
-    const taskLinkAggregator = new TaskLinkEvents_BatchAggregator();
 
     await Promise.all([
         projectAggregator.init(),
@@ -86,7 +84,6 @@ export async function startConsumers() {
         teamTaskOrphaningListener.init(),
         teamTaskUnassignmentListener.init(),
         taskAggregator.init(),
-        taskLinkAggregator.init(),
     ]);
 
     logger.info('[Registry] All domain consumers and listeners initialized');
