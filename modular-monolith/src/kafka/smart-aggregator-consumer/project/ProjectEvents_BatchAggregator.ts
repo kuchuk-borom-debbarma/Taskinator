@@ -119,14 +119,15 @@ export class ProjectEvents_BatchAggregator {
             }
         }
 
-        // 3. Build all outbox entries (pure data, no I/O)
-        // NOTE: We do NOT use specific kafka_keys here to maximize partition throughput.
-        // Since these aggregated signals are either Commutative Deltas (counts) or
-        // Idempotent Purges (cleanups), strictly ordered delivery per user/project
-        // is not required, allowing for better load distribution across Kafka consumers.
+        // --- 3. Build all outbox entries (Pure Semantic Signals) ---
+        // These events are handled by Execution Listeners in various modules (Project, Team, Task, Auth).
+
         const outboxEntries: OutboxEntry[] = [];
 
-        // User project count changes
+        /**
+         * [Auth Domain] Update User Project Count
+         * Signaling: Project Created (+1) or Deleted (-1)
+         */
         for (const [userId, delta] of userIncrements.entries()) {
             outboxEntries.push({
                 kafka_topic: KAFKA_TOPICS.PROJECT_AGGREGATED,
@@ -139,7 +140,10 @@ export class ProjectEvents_BatchAggregator {
             });
         }
 
-        // Project member count changes
+        /**
+         * [Project Domain] Update Project Member Count
+         * Signaling: Member Added (+1) or Removed (-1)
+         */
         for (const [projectId, delta] of memberIncrements.entries()) {
             outboxEntries.push({
                 kafka_topic: KAFKA_TOPICS.PROJECT_AGGREGATED,
@@ -152,20 +156,51 @@ export class ProjectEvents_BatchAggregator {
             });
         }
 
-        // Member removal cleanup
+        /**
+         * [Cross-Domain Cascade] Specific Member Removal Orchestration
+         * Signaling: Explicit instructions for downstream modules to purge user-specific data.
+         */
         for (const [projectId, userIds] of memberRemovals.entries()) {
+            // [Team Module] Instruction to purge the user from all project teams
             outboxEntries.push({
                 kafka_topic: KAFKA_TOPICS.PROJECT_AGGREGATED,
                 payload: {
-                    type: KAFKA_EVENTS.PROJECT_AGGREGATED.REMOVE_PROJECT_MEMBER,
+                    type: KAFKA_EVENTS.PROJECT_AGGREGATED
+                        .REMOVE_MEMBER_FROM_PROJECT_TEAMS,
+                    projectId,
+                    userIds,
+                },
+            });
+
+            // [Task Module] Instruction to unassign the user from all project tasks
+            outboxEntries.push({
+                kafka_topic: KAFKA_TOPICS.PROJECT_AGGREGATED,
+                payload: {
+                    type: KAFKA_EVENTS.PROJECT_AGGREGATED
+                        .UNASSIGN_MEMBER_FROM_PROJECT_TASKS,
                     projectId,
                     userIds,
                 },
             });
         }
 
-        // Project deletion cleanup - cascading commands to other modules
+        /**
+         * [Global Decommissioning] Project Deletion Cascade
+         * Signaling: Entire projects have been deleted.
+         * Triggers a coordinated purge across all modules.
+         */
         if (deletedProjectIds.length > 0) {
+            // [Project Module] Cleanup project members
+            outboxEntries.push({
+                kafka_topic: KAFKA_TOPICS.PROJECT_AGGREGATED,
+                payload: {
+                    type: KAFKA_EVENTS.PROJECT_AGGREGATED
+                        .DELETE_PROJECT_MEMBERS,
+                    projectIds: deletedProjectIds,
+                },
+            });
+
+            // [Team Module] Cleanup all teams in the project
             outboxEntries.push({
                 kafka_topic: KAFKA_TOPICS.PROJECT_AGGREGATED,
                 payload: {
@@ -173,6 +208,8 @@ export class ProjectEvents_BatchAggregator {
                     projectIds: deletedProjectIds,
                 },
             });
+
+            // [Team Module] Cleanup all team membership records
             outboxEntries.push({
                 kafka_topic: KAFKA_TOPICS.PROJECT_AGGREGATED,
                 payload: {
@@ -181,6 +218,8 @@ export class ProjectEvents_BatchAggregator {
                     projectIds: deletedProjectIds,
                 },
             });
+
+            // [Task Module] Cleanup all tasks in the project
             outboxEntries.push({
                 kafka_topic: KAFKA_TOPICS.PROJECT_AGGREGATED,
                 payload: {
@@ -188,6 +227,8 @@ export class ProjectEvents_BatchAggregator {
                     projectIds: deletedProjectIds,
                 },
             });
+
+            // [Task Module] Cleanup all project task links
             outboxEntries.push({
                 kafka_topic: KAFKA_TOPICS.PROJECT_AGGREGATED,
                 payload: {
