@@ -67,11 +67,8 @@ export const KAFKA_EVENTS = {
     TASK_AGGREGATED: {
         SYNC_PROJECT_TASK_COUNT: 'task.aggregated.sync_project_task_count',
         SYNC_TEAM_TASK_COUNT: 'task.aggregated.sync_team_task_count',
-        UPDATE_MEMBER_ASSIGNED_TASK_COUNT:
-            'task.aggregated.update_member_assigned_task_count',
-        PURGE_TASK_COMMENTS: 'task.aggregated.purge_task_comments',
-        PURGE_TASK_ATTACHMENTS: 'task.aggregated.purge_task_attachments',
         DELETE_TASK_LINKS: 'task.aggregated.delete_task_links',
+        DELETE_TASK_REACHABILITY: 'task.aggregated.delete_task_reachability',
         // Deprecated
         COUNTS_CHANGED: 'task.aggregated.counts_changed',
         MEMBERS_CHANGED: 'task.aggregated.members_changed',

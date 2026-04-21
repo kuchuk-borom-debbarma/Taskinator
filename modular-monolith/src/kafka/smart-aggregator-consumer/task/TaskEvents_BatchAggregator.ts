@@ -62,8 +62,7 @@ export class TaskEvents_BatchAggregator {
             // [2] Semantic Folding & Delta Calculation
             const projectDeltas = new Map<string, number>();
             const teamDeltas = new Map<string, number>();
-            const memberDeltas = new Map<string, number>();
-            const deletedTaskIds: string[] = [];
+            const deletedTaskIds = new Set<string>();
 
             for (const event of unprocessed) {
                 const data = event.data;
@@ -81,12 +80,6 @@ export class TaskEvents_BatchAggregator {
                                 (teamDeltas.get(data.teamId) || 0) + 1,
                             );
                         }
-                        if (data.memberId) {
-                            memberDeltas.set(
-                                data.memberId,
-                                (memberDeltas.get(data.memberId) || 0) + 1,
-                            );
-                        }
                         break;
 
                     case KAFKA_EVENTS.TASK.DELETED:
@@ -100,19 +93,13 @@ export class TaskEvents_BatchAggregator {
                                 (teamDeltas.get(data.teamId) || 0) - 1,
                             );
                         }
-                        if (data.memberId) {
-                            memberDeltas.set(
-                                data.memberId,
-                                (memberDeltas.get(data.memberId) || 0) - 1,
-                            );
-                        }
-                        deletedTaskIds.push(taskId);
+                        deletedTaskIds.add(taskId);
                         break;
 
                     case KAFKA_EVENTS.TASK.UPDATED: {
                         const { old, new: newState } = data;
 
-                        // Team Changes
+                        // Team Changes (Folding team task counts)
                         if (old.teamId !== newState.teamId) {
                             if (old.teamId)
                                 teamDeltas.set(
@@ -123,21 +110,6 @@ export class TaskEvents_BatchAggregator {
                                 teamDeltas.set(
                                     newState.teamId,
                                     (teamDeltas.get(newState.teamId) || 0) + 1,
-                                );
-                        }
-
-                        // Member Changes (Assignment Delta)
-                        if (old.memberId !== newState.memberId) {
-                            if (old.memberId)
-                                memberDeltas.set(
-                                    old.memberId,
-                                    (memberDeltas.get(old.memberId) || 0) - 1,
-                                );
-                            if (newState.memberId)
-                                memberDeltas.set(
-                                    newState.memberId,
-                                    (memberDeltas.get(newState.memberId) || 0) +
-                                        1,
                                 );
                         }
                         break;
@@ -175,42 +147,27 @@ export class TaskEvents_BatchAggregator {
                 });
             }
 
-            // Member Assignment Updates
-            for (const [userId, delta] of memberDeltas.entries()) {
-                if (delta === 0) continue;
-                outboxEntries.push({
-                    kafka_topic: KAFKA_TOPICS.TASK_AGGREGATED,
-                    payload: {
-                        type: KAFKA_EVENTS.TASK_AGGREGATED
-                            .UPDATE_MEMBER_ASSIGNED_TASK_COUNT,
-                        userId,
-                        delta,
-                    },
-                });
-            }
+            // Bulk Cleanup Actions (Triggered on task deletion)
+            if (deletedTaskIds.size > 0) {
+                const ids = Array.from(deletedTaskIds);
 
-            // Bulk Cleanup Actions
-            if (deletedTaskIds.length > 0) {
+                // Signal Task Module to purge direct links
                 outboxEntries.push({
                     kafka_topic: KAFKA_TOPICS.TASK_AGGREGATED,
                     payload: {
                         type: KAFKA_EVENTS.TASK_AGGREGATED.DELETE_TASK_LINKS,
-                        taskIds: deletedTaskIds,
+                        taskIds: ids,
                     },
                 });
-                outboxEntries.push({
-                    kafka_topic: KAFKA_TOPICS.TASK_AGGREGATED,
-                    payload: {
-                        type: KAFKA_EVENTS.TASK_AGGREGATED.PURGE_TASK_COMMENTS,
-                        taskIds: deletedTaskIds,
-                    },
-                });
+
+                // Signal Task Module to repair reachability paths
+                // This is a separate, heavy operation that must be handled by the listener
                 outboxEntries.push({
                     kafka_topic: KAFKA_TOPICS.TASK_AGGREGATED,
                     payload: {
                         type: KAFKA_EVENTS.TASK_AGGREGATED
-                            .PURGE_TASK_ATTACHMENTS,
-                        taskIds: deletedTaskIds,
+                            .DELETE_TASK_REACHABILITY,
+                        taskIds: ids,
                     },
                 });
             }
