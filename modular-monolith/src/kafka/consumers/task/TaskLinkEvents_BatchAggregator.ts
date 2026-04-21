@@ -1,10 +1,14 @@
-import eventBus from '../../../../utils/EventBus.ts';
+import eventBus from '../../../utils/EventBus.ts';
 import {
     KAFKA_EVENTS,
     KAFKA_TOPICS,
-} from '../../../../utils/event-bus/constants.ts';
-import type { DomainEvent } from '../../../../utils/event-bus/types.ts';
-import { logger } from '../../../../logger';
+} from '../../../utils/event-bus/constants.ts';
+import type { DomainEvent } from '../../../utils/event-bus/types.ts';
+import { logger } from '../../../logger';
+import {
+    TaskDirectLinkCountHandler,
+    type TaskDirectLinkDelta,
+} from './handlers/TaskDirectLinkCountHandler.ts';
 
 interface Edge {
     s: string;
@@ -15,9 +19,11 @@ interface Edge {
  * Aggregates task link events into net edge changes.
  * Handles Created, Updated, and Deleted events with semantic folding and project isolation.
  *
- * Future: Will trigger Link Metrics and Reachability handlers.
+ * Logic: Calculates net deltas for direct incoming/outgoing counts per node.
  */
 export class TaskLinkEvents_BatchAggregator {
+    private directCountHandler = new TaskDirectLinkCountHandler();
+
     async init() {
         logger.info('[Task Module] Initializing Task Link Batch Aggregator');
 
@@ -25,14 +31,11 @@ export class TaskLinkEvents_BatchAggregator {
             KAFKA_TOPICS.TASK,
             'task-link-aggregator-group',
             {
-                [KAFKA_EVENTS.TASK_LINK.CREATED]: () => {}, // Handled in batch
-                [KAFKA_EVENTS.TASK_LINK.UPDATED]: () => {},
-                [KAFKA_EVENTS.TASK_LINK.DELETED]: () => {},
+                [KAFKA_EVENTS.TASK_LINK.CREATED]: this.handleBatch.bind(this),
+                [KAFKA_EVENTS.TASK_LINK.UPDATED]: this.handleBatch.bind(this),
+                [KAFKA_EVENTS.TASK_LINK.DELETED]: this.handleBatch.bind(this),
             },
-            {
-                batch: true,
-                eachBatch: this.handleBatch.bind(this),
-            },
+            { batch: true },
         );
     }
 
@@ -108,35 +111,60 @@ export class TaskLinkEvents_BatchAggregator {
 
         // Process each project's net changes
         for (const [projectId, linkLifecycle] of projectChanges.entries()) {
-            const addedEdges: Edge[] = [];
-            const removedEdges: Edge[] = [];
+            const taskDeltas = new Map<string, { in: number; out: number }>();
+
+            const getDelta = (taskId: string) => {
+                if (!taskDeltas.has(taskId)) {
+                    taskDeltas.set(taskId, { in: 0, out: 0 });
+                }
+                return taskDeltas.get(taskId)!;
+            };
 
             for (const state of linkLifecycle.values()) {
                 const { initial, final, existedBefore, existsAfter } = state;
 
                 // Edge Additions
                 if (!existedBefore && existsAfter && final) {
-                    addedEdges.push(final);
+                    getDelta(final.s).out++;
+                    getDelta(final.t).in++;
                 }
                 // Edge Removals
                 else if (existedBefore && !existsAfter && initial) {
-                    removedEdges.push(initial);
+                    getDelta(initial.s).out--;
+                    getDelta(initial.t).in--;
                 }
-                // Edge Updates (Folded into Remove/Add if endpoints changed)
+                // Edge Updates (Endpoints changed)
                 else if (existedBefore && existsAfter && initial && final) {
                     if (initial.s !== final.s || initial.t !== final.t) {
-                        removedEdges.push(initial);
-                        addedEdges.push(final);
+                        getDelta(initial.s).out--;
+                        getDelta(initial.t).in--;
+
+                        getDelta(final.s).out++;
+                        getDelta(final.t).in++;
                     }
                 }
             }
 
-            if (addedEdges.length > 0 || removedEdges.length > 0) {
+            // Map net deltas to signaling payload
+            const deltaList: TaskDirectLinkDelta[] = Array.from(
+                taskDeltas.entries(),
+            )
+                .map(([taskId, counts]) => ({
+                    taskId,
+                    incomingDelta: counts.in,
+                    outgoingDelta: counts.out,
+                }))
+                .filter((d) => d.incomingDelta !== 0 || d.outgoingDelta !== 0);
+
+            if (deltaList.length > 0) {
                 logger.info(
-                    `[Task Link Aggregator] Project ${projectId}: Folded ${addedEdges.length} additions and ${removedEdges.length} removals. (Handlers not yet implemented)`,
+                    `[Task Link Aggregator] Project ${projectId}: Signaling direct count updates for ${deltaList.length} tasks`,
                 );
 
-                // TODO: Emit LINK_COUNTS_CHANGED and REACHABILITY_CHANGED signals here.
+                await this.directCountHandler.handleDirectLinkCountChanges(
+                    projectId,
+                    deltaList,
+                );
             }
         }
     }

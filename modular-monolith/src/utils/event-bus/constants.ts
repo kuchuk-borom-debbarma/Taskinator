@@ -53,9 +53,9 @@ export const KAFKA_EVENTS = {
     },
     TASK_AGGREGATED: {
         COUNTS_CHANGED: 'task.aggregated.counts_changed',
-        LINK_COUNTS_CHANGED: 'task.aggregated.link_counts_changed',
+        DIRECT_LINK_COUNTS_CHANGED:
+            'task.aggregated.direct_link_counts_changed',
         MEMBERS_CHANGED: 'task.aggregated.members_changed',
         DELETED: 'task.aggregated.deleted',
-        LINKS_CHANGED: 'task.aggregated.links_changed',
     },
 } as const;

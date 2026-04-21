@@ -13,7 +13,7 @@ import {
     KAFKA_TOPICS,
 } from '../../../utils/event-bus/constants.ts';
 import { sql } from 'kysely';
-import { NotFoundError, ConflictError } from '../../../utils/errors.ts';
+import { NotFoundError, ConflictError } from '../../../graphql/errors.ts';
 
 export const getTasksPage = async (
     userId: string,
@@ -969,6 +969,43 @@ export const deleteReachabilityByTaskIds = async (
         DELETE FROM task_reachability 
         WHERE ancestor_task_id = ANY(${taskIds}::uuid[]) 
            OR descendant_task_id = ANY(${taskIds}::uuid[])
+    `.execute(db);
+};
+
+/**
+ * High-performance batch update for direct task link counters.
+ * Processes an entire batch of tasks across potentially multiple projects in a single SQL call.
+ */
+export const updateTaskDirectLinkCountsBatch = async (
+    deltas: {
+        taskId: string;
+        projectId: string;
+        incomingDelta: number;
+        outgoingDelta: number;
+    }[],
+) => {
+    if (deltas.length === 0) return;
+
+    const taskIds = deltas.map((d) => d.taskId);
+    const projectIds = deltas.map((d) => d.projectId);
+    const incDeltas = deltas.map((d) => d.incomingDelta);
+    const outDeltas = deltas.map((d) => d.outgoingDelta);
+
+    await sql`
+        UPDATE project_task
+        SET 
+            direct_incoming_count = project_task.direct_incoming_count + V.inc,
+            direct_outgoing_count = project_task.direct_outgoing_count + V.out,
+            updated_at = CURRENT_TIMESTAMP
+        FROM (
+            SELECT 
+                unnest(${taskIds}::uuid[]) as tid,
+                unnest(${projectIds}::uuid[]) as pid,
+                unnest(${incDeltas}::integer[]) as inc,
+                unnest(${outDeltas}::integer[]) as out
+        ) AS V
+        WHERE project_task.id = V.tid
+          AND project_task.fk_project_id = V.pid
     `.execute(db);
 };
 
