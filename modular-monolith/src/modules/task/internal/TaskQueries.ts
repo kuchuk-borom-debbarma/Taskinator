@@ -912,38 +912,60 @@ export const unassignTasksByTeamIds = async (
     return { updatedCount: result.rows.length };
 };
 
-export const unassignMembersFromProjectTasks = async (
-    projectId: string,
-    userIds: string[],
+/**
+ * Batch unassigns members from project tasks across multiple projects.
+ */
+export const unassignMembersFromProjectTasksBatch = async (
+    deltas: { projectId: string; userIds: string[] }[],
 ): Promise<{ updatedCount: number }> => {
-    if (userIds.length === 0) return { updatedCount: 0 };
+    if (deltas.length === 0) return { updatedCount: 0 };
+
+    // We unnest the projectId and userIds.
+    // Since userIds is an array, we unnest an array of arrays.
+    const projectIds = deltas.map((d) => d.projectId);
+    const userIdsList = deltas.map((d) => d.userIds);
 
     const result = await sql<{ id: string }>`
         UPDATE project_task
         SET 
             fk_member_id = NULL,
             updated_at = NOW()
-        WHERE fk_project_id = ${projectId}::uuid
-          AND fk_member_id = ANY(${userIds}::text[])
+        FROM (
+            SELECT 
+                unnest(${projectIds}::uuid[]) as pid,
+                unnest(${userIdsList}::text[][]) as uids
+        ) AS V
+        WHERE project_task.fk_project_id = V.pid
+          AND project_task.fk_member_id = ANY(V.uids)
         RETURNING id
     `.execute(db);
 
     return { updatedCount: result.rows.length };
 };
 
-export const unassignTeamMembersFromTasks = async (
-    teamId: string,
-    userIds: string[],
+/**
+ * Batch unassigns members from team tasks across multiple teams.
+ */
+export const unassignTeamMembersFromTasksBatch = async (
+    deltas: { teamId: string; userIds: string[] }[],
 ): Promise<{ updatedCount: number }> => {
-    if (userIds.length === 0) return { updatedCount: 0 };
+    if (deltas.length === 0) return { updatedCount: 0 };
+
+    const teamIds = deltas.map((d) => d.teamId);
+    const userIdsList = deltas.map((d) => d.userIds);
 
     const result = await sql<{ id: string }>`
         UPDATE project_task
         SET 
             fk_member_id = NULL,
             updated_at = NOW()
-        WHERE fk_team_id = ${teamId}::uuid
-          AND fk_member_id = ANY(${userIds}::text[])
+        FROM (
+            SELECT 
+                unnest(${teamIds}::uuid[]) as tid,
+                unnest(${userIdsList}::text[][]) as uids
+        ) AS V
+        WHERE project_task.fk_team_id = V.tid
+          AND project_task.fk_member_id = ANY(V.uids)
         RETURNING id
     `.execute(db);
 

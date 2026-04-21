@@ -634,18 +634,27 @@ export const updateTeamMemberCountsBulk = async (
     `.execute(db);
 };
 
-export const removeMembersFromProjectTeams = async (
-    projectId: string,
-    userIds: string[],
+/**
+ * Batch removes members from project teams across multiple projects.
+ * Also performs bulk counter repair for affected teams.
+ */
+export const removeMembersFromProjectTeamsBatch = async (
+    deltas: { projectId: string; userIds: string[] }[],
 ): Promise<{ affectedTeamCount: number }> => {
-    if (userIds.length === 0) return { affectedTeamCount: 0 };
+    if (deltas.length === 0) return { affectedTeamCount: 0 };
 
-    // 1. Purge members and identify affected teams
+    const projectIds = deltas.map((d) => d.projectId);
+    const userIdsList = deltas.map((d) => d.userIds);
+
+    // 1. Purge members and identify affected teams using UNNEST
     const affectedTeams = await sql<{ teamId: string }>`
         DELETE FROM project_team_member
-        WHERE fk_project_id = ${projectId}::uuid
-          AND fk_user_id = ANY(${userIds}::text[])
-        RETURNING fk_team_id AS "teamId"
+        USING (
+            SELECT unnest(${projectIds}::uuid[]) as pid, unnest(${userIdsList}::text[][]) as uids
+        ) AS V
+        WHERE project_team_member.fk_project_id = V.pid
+          AND project_team_member.fk_user_id = ANY(V.uids)
+        RETURNING project_team_member.fk_team_id AS "teamId"
     `.execute(db);
 
     if (affectedTeams.rows.length === 0) return { affectedTeamCount: 0 };

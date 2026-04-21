@@ -5,11 +5,12 @@ import {
 } from '../../../../utils/event-bus/constants.ts';
 import type { DomainEvent } from '../../../../utils/event-bus/types.ts';
 import { logger } from '../../../../logger';
-import { unassignMembersFromProjectTasks } from '../TaskQueries.ts';
+import { unassignMembersFromProjectTasksBatch } from '../TaskQueries.ts';
 
 /**
  * Execution Listener for Project Member removal (Task Cascade).
  * Unassigns the user from all tasks in the project.
+ * Optimized for single-operation batch execution.
  */
 export class ProjectAggregated_MemberRemoved_UnassignMemberFromProjectTasksListener {
     async init() {
@@ -33,29 +34,40 @@ export class ProjectAggregated_MemberRemoved_UnassignMemberFromProjectTasksListe
     ) {
         if (events.length === 0) return;
 
+        // Grouping to ensure unique projectId entries for the batch query
+        const projectMap = new Map<string, Set<string>>();
+
         for (const event of events) {
             const { projectId, userIds } = event.data;
+            const existing = projectMap.get(projectId) || new Set<string>();
+            userIds.forEach((id) => existing.add(id));
+            projectMap.set(projectId, existing);
+        }
+
+        const deltas = Array.from(projectMap.entries()).map(
+            ([projectId, userIdsSet]) => ({
+                projectId,
+                userIds: Array.from(userIdsSet),
+            }),
+        );
+
+        logger.info(
+            `[ProjectAggregated -> Task] Performing batch unassignment for ${deltas.length} projects in a single call`,
+        );
+
+        try {
+            const { updatedCount } =
+                await unassignMembersFromProjectTasksBatch(deltas);
 
             logger.info(
-                `[ProjectAggregated -> Task] Unassigning ${userIds.length} users from all tasks in Project ${projectId}`,
+                `[ProjectAggregated -> Task] Successfully unassigned ${updatedCount} memberships from tasks across ${deltas.length} projects`,
             );
-
-            try {
-                const { updatedCount } = await unassignMembersFromProjectTasks(
-                    projectId,
-                    userIds,
-                );
-
-                logger.info(
-                    `[ProjectAggregated -> Task] Successfully unassigned ${updatedCount} members from tasks in Project ${projectId}`,
-                );
-            } catch (err) {
-                logger.error(
-                    '[ProjectAggregated -> Task] Failed to unassign members from tasks:',
-                    err,
-                );
-                throw err;
-            }
+        } catch (err) {
+            logger.error(
+                '[ProjectAggregated -> Task] Failed to unassign members from tasks:',
+                err,
+            );
+            throw err;
         }
     }
 }

@@ -5,11 +5,12 @@ import {
 } from '../../../../utils/event-bus/constants.ts';
 import type { DomainEvent } from '../../../../utils/event-bus/types.ts';
 import { logger } from '../../../../logger';
-import { removeMembersFromProjectTeams } from '../TeamQueries.ts';
+import { removeMembersFromProjectTeamsBatch } from '../TeamQueries.ts';
 
 /**
  * Execution Listener for Project Member removal (Team Cascade).
  * Removes the user from all teams in the project.
+ * Optimized for single-operation batch execution.
  */
 export class ProjectAggregated_MemberRemoved_RemoveMemberFromAllProjectTeamsListener {
     async init() {
@@ -33,27 +34,40 @@ export class ProjectAggregated_MemberRemoved_RemoveMemberFromAllProjectTeamsList
     ) {
         if (events.length === 0) return;
 
+        // Grouping to ensure unique projectId entries for the batch query
+        const projectMap = new Map<string, Set<string>>();
+
         for (const event of events) {
             const { projectId, userIds } = event.data;
+            const existing = projectMap.get(projectId) || new Set<string>();
+            userIds.forEach((id) => existing.add(id));
+            projectMap.set(projectId, existing);
+        }
+
+        const deltas = Array.from(projectMap.entries()).map(
+            ([projectId, userIdsSet]) => ({
+                projectId,
+                userIds: Array.from(userIdsSet),
+            }),
+        );
+
+        logger.info(
+            `[ProjectAggregated -> Team] Performing batch member-team purging for ${deltas.length} projects in a single call`,
+        );
+
+        try {
+            const { affectedTeamCount } =
+                await removeMembersFromProjectTeamsBatch(deltas);
 
             logger.info(
-                `[ProjectAggregated -> Team] Purging ${userIds.length} users from all teams in Project ${projectId}`,
+                `[ProjectAggregated -> Team] Successfully cascaded removal to ${affectedTeamCount} teams across ${deltas.length} projects`,
             );
-
-            try {
-                const { affectedTeamCount } =
-                    await removeMembersFromProjectTeams(projectId, userIds);
-
-                logger.info(
-                    `[ProjectAggregated -> Team] Successfully cascaded removal to ${affectedTeamCount} teams in Project ${projectId}`,
-                );
-            } catch (err) {
-                logger.error(
-                    '[ProjectAggregated -> Team] Failed to cascade member removal:',
-                    err,
-                );
-                throw err;
-            }
+        } catch (err) {
+            logger.error(
+                '[ProjectAggregated -> Team] Failed to cascade member removal:',
+                err,
+            );
+            throw err;
         }
     }
 }
