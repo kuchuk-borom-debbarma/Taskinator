@@ -8,23 +8,23 @@ import {
 import { claimEventsAtomic } from '../../../../utils/event-bus/idempotency.ts';
 import type { DomainEvent } from '../../../../utils/event-bus/types.ts';
 
-import { purgeTaskDataByProjectIds } from '../TaskQueries.ts';
+import { purgeTeamDataByProjectIds } from '../TeamQueries.ts';
 
 /**
- * Task Module Listener for Project Deletion.
- * Responsible for cleaning up all task-related data when a project is removed.
+ * Team Module Listener for Project Deletion.
+ * Responsible for cleaning up all team-related data when a project is removed.
  */
-export class ProjectDeleted_TaskCleanupListener {
+export class ProjectAggregated_DeleteProjects_TeamCleanupListener {
     async init() {
         logger.info(
-            '[Task Module] Initializing ProjectDeleted Task Cleanup Listener',
+            '[Team Module] Initializing ProjectDeleted Team Cleanup Listener',
         );
 
         await eventBus.subscribe(
             KAFKA_TOPICS.PROJECT_AGGREGATED,
-            'task-project-cleanup-group',
+            'team-project-cleanup-group',
             {
-                [KAFKA_EVENTS.PROJECT_AGGREGATED.DELETED]:
+                [KAFKA_EVENTS.PROJECT_AGGREGATED.DELETE_PROJECTS]:
                     this.handleProjectDeletion.bind(this),
             },
             { batch: true, manualIdempotency: true },
@@ -42,18 +42,18 @@ export class ProjectDeleted_TaskCleanupListener {
             const approvedEvents = await claimEventsAtomic(
                 trx,
                 events,
-                'task-project-cleanup-group',
+                'team-project-cleanup-group',
             );
             if (approvedEvents.length === 0) return;
 
             const projectIds = approvedEvents.flatMap((e) => e.data.projectIds);
 
             logger.info(
-                `[Task Module] Cleaning up data for ${projectIds.length} deleted projects`,
+                `[Team Module] Cleaning up team data for ${projectIds.length} deleted projects`,
             );
 
-            // 2. Delegate to Task Repository
-            await purgeTaskDataByProjectIds(trx, projectIds);
+            // 2. Delegate to Team Repository
+            await purgeTeamDataByProjectIds(trx, projectIds);
         });
     }
 }

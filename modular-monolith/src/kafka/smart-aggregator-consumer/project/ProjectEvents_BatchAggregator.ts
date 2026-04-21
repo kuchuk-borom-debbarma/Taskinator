@@ -1,23 +1,18 @@
+import { db } from '../../../database';
 import { logger } from '../../../logger';
 import eventBus from '../../../utils/EventBus.ts';
 import type { DomainEvent } from '../../../utils/event-bus';
 import { KAFKA_EVENTS, KAFKA_TOPICS } from '../../../utils/event-bus';
-import { ProjectCleanupHandler } from './handlers/ProjectCleanupHandler.ts';
-import { ProjectMemberCleanupHandler } from './handlers/ProjectMemberCleanupHandler.ts';
-import { ProjectMemberCountHandler } from './handlers/ProjectMemberCountHandler.ts';
-import { UserProjectCountHandler } from './handlers/UserProjectCountHandler.ts';
+import {
+    appendEventsToOutbox,
+    type OutboxEntry,
+} from '../../../utils/event-bus/OutboxQueries.ts';
 import type { ProjectState } from './types.ts';
 
 export class ProjectEvents_BatchAggregator {
-    private countHandler = new UserProjectCountHandler();
-    private memberCountHandler = new ProjectMemberCountHandler();
-    private memberCleanupHandler = new ProjectMemberCleanupHandler();
-    private cleanupHandler = new ProjectCleanupHandler();
-
     async init() {
         logger.info(
-            '[ProjectEvents -> Aggregator] Initializing Smart Consumer with handlers:',
-            'UserProjectCountHandler, ProjectCleanupHandler',
+            '[ProjectEvents -> Aggregator] Initializing Smart Consumer',
         );
 
         await eventBus.subscribe(
@@ -94,10 +89,9 @@ export class ProjectEvents_BatchAggregator {
         for (const state of projectStates.values()) {
             // Lifecycle Counts (User Level)
             if (state.netBalance !== 0) {
-                const currentDelta = userIncrements.get(state.userId) || 0;
                 userIncrements.set(
                     state.userId,
-                    currentDelta + state.netBalance,
+                    (userIncrements.get(state.userId) || 0) + state.netBalance,
                 );
             }
 
@@ -125,40 +119,92 @@ export class ProjectEvents_BatchAggregator {
             }
         }
 
-        // 3. Delegate Clean Data to Handlers
-        await Promise.all([
-            this.countHandler.handle(userIncrements).catch((err: any) => {
-                logger.error(
-                    '[Project Coordinator] Count handler failed:',
-                    err,
-                );
-            }),
-            this.memberCountHandler
-                .handle(memberIncrements)
-                .catch((err: any) => {
-                    logger.error(
-                        '[Project Coordinator] Member count handler failed:',
-                        err,
-                    );
-                }),
-            ...Array.from(memberRemovals.entries()).map(([pid, uids]) =>
-                this.memberCleanupHandler
-                    .handle(pid, uids)
-                    .catch((err: any) => {
-                        logger.error(
-                            '[Project Coordinator] Member cleanup handler failed:',
-                            err,
-                        );
-                    }),
-            ),
-            this.cleanupHandler.handle(deletedProjectIds).catch((err: any) => {
-                logger.error(
-                    '[Project Coordinator] Cleanup handler failed:',
-                    err,
-                );
-            }),
-        ]);
+        // 3. Build all outbox entries (pure data, no I/O)
+        // NOTE: We do NOT use specific kafka_keys here to maximize partition throughput.
+        // Since these aggregated signals are either Commutative Deltas (counts) or
+        // Idempotent Purges (cleanups), strictly ordered delivery per user/project
+        // is not required, allowing for better load distribution across Kafka consumers.
+        const outboxEntries: OutboxEntry[] = [];
+
+        // User project count changes
+        for (const [userId, delta] of userIncrements.entries()) {
+            outboxEntries.push({
+                kafka_topic: KAFKA_TOPICS.PROJECT_AGGREGATED,
+                payload: {
+                    type: KAFKA_EVENTS.PROJECT_AGGREGATED
+                        .CHANGE_USER_PROJECT_COUNT,
+                    userId,
+                    delta,
+                },
+            });
+        }
+
+        // Project member count changes
+        for (const [projectId, delta] of memberIncrements.entries()) {
+            outboxEntries.push({
+                kafka_topic: KAFKA_TOPICS.PROJECT_AGGREGATED,
+                payload: {
+                    type: KAFKA_EVENTS.PROJECT_AGGREGATED
+                        .CHANGE_PROJECT_MEMBER_COUNT,
+                    projectId,
+                    delta,
+                },
+            });
+        }
+
+        // Member removal cleanup
+        for (const [projectId, userIds] of memberRemovals.entries()) {
+            outboxEntries.push({
+                kafka_topic: KAFKA_TOPICS.PROJECT_AGGREGATED,
+                payload: {
+                    type: KAFKA_EVENTS.PROJECT_AGGREGATED.REMOVE_PROJECT_MEMBER,
+                    projectId,
+                    userIds,
+                },
+            });
+        }
+
+        // Project deletion cleanup - cascading commands to other modules
+        if (deletedProjectIds.length > 0) {
+            outboxEntries.push({
+                kafka_topic: KAFKA_TOPICS.PROJECT_AGGREGATED,
+                payload: {
+                    type: KAFKA_EVENTS.PROJECT_AGGREGATED.DELETE_PROJECT_TEAMS,
+                    projectIds: deletedProjectIds,
+                },
+            });
+            outboxEntries.push({
+                kafka_topic: KAFKA_TOPICS.PROJECT_AGGREGATED,
+                payload: {
+                    type: KAFKA_EVENTS.PROJECT_AGGREGATED
+                        .DELETE_PROJECT_TEAM_MEMBERS,
+                    projectIds: deletedProjectIds,
+                },
+            });
+            outboxEntries.push({
+                kafka_topic: KAFKA_TOPICS.PROJECT_AGGREGATED,
+                payload: {
+                    type: KAFKA_EVENTS.PROJECT_AGGREGATED.DELETE_PROJECT_TASKS,
+                    projectIds: deletedProjectIds,
+                },
+            });
+            outboxEntries.push({
+                kafka_topic: KAFKA_TOPICS.PROJECT_AGGREGATED,
+                payload: {
+                    type: KAFKA_EVENTS.PROJECT_AGGREGATED
+                        .DELETE_PROJECT_TASK_LINKS,
+                    projectIds: deletedProjectIds,
+                },
+            });
+        }
+
+        // 4. Single atomic write — throws on failure so Kafka does NOT ACK the batch
+        await appendEventsToOutbox(db, outboxEntries);
+
+        logger.info(
+            `[Project Coordinator] Wrote ${outboxEntries.length} outbox entries for batch of ${events.length} events`,
+        );
     }
 }
 
-//IMPORTANT: Recursion event for large data to prevent database lock. If project has 1 million+ tasks deleting in one go will lock database. Instead, do it in batch and republish event
+//IMPORTANT: FUTURE Recursion event for large data to prevent database lock. If project has 1 million+ tasks deleting in one go will lock database. Instead, do it in batch and republish event

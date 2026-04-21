@@ -11,7 +11,7 @@ import { updateProjectMemberCountsBulk } from '../ProjectQueries.ts';
  * Execution Listener for Project Member counts.
  * Listens to aggregated signals from the Project aggregator.
  */
-export class ProjectAggregated_CountsChanged_SyncProjectMemberCountListener {
+export class ProjectAggregated_ChangeProjectMemberCount_SyncProjectMemberCountListener {
     async init() {
         logger.info(
             '[ProjectAggregated -> Project] Initializing Listener for members_count updates',
@@ -21,7 +21,7 @@ export class ProjectAggregated_CountsChanged_SyncProjectMemberCountListener {
             KAFKA_TOPICS.PROJECT_AGGREGATED,
             'project-member-count-group',
             {
-                [KAFKA_EVENTS.PROJECT_AGGREGATED.MEMBER_COUNTS_CHANGED]:
+                [KAFKA_EVENTS.PROJECT_AGGREGATED.CHANGE_PROJECT_MEMBER_COUNT]:
                     this.handleMemberCountsChanged.bind(this),
             },
             { batch: true },

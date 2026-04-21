@@ -166,7 +166,7 @@ CREATE INDEX idx_internal_notification_user_feed ON internal_notification(fk_use
 CREATE TABLE outbox_events (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     kafka_topic TEXT NOT NULL,
-    kafka_key TEXT NOT NULL,
+    kafka_key TEXT,
     payload JSONB NOT NULL,
     status TEXT NOT NULL DEFAULT 'PENDING',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP

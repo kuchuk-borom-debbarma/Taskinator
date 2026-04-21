@@ -28,10 +28,17 @@ export const KAFKA_EVENTS = {
         USER_CREATED: 'auth.user.created',
     },
     PROJECT_AGGREGATED: {
-        COUNTS_CHANGED: 'project.aggregated.counts_changed',
-        MEMBER_COUNTS_CHANGED: 'project.aggregated.member_counts_changed',
-        MEMBER_REMOVED: 'project.aggregated.member_removed',
-        DELETED: 'project.aggregated.deleted',
+        CHANGE_USER_PROJECT_COUNT:
+            'project.aggregated.change_user_project_count',
+        CHANGE_PROJECT_MEMBER_COUNT:
+            'project.aggregated.change_project_member_count',
+        REMOVE_PROJECT_MEMBER: 'project.aggregated.remove_project_member',
+        DELETE_PROJECT_TEAMS: 'project.aggregated.delete_project_teams',
+        DELETE_PROJECT_TEAM_MEMBERS:
+            'project.aggregated.delete_project_team_members',
+        DELETE_PROJECT_TASKS: 'project.aggregated.delete_project_tasks',
+        DELETE_PROJECT_TASK_LINKS:
+            'project.aggregated.delete_project_task_links',
     },
     TEAM_AGGREGATED: {
         PROJECT_TEAM_COUNTS_CHANGED:

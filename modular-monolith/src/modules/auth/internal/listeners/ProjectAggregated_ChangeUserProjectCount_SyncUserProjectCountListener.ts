@@ -13,7 +13,7 @@ import { updateUserProjectCountsBulk } from '../AuthQueries.ts';
  * This performs the actual bulk SQL updates against the 'users' table in the database
  * once the events have been aggregated and folded.
  */
-export class ProjectAggregated_CountsChanged_SyncUserProjectCountListener {
+export class ProjectAggregated_ChangeUserProjectCount_SyncUserProjectCountListener {
     async init() {
         logger.info(
             '[ProjectAggregated -> Auth] Initializing Listener for users project counts',
@@ -23,7 +23,7 @@ export class ProjectAggregated_CountsChanged_SyncUserProjectCountListener {
             KAFKA_TOPICS.PROJECT_AGGREGATED,
             'auth-project-aggregator-group',
             {
-                [KAFKA_EVENTS.PROJECT_AGGREGATED.COUNTS_CHANGED]:
+                [KAFKA_EVENTS.PROJECT_AGGREGATED.CHANGE_USER_PROJECT_COUNT]:
                     this.handleAggregatedCounts.bind(this),
             },
             { batch: true },

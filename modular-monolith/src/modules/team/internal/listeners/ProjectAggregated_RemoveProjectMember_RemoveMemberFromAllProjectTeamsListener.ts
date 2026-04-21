@@ -5,24 +5,24 @@ import {
     KAFKA_TOPICS,
 } from '../../../../utils/event-bus/constants.ts';
 import type { DomainEvent } from '../../../../utils/event-bus/types.ts';
-import { unassignMembersFromProjectTasksBatch } from '../TaskQueries.ts';
+import { removeMembersFromProjectTeamsBatch } from '../TeamQueries.ts';
 
 /**
- * Execution Listener for Project Member removal (Task Cascade).
- * Unassigns the user from all tasks in the project.
+ * Execution Listener for Project Member removal (Team Cascade).
+ * Removes the user from all teams in the project.
  * Optimized for single-operation batch execution.
  */
-export class ProjectAggregated_MemberRemoved_UnassignMemberFromProjectTasksListener {
+export class ProjectAggregated_RemoveProjectMember_RemoveMemberFromAllProjectTeamsListener {
     async init() {
         logger.info(
-            '[ProjectAggregated -> Task] Initializing Listener for Member Removal cascade',
+            '[ProjectAggregated -> Team] Initializing Listener for Member Removal cascade',
         );
 
         await eventBus.subscribe(
             KAFKA_TOPICS.PROJECT_AGGREGATED,
-            'project-member-task-cleanup-group',
+            'project-member-team-cleanup-group',
             {
-                [KAFKA_EVENTS.PROJECT_AGGREGATED.MEMBER_REMOVED]:
+                [KAFKA_EVENTS.PROJECT_AGGREGATED.REMOVE_PROJECT_MEMBER]:
                     this.handleMemberRemoved.bind(this),
             },
             { batch: true },
@@ -52,19 +52,19 @@ export class ProjectAggregated_MemberRemoved_UnassignMemberFromProjectTasksListe
         );
 
         logger.info(
-            `[ProjectAggregated -> Task] Performing batch unassignment for ${deltas.length} projects in a single call`,
+            `[ProjectAggregated -> Team] Performing batch member-team purging for ${deltas.length} projects in a single call`,
         );
 
         try {
-            const { updatedCount } =
-                await unassignMembersFromProjectTasksBatch(deltas);
+            const { affectedTeamCount } =
+                await removeMembersFromProjectTeamsBatch(deltas);
 
             logger.info(
-                `[ProjectAggregated -> Task] Successfully unassigned ${updatedCount} memberships from tasks across ${deltas.length} projects`,
+                `[ProjectAggregated -> Team] Successfully cascaded removal to ${affectedTeamCount} teams across ${deltas.length} projects`,
             );
         } catch (err) {
             logger.error(
-                '[ProjectAggregated -> Task] Failed to unassign members from tasks:',
+                '[ProjectAggregated -> Team] Failed to cascade member removal:',
                 err,
             );
             throw err;
