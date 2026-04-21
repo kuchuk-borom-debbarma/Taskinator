@@ -5,11 +5,7 @@ import {
 } from '../../../utils/event-bus/constants.ts';
 import type { DomainEvent } from '../../../utils/event-bus/types.ts';
 import { logger } from '../../../logger';
-import {
-    TaskDirectLinkCountHandler,
-    type TaskDirectLinkDelta,
-} from './handlers/TaskDirectLinkCountHandler.ts';
-import { ReachabilityExpansionHandler } from './handlers/ReachabilityExpansionHandler.ts';
+import { type ReachabilityExpansionStep } from '../../modules/task/internal/ReachabilityQueries.ts';
 
 interface Edge {
     s: string;
@@ -23,9 +19,6 @@ interface Edge {
  * Logic: Calculates net deltas for direct incoming/outgoing counts per node.
  */
 export class TaskLinkEvents_BatchAggregator {
-    private directCountHandler = new TaskDirectLinkCountHandler();
-    private reachabilityExpansionHandler = new ReachabilityExpansionHandler();
-
     async init() {
         logger.info('[Task Module] Initializing Task Link Batch Aggregator');
 
@@ -44,7 +37,7 @@ export class TaskLinkEvents_BatchAggregator {
     private async handleBatch(events: DomainEvent[]) {
         if (events.length === 0) return;
 
-        // Group by projectId first to ensure updates are isolated
+        // 1. Group Events by Project and Link lifecycle
         const projectChanges = new Map<
             string,
             Map<
@@ -60,10 +53,8 @@ export class TaskLinkEvents_BatchAggregator {
 
         for (const event of events) {
             const { linkId, projectId } = event.data;
-
-            if (!projectChanges.has(projectId)) {
+            if (!projectChanges.has(projectId))
                 projectChanges.set(projectId, new Map());
-            }
 
             const linkLifecycle = projectChanges.get(projectId)!;
             let entry = linkLifecycle.get(linkId);
@@ -111,46 +102,66 @@ export class TaskLinkEvents_BatchAggregator {
             }
         }
 
-        // Process each project's net changes
+        // 2. Process each project's net changes in a SINGLE pass
         for (const [projectId, linkLifecycle] of projectChanges.entries()) {
             const taskDeltas = new Map<string, { in: number; out: number }>();
+            const reachabilitySteps: ReachabilityExpansionStep[] = [];
 
-            const getDelta = (taskId: string) => {
-                if (!taskDeltas.has(taskId)) {
+            const applyDelta = (
+                taskId: string,
+                direction: 'in' | 'out',
+                delta: number,
+            ) => {
+                if (!taskDeltas.has(taskId))
                     taskDeltas.set(taskId, { in: 0, out: 0 });
-                }
-                return taskDeltas.get(taskId)!;
+                taskDeltas.get(taskId)![direction] += delta;
+            };
+
+            const addReachabilityStep = (
+                edge: Edge,
+                action: 'ADD' | 'REMOVE',
+            ) => {
+                reachabilitySteps.push({
+                    projectId,
+                    ancestorId: edge.s,
+                    frontierId: edge.t,
+                    action,
+                    depth: 1,
+                });
             };
 
             for (const state of linkLifecycle.values()) {
                 const { initial, final, existedBefore, existsAfter } = state;
 
-                // Edge Additions
+                // Case: Pure Addition
                 if (!existedBefore && existsAfter && final) {
-                    getDelta(final.s).out++;
-                    getDelta(final.t).in++;
+                    applyDelta(final.s, 'out', 1);
+                    applyDelta(final.t, 'in', 1);
+                    addReachabilityStep(final, 'ADD');
                 }
-                // Edge Removals
+                // Case: Pure Removal
                 else if (existedBefore && !existsAfter && initial) {
-                    getDelta(initial.s).out--;
-                    getDelta(initial.t).in--;
+                    applyDelta(initial.s, 'out', -1);
+                    applyDelta(initial.t, 'in', -1);
+                    addReachabilityStep(initial, 'REMOVE');
                 }
-                // Edge Updates (Endpoints changed)
+                // Case: Update (Endpoints changed)
                 else if (existedBefore && existsAfter && initial && final) {
                     if (initial.s !== final.s || initial.t !== final.t) {
-                        getDelta(initial.s).out--;
-                        getDelta(initial.t).in--;
-
-                        getDelta(final.s).out++;
-                        getDelta(final.t).in++;
+                        // Remove old
+                        applyDelta(initial.s, 'out', -1);
+                        applyDelta(initial.t, 'in', -1);
+                        addReachabilityStep(initial, 'REMOVE');
+                        // Add new
+                        applyDelta(final.s, 'out', 1);
+                        applyDelta(final.t, 'in', 1);
+                        addReachabilityStep(final, 'ADD');
                     }
                 }
             }
 
-            // Map net deltas to signaling payload
-            const deltaList: TaskDirectLinkDelta[] = Array.from(
-                taskDeltas.entries(),
-            )
+            // 3. Signal Direct Link Count Changes
+            const deltaList = Array.from(taskDeltas.entries())
                 .map(([taskId, counts]) => ({
                     taskId,
                     incomingDelta: counts.in,
@@ -158,47 +169,32 @@ export class TaskLinkEvents_BatchAggregator {
                 }))
                 .filter((d) => d.incomingDelta !== 0 || d.outgoingDelta !== 0);
 
-            // --- REACHABILITY TRIGGER ---
-            const addedEdges = Array.from(linkLifecycle.values())
-                .filter((s) => !s.existedBefore && s.existsAfter && s.final)
-                .map((s) => s.final!);
-
-            const removedEdges = Array.from(linkLifecycle.values())
-                .filter((s) => s.existedBefore && !s.existsAfter && s.initial)
-                .map((s) => s.initial!);
-
-            // Handle updates where endpoints changed ( Removal + Addition )
-            Array.from(linkLifecycle.values())
-                .filter(
-                    (s) =>
-                        s.existedBefore &&
-                        s.existsAfter &&
-                        s.initial &&
-                        s.final &&
-                        (s.initial.s !== s.final.s ||
-                            s.initial.t !== s.final.t),
-                )
-                .forEach((s) => {
-                    addedEdges.push(s.final!);
-                    removedEdges.push(s.initial!);
-                });
-
-            if (addedEdges.length > 0 || removedEdges.length > 0) {
-                await this.reachabilityExpansionHandler.triggerInitialExpansion(
-                    projectId,
-                    addedEdges,
-                    removedEdges,
+            if (deltaList.length > 0) {
+                logger.info(
+                    `[Task Link Aggregator] Project ${projectId}: Signaling ${deltaList.length} task count deltas`,
+                );
+                await eventBus.publish(
+                    KAFKA_TOPICS.TASK_AGGREGATED,
+                    KAFKA_EVENTS.TASK_AGGREGATED.DIRECT_LINK_COUNTS_CHANGED,
+                    {
+                        key: projectId,
+                        data: { projectId, deltas: deltaList },
+                    },
                 );
             }
 
-            if (deltaList.length > 0) {
+            // 4. Signal Reachability Expansion
+            if (reachabilitySteps.length > 0) {
                 logger.info(
-                    `[Task Link Aggregator] Project ${projectId}: Signaling direct count updates for ${deltaList.length} tasks`,
+                    `[Task Link Aggregator] Project ${projectId}: Signaling ${reachabilitySteps.length} reachability expansion steps`,
                 );
-
-                await this.directCountHandler.handleDirectLinkCountChanges(
-                    projectId,
-                    deltaList,
+                await eventBus.publish(
+                    KAFKA_TOPICS.TASK_AGGREGATED,
+                    KAFKA_EVENTS.TASK_AGGREGATED.REACHABILITY_EXPAND,
+                    {
+                        key: projectId,
+                        data: { steps: reachabilitySteps },
+                    },
                 );
             }
         }

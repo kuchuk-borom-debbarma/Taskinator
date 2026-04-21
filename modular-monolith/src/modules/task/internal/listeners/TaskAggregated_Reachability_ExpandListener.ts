@@ -17,9 +17,6 @@ const MAX_RECURSION_DEPTH = 100;
 /**
  * Recursive Worker for Task Reachability Expansion.
  * Implements the "Frontier Expansion" algorithm using Kafka re-publishing.
- *
- * This version is optimized for exactly ONE database trip per Kafka batch
- * as ancestor expansion is handled internally by the database query.
  */
 export class TaskAggregated_Reachability_ExpandListener {
     async init() {
@@ -43,11 +40,8 @@ export class TaskAggregated_Reachability_ExpandListener {
     ) {
         if (events.length === 0) return;
 
-        // 1. Consolidate ALL steps from the batch
-        let allSteps: ReachabilityExpansionStep[] = [];
-        for (const event of events) {
-            allSteps = [...allSteps, ...event.data.steps];
-        }
+        // 1. Consolidate ALL steps from the batch (Declarative)
+        const allSteps = events.flatMap((e) => e.data.steps);
 
         logger.debug(
             `[Reachability Engine] Processing expansion batch of ${allSteps.length} paths`,
@@ -55,7 +49,6 @@ export class TaskAggregated_Reachability_ExpandListener {
 
         try {
             // 2. Execute the Expansion Matrix Update (One atomic DB call)
-            // This now handles Ancestor Discovery for Step 1 internally.
             const nextSteps = await expandReachabilityFrontierBatch(allSteps);
 
             // 3. Cleanup and Sync
@@ -63,12 +56,10 @@ export class TaskAggregated_Reachability_ExpandListener {
                 await cleanupOrphanedReachability();
             }
 
-            // Sync total transitive counts for affected tasks
-            const affectedTasks = new Set<string>();
-            allSteps.forEach((s) => {
-                affectedTasks.add(s.ancestorId);
-                affectedTasks.add(s.frontierId);
-            });
+            // Sync total transitive counts for affected tasks (Declarative collection)
+            const affectedTasks = new Set(
+                allSteps.flatMap((s) => [s.ancestorId, s.frontierId]),
+            );
             await syncTaskTransitiveCounts(Array.from(affectedTasks));
 
             // 4. Recursive Republication
@@ -81,13 +72,13 @@ export class TaskAggregated_Reachability_ExpandListener {
                     logger.warn(
                         `[Reachability Engine] Terminated ${
                             nextSteps.length - validNextSteps.length
-                        } paths due to legacy/depth limit`,
+                        } paths due to depth limit`,
                     );
                 }
 
                 if (validNextSteps.length > 0) {
                     logger.info(
-                        `[Reachability Engine] Republishing ${validNextSteps.length} expansion steps to the next level`,
+                        `[Reachability Engine] Republishing ${validNextSteps.length} expansion steps`,
                     );
 
                     await eventBus.publish(
