@@ -1,7 +1,10 @@
 import { sql, type Transaction } from 'kysely';
 import { type Database, db } from '../../../database';
 import { ConflictError, NotFoundError } from '../../../graphql/errors.ts';
-import { KAFKA_EVENTS } from '../../../utils/event-bus/constants.ts';
+import {
+    KAFKA_EVENTS,
+    KAFKA_TOPICS,
+} from '../../../utils/event-bus/constants.ts';
 import { decodeCursor, encodeCursor } from '../../../utils/utils.ts';
 import type {
     GetNeighbourhoodParam,
@@ -707,9 +710,10 @@ export const insertTaskLink = async (param: {
         inserted_outbox AS (
             INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
             SELECT 
-                ${KAFKA_EVENTS.TASK_LINK.CREATED},
+                ${KAFKA_TOPICS.TASK},
                 id::text,
                 jsonb_build_object(
+                    'type', ${KAFKA_EVENTS.TASK_LINK.CREATED},
                     'linkId', id,
                     'projectId', projectId,
                     'sourceTaskId', sourceTaskId,
@@ -759,9 +763,10 @@ export const deleteTaskLink = async (param: {
         inserted_outbox AS (
             INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
             SELECT 
-                ${KAFKA_EVENTS.TASK_LINK.DELETED},
+                ${KAFKA_TOPICS.TASK},
                 id::text,
                 jsonb_build_object(
+                    'type', ${KAFKA_EVENTS.TASK_LINK.DELETED},
                     'linkId', id,
                     'projectId', projectId,
                     'sourceTaskId', sourceTaskId,
@@ -832,9 +837,10 @@ export const updateTaskLink = async (param: {
         inserted_outbox AS (
             INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
             SELECT 
-                ${KAFKA_EVENTS.TASK_LINK.UPDATED},
+                ${KAFKA_TOPICS.TASK},
                 id::text,
                 jsonb_build_object(
+                    'type', ${KAFKA_EVENTS.TASK_LINK.UPDATED},
                     'linkId', id,
                     'projectId', projectId,
                     'oldSourceTaskId', (SELECT source_task_id FROM current_link),

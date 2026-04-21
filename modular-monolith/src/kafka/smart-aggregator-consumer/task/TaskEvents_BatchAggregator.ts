@@ -32,6 +32,12 @@ export class TaskEvents_BatchAggregator {
                 [KAFKA_EVENTS.TASK.CREATED]: this.handleTaskBatch.bind(this),
                 [KAFKA_EVENTS.TASK.UPDATED]: this.handleTaskBatch.bind(this),
                 [KAFKA_EVENTS.TASK.DELETED]: this.handleTaskBatch.bind(this),
+                [KAFKA_EVENTS.TASK_LINK.CREATED]:
+                    this.handleTaskBatch.bind(this),
+                [KAFKA_EVENTS.TASK_LINK.UPDATED]:
+                    this.handleTaskBatch.bind(this),
+                [KAFKA_EVENTS.TASK_LINK.DELETED]:
+                    this.handleTaskBatch.bind(this),
             },
             { batch: true },
         );
@@ -63,6 +69,15 @@ export class TaskEvents_BatchAggregator {
             const projectDeltas = new Map<string, number>();
             const teamDeltas = new Map<string, number>();
             const deletedTaskIds = new Set<string>();
+            const linkDeltas = new Map<
+                string,
+                {
+                    delta: number;
+                    projectId: string;
+                    sourceId: string;
+                    targetId: string;
+                }
+            >();
 
             for (const event of unprocessed) {
                 const data = event.data;
@@ -114,6 +129,73 @@ export class TaskEvents_BatchAggregator {
                         }
                         break;
                     }
+
+                    case KAFKA_EVENTS.TASK_LINK.CREATED: {
+                        const key = `${data.sourceTaskId}:${data.targetTaskId}`;
+                        const existing = linkDeltas.get(key) || {
+                            delta: 0,
+                            projectId: data.projectId,
+                            sourceId: data.sourceTaskId,
+                            targetId: data.targetTaskId,
+                        };
+                        linkDeltas.set(key, {
+                            ...existing,
+                            delta: existing.delta + 1,
+                        });
+                        break;
+                    }
+
+                    case KAFKA_EVENTS.TASK_LINK.DELETED: {
+                        const key = `${data.sourceTaskId}:${data.targetTaskId}`;
+                        const existing = linkDeltas.get(key) || {
+                            delta: 0,
+                            projectId: data.projectId,
+                            sourceId: data.sourceTaskId,
+                            targetId: data.targetTaskId,
+                        };
+                        linkDeltas.set(key, {
+                            ...existing,
+                            delta: existing.delta - 1,
+                        });
+                        break;
+                    }
+
+                    case KAFKA_EVENTS.TASK_LINK.UPDATED: {
+                        const {
+                            projectId,
+                            oldSourceTaskId,
+                            oldTargetTaskId,
+                            newSourceTaskId,
+                            newTargetTaskId,
+                        } = data;
+
+                        // Remove old connection
+                        const oldKey = `${oldSourceTaskId}:${oldTargetTaskId}`;
+                        const oldEx = linkDeltas.get(oldKey) || {
+                            delta: 0,
+                            projectId,
+                            sourceId: oldSourceTaskId,
+                            targetId: oldTargetTaskId,
+                        };
+                        linkDeltas.set(oldKey, {
+                            ...oldEx,
+                            delta: oldEx.delta - 1,
+                        });
+
+                        // Add new connection
+                        const newKey = `${newSourceTaskId}:${newTargetTaskId}`;
+                        const newEx = linkDeltas.get(newKey) || {
+                            delta: 0,
+                            projectId,
+                            sourceId: newSourceTaskId,
+                            targetId: newTargetTaskId,
+                        };
+                        linkDeltas.set(newKey, {
+                            ...newEx,
+                            delta: newEx.delta + 1,
+                        });
+                        break;
+                    }
                 }
             }
 
@@ -143,6 +225,31 @@ export class TaskEvents_BatchAggregator {
                         type: KAFKA_EVENTS.TASK_AGGREGATED.SYNC_TEAM_TASK_COUNT,
                         teamId,
                         delta,
+                    },
+                });
+            }
+
+            // Link Reachability Syncs
+            for (const sync of linkDeltas.values()) {
+                if (sync.delta === 0) continue;
+
+                // Optimization: If either task is being deleted, the bulk signal handles it
+                if (
+                    deletedTaskIds.has(sync.sourceId) ||
+                    deletedTaskIds.has(sync.targetId)
+                ) {
+                    continue;
+                }
+
+                outboxEntries.push({
+                    kafka_topic: KAFKA_TOPICS.TASK_AGGREGATED,
+                    payload: {
+                        type: KAFKA_EVENTS.TASK_AGGREGATED
+                            .SYNC_TASK_REACHABILITY,
+                        projectId: sync.projectId,
+                        sourceTaskId: sync.sourceId,
+                        targetTaskId: sync.targetId,
+                        action: sync.delta > 0 ? 'ADD' : 'REMOVE',
                     },
                 });
             }
