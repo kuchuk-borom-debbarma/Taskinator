@@ -46,7 +46,8 @@ async function addUsers(count: number) {
 
 // Read from CLI arguments
 const args = process.argv.slice(2);
-const count = parseInt(args[0], 10);
+const countInput = args[0] || '';
+const count = parseInt(countInput, 10);
 
 if (Number.isNaN(count) || count <= 0) {
     console.error('❌ Please provide a valid number of users to add.');

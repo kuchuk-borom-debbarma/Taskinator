@@ -23,36 +23,31 @@ bun run test:e2e
 
 ## 🛠 The Manual Way (For Debugging / Scripting)
 
-If you are writing a new test, debugging a failure, or want to interact with the E2E database directly, you can control the lifecycle manually.
+If you are writing a new test, debugging a failure, or want to interact with the E2E database directly, you can control the lifecycle manually using these scripts:
 
-### 1. Start the Isolated Environment
+### 1. Open the Isolated Environment
 ```bash
-bun run test:e2e:up
+bun run test:e2e:open
 ```
-*Note: The E2E environment runs on alternate ports to avoid conflicts: Postgres (`5435`), Kafka (`9094`), Redis (`6380`).*
+*What this does: Spins up Postgres (`5435`), Kafka (`9094`), and Redis (`6380`) containers, waits for them to be healthy, and automatically applies `schema.sql`.*
 
-### 2. Apply the Database Schema
-```bash
-DB_PORT=5435 bun run src/tests/e2e/scripts/apply-schema.ts
-```
-
-### 3. (Optional) Seed Fake Users
+### 2. (Optional) Seed Fake Users
 If you want to manually seed users into the E2E database to test queries:
 ```bash
 DB_PORT=5435 bun run src/tests/e2e/scripts/add-users.ts 100
 ```
 *(This will insert 100 sequential base-26 alphabetical users: `a@a.a`, `b@a.a`, etc.)*
 
-### 4. Run Tests Manually
-Because the test runner needs the E2E environment variables, you must inject them:
+### 3. Run Tests Manually
+Once the environment is open, you can run tests repeatedly without waiting for Docker to spin up:
 ```bash
-DB_PORT=5435 KAFKA_BROKERS=localhost:9094 REDIS_URL=redis://localhost:6380 node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand src/tests/e2e/**/*.test.ts
+bun run test:e2e:run
 ```
 
-### 5. Tear Down the Environment
+### 4. Close the Environment
 When you're finished, wipe the containers and clear the RAM:
 ```bash
-bun run test:e2e:down
+bun run test:e2e:close
 ```
 
 ---
