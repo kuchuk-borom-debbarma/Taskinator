@@ -59,6 +59,13 @@ export class TeamEvents_BatchAggregator {
                 `[Team Coordinator] Processing batch of ${unprocessed.length} new events`,
             );
 
+            // [1.5] Strict Chronological Sort
+            const chronologicallyOrderedEvents = [...unprocessed].sort(
+                (a, b) =>
+                    new Date(a.timestamp).getTime() -
+                    new Date(b.timestamp).getTime(),
+            );
+
             // [2] Semantic Folding (Cancellation Logic)
             const teamStates = new Map<
                 string,
@@ -71,7 +78,7 @@ export class TeamEvents_BatchAggregator {
                 }
             >();
 
-            for (const event of unprocessed) {
+            for (const event of chronologicallyOrderedEvents) {
                 const { teamId, projectId } = event.data;
                 const current = teamStates.get(teamId) || {
                     teamId,

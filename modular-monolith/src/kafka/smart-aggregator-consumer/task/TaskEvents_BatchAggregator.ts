@@ -65,6 +65,14 @@ export class TaskEvents_BatchAggregator {
                 `[Task Coordinator] Processing batch of ${unprocessed.length} new events`,
             );
 
+            // [1.5] Strict Chronological Sort
+            // Ensures causality (Create -> Update -> Delete) is preserved regardless of Kafka fetch order
+            const chronologicallyOrderedEvents = [...unprocessed].sort(
+                (a, b) =>
+                    new Date(a.timestamp).getTime() -
+                    new Date(b.timestamp).getTime(),
+            );
+
             // [2] Semantic Folding & Delta Calculation
             const projectDeltas = new Map<string, number>();
             const teamDeltas = new Map<string, number>();
@@ -79,7 +87,7 @@ export class TaskEvents_BatchAggregator {
                 }
             >();
 
-            for (const event of unprocessed) {
+            for (const event of chronologicallyOrderedEvents) {
                 const data = event.data;
                 const { projectId, taskId } = data;
 

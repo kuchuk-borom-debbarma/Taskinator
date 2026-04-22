@@ -55,6 +55,13 @@ export class ProjectEvents_BatchAggregator {
                 `[Project Coordinator] Processing batch of ${unprocessed.length} new events`,
             );
 
+            // [1.5] Strict Chronological Sort
+            const chronologicallyOrderedEvents = [...unprocessed].sort(
+                (a, b) =>
+                    new Date(a.timestamp).getTime() -
+                    new Date(b.timestamp).getTime(),
+            );
+
             // [2] Semantic Folding (Cancellation Logic)
             const projectStates = new Map<
                 string,
@@ -64,7 +71,7 @@ export class ProjectEvents_BatchAggregator {
                 }
             >();
 
-            for (const event of unprocessed) {
+            for (const event of chronologicallyOrderedEvents) {
                 const { projectId, userId } = event.data;
                 const current = projectStates.get(projectId) || {
                     projectId,
