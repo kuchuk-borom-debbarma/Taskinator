@@ -20,7 +20,7 @@ const dispatchToEventBus = async (
     events: {
         id: string;
         kafka_topic: string;
-        kafka_key: string;
+        kafka_key: string | null;
         payload: any;
     }[],
 ) => {
@@ -30,7 +30,7 @@ const dispatchToEventBus = async (
         {
             topic: string;
             type: string;
-            payloads: Array<{ id: string; key: string; data: any }>;
+            payloads: Array<{ id: string; key: string | null; data: any }>;
         }
     >();
 

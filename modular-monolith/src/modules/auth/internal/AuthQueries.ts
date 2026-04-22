@@ -1,5 +1,5 @@
-import { sql } from 'kysely';
-import { db } from '../../../database';
+import { sql, type Transaction } from 'kysely';
+import { type Database, db } from '../../../database';
 
 /**
  * Repository for Auth-related database operations.
@@ -7,6 +7,7 @@ import { db } from '../../../database';
 
 export const updateUserProjectCountsBulk = async (
     updates: Map<string, number>,
+    trx?: Transaction<Database>,
 ): Promise<void> => {
     const entries = Array.from(updates.entries());
     if (entries.length === 0) return;
@@ -22,5 +23,5 @@ export const updateUserProjectCountsBulk = async (
             SELECT * FROM UNNEST(${ids}::uuid[], ${deltas}::int[])
         ) AS v(id, delta)
         WHERE users.id = v.id
-    `.execute(db);
+    `.execute(trx || db);
 };

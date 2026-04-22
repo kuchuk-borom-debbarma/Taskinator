@@ -14,7 +14,6 @@ export interface ProjectTaskTable {
     title: string;
     description: Generated<string>;
     status: Generated<string>;
-    last_event_id: string | null;
     version: Generated<number>;
     created_by: string;
     updated_by: string;

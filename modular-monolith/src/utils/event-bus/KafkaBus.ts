@@ -1,7 +1,7 @@
 import { context, propagation, trace } from '@opentelemetry/api';
 import { type Consumer, Kafka, Partitioners, type Producer } from 'kafkajs';
 import { KAFKA_TOPICS } from './constants.ts';
-import { createEvent, withIdempotency } from './idempotency.ts';
+import { createEvent } from './idempotency.ts';
 import type { Bus, DomainEvent } from './types.ts';
 
 export class KafkaBus implements Bus {
@@ -31,7 +31,7 @@ export class KafkaBus implements Bus {
         const admin = this.kafka.admin();
         await admin.connect();
         const existingTopics = await admin.listTopics();
-        const requiredTopics = Object.values(KAFKA_TOPICS);
+        const requiredTopics = Object.values(KAFKA_TOPICS) as string[];
         const topicsToCreate = requiredTopics.filter(
             (t) => !existingTopics.includes(t),
         );
@@ -54,8 +54,8 @@ export class KafkaBus implements Bus {
         topic: string,
         type: string,
         payload:
-            | { id?: string; key: string; data: any }
-            | Array<{ id?: string; key: string; data: any }>,
+            | { id?: string; key: string | null; data: any }
+            | Array<{ id?: string; key: string | null; data: any }>,
     ) {
         const items = Array.isArray(payload) ? payload : [payload];
         const events = items.map((i) => createEvent(type, i.key, i.data, i.id));
@@ -66,7 +66,7 @@ export class KafkaBus implements Bus {
         topic: string,
         groupId: string,
         handlers: Record<string, (data: any) => Promise<void>>,
-        options?: { batch?: boolean; manualIdempotency?: boolean },
+        options?: { batch?: boolean },
     ) {
         await this.createConsumer(topic, groupId, handlers, options);
     }
@@ -86,7 +86,7 @@ export class KafkaBus implements Bus {
         topic: string,
         groupId: string,
         handlers: Record<string, (data: any) => Promise<void>>,
-        options?: { batch?: boolean; manualIdempotency?: boolean },
+        options?: { batch?: boolean },
     ) {
         const consumer = this.kafka.consumer({ groupId });
         await consumer.connect();
@@ -125,32 +125,14 @@ export class KafkaBus implements Bus {
                                     )
                                     .filter((e) => handlers[e.type]);
 
-                                // 2. Idempotency handling
-                                if (options?.manualIdempotency) {
-                                    // Bypassing global idempotency. The listener MUST call claimEventsAtomic.
-                                    await this.executeHandlers(
-                                        allEvents,
-                                        handlers,
-                                        options,
-                                        isRunning,
-                                        isStale,
-                                    );
-                                } else {
-                                    // Standard Global Idempotency (Non-Transactional)
-                                    await withIdempotency(
-                                        allEvents,
-                                        groupId,
-                                        async (unprocessed) => {
-                                            await this.executeHandlers(
-                                                unprocessed,
-                                                handlers,
-                                                options,
-                                                isRunning,
-                                                isStale,
-                                            );
-                                        },
-                                    );
-                                }
+                                // 2. Execute Handlers (Idempotency is now the responsibility of the handler)
+                                await this.executeHandlers(
+                                    allEvents,
+                                    handlers,
+                                    options,
+                                    isRunning,
+                                    isStale,
+                                );
 
                                 // 3. Mark the Kafka batch as consumed to advance the offset
                                 for (const m of batch.messages)

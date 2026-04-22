@@ -1,6 +1,7 @@
 export interface OutboxEntry {
+    event_id?: string;
     kafka_topic: string;
-    kafka_key: string;
+    kafka_key?: string | null;
     payload: any;
 }
 

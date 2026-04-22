@@ -7,7 +7,6 @@ export type Project = {
     name: string;
     description: string | null;
     version: number;
-    lastEventId: string | null;
     createdAt: Date;
     epochPrecision?: string; // High-precision string for cursor pagination
     updatedAt?: Date;
@@ -21,7 +20,6 @@ export type ProjectMember = {
     userId: string;
     projectId: string;
     version: number;
-    lastEventId: string | null;
     createdAt: Date;
     epochPrecision?: string;
     updatedAt: Date;

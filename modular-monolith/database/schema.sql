@@ -7,7 +7,6 @@ CREATE TABLE project (
     name TEXT NOT NULL,
     description TEXT,
     fk_user_id TEXT NOT NULL,
-    last_event_id UUID,
     version INTEGER NOT NULL DEFAULT 1,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
@@ -18,7 +17,6 @@ CREATE TABLE project_member (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     fk_project_id UUID NOT NULL,
     fk_user_id TEXT NOT NULL,
-    last_event_id UUID,
     version INTEGER NOT NULL DEFAULT 1,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
@@ -31,7 +29,6 @@ CREATE TABLE project_team (
     name TEXT NOT NULL,
     fk_project_id UUID NOT NULL,
     fk_user_id TEXT NOT NULL, -- Creator
-    last_event_id UUID,
     version INTEGER NOT NULL DEFAULT 1,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
@@ -43,7 +40,6 @@ CREATE TABLE project_team_member (
     fk_project_id UUID NOT NULL,
     fk_team_id UUID NOT NULL,
     fk_user_id TEXT NOT NULL,
-    last_event_id UUID,
     version INTEGER NOT NULL DEFAULT 1,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
@@ -59,7 +55,6 @@ CREATE TABLE project_task (
     title TEXT NOT NULL,
     description TEXT NOT NULL DEFAULT '',
     status TEXT NOT NULL DEFAULT 'TODO',
-    last_event_id UUID,
     version INTEGER NOT NULL DEFAULT 1,
     created_by TEXT NOT NULL,
     updated_by TEXT NOT NULL,
@@ -92,8 +87,7 @@ CREATE TABLE task_reachability (
     fk_project_id UUID NOT NULL,
     ancestor_task_id UUID NOT NULL,
     descendant_task_id UUID NOT NULL,
-    min_depth INTEGER NOT NULL,
-    path_count INTEGER NOT NULL DEFAULT 1,
+    depth INTEGER NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (fk_project_id, ancestor_task_id, descendant_task_id)
 );
@@ -103,8 +97,8 @@ CREATE INDEX idx_project_task_project ON project_task(fk_project_id);
 CREATE INDEX idx_task_link_source ON task_link(fk_project_id, source_task_id);
 CREATE INDEX idx_task_link_target ON task_link(fk_project_id, target_task_id);
 CREATE INDEX idx_task_link_pair ON task_link(fk_project_id, source_task_id, target_task_id);
-CREATE INDEX idx_reach_desc ON task_reachability(fk_project_id, descendant_task_id, min_depth);
-CREATE INDEX idx_reach_anc ON task_reachability(fk_project_id, ancestor_task_id, min_depth);
+CREATE INDEX idx_reach_desc ON task_reachability(fk_project_id, descendant_task_id, depth);
+CREATE INDEX idx_reach_anc ON task_reachability(fk_project_id, ancestor_task_id, depth);
 
 
 
@@ -164,9 +158,10 @@ CREATE INDEX idx_internal_notification_user_feed ON internal_notification(fk_use
 
 -- Outbox Events Table (wCTE Delivery)
 CREATE TABLE outbox_events (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    id BIGSERIAL PRIMARY KEY,
+    event_id UUID NOT NULL DEFAULT uuid_generate_v4(),
     kafka_topic TEXT NOT NULL,
-    kafka_key TEXT NOT NULL,
+    kafka_key TEXT,
     payload JSONB NOT NULL,
     status TEXT NOT NULL DEFAULT 'PENDING',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP

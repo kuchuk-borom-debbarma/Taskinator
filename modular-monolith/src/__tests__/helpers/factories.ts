@@ -42,7 +42,6 @@ export async function createProject(
         description: string | null;
         userId: string;
         version: number;
-        lastEventId: string | null;
         createdAt: Date;
         updatedAt: any;
         membersCount: number;
@@ -61,7 +60,6 @@ export async function createProject(
             description,
             fk_user_id AS "userId",
             version,
-            last_event_id AS "lastEventId",
             created_at AS "createdAt",
             updated_at AS "updatedAt",
             members_count AS "membersCount",
@@ -84,7 +82,6 @@ export async function addProjectMember(
         userId: string;
         projectId: string;
         version: number;
-        lastEventId: string | null;
         createdAt: Date;
         updatedAt: any;
     }>`
@@ -95,7 +92,6 @@ export async function addProjectMember(
             fk_user_id AS "userId",
             fk_project_id AS "projectId",
             version,
-            last_event_id AS "lastEventId",
             created_at AS "createdAt",
             updated_at AS "updatedAt"
     `.execute(db);
@@ -119,7 +115,6 @@ export async function createTeam(
             fk_project_id AS "projectId",
             fk_user_id AS "createdBy",
             version,
-            last_event_id AS "lastEventId",
             created_at AS "createdAt",
             updated_at AS "updatedAt",
             members_count AS "membersCount",
@@ -145,7 +140,6 @@ export async function addTeamMember(
             fk_user_id AS "userId",
             fk_project_id AS "projectId",
             version,
-            last_event_id AS "lastEventId",
             created_at AS "createdAt",
             updated_at AS "updatedAt"
     `.execute(db);

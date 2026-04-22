@@ -12,7 +12,6 @@ export type Task = {
     description: string;
     status: TaskStatus;
     version: number;
-    lastEventId: string | null;
     createdBy: string;
     updatedBy: string;
     priority: number;

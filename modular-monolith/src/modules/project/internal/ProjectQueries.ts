@@ -1,10 +1,7 @@
-import { sql } from 'kysely';
-import { db } from '../../../database';
+import { sql, type Transaction } from 'kysely';
+import { type Database, db } from '../../../database';
 import type { PaginationParams } from '../../../types/pagination.ts';
-import {
-    KAFKA_EVENTS,
-    KAFKA_TOPICS,
-} from '../../../utils/event-bus/constants.ts';
+import { KAFKA_EVENTS, KAFKA_TOPICS } from '../../../utils/event-bus';
 import { decodeCursor, encodeCursor } from '../../../utils/utils.ts';
 import type { Project, ProjectMember } from '../ProjectService.ts';
 
@@ -23,7 +20,6 @@ export async function insertProject(param: {
                 description, 
                 fk_user_id AS "userId", 
                 version, 
-                last_event_id AS "lastEventId", 
                 created_at AS "createdAt", 
                 created_at::text AS "epochPrecision",
                 updated_at AS "updatedAt"
@@ -71,11 +67,22 @@ export async function updateProject(param: {
                 description, 
                 fk_user_id AS "userId", 
                 version, 
-                last_event_id AS "lastEventId", 
                 created_at AS "createdAt", 
                 created_at::text AS "epochPrecision",
                 updated_at AS "updatedAt"
         ),
+        inserted_outbox AS (
+            INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
+            SELECT 
+                ${KAFKA_TOPICS.PROJECT},
+                id::text,
+                jsonb_build_object(
+                    'type', ${KAFKA_EVENTS.PROJECT.UPDATED},
+                    'projectId', id,
+                    'actorId', ${param.actorId},
+                    'name', name
+                )
+            FROM updated_project
         )
         SELECT * FROM updated_project
     `.execute(db);
@@ -256,7 +263,6 @@ export const getProjects = async (
             description,
             fk_user_id AS "userId",
             version,
-            last_event_id AS "lastEventId",
             created_at AS "createdAt",
             created_at::text as "epochPrecision",
             updated_at AS "updatedAt",
@@ -341,7 +347,6 @@ export const getProjectMembers = async (
             fk_user_id AS "userId", 
             fk_project_id AS "projectId", 
             version, 
-            last_event_id AS "lastEventId", 
             created_at AS "createdAt", 
             created_at::text as "epochPrecision",
             updated_at AS "updatedAt"
@@ -403,7 +408,6 @@ export const getProjectMembersByIds = async (
             pm.fk_user_id AS "userId", 
             pm.fk_project_id AS "projectId", 
             pm.version, 
-            pm.last_event_id AS "lastEventId", 
             pm.created_at AS "createdAt", 
             pm.created_at::text AS "epochPrecision",
             pm.updated_at AS "updatedAt"
@@ -426,7 +430,6 @@ export const getProjectMembersByActorIdAndIds = async (
             pm.fk_user_id AS "userId", 
             pm.fk_project_id AS "projectId", 
             pm.version, 
-            pm.last_event_id AS "lastEventId", 
             pm.created_at AS "createdAt", 
             pm.created_at::text AS "epochPrecision",
             pm.updated_at AS "updatedAt"
@@ -455,7 +458,6 @@ export const getProjectsByIds = async (
             description,
             fk_user_id AS "userId",
             version,
-            last_event_id AS "lastEventId",
             created_at AS "createdAt",
             created_at::text AS "epochPrecision",
             updated_at AS "updatedAt"
@@ -479,7 +481,6 @@ export const getProjectsByActorIdAndProjectIds = async (
             description,
             fk_user_id AS "userId",
             version,
-            last_event_id AS "lastEventId",
             created_at AS "createdAt",
             created_at::text AS "epochPrecision",
             updated_at AS "updatedAt"
@@ -500,6 +501,7 @@ export const getProjectsByActorIdAndProjectIds = async (
 
 export const updateProjectTeamCountsBulk = async (
     updates: Map<string, number>,
+    trx?: Transaction<Database>,
 ): Promise<void> => {
     const entries = Array.from(updates.entries());
     if (entries.length === 0) return;
@@ -515,11 +517,12 @@ export const updateProjectTeamCountsBulk = async (
             SELECT * FROM UNNEST(${ids}::uuid[], ${deltas}::int[])
         ) AS v(id, delta)
         WHERE project.id = v.id
-    `.execute(db);
+    `.execute(trx || db);
 };
 
 export const updateProjectMemberCountsBulk = async (
     updates: Map<string, number>,
+    trx?: Transaction<Database>,
 ): Promise<void> => {
     const entries = Array.from(updates.entries());
     if (entries.length === 0) return;
@@ -535,11 +538,12 @@ export const updateProjectMemberCountsBulk = async (
             SELECT * FROM UNNEST(${ids}::uuid[], ${deltas}::int[])
         ) AS v(id, delta)
         WHERE project.id = v.id
-    `.execute(db);
+    `.execute(trx || db);
 };
 
 export async function updateProjectTaskCountsBulk(
     updates: Map<string, number>,
+    trx?: Transaction<Database>,
 ): Promise<void> {
     const entries = Array.from(updates.entries());
     if (entries.length === 0) return;
@@ -555,7 +559,7 @@ export async function updateProjectTaskCountsBulk(
             SELECT * FROM UNNEST(${ids}::uuid[], ${deltas}::int[])
         ) AS v(id, delta)
         WHERE project.id = v.id
-    `.execute(db);
+    `.execute(trx || db);
 }
 
 /**
@@ -603,8 +607,8 @@ export async function incrementUserProjectCountsBulk(
  * Bulk repair of Project Member counts.
  */
 export async function incrementProjectMemberCountsBulk(
-    trx: any,
     deltas: Map<string, number>,
+    trx?: Transaction<Database>,
 ): Promise<void> {
     const entries = Array.from(deltas.entries());
     if (entries.length === 0) return;
@@ -620,5 +624,54 @@ export async function incrementProjectMemberCountsBulk(
             SELECT * FROM UNNEST(${projectIds}::uuid[], ${deltaList}::int[])
         ) AS v(pid, delta)
         WHERE project.id = v.pid
-    `.execute(trx);
+    `.execute(trx || db);
 }
+
+/**
+ * Batch removes members from projects across multiple project IDs.
+ * Returns the list of project IDs where deletions actually occurred for counter repair.
+ */
+export const purgeProjectMembersBatch = async (
+    deltas: { projectId: string; userIds: string[] }[],
+    trx?: Transaction<Database>,
+): Promise<{ affectedProjectMemberCounts: Map<string, number> }> => {
+    if (deltas.length === 0) return { affectedProjectMemberCounts: new Map() };
+
+    const projectIds = deltas.map((d) => d.projectId);
+    const userIdsList = deltas.map((d) => d.userIds);
+
+    const result = await sql<{ projectId: string }>`
+        DELETE FROM project_member
+        USING (
+            SELECT unnest(${projectIds}::uuid[]) as pid, unnest(${userIdsList}::text[][]) as uids
+        ) AS V
+        WHERE project_member.fk_project_id = V.pid
+          AND project_member.fk_user_id = ANY(V.uids)
+        RETURNING project_member.fk_project_id AS "projectId"
+    `.execute(trx || db);
+
+    const counts = new Map<string, number>();
+    for (const row of result.rows) {
+        counts.set(row.projectId, (counts.get(row.projectId) || 0) + 1);
+    }
+
+    return { affectedProjectMemberCounts: counts };
+};
+
+/**
+ * Purges all membership records for specified projects.
+ * Used during full project decommissioning.
+ */
+export const purgeProjectMembersByProjectIdsBatch = async (
+    projectIds: string[],
+    trx?: Transaction<Database>,
+): Promise<{ affectedCount: number }> => {
+    if (projectIds.length === 0) return { affectedCount: 0 };
+
+    const result = await (trx || db)
+        .deleteFrom('project_member')
+        .where('fk_project_id', 'in', projectIds)
+        .executeTakeFirst();
+
+    return { affectedCount: Number(result.numDeletedRows) };
+};

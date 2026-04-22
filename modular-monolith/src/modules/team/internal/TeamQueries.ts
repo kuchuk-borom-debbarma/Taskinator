@@ -1,5 +1,5 @@
-import { sql } from 'kysely';
-import { db } from '../../../database';
+import { sql, type Transaction } from 'kysely';
+import { type Database, db } from '../../../database';
 import { ConflictError, NotFoundError } from '../../../graphql/errors.ts';
 import type { PaginationParams } from '../../../types/pagination.ts';
 import { decodeCursor, encodeCursor } from '../../../utils/utils.ts';
@@ -22,14 +22,15 @@ export const insertTeam = async (param: {
             INSERT INTO project_team (name, fk_project_id, fk_user_id)
             SELECT ${param.name}, ${param.projectId}::uuid, ${param.actorId}
             WHERE EXISTS (SELECT 1 FROM authorized)
-            RETURNING id, name, fk_project_id AS "projectId", fk_user_id AS "createdBy", version, last_event_id AS "lastEventId", created_at AS "createdAt", updated_at AS "updatedAt"
+            RETURNING id, name, fk_project_id AS "projectId", fk_user_id AS "createdBy", version, created_at AS "createdAt", updated_at AS "updatedAt"
         ),
         inserted_outbox AS (
             INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
             SELECT 
-                'team.created',
+                'team-events',
                 "projectId"::text,
                 jsonb_build_object(
+                    'type', 'team.created',
                     'teamId', id,
                     'projectId', "projectId",
                     'name', name,
@@ -88,7 +89,6 @@ export const getTeams = async (
             t.fk_project_id AS "projectId", 
             t.fk_user_id AS "createdBy", 
             t.version, 
-            t.last_event_id AS "lastEventId", 
             t.created_at AS "createdAt", 
             t.created_at::text as "epochPrecision",
             t.updated_at AS "updatedAt"
@@ -182,7 +182,6 @@ export const getTeamMembers = async (
             fk_team_id AS "teamId", 
             fk_user_id AS "userId", 
             version, 
-            last_event_id AS "lastEventId", 
             created_at AS "createdAt", 
             created_at::text as "epochPrecision",
             updated_at AS "updatedAt"
@@ -338,7 +337,6 @@ export const getTeamsByIds = async (teamIds: string[]): Promise<Team[]> => {
             fk_project_id AS "projectId", 
             fk_user_id AS "createdBy", 
             version, 
-            last_event_id AS "lastEventId", 
             created_at AS "createdAt", 
             updated_at AS "updatedAt"
         FROM project_team
@@ -361,7 +359,6 @@ export const getTeamsByActorIdAndIds = async (
             fk_project_id AS "projectId", 
             fk_user_id AS "createdBy", 
             version, 
-            last_event_id AS "lastEventId", 
             created_at AS "createdAt", 
             updated_at AS "updatedAt"
         FROM project_team
@@ -399,9 +396,10 @@ export const deleteTeams = async (param: {
         inserted_outbox AS (
             INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
             SELECT 
-                'team.deleted',
+                'team-events',
                 id::text,
                 jsonb_build_object(
+                    'type', 'team.deleted',
                     'teamId', id,
                     'projectId', "projectId",
                     'name', name
@@ -448,14 +446,16 @@ export const insertTeamMembers = async (param: {
         inserted_outbox AS (
             INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
             SELECT 
-                'team.members_added',
-                ${param.teamId},
+                'team-events',
+                ${param.teamId}::text,
                 jsonb_build_object(
-                    'teamId', ${param.teamId},
-                    'projectId', ${param.projectId},
-                    'addedUserIds', (SELECT json_agg(fk_user_id) FROM inserted_members)
+                    'type', 'team.members_added',
+                    'teamId', ${param.teamId}::uuid,
+                    'projectId', ${param.projectId}::uuid,
+                    'addedUserIds', array_agg(fk_user_id)
                 )
-            WHERE EXISTS (SELECT 1 FROM inserted_members)
+            FROM inserted_members
+            GROUP BY 1
         )
         SELECT COUNT(*)::text AS "addedCount" FROM inserted_members
     `.execute(db);
@@ -497,14 +497,16 @@ export const deleteTeamMembers = async (param: {
         inserted_outbox AS (
             INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
             SELECT 
-                'team.members_removed',
-                ${param.teamId},
+                'team-events',
+                ${param.teamId}::text,
                 jsonb_build_object(
-                    'teamId', ${param.teamId},
-                    'projectId', ${param.projectId},
-                    'removedUserIds', (SELECT json_agg(fk_user_id) FROM deleted_members)
+                    'type', 'team.members_removed',
+                    'teamId', ${param.teamId}::uuid,
+                    'projectId', ${param.projectId}::uuid,
+                    'removedUserIds', array_agg(fk_user_id)
                 )
-            WHERE EXISTS (SELECT 1 FROM deleted_members)
+            FROM deleted_members
+            GROUP BY 1
         )
         SELECT COUNT(*)::text AS "removedCount" FROM deleted_members
     `.execute(db);
@@ -538,16 +540,17 @@ export const updateTeam = async (param: {
               AND version = ${param.version}
               AND EXISTS (SELECT 1 FROM authorized)
             RETURNING id, name, fk_project_id AS "projectId", fk_user_id AS "createdBy", 
-                      version, last_event_id AS "lastEventId", created_at AS "createdAt", updated_at AS "updatedAt"
+                      version, created_at AS "createdAt", updated_at AS "updatedAt"
         ),
         inserted_outbox AS (
             INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
             SELECT 
-                'team.updated',
+                'team-events',
                 id::text,
                 jsonb_build_object(
+                    'type', 'team.updated',
                     'teamId', id,
-                    'projectId', projectId,
+                    'projectId', "projectId",
                     'name', name,
                     'version', version,
                     'actorId', ${param.actorId}
@@ -638,15 +641,22 @@ export const updateTeamMemberCountsBulk = async (
  * Batch removes members from project teams across multiple projects.
  * Also performs bulk counter repair for affected teams.
  */
-export const removeMembersFromProjectTeamsBatch = async (
+/**
+ * Batch removes members from project teams across multiple projects.
+ * This is a consolidated action that also performs the counter repair.
+ * [Action]: REMOVE_PROJECT_TEAM_MEMBER
+ */
+export const removeProjectTeamMembersBatch = async (
     deltas: { projectId: string; userIds: string[] }[],
-): Promise<{ affectedTeamCount: number }> => {
-    if (deltas.length === 0) return { affectedTeamCount: 0 };
+    trx?: Transaction<Database>,
+): Promise<{ affectedProjectCount: number; affectedTeamCount: number }> => {
+    if (deltas.length === 0)
+        return { affectedProjectCount: 0, affectedTeamCount: 0 };
 
     const projectIds = deltas.map((d) => d.projectId);
     const userIdsList = deltas.map((d) => d.userIds);
 
-    // 1. Purge members and identify affected teams using UNNEST
+    // 1. Purge members and identify affected teams using RETURNING
     const affectedTeams = await sql<{ teamId: string }>`
         DELETE FROM project_team_member
         USING (
@@ -655,9 +665,11 @@ export const removeMembersFromProjectTeamsBatch = async (
         WHERE project_team_member.fk_project_id = V.pid
           AND project_team_member.fk_user_id = ANY(V.uids)
         RETURNING project_team_member.fk_team_id AS "teamId"
-    `.execute(db);
+    `.execute(trx || db);
 
-    if (affectedTeams.rows.length === 0) return { affectedTeamCount: 0 };
+    if (affectedTeams.rows.length === 0) {
+        return { affectedProjectCount: deltas.length, affectedTeamCount: 0 };
+    }
 
     // 2. Aggregate deltas for Counter Repair
     const teamDeltas = new Map<string, number>();
@@ -665,14 +677,18 @@ export const removeMembersFromProjectTeamsBatch = async (
         teamDeltas.set(row.teamId, (teamDeltas.get(row.teamId) || 0) - 1);
     }
 
-    // 3. Batch Update Counters
-    await updateTeamMemberCountsBulk(teamDeltas);
+    // 3. Perform atomic counter update within the SAME transaction
+    await incrementTeamMemberCountsBulk(trx || db, teamDeltas);
 
-    return { affectedTeamCount: teamDeltas.size };
+    return {
+        affectedProjectCount: deltas.length,
+        affectedTeamCount: teamDeltas.size,
+    };
 };
 
 export async function updateTeamTaskCountsBulk(
     updates: Map<string, number>,
+    trx?: Transaction<Database>,
 ): Promise<void> {
     const entries = Array.from(updates.entries());
     if (entries.length === 0) return;
@@ -688,27 +704,43 @@ export async function updateTeamTaskCountsBulk(
             SELECT * FROM UNNEST(${ids}::uuid[], ${deltas}::int[])
         ) AS v(id, delta)
         WHERE project_team.id = v.id
-    `.execute(db);
+    `.execute(trx || db);
 }
 
 /**
- * Atomic removal of all team-related data for specific projects.
+ * Bulk decommissions team membership records for specified projects.
+ * [Action]: DELETE_PROJECT_TEAM_MEMBER
  */
-export async function purgeTeamDataByProjectIds(
-    trx: any,
+export async function deleteProjectTeamMemberBatch(
     projectIds: string[],
-): Promise<void> {
-    if (projectIds.length === 0) return;
+    trx?: Transaction<Database>,
+): Promise<{ affectedCount: number }> {
+    if (projectIds.length === 0) return { affectedCount: 0 };
 
-    await trx
+    const result = await (trx || db)
         .deleteFrom('project_team_member')
         .where('fk_project_id', 'in', projectIds)
-        .execute();
+        .executeTakeFirst();
 
-    await trx
+    return { affectedCount: Number(result.numDeletedRows) };
+}
+
+/**
+ * Bulk decommissions team entities for specified projects.
+ * [Action]: DELETE_PROJECT_TEAM
+ */
+export async function deleteProjectTeamBatch(
+    projectIds: string[],
+    trx?: Transaction<Database>,
+): Promise<{ affectedCount: number }> {
+    if (projectIds.length === 0) return { affectedCount: 0 };
+
+    const result = await (trx || db)
         .deleteFrom('project_team')
         .where('fk_project_id', 'in', projectIds)
-        .execute();
+        .executeTakeFirst();
+
+    return { affectedCount: Number(result.numDeletedRows) };
 }
 
 /**
@@ -732,7 +764,7 @@ export async function incrementTeamMemberCountsBulk(
             SELECT * FROM UNNEST(${teamIds}::uuid[], ${deltaList}::int[])
         ) AS v(tid, delta)
         WHERE project_team.id = v.tid
-    `.execute(trx);
+    `.execute(trx || db);
 }
 
 /**
@@ -756,5 +788,23 @@ export async function incrementProjectTeamCountsBulk(
             SELECT * FROM UNNEST(${projectIds}::uuid[], ${deltaList}::int[])
         ) AS v(pid, delta)
         WHERE project.id = v.pid
-    `.execute(trx);
+    `.execute(trx || db);
+}
+
+/**
+ * Bulk purge of team memberships.
+ * [Action]: PURGE_TEAM_MEMBERSHIPS
+ */
+export async function purgeTeamMembershipsByTeamIdsBatch(
+    teamIds: string[],
+    trx?: any,
+): Promise<{ affectedCount: number }> {
+    if (teamIds.length === 0) return { affectedCount: 0 };
+
+    const result = await (trx || db)
+        .deleteFrom('project_team_member')
+        .where('fk_team_id', 'in', teamIds)
+        .executeTakeFirst();
+
+    return { affectedCount: Number(result.numDeletedRows) };
 }

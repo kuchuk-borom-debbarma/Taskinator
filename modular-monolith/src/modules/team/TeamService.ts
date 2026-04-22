@@ -8,7 +8,6 @@ export type Team = {
     projectId: string;
     createdBy: string;
     version: number;
-    lastEventId: string | null;
     createdAt: Date;
     updatedAt: Date;
     membersCount: number;
@@ -21,7 +20,6 @@ export type TeamMember = {
     teamId: string;
     userId: string;
     version: number;
-    lastEventId: string | null;
     createdAt: Date;
     updatedAt: Date;
 };
