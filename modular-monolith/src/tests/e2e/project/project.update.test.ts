@@ -134,7 +134,7 @@ describe('Project Update E2E', () => {
         expect(updateRes.body.data.updateProject.version).toBe(version + 1);
     });
 
-    it('should allow setting name to empty string (Currently allowed by DB/Logic)', async () => {
+    it('should fail when setting name to a string too short (<3 chars)', async () => {
         const createRes = await gqlRequest({
             query: CREATE_PROJECT,
             variables: { name: 'Something' },
@@ -144,11 +144,14 @@ describe('Project Update E2E', () => {
 
         const updateRes = await gqlRequest({
             query: UPDATE_PROJECT,
-            variables: { id, version, name: '' },
+            variables: { id, version, name: 'Ab' },
             token: token1,
         });
 
-        expect(updateRes.body.data.updateProject.name).toBe('');
+        expect(updateRes.body.errors).toBeDefined();
+        expect(updateRes.body.errors[0].message).toContain(
+            'Project name must be between 3 and 255 characters.',
+        );
     });
 
     it('should NOT allow clearing description by setting it to null (Sticky Field behavior)', async () => {

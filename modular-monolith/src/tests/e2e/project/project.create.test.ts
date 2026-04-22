@@ -92,15 +92,29 @@ describe('Project Creation E2E', () => {
         expect(res2.body.data.createProject.name).toBe('Duplicate Name');
     });
 
-    it('should handle extremely long project names', async () => {
-        const longName = 'A'.repeat(500);
+    it('should fail for extremely long project names (>255 chars)', async () => {
+        const longName = 'A'.repeat(256);
         const res = await gqlRequest({
             query: CREATE_PROJECT,
             variables: { name: longName },
             token: token1,
         });
-        expect(res.status).toBe(200);
-        expect(res.body.data.createProject.name).toBe(longName);
+        expect(res.body.errors).toBeDefined();
+        expect(res.body.errors[0].message).toContain(
+            'Project name must be between 3 and 255 characters.',
+        );
+    });
+
+    it('should fail for short project names (<3 chars)', async () => {
+        const res = await gqlRequest({
+            query: CREATE_PROJECT,
+            variables: { name: 'Ab' },
+            token: token1,
+        });
+        expect(res.body.errors).toBeDefined();
+        expect(res.body.errors[0].message).toContain(
+            'Project name must be between 3 and 255 characters.',
+        );
     });
 
     it('should create a project with a description and special characters', async () => {

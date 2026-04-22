@@ -105,6 +105,13 @@ export class ProjectServiceImpl implements ProjectService {
         logger.info(
             `ProjectService.createProject started by ${param.actorId} for "${param.name}"`,
         );
+
+        if (param.name.length < 3 || param.name.length > 255) {
+            throw new Error(
+                'Project name must be between 3 and 255 characters.',
+            );
+        }
+
         const result = await queries.insertProject({
             userId: param.actorId,
             name: param.name,
@@ -132,6 +139,16 @@ export class ProjectServiceImpl implements ProjectService {
         logger.info(
             `ProjectService.updateProject started for ${param.id} by ${param.actorId}`,
         );
+
+        if (
+            param.name !== undefined &&
+            (param.name.length < 3 || param.name.length > 255)
+        ) {
+            throw new Error(
+                'Project name must be between 3 and 255 characters.',
+            );
+        }
+
         const result = await queries.updateProject(param);
         if (result) {
             logger.info(`ProjectService.updateProject successful: ${param.id}`);
