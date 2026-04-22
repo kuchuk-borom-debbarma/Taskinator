@@ -1,5 +1,6 @@
 import { Kysely, PostgresDialect } from 'kysely';
 import { Pool } from 'pg';
+import { logger } from '../logger';
 import type { OutboxEventTable } from './tables/OutboxEvent.ts';
 import type { ProcessedEventTable } from './tables/ProcessedEvent.ts';
 import type { ProjectMemberTable, ProjectTable } from './tables/Project.ts';
@@ -35,6 +36,11 @@ export const pool = new Pool({
     max: 10,
 });
 
+pool.on('connect', () =>
+    logger.debug('Database: New client connected to pool'),
+);
+pool.on('error', (err) => logger.error('Database: Unexpected pool error', err));
+
 const dialect = new PostgresDialect({
     pool,
 });
@@ -42,3 +48,5 @@ const dialect = new PostgresDialect({
 export const db = new Kysely<Database>({
     dialect,
 });
+
+logger.info('Database: Kysely instance initialized');

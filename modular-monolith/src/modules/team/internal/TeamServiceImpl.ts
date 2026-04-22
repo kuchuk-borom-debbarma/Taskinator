@@ -1,3 +1,4 @@
+import { logger } from '../../../logger';
 import type { PaginationParams } from '../../../types/pagination.ts';
 import type { User } from '../../auth/AuthService.ts';
 import type { Team, TeamMember, TeamService } from '../TeamService.ts';
@@ -24,6 +25,9 @@ export class TeamServiceImpl implements TeamService {
         nextCursor: string | null;
         prevCursor: string | null;
     }> {
+        logger.debug(
+            `TeamService.getTeams called for user: ${userId}, project: ${projectId}`,
+        );
         return getTeams(userId, projectId, params);
     }
 
@@ -37,6 +41,7 @@ export class TeamServiceImpl implements TeamService {
         nextCursor: string | null;
         prevCursor: string | null;
     }> {
+        logger.debug(`TeamService.getTeamMembers called for team: ${teamId}`);
         return getTeamMembers(userId, projectId, teamId, params);
     }
 
@@ -52,10 +57,16 @@ export class TeamServiceImpl implements TeamService {
         nextCursor: string | null;
         prevCursor: string | null;
     }> {
+        logger.debug(
+            `TeamService.searchTeamUsers called for team: ${params.teamId}, search: ${params.search}`,
+        );
         return searchTeamUsers(params);
     }
 
     async getTeamsByIds(teamIds: string[]): Promise<Team[]> {
+        logger.debug(
+            `TeamService.getTeamsByIds called for ${teamIds.length} ids`,
+        );
         return await getTeamsByIdsQuery(teamIds);
     }
 
@@ -63,6 +74,9 @@ export class TeamServiceImpl implements TeamService {
         actorId: string,
         teamIds: string[],
     ): Promise<Team[]> {
+        logger.debug(
+            `TeamService.getTeamsByActorIdAndIds called for actor: ${actorId}, teams: ${teamIds.length}`,
+        );
         return await getTeamsByActorIdAndIds(actorId, teamIds);
     }
 
@@ -71,7 +85,12 @@ export class TeamServiceImpl implements TeamService {
         projectId: string;
         name: string;
     }): Promise<Team> {
-        return await insertTeam(param);
+        logger.info(
+            `TeamService.createTeam started by ${param.actorId} in project ${param.projectId} for "${param.name}"`,
+        );
+        const result = await insertTeam(param);
+        logger.info(`TeamService.createTeam successful: ${result.id}`);
+        return result;
     }
 
     async deleteTeams(param: {
@@ -79,7 +98,14 @@ export class TeamServiceImpl implements TeamService {
         projectId: string;
         teamIds: string[];
     }): Promise<{ deletedCount: number }> {
-        return await deleteTeams(param);
+        logger.info(
+            `TeamService.deleteTeams started by ${param.actorId} for ${param.teamIds.length} teams`,
+        );
+        const result = await deleteTeams(param);
+        logger.info(
+            `TeamService.deleteTeams completed: deleted ${result.deletedCount} teams`,
+        );
+        return result;
     }
 
     async addTeamMembers(param: {
@@ -88,7 +114,14 @@ export class TeamServiceImpl implements TeamService {
         teamId: string;
         userIds: string[];
     }): Promise<{ addedCount: number }> {
-        return await insertTeamMembers(param);
+        logger.info(
+            `TeamService.addTeamMembers started for team ${param.teamId} by ${param.actorId}, users: ${param.userIds.length}`,
+        );
+        const result = await insertTeamMembers(param);
+        logger.info(
+            `TeamService.addTeamMembers completed: added ${result.addedCount} members`,
+        );
+        return result;
     }
 
     async removeTeamMembers(param: {
@@ -97,7 +130,14 @@ export class TeamServiceImpl implements TeamService {
         teamId: string;
         userIds: string[];
     }): Promise<{ removedCount: number }> {
-        return await deleteTeamMembers(param);
+        logger.info(
+            `TeamService.removeTeamMembers started for team ${param.teamId} by ${param.actorId}, users: ${param.userIds.length}`,
+        );
+        const result = await deleteTeamMembers(param);
+        logger.info(
+            `TeamService.removeTeamMembers completed: removed ${result.removedCount} members`,
+        );
+        return result;
     }
 
     async updateTeam(param: {
@@ -107,14 +147,19 @@ export class TeamServiceImpl implements TeamService {
         name: string;
         version: number;
     }): Promise<Team> {
-        return await updateTeam(param);
+        logger.info(
+            `TeamService.updateTeam started for ${param.teamId} by ${param.actorId}`,
+        );
+        const result = await updateTeam(param);
+        logger.info(`TeamService.updateTeam successful: ${param.teamId}`);
+        return result;
     }
 
     async init(): Promise<void> {
-        console.log(`[TeamService] Initializing...`);
+        logger.info(`TeamService initialized`);
     }
 
     async destroy(): Promise<void> {
-        console.log(`[TeamService] Destroying...`);
+        logger.info(`TeamService destroyed`);
     }
 }

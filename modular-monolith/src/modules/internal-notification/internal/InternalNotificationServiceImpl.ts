@@ -1,3 +1,4 @@
+import { logger } from '../../../logger';
 import type { PaginationParams } from '../../../types/pagination.ts';
 import eventBus from '../../../utils/EventBus.ts';
 import type {
@@ -13,20 +14,32 @@ export class InternalNotificationServiceImpl
     async createNotification(
         data: CreateNotificationParam,
     ): Promise<InternalNotification> {
+        logger.debug(
+            `InternalNotificationService.createNotification for user: ${data.userId}, type: ${data.type}`,
+        );
         return await Queries.insertNotification(data);
     }
 
     async createNotificationsBatch(
         rows: CreateNotificationParam[],
     ): Promise<InternalNotification[]> {
+        logger.info(
+            `InternalNotificationService.createNotificationsBatch for ${rows.length} notifications`,
+        );
         return await Queries.insertNotificationsBatch(rows);
     }
 
     async markAsRead(userId: string, notificationId: string): Promise<void> {
+        logger.debug(
+            `InternalNotificationService.markAsRead: ${notificationId} for user: ${userId}`,
+        );
         await Queries.markAsRead(userId, notificationId);
     }
 
     async markAllAsRead(userId: string): Promise<void> {
+        logger.info(
+            `InternalNotificationService.markAllAsRead for user: ${userId}`,
+        );
         await Queries.markAllAsRead(userId);
     }
 
@@ -38,6 +51,9 @@ export class InternalNotificationServiceImpl
         nextCursor: string | null;
         prevCursor: string | null;
     }> {
+        logger.debug(
+            `InternalNotificationService.getNotifications for user: ${userId}`,
+        );
         return await Queries.getNotifications(userId, params);
     }
 
@@ -46,12 +62,12 @@ export class InternalNotificationServiceImpl
     }
 
     async init(): Promise<void> {
-        console.log(`Initializing event bus ${this.constructor.name}`);
+        logger.info(`InternalNotificationService initialized`);
         await eventBus.init();
     }
 
     async destroy(): Promise<void> {
-        console.log(`Disconnecting event bus ${this.constructor.name}`);
+        logger.info(`InternalNotificationService destroyed`);
         await eventBus.destroy();
     }
 }

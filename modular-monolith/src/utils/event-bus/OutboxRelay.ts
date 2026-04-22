@@ -1,5 +1,6 @@
 import type { PoolClient } from 'pg';
 import { db, pool } from '../../database';
+import { logger } from '../../logger';
 import eventBus from '../EventBus.ts';
 
 let isRunning = false;
@@ -50,9 +51,12 @@ const dispatchToEventBus = async (
         });
     }
 
-    const publishPromises = Array.from(groups.values()).map((group) =>
-        eventBus.publish(group.topic, group.type, group.payloads),
-    );
+    const publishPromises = Array.from(groups.values()).map((group) => {
+        logger.debug(
+            `Relaying ${group.payloads.length} events of type "${group.type}" to topic "${group.topic}"`,
+        );
+        return eventBus.publish(group.topic, group.type, group.payloads);
+    });
 
     await Promise.all(publishPromises);
 };
@@ -65,6 +69,7 @@ const processOutboxBatch = async () => {
     const events = await fetchPendingEvents();
     if (events.length === 0) return;
 
+    logger.info(`Outbox Relay: Processing batch of ${events.length} events`);
     await dispatchToEventBus(events);
     const eventIds = events.map((e) => e.id);
     await clearProcessedEvents(eventIds);
@@ -80,6 +85,7 @@ const setupListener = async () => {
 
     try {
         listenClient = await pool.connect();
+        logger.info('Outbox Relay: DB connection established for LISTEN');
 
         // Listen for new events
         await listenClient.query('LISTEN outbox_event_notification');
@@ -87,8 +93,8 @@ const setupListener = async () => {
         listenClient.on('notification', (msg) => {
             if (msg.channel === 'outbox_event_notification' && isRunning) {
                 processOutboxBatch().catch((err) =>
-                    console.error(
-                        '[Outbox Relay] Notification processing error:',
+                    logger.error(
+                        'Outbox Relay: Notification processing error:',
                         err,
                     ),
                 );
@@ -96,13 +102,13 @@ const setupListener = async () => {
         });
 
         listenClient.on('error', (err) => {
-            console.error('[Outbox Relay] Listen client error:', err);
+            logger.error('Outbox Relay: Listen client error:', err);
             reconnectListener();
         });
 
-        console.log('[Outbox Relay] Reactive LISTEN established.');
+        logger.info('Outbox Relay: Reactive LISTEN established.');
     } catch (err) {
-        console.error('[Outbox Relay] Failed to setup LISTEN:', err);
+        logger.error('Outbox Relay: Failed to setup LISTEN:', err);
         reconnectListener();
     }
 };
@@ -113,6 +119,7 @@ const reconnectListener = () => {
         listenClient = null;
     }
     if (isRunning) {
+        logger.warn('Outbox Relay: Attempting to reconnect LISTEN in 5s...');
         setTimeout(setupListener, 5000);
     }
 };
@@ -123,10 +130,7 @@ const poll = async () => {
     try {
         await processOutboxBatch();
     } catch (err) {
-        console.error(
-            '[Outbox Relay] Error processing events during poll:',
-            err,
-        );
+        logger.error('Outbox Relay: Error processing events during poll:', err);
     } finally {
         if (isRunning) {
             // Safety poll every 10 seconds in case NOTIFY was missed or during reconnects
@@ -139,8 +143,8 @@ export const startOutboxRelay = () => {
     if (isRunning) return;
     isRunning = true;
 
-    console.log(
-        '[Outbox Relay] Starting Reactive Relay (LISTEN + Safety Polling)',
+    logger.info(
+        'Outbox Relay: Starting Reactive Relay (LISTEN + Safety Polling)',
     );
     processOutboxBatch().then(() => {
         setupListener();
@@ -150,6 +154,7 @@ export const startOutboxRelay = () => {
 
 export const stopOutboxRelay = () => {
     isRunning = false;
+    logger.info('Outbox Relay: Stopping relay...');
     if (timeoutId) {
         clearTimeout(timeoutId);
         timeoutId = null;

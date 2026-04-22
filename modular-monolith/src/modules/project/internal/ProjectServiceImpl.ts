@@ -1,3 +1,4 @@
+import { logger } from '../../../logger';
 import type { PaginationParams } from '../../../types/pagination.ts';
 import eventBus from '../../../utils/EventBus.ts';
 import type {
@@ -25,8 +26,14 @@ export class ProjectServiceImpl implements ProjectService {
         nextCursor: string | null;
         prevCursor: string | null;
     }> {
-        console.log(`[Project Service] Getting projects for userId: ${userId}`);
-        return getProjects(userId, params);
+        logger.debug(
+            `ProjectService.getProjectsOfUser called for userId: ${userId}`,
+        );
+        const result = await getProjects(userId, params);
+        logger.debug(
+            `ProjectService.getProjectsOfUser returned ${result.projects.length} projects`,
+        );
+        return result;
     }
 
     async getProjectMembers(
@@ -38,12 +45,18 @@ export class ProjectServiceImpl implements ProjectService {
         nextCursor: string | null;
         prevCursor: string | null;
     }> {
+        logger.debug(
+            `ProjectService.getProjectMembers called for project: ${projectId}`,
+        );
         return getProjectMembers(userId, projectId, params);
     }
 
     async getProjectMembersByIds(
         memberIds: string[],
     ): Promise<ProjectMember[]> {
+        logger.debug(
+            `ProjectService.getProjectMembersByIds called for ${memberIds.length} ids`,
+        );
         return getProjectMembersByIds(memberIds);
     }
 
@@ -51,10 +64,16 @@ export class ProjectServiceImpl implements ProjectService {
         userId: string,
         memberIds: string[],
     ): Promise<ProjectMember[]> {
+        logger.debug(
+            `ProjectService.getProjectMembersByActorIdAndIds called for actor: ${userId}, members: ${memberIds.length}`,
+        );
         return getProjectMembersByActorIdAndIds(userId, memberIds);
     }
 
     async getProjectsByIds(ids: string[]): Promise<Project[]> {
+        logger.debug(
+            `ProjectService.getProjectsByIds called for ${ids.length} ids`,
+        );
         return getProjectsByIds(ids);
     }
 
@@ -62,16 +81,19 @@ export class ProjectServiceImpl implements ProjectService {
         userId: string,
         projectIds: string[],
     ): Promise<Project[]> {
+        logger.debug(
+            `ProjectService.getProjectsByActorIdAndProjectIds called for actor: ${userId}, projects: ${projectIds.length}`,
+        );
         return getProjectsByActorIdAndProjectIds(userId, projectIds);
     }
 
     async destroy(): Promise<void> {
-        console.log(`Disconnecting event bus ${this.constructor.name}`);
+        logger.info(`Disconnecting event bus ${this.constructor.name}`);
         await eventBus.destroy();
     }
 
     async init() {
-        console.log(`Initializing event bus ${this.constructor.name}`);
+        logger.info(`Initializing event bus ${this.constructor.name}`);
         await eventBus.init();
     }
 
@@ -80,12 +102,24 @@ export class ProjectServiceImpl implements ProjectService {
         name: string;
         description?: string;
     }): Promise<Project | null> {
-        const { actorId, name, description } = param;
-        return await queries.insertProject({
-            userId: actorId,
-            name,
-            description,
+        logger.info(
+            `ProjectService.createProject started by ${param.actorId} for "${param.name}"`,
+        );
+        const result = await queries.insertProject({
+            userId: param.actorId,
+            name: param.name,
+            description: param.description,
         });
+        if (result) {
+            logger.info(
+                `ProjectService.createProject successful: ${result.id}`,
+            );
+        } else {
+            logger.error(
+                `ProjectService.createProject failed for "${param.name}"`,
+            );
+        }
+        return result;
     }
 
     async updateProject(param: {
@@ -95,14 +129,32 @@ export class ProjectServiceImpl implements ProjectService {
         name?: string;
         description?: string;
     }): Promise<Project | null> {
-        return await queries.updateProject(param);
+        logger.info(
+            `ProjectService.updateProject started for ${param.id} by ${param.actorId}`,
+        );
+        const result = await queries.updateProject(param);
+        if (result) {
+            logger.info(`ProjectService.updateProject successful: ${param.id}`);
+        } else {
+            logger.warn(
+                `ProjectService.updateProject failed for ${param.id} (likely version mismatch or permissions)`,
+            );
+        }
+        return result;
     }
 
     async deleteProjects(param: {
         actorId: string;
         projectIds: string[];
     }): Promise<{ success: boolean; deletedCount: number }> {
-        return await queries.deleteProjects(param);
+        logger.info(
+            `ProjectService.deleteProjects started by ${param.actorId} for ${param.projectIds.length} projects`,
+        );
+        const result = await queries.deleteProjects(param);
+        logger.info(
+            `ProjectService.deleteProjects completed: deleted ${result.deletedCount} projects`,
+        );
+        return result;
     }
 
     async addProjectMembers(param: {
@@ -110,7 +162,12 @@ export class ProjectServiceImpl implements ProjectService {
         projectId: string;
         userIds: string[];
     }): Promise<boolean> {
-        return await queries.insertProjectMembers(param);
+        logger.info(
+            `ProjectService.addProjectMembers started for ${param.projectId} by ${param.actorId}, users: ${param.userIds.length}`,
+        );
+        const result = await queries.insertProjectMembers(param);
+        logger.info(`ProjectService.addProjectMembers result: ${result}`);
+        return result;
     }
 
     async removeProjectMembers(param: {
@@ -118,6 +175,11 @@ export class ProjectServiceImpl implements ProjectService {
         projectId: string;
         userIds: string[];
     }): Promise<boolean> {
-        return await queries.deleteProjectMembers(param);
+        logger.info(
+            `ProjectService.removeProjectMembers started for ${param.projectId} by ${param.actorId}, users: ${param.userIds.length}`,
+        );
+        const result = await queries.deleteProjectMembers(param);
+        logger.info(`ProjectService.removeProjectMembers result: ${result}`);
+        return result;
     }
 }
