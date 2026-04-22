@@ -173,4 +173,16 @@ CREATE TABLE outbox_events (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Trigger for Outbox Relay (LISTEN/NOTIFY)
+CREATE OR REPLACE FUNCTION notify_outbox_event() RETURNS TRIGGER AS $$
+BEGIN
+  PERFORM pg_notify('outbox_event_notification', NEW.id::text);
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_outbox_event_inserted
+AFTER INSERT ON outbox_events
+FOR EACH ROW EXECUTE FUNCTION notify_outbox_event();
+
 

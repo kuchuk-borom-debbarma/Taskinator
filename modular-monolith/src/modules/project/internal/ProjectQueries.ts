@@ -166,7 +166,7 @@ export async function insertProjectMembers(param: {
                     'addedUserIds', (SELECT json_agg("userId") FROM inserted_members),
                     'actorId', ${param.actorId}::text
                 )
-            WHERE EXISTS (SELECT 1 FROM inserted_members)
+            FROM (SELECT DISTINCT "projectId" FROM inserted_members) AS sub
         )
         SELECT 1 FROM authorized
     `.execute(db);
@@ -213,7 +213,7 @@ export async function deleteProjectMembers(param: {
                     'removedUserIds', (SELECT json_agg("userId") FROM deleted_members),
                     'actorId', ${param.actorId}::text
                 )
-            WHERE EXISTS (SELECT 1 FROM deleted_members)
+            FROM (SELECT DISTINCT "projectId" FROM deleted_members) AS sub
         )
         SELECT 1 FROM authorized
     `.execute(db);

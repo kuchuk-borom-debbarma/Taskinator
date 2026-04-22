@@ -45,7 +45,7 @@ const dispatchToEventBus = async (
         }
 
         groups.get(groupKey)?.payloads.push({
-            id: event.id,
+            id: event.event_id, // Use the UUID event_id for the event bus, NOT the database serial ID
             key: event.kafka_key,
             data: event.payload,
         });
