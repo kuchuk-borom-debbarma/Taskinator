@@ -45,6 +45,8 @@ export const KAFKA_EVENTS = {
             'project.aggregated.delete_project_team_member',
         DELETE_PROJECT_TASK: 'project.aggregated.delete_project_task',
         DELETE_PROJECT_TASK_LINK: 'project.aggregated.delete_project_task_link',
+        DELETE_PROJECT_TASK_REACHABILITY:
+            'project.aggregated.delete_project_task_reachability',
     },
     TEAM_AGGREGATED: {
         SYNC_PROJECT_TEAM_COUNT: 'team.aggregated.sync_project_team_count',

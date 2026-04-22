@@ -243,6 +243,15 @@ export class ProjectEvents_BatchAggregator {
                         projectIds: deletedProjectIds,
                     },
                 });
+
+                outboxEntries.push({
+                    kafka_topic: KAFKA_TOPICS.PROJECT_AGGREGATED,
+                    payload: {
+                        type: KAFKA_EVENTS.PROJECT_AGGREGATED
+                            .DELETE_PROJECT_TASK_REACHABILITY,
+                        projectIds: deletedProjectIds,
+                    },
+                });
             }
 
             // [5] Single atomic write
