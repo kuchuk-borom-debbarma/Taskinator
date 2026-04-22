@@ -19,7 +19,6 @@ async function robustCleanup() {
     const tables = [
         'outbox_events',
         'processed_event',
-        'automations',
         'project_team_member',
         'project_team',
         'project_member',

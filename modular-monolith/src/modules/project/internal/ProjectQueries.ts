@@ -30,7 +30,7 @@ export async function insertProject(param: {
                 ${KAFKA_TOPICS.PROJECT},
                 id::text,
                 jsonb_build_object(
-                    'type', ${KAFKA_EVENTS.PROJECT.CREATED},
+                    'type', ${KAFKA_EVENTS.PROJECT.CREATED}::text,
                     'projectId', id,
                     'userId', "userId",
                     'name', name
@@ -77,9 +77,9 @@ export async function updateProject(param: {
                 ${KAFKA_TOPICS.PROJECT},
                 id::text,
                 jsonb_build_object(
-                    'type', ${KAFKA_EVENTS.PROJECT.UPDATED},
+                    'type', ${KAFKA_EVENTS.PROJECT.UPDATED}::text,
                     'projectId', id,
-                    'actorId', ${param.actorId},
+                    'actorId', ${param.actorId}::text,
                     'name', name
                 )
             FROM updated_project
@@ -110,7 +110,7 @@ export async function deleteProjects(param: {
                 ${KAFKA_TOPICS.PROJECT},
                 id::text,
                 jsonb_build_object(
-                    'type', ${KAFKA_EVENTS.PROJECT.DELETED},
+                    'type', ${KAFKA_EVENTS.PROJECT.DELETED}::text,
                     'projectId', id,
                     'userId', "userId",
                     'name', name
@@ -161,10 +161,10 @@ export async function insertProjectMembers(param: {
                 ${KAFKA_TOPICS.PROJECT},
                 "projectId"::text,
                 jsonb_build_object(
-                    'type', ${KAFKA_EVENTS.PROJECT.MEMBERS_ADDED},
+                    'type', ${KAFKA_EVENTS.PROJECT.MEMBERS_ADDED}::text,
                     'projectId', "projectId",
                     'addedUserIds', (SELECT json_agg("userId") FROM inserted_members),
-                    'actorId', ${param.actorId}
+                    'actorId', ${param.actorId}::text
                 )
             WHERE EXISTS (SELECT 1 FROM inserted_members)
         )
@@ -208,10 +208,10 @@ export async function deleteProjectMembers(param: {
                 ${KAFKA_TOPICS.PROJECT},
                 "projectId"::text,
                 jsonb_build_object(
-                    'type', ${KAFKA_EVENTS.PROJECT.MEMBERS_REMOVED},
+                    'type', ${KAFKA_EVENTS.PROJECT.MEMBERS_REMOVED}::text,
                     'projectId', "projectId",
                     'removedUserIds', (SELECT json_agg("userId") FROM deleted_members),
-                    'actorId', ${param.actorId}
+                    'actorId', ${param.actorId}::text
                 )
             WHERE EXISTS (SELECT 1 FROM deleted_members)
         )

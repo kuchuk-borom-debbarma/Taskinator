@@ -30,7 +30,7 @@ export const insertTeam = async (param: {
                 'team-events',
                 "projectId"::text,
                 jsonb_build_object(
-                    'type', 'team.created',
+                    'type', 'team.created'::text,
                     'teamId', id,
                     'projectId', "projectId",
                     'name', name,
@@ -399,7 +399,7 @@ export const deleteTeams = async (param: {
                 'team-events',
                 id::text,
                 jsonb_build_object(
-                    'type', 'team.deleted',
+                    'type', 'team.deleted'::text,
                     'teamId', id,
                     'projectId', "projectId",
                     'name', name
@@ -449,7 +449,7 @@ export const insertTeamMembers = async (param: {
                 'team-events',
                 ${param.teamId}::text,
                 jsonb_build_object(
-                    'type', 'team.members_added',
+                    'type', 'team.members_added'::text,
                     'teamId', ${param.teamId}::uuid,
                     'projectId', ${param.projectId}::uuid,
                     'addedUserIds', array_agg(fk_user_id)
@@ -500,7 +500,7 @@ export const deleteTeamMembers = async (param: {
                 'team-events',
                 ${param.teamId}::text,
                 jsonb_build_object(
-                    'type', 'team.members_removed',
+                    'type', 'team.members_removed'::text,
                     'teamId', ${param.teamId}::uuid,
                     'projectId', ${param.projectId}::uuid,
                     'removedUserIds', array_agg(fk_user_id)
@@ -548,12 +548,12 @@ export const updateTeam = async (param: {
                 'team-events',
                 id::text,
                 jsonb_build_object(
-                    'type', 'team.updated',
+                    'type', 'team.updated'::text,
                     'teamId', id,
                     'projectId', "projectId",
                     'name', name,
                     'version', version,
-                    'actorId', ${param.actorId}
+                    'actorId', ${param.actorId}::text
                 )
             FROM updated
         )
