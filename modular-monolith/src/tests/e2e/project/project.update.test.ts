@@ -85,6 +85,99 @@ describe('Project Update E2E', () => {
         expect(updateRes.body.errors[0].message).toContain('Version mismatch');
     });
 
+    it('should update name only and preserve description (Partial Update)', async () => {
+        // 1. Create with description
+        const createRes = await gqlRequest({
+            query: CREATE_PROJECT,
+            variables: {
+                name: 'Full Project',
+                description: 'Original Description',
+            },
+            token: token1,
+        });
+        const projectId = createRes.body.data.createProject.id;
+        const oldVersion = createRes.body.data.createProject.version;
+
+        // 2. Update name only
+        const updateRes = await gqlRequest({
+            query: UPDATE_PROJECT,
+            variables: {
+                id: projectId,
+                version: oldVersion,
+                name: 'Renamed Project',
+            },
+            token: token1,
+        });
+
+        expect(updateRes.body.data.updateProject.name).toBe('Renamed Project');
+        expect(updateRes.body.data.updateProject.description).toBe(
+            'Original Description',
+        );
+        expect(updateRes.body.data.updateProject.version).toBe(oldVersion + 1);
+    });
+
+    it('should increment version even if values are identical (No-Op Update)', async () => {
+        const createRes = await gqlRequest({
+            query: CREATE_PROJECT,
+            variables: { name: 'No-Op Test' },
+            token: token1,
+        });
+        const { id, version, name } = createRes.body.data.createProject;
+
+        const updateRes = await gqlRequest({
+            query: UPDATE_PROJECT,
+            variables: { id, version, name }, // Same name
+            token: token1,
+        });
+
+        expect(updateRes.body.data.updateProject.name).toBe(name);
+        expect(updateRes.body.data.updateProject.version).toBe(version + 1);
+    });
+
+    it('should allow setting name to empty string (Currently allowed by DB/Logic)', async () => {
+        const createRes = await gqlRequest({
+            query: CREATE_PROJECT,
+            variables: { name: 'Something' },
+            token: token1,
+        });
+        const { id, version } = createRes.body.data.createProject;
+
+        const updateRes = await gqlRequest({
+            query: UPDATE_PROJECT,
+            variables: { id, version, name: '' },
+            token: token1,
+        });
+
+        expect(updateRes.body.data.updateProject.name).toBe('');
+    });
+
+    it('should NOT allow clearing description by setting it to null (Sticky Field behavior)', async () => {
+        // This test documents current behavior where COALESCE prevents setting to null
+        const createRes = await gqlRequest({
+            query: CREATE_PROJECT,
+            variables: { name: 'Sticky Test', description: 'I am sticky' },
+            token: token1,
+        });
+        const { id, version } = createRes.body.data.createProject;
+
+        const updateRes = await gqlRequest({
+            query: `
+                mutation Update($id: ID!, $version: Int!, $desc: String) {
+                    updateProject(id: $id, version: $version, description: $desc) {
+                        description
+                    }
+                }
+            `,
+            variables: { id, version, desc: null },
+            token: token1,
+        });
+
+        // Current implementation keeps the old value because COALESCE(null, old) = old
+        expect(updateRes.body.data.updateProject.description).toBe(
+            'I am sticky',
+        );
+    });
+
     it('should fail when updating a project owned by another user', async () => {
         // [1] User 1 creates a project
         const createRes = await gqlRequest({

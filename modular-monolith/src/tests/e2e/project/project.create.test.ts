@@ -103,6 +103,30 @@ describe('Project Creation E2E', () => {
         expect(res.body.data.createProject.name).toBe(longName);
     });
 
+    it('should create a project with a description and special characters', async () => {
+        const complexName = '🚀 Project X (UTF-8) ⚡️';
+        const complexDesc = 'Multi-line\n"Quoted" & <Escaped> Description';
+
+        const res = await gqlRequest({
+            query: CREATE_PROJECT,
+            variables: { name: complexName, description: complexDesc },
+            token: token1,
+        });
+
+        expect(res.status).toBe(200);
+        expect(res.body.data.createProject.name).toBe(complexName);
+        expect(res.body.data.createProject.description).toBe(complexDesc);
+
+        // Verify in DB
+        const p = await db
+            .selectFrom('project')
+            .selectAll()
+            .where('id', '=', res.body.data.createProject.id)
+            .executeTakeFirstOrThrow();
+        expect(p.name).toBe(complexName);
+        expect(p.description).toBe(complexDesc);
+    });
+
     it('should fail to create project without authentication', async () => {
         const res = await gqlRequest({
             query: CREATE_PROJECT,

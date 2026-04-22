@@ -3,7 +3,11 @@ import { cleanupDb } from '../../../__tests__/helpers/db.ts';
 import { db } from '../../../database/index.ts';
 import { gqlRequest } from '../helpers/request.ts';
 import { bootstrapE2E, teardownE2E } from '../helpers/server.ts';
-import { CREATE_PROJECT, DELETE_PROJECTS } from './mutation.ts';
+import {
+    ADD_PROJECT_MEMBERS,
+    CREATE_PROJECT,
+    DELETE_PROJECTS,
+} from './mutation.ts';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-jwt-key';
 
@@ -134,6 +138,89 @@ describe('Project Deletion E2E', () => {
             .where('id', '=', projectId)
             .executeTakeFirstOrThrow();
         expect(p.name).toBe('Untouchable Project');
+    });
+
+    it('should delete project and verify background membership purge', async () => {
+        // [1] Setup: Create project and add a member
+        const createRes = await gqlRequest({
+            query: CREATE_PROJECT,
+            variables: { name: 'Cascade Test' },
+            token: token1,
+        });
+        const projectId = createRes.body.data.createProject.id;
+
+        const otherUser = await db
+            .insertInto('users')
+            .values({
+                email: 'other@test.com',
+                username: 'other',
+                password_hash: 'a',
+            })
+            .returningAll()
+            .executeTakeFirstOrThrow();
+
+        await gqlRequest({
+            query: ADD_PROJECT_MEMBERS,
+            variables: { projectId, userIds: [otherUser.id] },
+            token: token1,
+        });
+
+        // Verify member exists in DB
+        const mBefore = await db
+            .selectFrom('project_member')
+            .where('fk_project_id', '=', projectId)
+            .execute();
+        expect(mBefore.length).toBe(1);
+
+        // [2] Delete Project
+        await gqlRequest({
+            query: DELETE_PROJECTS,
+            variables: { projectIds: [projectId] },
+            token: token1,
+        });
+
+        // [3] Background Check: Membership should be purged eventually
+        let purged = false;
+        let attempts = 0;
+        while (attempts < 20) {
+            const members = await db
+                .selectFrom('project_member')
+                .where('fk_project_id', '=', projectId)
+                .execute();
+            if (members.length === 0) {
+                purged = true;
+                break;
+            }
+            await new Promise((r) => setTimeout(r, 500));
+            attempts++;
+        }
+
+        expect(purged).toBe(true);
+    }, 20000);
+
+    it('should be idempotent when deleting the same project multiple times', async () => {
+        const createRes = await gqlRequest({
+            query: CREATE_PROJECT,
+            variables: { name: 'Idempotency Test' },
+            token: token1,
+        });
+        const projectId = createRes.body.data.createProject.id;
+
+        // Call delete twice
+        const res1 = await gqlRequest({
+            query: DELETE_PROJECTS,
+            variables: { projectIds: [projectId] },
+            token: token1,
+        });
+        const res2 = await gqlRequest({
+            query: DELETE_PROJECTS,
+            variables: { projectIds: [projectId] },
+            token: token1,
+        });
+
+        expect(res1.body.data.deleteProjects.deletedCount).toBe(1);
+        expect(res2.body.data.deleteProjects.deletedCount).toBe(0);
+        expect(res2.body.data.deleteProjects.success).toBe(true);
     });
 
     it('should handle bulk deletion with some non-existent IDs', async () => {
