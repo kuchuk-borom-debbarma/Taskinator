@@ -81,8 +81,61 @@ describe('Project Update E2E', () => {
             variables: { id: projectId, version: 99, name: 'Conflict' },
             token: token1,
         });
-
         expect(updateRes.body.errors).toBeDefined();
         expect(updateRes.body.errors[0].message).toContain('Version mismatch');
+    });
+
+    it('should fail when updating a project owned by another user', async () => {
+        // [1] User 1 creates a project
+        const createRes = await gqlRequest({
+            query: CREATE_PROJECT,
+            variables: { name: 'User 1 Project' },
+            token: token1,
+        });
+        const projectId = createRes.body.data.createProject.id;
+
+        // [2] User 2 tries to update it
+        const user2 = await db
+            .insertInto('users')
+            .values({
+                email: 'user2@test.com',
+                username: 'user2',
+                password_hash: 'a',
+            })
+            .returningAll()
+            .executeTakeFirstOrThrow();
+        const token2 = jwt.sign(
+            { id: user2.id, email: user2.email, username: user2.username },
+            JWT_SECRET,
+        );
+
+        const updateRes = await gqlRequest({
+            query: UPDATE_PROJECT,
+            variables: { id: projectId, version: 1, name: 'Hacked!' },
+            token: token2,
+        });
+
+        expect(updateRes.body.errors).toBeDefined();
+        expect(updateRes.body.errors[0].message).toContain(
+            'Failed to update project',
+        );
+
+        // Verify DB didn't change
+        const p = await db
+            .selectFrom('project')
+            .selectAll()
+            .where('id', '=', projectId)
+            .executeTakeFirstOrThrow();
+        expect(p.name).toBe('User 1 Project');
+    });
+
+    it('should fail gracefully when updating a non-existent project ID', async () => {
+        const randomId = '550e8400-e29b-41d4-a716-446655440000';
+        const res = await gqlRequest({
+            query: UPDATE_PROJECT,
+            variables: { id: randomId, version: 1, name: 'Ghost' },
+            token: token1,
+        });
+        expect(res.body.errors).toBeDefined();
     });
 });

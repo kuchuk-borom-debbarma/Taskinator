@@ -87,11 +87,79 @@ describe('Project Deletion E2E', () => {
 
         expect(finalCount).toBe(0);
 
-        // [4] DB Check
         const project = await db
             .selectFrom('project')
             .where('id', '=', projectId)
             .executeTakeFirst();
         expect(project).toBeUndefined();
     }, 20000);
+
+    it('should fail when deleting a project owned by another user', async () => {
+        // [1] User 1 creates project
+        const createRes = await gqlRequest({
+            query: CREATE_PROJECT,
+            variables: { name: 'Untouchable Project' },
+            token: token1,
+        });
+        const projectId = createRes.body.data.createProject.id;
+
+        // [2] User 2 tries to delete it
+        const user2 = await db
+            .insertInto('users')
+            .values({
+                email: 'user2@test.com',
+                username: 'user2',
+                password_hash: 'a',
+            })
+            .returningAll()
+            .executeTakeFirstOrThrow();
+        const token2 = jwt.sign(
+            { id: user2.id, email: user2.email, username: user2.username },
+            JWT_SECRET,
+        );
+
+        const deleteRes = await gqlRequest({
+            query: DELETE_PROJECTS,
+            variables: { projectIds: [projectId] },
+            token: token2,
+        });
+
+        // The mutation might return success true but deletedCount 0
+        expect(deleteRes.body.data.deleteProjects.deletedCount).toBe(0);
+
+        // Verify project still exists
+        const p = await db
+            .selectFrom('project')
+            .selectAll()
+            .where('id', '=', projectId)
+            .executeTakeFirstOrThrow();
+        expect(p.name).toBe('Untouchable Project');
+    });
+
+    it('should handle bulk deletion with some non-existent IDs', async () => {
+        const createRes = await gqlRequest({
+            query: CREATE_PROJECT,
+            variables: { name: 'Exists' },
+            token: token1,
+        });
+        const projectId = createRes.body.data.createProject.id;
+        const ghostId = '550e8400-e29b-41d4-a716-446655440001';
+
+        const deleteRes = await gqlRequest({
+            query: DELETE_PROJECTS,
+            variables: { projectIds: [projectId, ghostId] },
+            token: token1,
+        });
+
+        expect(deleteRes.body.data.deleteProjects.deletedCount).toBe(1);
+    });
+
+    it('should handle empty ID list gracefully', async () => {
+        const deleteRes = await gqlRequest({
+            query: DELETE_PROJECTS,
+            variables: { projectIds: [] },
+            token: token1,
+        });
+        expect(deleteRes.body.data.deleteProjects.deletedCount).toBe(0);
+    });
 });

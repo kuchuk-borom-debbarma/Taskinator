@@ -76,4 +76,39 @@ describe('Project Creation E2E', () => {
 
         expect(finalCount).toBe(1);
     }, 15000);
+
+    it('should allow multiple projects with the same name (standard behavior)', async () => {
+        await gqlRequest({
+            query: CREATE_PROJECT,
+            variables: { name: 'Duplicate Name' },
+            token: token1,
+        });
+        const res2 = await gqlRequest({
+            query: CREATE_PROJECT,
+            variables: { name: 'Duplicate Name' },
+            token: token1,
+        });
+        expect(res2.status).toBe(200);
+        expect(res2.body.data.createProject.name).toBe('Duplicate Name');
+    });
+
+    it('should handle extremely long project names', async () => {
+        const longName = 'A'.repeat(500);
+        const res = await gqlRequest({
+            query: CREATE_PROJECT,
+            variables: { name: longName },
+            token: token1,
+        });
+        expect(res.status).toBe(200);
+        expect(res.body.data.createProject.name).toBe(longName);
+    });
+
+    it('should fail to create project without authentication', async () => {
+        const res = await gqlRequest({
+            query: CREATE_PROJECT,
+            variables: { name: 'No Token Project' },
+        });
+        expect(res.body.errors).toBeDefined();
+        expect(res.body.errors[0].message).toContain('userId not found');
+    });
 });
