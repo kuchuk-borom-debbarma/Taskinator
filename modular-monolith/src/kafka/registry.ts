@@ -9,6 +9,7 @@ import { ProjectAggregated_DeleteProjectTask } from '../modules/task/internal/li
 import { ProjectAggregated_DeleteProjectTaskLink } from '../modules/task/internal/listeners/ProjectAggregated_DeleteProjectTaskLink.ts';
 import { ProjectAggregated_UnassignProjectTaskMember } from '../modules/task/internal/listeners/ProjectAggregated_UnassignProjectTaskMember.ts';
 import { TaskAggregated_DeleteTaskLinksListener } from '../modules/task/internal/listeners/TaskAggregated_DeleteTaskLinksListener.ts';
+import { TaskAggregated_DeleteTaskReachabilityListener } from '../modules/task/internal/listeners/TaskAggregated_DeleteTaskReachabilityListener.ts';
 import { TaskAggregated_ReachabilitySyncListener } from '../modules/task/internal/listeners/TaskAggregated_ReachabilitySyncListener.ts';
 import { TeamAggregated_OrphanTeamTasksListener } from '../modules/task/internal/listeners/TeamAggregated_OrphanTeamTasksListener.ts';
 import { TeamAggregated_UnassignMemberFromTeamTasksListener } from '../modules/task/internal/listeners/TeamAggregated_UnassignMemberFromTeamTasksListener.ts';
@@ -75,6 +76,8 @@ export async function startConsumers() {
         new TaskAggregated_DeleteTaskLinksListener();
     const taskReachabilitySyncListener =
         new TaskAggregated_ReachabilitySyncListener();
+    const taskBulkReachabilityCleanupListener =
+        new TaskAggregated_DeleteTaskReachabilityListener();
 
     await Promise.all([
         projectAggregator.init(),
@@ -99,6 +102,7 @@ export async function startConsumers() {
         taskTeamSyncListener.init(),
         taskLinkCleanupListener.init(),
         taskReachabilitySyncListener.init(),
+        taskBulkReachabilityCleanupListener.init(),
     ]);
 
     logger.info('[Registry] All domain consumers and listeners initialized');

@@ -1378,3 +1378,67 @@ export const contractTaskReachability = async (
         DO UPDATE SET depth = EXCLUDED.depth
     `.execute(trx);
 };
+
+/**
+ * Bulk Reachability Deletion: Handles the removal of multiple tasks
+ * and repairs the graph transitive closure.
+ */
+export const deleteTaskReachabilityBulk = async (
+    trx: Transaction<Database>,
+    taskIds: string[],
+): Promise<void> => {
+    // 1. Identify affected projects before purging
+    const projects = await sql<{ fk_project_id: string }>`
+        SELECT DISTINCT fk_project_id 
+        FROM task_reachability 
+        WHERE ancestor_task_id = ANY(${taskIds}::uuid[]) 
+           OR descendant_task_id = ANY(${taskIds}::uuid[])
+    `.execute(trx);
+
+    if (projects.rows.length === 0) return;
+
+    const projectIds = projects.rows.map((p) => p.fk_project_id);
+
+    // 2. Purge all reachability records for the deleted tasks
+    await sql`
+        DELETE FROM task_reachability
+        WHERE ancestor_task_id = ANY(${taskIds}::uuid[])
+           OR descendant_task_id = ANY(${taskIds}::uuid[])
+    `.execute(trx);
+
+    // 3. For each affected project, perform a scoped repair
+    for (const projectId of projectIds) {
+        await sql`
+            WITH RECURSIVE repair AS (
+                SELECT 
+                    fk_project_id,
+                    source_task_id as anc_id,
+                    target_task_id as des_id,
+                    1 as depth
+                FROM task_link
+                WHERE fk_project_id = ${projectId}::uuid
+                
+                UNION
+                
+                SELECT 
+                    tl.fk_project_id,
+                    r.anc_id,
+                    tl.target_task_id,
+                    r.depth + 1
+                FROM repair r
+                JOIN task_link tl ON tl.source_task_id = r.des_id
+                WHERE tl.fk_project_id = ${projectId}::uuid
+                  AND r.depth < 100
+            )
+            INSERT INTO task_reachability (fk_project_id, ancestor_task_id, descendant_task_id, depth)
+            SELECT fk_project_id, anc_id, des_id, MIN(depth)
+            FROM repair
+            GROUP BY fk_project_id, anc_id, des_id
+            ON CONFLICT (fk_project_id, ancestor_task_id, descendant_task_id) 
+            DO UPDATE SET depth = EXCLUDED.depth
+        `.execute(trx);
+
+        // Sync counters for this project
+        await syncTaskGraphCounters(trx, projectId);
+    }
+};
