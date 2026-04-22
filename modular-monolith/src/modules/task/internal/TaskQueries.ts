@@ -55,8 +55,8 @@ export const getTasksPage = async (
             description,
             status,
             version,
-            fk_created_by AS "createdBy",
-            fk_updated_by AS "updatedBy",
+            created_by AS "createdBy",
+            updated_by AS "updatedBy",
             priority,
             created_at AS "createdAt",
             created_at::text as "epochPrecision",
@@ -217,13 +217,13 @@ export const getTaskLinksPage = async (
             fk_created_by AS "createdBy", 
             created_at AS "createdAt",
             created_at::text as "epochPrecision"
-        FROM project_task_link
+        FROM task_link
         WHERE EXISTS (SELECT 1 FROM auth_check)
           AND fk_project_id = ${projectId}::uuid
           AND (
             CASE 
-              WHEN ${direction} = 'incoming' THEN fk_target_task_id = ${taskId}::uuid
-              ELSE fk_source_task_id = ${taskId}::uuid
+              WHEN ${direction} = 'incoming' THEN target_task_id = ${taskId}::uuid
+              ELSE source_task_id = ${taskId}::uuid
             END
           )
           AND (
@@ -418,8 +418,8 @@ export const insertTask = async (param: {
                 title, 
                 description, 
                 status, 
-                fk_created_by, 
-                fk_updated_by
+                created_by, 
+                updated_by
             )
             SELECT 
                 ${param.projectId}::uuid, 
@@ -438,8 +438,8 @@ export const insertTask = async (param: {
                 description, 
                 status, 
                 version, 
-                    fk_created_by AS "createdBy", 
-                fk_updated_by AS "updatedBy",
+                created_by AS "createdBy", 
+                updated_by AS "updatedBy",
                 priority, 
                 created_at AS "createdAt", 
                 updated_at AS "updatedAt"
@@ -503,7 +503,7 @@ export const updateTask = async (param: {
     }
 
     updates.push(sql`version = version + 1`);
-    updates.push(sql`fk_updated_by = ${param.actorId}`);
+    updates.push(sql`updated_by = ${param.actorId}`);
     updates.push(sql`updated_at = NOW()`);
 
     const setClause = sql.join(updates, sql`, `);
@@ -557,8 +557,8 @@ export const updateTask = async (param: {
                 description, 
                 status, 
                 version, 
-                    fk_created_by AS "createdBy", 
-                fk_updated_by AS "updatedBy",
+                created_by AS "createdBy", 
+                updated_by AS "updatedBy",
                 priority, 
                 created_at AS "createdAt", 
                 updated_at AS "updatedAt"
@@ -1263,3 +1263,118 @@ export async function orphanTasksByTeamIdsBatch(
 
     return { affectedCount: Number(result.numUpdatedRows) };
 }
+
+/**
+ * Closure Table Expansion: Connects all ancestors of 'sourceTaskId'
+ * to all descendants of 'targetTaskId'.
+ */
+export const expandTaskReachability = async (
+    trx: Transaction<Database>,
+    projectId: string,
+    sourceId: string,
+    targetId: string,
+): Promise<void> => {
+    await sql`
+        INSERT INTO task_reachability (fk_project_id, ancestor_task_id, descendant_task_id, depth)
+        SELECT 
+            ${projectId}::uuid,
+            anc.ancestor_id,
+            des.descendant_id,
+            anc.depth + 1 + des.depth
+        FROM 
+            (
+                SELECT ancestor_task_id as ancestor_id, depth 
+                FROM task_reachability 
+                WHERE descendant_task_id = ${sourceId}::uuid AND fk_project_id = ${projectId}::uuid
+                UNION ALL 
+                SELECT ${sourceId}::uuid, 0
+            ) anc,
+            (
+                SELECT descendant_task_id as descendant_id, depth 
+                FROM task_reachability 
+                WHERE ancestor_task_id = ${targetId}::uuid AND fk_project_id = ${projectId}::uuid
+                UNION ALL 
+                SELECT ${targetId}::uuid, 0
+            ) des
+        ON CONFLICT (fk_project_id, ancestor_task_id, descendant_task_id) 
+        DO UPDATE SET depth = LEAST(task_reachability.depth, EXCLUDED.depth)
+    `.execute(trx);
+};
+
+/**
+ * Synchronizes denormalized reachability counters on the project_task table.
+ */
+export const syncTaskGraphCounters = async (
+    trx: Transaction<Database>,
+    projectId: string,
+): Promise<void> => {
+    await sql`
+        UPDATE project_task 
+        SET 
+            total_incoming_count = (
+                SELECT COUNT(*) FROM task_reachability 
+                WHERE descendant_task_id = project_task.id AND fk_project_id = ${projectId}::uuid
+            ),
+            total_outgoing_count = (
+                SELECT COUNT(*) FROM task_reachability 
+                WHERE ancestor_task_id = project_task.id AND fk_project_id = ${projectId}::uuid
+            )
+        WHERE fk_project_id = ${projectId}::uuid
+    `.execute(trx);
+};
+
+/**
+ * Closure Table Contraction: Removes paths that potentially relied on
+ * the bridge 'sourceId -> targetId' and repairs the graph.
+ */
+export const contractTaskReachability = async (
+    trx: Transaction<Database>,
+    projectId: string,
+    sourceId: string,
+    targetId: string,
+): Promise<void> => {
+    // 1. Identify and Purge potentially broken paths
+    await sql`
+        DELETE FROM task_reachability
+        WHERE fk_project_id = ${projectId}::uuid
+          AND ancestor_task_id IN (
+              SELECT ancestor_task_id FROM task_reachability WHERE descendant_task_id = ${sourceId}::uuid AND fk_project_id = ${projectId}::uuid
+              UNION ALL SELECT ${sourceId}::uuid
+          )
+          AND descendant_task_id IN (
+              SELECT descendant_task_id FROM task_reachability WHERE ancestor_task_id = ${targetId}::uuid AND fk_project_id = ${projectId}::uuid
+              UNION ALL SELECT ${targetId}::uuid
+          )
+    `.execute(trx);
+
+    // 2. Recursive Repair
+    await sql`
+        WITH RECURSIVE repair AS (
+            SELECT 
+                fk_project_id,
+                source_task_id as anc_id,
+                target_task_id as des_id,
+                1 as depth
+            FROM task_link
+            WHERE fk_project_id = ${projectId}::uuid
+            
+            UNION
+            
+            SELECT 
+                tl.fk_project_id,
+                r.anc_id,
+                tl.target_task_id,
+                r.depth + 1
+            FROM repair r
+            JOIN task_link tl ON tl.source_task_id = r.des_id
+            WHERE tl.fk_project_id = ${projectId}::uuid
+              AND r.depth < 100
+        )
+        INSERT INTO task_reachability (fk_project_id, ancestor_task_id, descendant_task_id, depth)
+        SELECT fk_project_id, anc_id, des_id, MIN(depth)
+        FROM repair
+        GROUP BY fk_project_id, anc_id, des_id
+        ON CONFLICT (fk_project_id, ancestor_task_id, descendant_task_id) 
+        DO UPDATE SET depth = EXCLUDED.depth
+    `.execute(trx);
+};
