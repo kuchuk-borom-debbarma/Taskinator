@@ -7,7 +7,7 @@ import type { Bus, DomainEvent } from './types.ts';
 export class KafkaBus implements Bus {
     private kafka = new Kafka({
         clientId: 'taskinator-v2',
-        brokers: ['localhost:9092'],
+        brokers: [process.env.KAFKA_BROKERS || 'localhost:9092'],
     });
     private producer: Producer;
     private consumers: Consumer[] = [];

@@ -27,11 +27,11 @@ export interface Database {
 }
 
 export const pool = new Pool({
-    database: 'test',
-    host: 'localhost',
-    user: 'admin',
-    password: 'password',
-    port: 5434,
+    database: process.env.DB_NAME || 'test',
+    host: process.env.DB_HOST || 'localhost',
+    user: process.env.DB_USER || 'admin',
+    password: process.env.DB_PASSWORD || 'password',
+    port: Number(process.env.DB_PORT) || 5434,
     max: 10,
 });
 
