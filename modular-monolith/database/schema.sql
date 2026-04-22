@@ -87,8 +87,7 @@ CREATE TABLE task_reachability (
     fk_project_id UUID NOT NULL,
     ancestor_task_id UUID NOT NULL,
     descendant_task_id UUID NOT NULL,
-    min_depth INTEGER NOT NULL,
-    path_count INTEGER NOT NULL DEFAULT 1,
+    depth INTEGER NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (fk_project_id, ancestor_task_id, descendant_task_id)
 );
@@ -98,8 +97,8 @@ CREATE INDEX idx_project_task_project ON project_task(fk_project_id);
 CREATE INDEX idx_task_link_source ON task_link(fk_project_id, source_task_id);
 CREATE INDEX idx_task_link_target ON task_link(fk_project_id, target_task_id);
 CREATE INDEX idx_task_link_pair ON task_link(fk_project_id, source_task_id, target_task_id);
-CREATE INDEX idx_reach_desc ON task_reachability(fk_project_id, descendant_task_id, min_depth);
-CREATE INDEX idx_reach_anc ON task_reachability(fk_project_id, ancestor_task_id, min_depth);
+CREATE INDEX idx_reach_desc ON task_reachability(fk_project_id, descendant_task_id, depth);
+CREATE INDEX idx_reach_anc ON task_reachability(fk_project_id, ancestor_task_id, depth);
 
 
 
