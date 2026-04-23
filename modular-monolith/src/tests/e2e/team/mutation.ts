@@ -39,3 +39,17 @@ export const REMOVE_TEAM_MEMBERS = `
         }
     }
 `;
+
+export const UPDATE_TEAM = `
+    mutation UpdateTeam($projectId: ID!, $teamId: ID!, $name: String!, $version: Int!) {
+        updateTeam(projectId: $projectId, teamId: $teamId, name: $name, version: $version) {
+            success
+            team {
+                id
+                name
+                version
+                updatedAt
+            }
+        }
+    }
+`;
