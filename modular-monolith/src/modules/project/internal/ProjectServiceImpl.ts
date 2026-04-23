@@ -23,6 +23,7 @@ export class ProjectServiceImpl implements ProjectService {
         params?: PaginationParams,
     ): Promise<{
         projects: Project[];
+        totalCount: number;
         nextCursor: string | null;
         prevCursor: string | null;
     }> {

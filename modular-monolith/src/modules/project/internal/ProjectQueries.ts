@@ -226,12 +226,13 @@ export const getProjects = async (
     params: PaginationParams = {},
 ): Promise<{
     projects: Project[];
+    totalCount: number;
     nextCursor: string | null;
     prevCursor: string | null;
 }> => {
-    const limit = Math.min(params.first || params.last || 5, 50);
-    const { after, before } = params;
-    const isBackward = !!before;
+    const limit = Math.min(params.first || params.last || 10, 50);
+    const { first, last, after, before } = params;
+    const isBackward = !!last || !!before;
     const cursor = before || after;
 
     let cursorEpoch: string | null = null;
@@ -242,6 +243,16 @@ export const getProjects = async (
         cursorEpoch = decoded.timeValue;
         cursorId = decoded.id;
     }
+
+    const countResult = await sql<{ count: string }>`
+        SELECT count(*)::text as count
+        FROM (
+            SELECT p.id FROM project p WHERE p.fk_user_id = ${userId}::text
+            UNION
+            SELECT pm.fk_project_id FROM project_member pm WHERE pm.fk_user_id = ${userId}::text
+        ) as sub
+    `.execute(db);
+    const totalCount = parseInt(countResult.rows[0].count, 10);
 
     const result = await sql<
         Project & { isOwner: boolean; epochPrecision: string }
@@ -286,6 +297,7 @@ export const getProjects = async (
     if (hasMore) {
         rows = rows.slice(0, limit);
     }
+    // Relay: if last is used, we order ASC in SQL, then reverse to get DESC final list
     if (isBackward) {
         rows.reverse();
     }
@@ -295,21 +307,27 @@ export const getProjects = async (
     let prevCursor: string | null = null;
 
     if (projects.length > 0) {
-        const first = projects[0]!;
-        const last = projects[projects.length - 1]!;
-        const firstEpoch = (first as any).epochPrecision;
-        const lastEpoch = (last as any).epochPrecision;
+        const firstRow = projects[0]!;
+        const lastRow = projects[projects.length - 1]!;
 
-        if (isBackward) {
-            nextCursor = encodeCursor(lastEpoch, last.id);
-            prevCursor = hasMore ? encodeCursor(firstEpoch, first.id) : null;
+        if (last || before) {
+            // Backward pagination
+            nextCursor = encodeCursor(lastRow.epochPrecision, lastRow.id);
+            prevCursor = hasMore
+                ? encodeCursor(firstRow.epochPrecision, firstRow.id)
+                : null;
         } else {
-            nextCursor = hasMore ? encodeCursor(lastEpoch, last.id) : null;
-            prevCursor = after ? encodeCursor(firstEpoch, first.id) : null;
+            // Forward pagination
+            nextCursor = hasMore
+                ? encodeCursor(lastRow.epochPrecision, lastRow.id)
+                : null;
+            prevCursor = after
+                ? encodeCursor(firstRow.epochPrecision, firstRow.id)
+                : null;
         }
     }
 
-    return { projects, nextCursor, prevCursor };
+    return { projects, totalCount, nextCursor, prevCursor };
 };
 
 export const getProjectMembers = async (
@@ -322,8 +340,8 @@ export const getProjectMembers = async (
     prevCursor: string | null;
 }> => {
     const limit = Math.min(params.first || params.last || 15, 50);
-    const { after, before } = params;
-    const isBackward = !!before;
+    const { first, last, after, before } = params;
+    const isBackward = !!last || !!before;
     const cursor = before || after;
 
     let cursorEpoch: string | null = null;
@@ -380,17 +398,21 @@ export const getProjectMembers = async (
     let prevCursor: string | null = null;
 
     if (members.length > 0) {
-        const first = members[0]!;
-        const last = members[members.length - 1]!;
-        const firstEpoch = (first as any).epochPrecision;
-        const lastEpoch = (last as any).epochPrecision;
+        const firstRow = members[0]!;
+        const lastRow = members[members.length - 1]!;
 
-        if (isBackward) {
-            nextCursor = encodeCursor(lastEpoch, last.id);
-            prevCursor = hasMore ? encodeCursor(firstEpoch, first.id) : null;
+        if (last || before) {
+            nextCursor = encodeCursor(lastRow.epochPrecision, lastRow.id);
+            prevCursor = hasMore
+                ? encodeCursor(firstRow.epochPrecision, firstRow.id)
+                : null;
         } else {
-            nextCursor = hasMore ? encodeCursor(lastEpoch, last.id) : null;
-            prevCursor = after ? encodeCursor(firstEpoch, first.id) : null;
+            nextCursor = hasMore
+                ? encodeCursor(lastRow.epochPrecision, lastRow.id)
+                : null;
+            prevCursor = after
+                ? encodeCursor(firstRow.epochPrecision, firstRow.id)
+                : null;
         }
     }
 

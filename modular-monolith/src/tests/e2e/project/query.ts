@@ -1,5 +1,5 @@
-export const GET_PROJECT = `
-    query GetProject($id: ID!) {
+export const GET_SINGLE_PROJECT = `
+    query GetSingleProject($id: ID!) {
         project(id: $id) {
             id
             name
@@ -16,11 +16,19 @@ export const GET_PROJECT = `
     }
 `;
 
-export const GET_MY_PROJECTS = `
-    query GetMyProjects {
-        me {
+export const GET_BATCH_PROJECTS = `
+    query GetBatchProjects($ids: [ID!]) {
+        projects(ids: $ids) {
             id
-            projects {
+            name
+        }
+    }
+`;
+
+export const GET_USER_PROJECTS = `
+    query GetUserProjects($first: Int, $after: String, $last: Int, $before: String) {
+        me {
+            projects(first: $first, after: $after, last: $last, before: $before) {
                 edges {
                     node {
                         id
@@ -30,17 +38,19 @@ export const GET_MY_PROJECTS = `
                 }
                 pageInfo {
                     hasNextPage
+                    hasPreviousPage
+                    startCursor
                     endCursor
                 }
+                totalCount
             }
         }
     }
 `;
 
 export const GET_PROJECT_MEMBERS = `
-    query GetProjectMembers($projectId: ID!, $first: Int, $after: String) {
-        project(id: $projectId) {
-            id
+    query GetProjectMembers($id: ID!, $first: Int, $after: String) {
+        project(id: $id) {
             projectMembers(first: $first, after: $after) {
                 edges {
                     node {
@@ -48,7 +58,6 @@ export const GET_PROJECT_MEMBERS = `
                         user {
                             id
                             username
-                            email
                         }
                     }
                     cursor

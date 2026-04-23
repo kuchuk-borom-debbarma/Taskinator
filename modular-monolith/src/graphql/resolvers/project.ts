@@ -1,7 +1,7 @@
 import type { User } from '../../modules/auth';
 import type { Project, ProjectMember } from '../../modules/project';
 import { projectService } from '../../modules/project';
-import type { PaginationParams } from '../../types/pagination.ts';
+import type { Connection, PaginationParams } from '../../types/pagination.ts';
 import { encodeCursor } from '../../utils/utils.ts';
 import type { GraphQLContext } from '../context.ts';
 import {
@@ -88,7 +88,7 @@ export const projectResolvers = {
         version: (parent: ProjectMember) => parent.version,
     },
     ProjectConnection: {
-        totalCount: () => 0,
+        totalCount: (parent: Connection<Project>) => parent.totalCount || 0,
     },
 
     User: {
@@ -99,7 +99,7 @@ export const projectResolvers = {
         ) => {
             if (!context.userId) throw new UnauthorizedError();
 
-            const { projects, nextCursor, prevCursor } =
+            const { projects, totalCount, nextCursor, prevCursor } =
                 await projectService.getProjectsOfUser(
                     parent.id, // Target user
                     args,
@@ -119,6 +119,7 @@ export const projectResolvers = {
                     startCursor: prevCursor,
                     endCursor: nextCursor,
                 },
+                totalCount,
             };
         },
     },
