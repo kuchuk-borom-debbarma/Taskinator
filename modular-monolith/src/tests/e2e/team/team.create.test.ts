@@ -58,16 +58,40 @@ describe('Team Creation E2E', () => {
 
         expect(res.status).toBe(200);
         expect(res.body.data.createTeam.success).toBe(true);
-        expect(res.body.data.createTeam.team.name).toBe('Engineering');
-        expect(res.body.data.createTeam.team.project.id).toBe(projectId);
+        const teamRes = res.body.data.createTeam.team;
+        expect(teamRes.name).toBe('Engineering');
+        expect(teamRes.project.id).toBe(projectId);
+        expect(teamRes.version).toBe(1);
+        expect(teamRes.membersCount).toBe(0);
+        expect(teamRes.tasksCount).toBe(0);
+        expect(teamRes.createdBy.id).toBe(user1.id);
+        expect(teamRes.createdAt).toBeDefined();
 
-        // Verify in DB
-        const team = await db
+        // [1] Verify in DB (Core Entity)
+        const teamDb = await db
             .selectFrom('project_team')
-            .where('id', '=', res.body.data.createTeam.team.id)
+            .where('id', '=', teamRes.id)
             .selectAll()
             .executeTakeFirst();
-        expect(team?.name).toBe('Engineering');
+        expect(teamDb?.name).toBe('Engineering');
+        expect(teamDb?.fk_user_id).toBe(user1.id);
+        expect(teamDb?.version).toBe(1);
+
+        // [2] Verify Outbox Event (Transactional Integrity)
+        const outbox = await db
+            .selectFrom('outbox_events')
+            .where('payload', '@>', JSON.stringify({ teamId: teamRes.id }))
+            .selectAll()
+            .executeTakeFirst();
+
+        expect(outbox).toBeDefined();
+        expect(outbox?.kafka_topic).toBe('team-events');
+        const payload = outbox?.payload as any;
+        expect(payload.type).toBe('team.created');
+        expect(payload.projectId).toBe(projectId);
+        expect(payload.teamId).toBe(teamRes.id);
+        expect(payload.name).toBe('Engineering');
+        expect(payload.createdBy).toBe(user1.id);
     });
 
     it('should allow a project member to create a team (Permissive model)', async () => {

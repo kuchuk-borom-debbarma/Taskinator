@@ -9,6 +9,14 @@ export const CREATE_TEAM = `
                     id
                 }
                 version
+                membersCount
+                tasksCount
+                createdBy {
+                    id
+                    username
+                }
+                createdAt
+                updatedAt
             }
         }
     }
