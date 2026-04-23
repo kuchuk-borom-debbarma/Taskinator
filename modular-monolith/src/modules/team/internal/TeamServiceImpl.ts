@@ -88,6 +88,11 @@ export class TeamServiceImpl implements TeamService {
         logger.info(
             `TeamService.createTeam started by ${param.actorId} in project ${param.projectId} for "${param.name}"`,
         );
+
+        if (param.name.length < 3 || param.name.length > 255) {
+            throw new Error('Team name must be between 3 and 255 characters.');
+        }
+
         const result = await insertTeam(param);
         logger.info(`TeamService.createTeam successful: ${result.id}`);
         return result;
@@ -150,6 +155,11 @@ export class TeamServiceImpl implements TeamService {
         logger.info(
             `TeamService.updateTeam started for ${param.teamId} by ${param.actorId}`,
         );
+
+        if (param.name.length < 3 || param.name.length > 255) {
+            throw new Error('Team name must be between 3 and 255 characters.');
+        }
+
         const result = await updateTeam(param);
         logger.info(`TeamService.updateTeam successful: ${param.teamId}`);
         return result;

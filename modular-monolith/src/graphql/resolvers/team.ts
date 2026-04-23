@@ -142,7 +142,10 @@ export const teamResolvers = {
             return {
                 edges: teams.map((t: any) => ({
                     node: t,
-                    cursor: t.id,
+                    cursor: encodeCursor(
+                        t.epochPrecision || t.createdAt.toISOString(),
+                        t.id,
+                    ),
                 })),
                 pageInfo: {
                     hasNextPage: !!nextCursor,
@@ -197,7 +200,10 @@ export const teamResolvers = {
             return {
                 edges: members.map((m: any) => ({
                     node: m,
-                    cursor: m.id,
+                    cursor: encodeCursor(
+                        (m as any).epochPrecision || m.createdAt.toISOString(),
+                        m.id,
+                    ),
                 })),
                 pageInfo: {
                     hasNextPage: !!nextCursor,
@@ -233,9 +239,7 @@ export const teamResolvers = {
             { projectId, teamIds }: { projectId: string; teamIds: string[] },
             context: GraphQLContext,
         ) => {
-            if (!context.userId) {
-                return { success: false, deletedCount: 0 };
-            }
+            if (!context.userId) throw new UnauthorizedError();
 
             const { deletedCount } = await teamService.deleteTeams({
                 actorId: context.userId,
@@ -257,9 +261,7 @@ export const teamResolvers = {
             }: { projectId: string; teamId: string; userIds: string[] },
             context: GraphQLContext,
         ) => {
-            if (!context.userId) {
-                throw new Error('Unauthorized');
-            }
+            if (!context.userId) throw new UnauthorizedError();
 
             const { addedCount } = await teamService.addTeamMembers({
                 actorId: context.userId,
@@ -282,9 +284,7 @@ export const teamResolvers = {
             }: { projectId: string; teamId: string; userIds: string[] },
             context: GraphQLContext,
         ) => {
-            if (!context.userId) {
-                throw new Error('Unauthorized');
-            }
+            if (!context.userId) throw new UnauthorizedError();
 
             const { removedCount } = await teamService.removeTeamMembers({
                 actorId: context.userId,
