@@ -1,0 +1,293 @@
+bun test v1.3.5 (1e86cebd)
+
+src/tests/e2e/team/team.member.test.ts:
+[INFO] 2026-04-23T14:47:40.207Z - Database: Kysely instance initialized
+[INFO] 2026-04-23T14:47:40.231Z - Initializing event bus ProjectServiceImpl
+[INFO] 2026-04-23T14:47:40.232Z - TeamService initialized
+[INFO] 2026-04-23T14:47:40.233Z - AuthService initialized
+[INFO] 2026-04-23T14:47:40.233Z - ExternalNotificationService initialized
+[INFO] 2026-04-23T14:47:40.233Z - InternalNotificationService initialized
+[INFO] 2026-04-23T14:47:40.233Z - [Registry] Starting domain event consumers...
+[INFO] 2026-04-23T14:47:40.233Z - [ProjectEvents -> Aggregator] Initializing Smart Consumer
+[INFO] 2026-04-23T14:47:40.233Z - [TeamEvents -> Aggregator] Initializing Smart Consumer
+[INFO] 2026-04-23T14:47:40.233Z - [ProjectAggregated -> Auth] Initializing Listener for users project counts
+[INFO] 2026-04-23T14:47:40.234Z - [ProjectAggregated -> Task] Initializing Listener: Delete Project Task (Decommissioning)
+[INFO] 2026-04-23T14:47:40.234Z - [ProjectAggregated -> Task] Initializing Listener: Delete Project Task Link (Decommissioning)
+[INFO] 2026-04-23T14:47:40.234Z - [Task -> Project Cleanup] Initializing Reachability Purge Listener
+[INFO] 2026-04-23T14:47:40.234Z - [ProjectAggregated -> Team] Initializing Listener: Delete Project Team (Decommissioning)
+[INFO] 2026-04-23T14:47:40.234Z - [ProjectAggregated -> Team] Initializing Listener: Delete Project Team Member (Decommissioning)
+[INFO] 2026-04-23T14:47:40.234Z - [ProjectAggregated -> Project] Initializing Listener: Delete Member (Decommissioning)
+[INFO] 2026-04-23T14:47:40.234Z - [ProjectAggregated -> Project] Initializing Listener for members_count updates
+[INFO] 2026-04-23T14:47:40.234Z - [ProjectAggregated -> Project] Initializing Listener: Remove Member
+[INFO] 2026-04-23T14:47:40.234Z - [ProjectAggregated -> Team] Initializing Listener: Remove Project Team Member
+[INFO] 2026-04-23T14:47:40.234Z - [ProjectAggregated -> Task] Initializing Listener: Unassign Project Task Member
+[INFO] 2026-04-23T14:47:40.234Z - [TeamAggregated -> Project] Initializing Listener for teams_count updates
+[INFO] 2026-04-23T14:47:40.234Z - [TeamAggregated -> Team] Initializing Listener for members_count updates
+[INFO] 2026-04-23T14:47:40.234Z - [TeamAggregated -> Team] Initializing Listener: Purge Team Memberships
+[INFO] 2026-04-23T14:47:40.234Z - [TeamAggregated -> Task] Initializing Listener: Orphan Team Tasks
+[INFO] 2026-04-23T14:47:40.234Z - [TeamAggregated -> Task] Initializing Listener: Unassign Member From Team Tasks
+[INFO] 2026-04-23T14:47:40.234Z - [TaskEvents -> Aggregator] Initializing Smart Consumer
+[INFO] 2026-04-23T14:47:40.234Z - [TaskAggregated -> Project] Initializing Listener for tasks_count updates
+[INFO] 2026-04-23T14:47:40.234Z - [TaskAggregated -> Team] Initializing Listener for team tasks_count updates
+[INFO] 2026-04-23T14:47:40.234Z - [TaskAggregated -> Task] Initializing Listener for task_link cleanup
+[INFO] 2026-04-23T14:47:40.234Z - [Task -> Reachability Listener] Initializing
+[INFO] 2026-04-23T14:47:40.234Z - [Task -> Bulk Reachability Listener] Initializing
+[INFO] 2026-04-23T14:47:40.235Z - [Registry] All domain consumers and listeners initialized
+[INFO] 2026-04-23T14:47:40.244Z - [Redis Bridge] Subscribed to targeted local routing channel: instance:Kuchuks-MacBook-Air.local-5057fb61
+[INFO] 2026-04-23T14:47:40.244Z - Outbox Relay: Starting Reactive Relay (LISTEN + Safety Polling)
+[DEBUG] 2026-04-23T14:47:40.260Z - Database: New client connected to pool
+[DEBUG] 2026-04-23T14:47:40.261Z - Database: New client connected to pool
+[INFO] 2026-04-23T14:47:40.273Z - Outbox Relay: DB connection established for LISTEN
+[INFO] 2026-04-23T14:47:40.273Z - Outbox Relay: Reactive LISTEN established.
+[DEBUG] 2026-04-23T14:47:40.279Z - Database: New client connected to pool
+[DEBUG] 2026-04-23T14:47:40.282Z - E2E GQL Request: createProject
+[DEBUG] 2026-04-23T14:47:40.297Z - Context initialized for user: e275a261-6619-4277-b7e6-2882ca1b2a39
+[INFO] 2026-04-23T14:47:40.298Z - GraphQL Execution Started: Anonymous
+[INFO] 2026-04-23T14:47:40.299Z - ProjectService.createProject started by e275a261-6619-4277-b7e6-2882ca1b2a39 for "Collaboration Project"
+[INFO] 2026-04-23T14:47:40.302Z - ProjectService.createProject successful: 5491556b-578b-4cdd-87ac-5a7dafb6bc2b
+[DEBUG] 2026-04-23T14:47:40.306Z - E2E GQL Response Success [200]
+[DEBUG] 2026-04-23T14:47:40.306Z - E2E GQL Request: createTeam
+[DEBUG] 2026-04-23T14:47:40.309Z - Context initialized for user: e275a261-6619-4277-b7e6-2882ca1b2a39
+[INFO] 2026-04-23T14:47:40.309Z - GraphQL Execution Started: Anonymous
+[INFO] 2026-04-23T14:47:40.309Z - TeamService.createTeam started by e275a261-6619-4277-b7e6-2882ca1b2a39 in project 5491556b-578b-4cdd-87ac-5a7dafb6bc2b for "Core Team"
+[INFO] 2026-04-23T14:47:40.309Z - Outbox Relay: Processing batch of 1 events
+[DEBUG] 2026-04-23T14:47:40.309Z - Relaying 1 events of type "project.created" to topic "project-events"
+[INFO] 2026-04-23T14:47:40.311Z - TeamService.createTeam successful: eb613877-d566-479b-a34d-f3c75b15cc5c
+[DEBUG] 2026-04-23T14:47:40.311Z - ProjectService.getProjectsByIds called for 1 ids
+[DEBUG] 2026-04-23T14:47:40.311Z - AuthService.getUsersByIds called for 1 ids
+[DEBUG] 2026-04-23T14:47:40.317Z - Database: New client connected to pool
+[DEBUG] 2026-04-23T14:47:40.317Z - Database: New client connected to pool
+[DEBUG] 2026-04-23T14:47:40.322Z - E2E GQL Response Success [200]
+[DEBUG] 2026-04-23T14:47:40.322Z - E2E GQL Request: addTeamMembers
+[INFO] 2026-04-23T14:47:40.322Z - Outbox Relay: Processing batch of 1 events
+[DEBUG] 2026-04-23T14:47:40.322Z - Relaying 1 events of type "team.created" to topic "team-events"
+[DEBUG] 2026-04-23T14:47:40.323Z - Context initialized for user: e275a261-6619-4277-b7e6-2882ca1b2a39
+[INFO] 2026-04-23T14:47:40.323Z - GraphQL Execution Started: Anonymous
+[INFO] 2026-04-23T14:47:40.324Z - TeamService.addTeamMembers started for team eb613877-d566-479b-a34d-f3c75b15cc5c by e275a261-6619-4277-b7e6-2882ca1b2a39, users: 1
+[INFO] 2026-04-23T14:47:40.325Z - TeamService.addTeamMembers completed: added 1 members
+[DEBUG] 2026-04-23T14:47:40.326Z - E2E GQL Response Success [200]
+[INFO] 2026-04-23T14:47:40.326Z - [Project Coordinator] Processing batch of 1 new events
+[DEBUG] 2026-04-23T14:47:40.326Z - [Project Coordinator] Folding event project.created for project 5491556b-578b-4cdd-87ac-5a7dafb6bc2b, user e275a261-6619-4277-b7e6-2882ca1b2a39
+[INFO] 2026-04-23T14:47:40.327Z - Outbox Relay: Processing batch of 1 events
+[DEBUG] 2026-04-23T14:47:40.327Z - Relaying 1 events of type "team.members_added" to topic "team-events"
+(pass) Team Membership E2E > should allow project owner to add members to a team [82.45ms]
+[INFO] 2026-04-23T14:47:40.328Z - [Project Coordinator] Wrote 1 outbox entries for batch
+[INFO] 2026-04-23T14:47:40.329Z - Outbox Relay: Processing batch of 1 events
+[DEBUG] 2026-04-23T14:47:40.329Z - Relaying 1 events of type "project.aggregated.change_user_project_count" to topic "project-aggregated-events"
+[DEBUG] 2026-04-23T14:47:40.333Z - E2E GQL Request: createProject
+[DEBUG] 2026-04-23T14:47:40.334Z - Context initialized for user: 5802aad8-8b22-4503-b846-aff2ef7e0f33
+[INFO] 2026-04-23T14:47:40.334Z - GraphQL Execution Started: Anonymous
+[INFO] 2026-04-23T14:47:40.334Z - ProjectService.createProject started by 5802aad8-8b22-4503-b846-aff2ef7e0f33 for "Collaboration Project"
+[INFO] 2026-04-23T14:47:40.334Z - [Team Coordinator] Processing batch of 1 new events
+[INFO] 2026-04-23T14:47:40.334Z - [Team Coordinator] Wrote 1 signals for batch
+[INFO] 2026-04-23T14:47:40.335Z - Outbox Relay: Processing batch of 1 events
+[DEBUG] 2026-04-23T14:47:40.335Z - Relaying 1 events of type "team.aggregated.sync_project_team_count" to topic "team-aggregated-events"
+[INFO] 2026-04-23T14:47:40.335Z - ProjectService.createProject successful: 85664a16-e493-4c62-937d-ae190a2d1006
+[DEBUG] 2026-04-23T14:47:40.336Z - E2E GQL Response Success [200]
+[INFO] 2026-04-23T14:47:40.337Z - Outbox Relay: Processing batch of 1 events
+[DEBUG] 2026-04-23T14:47:40.337Z - Relaying 1 events of type "project.created" to topic "project-events"
+[DEBUG] 2026-04-23T14:47:40.339Z - E2E GQL Request: createTeam
+[DEBUG] 2026-04-23T14:47:40.340Z - Context initialized for user: 5802aad8-8b22-4503-b846-aff2ef7e0f33
+[INFO] 2026-04-23T14:47:40.340Z - GraphQL Execution Started: Anonymous
+[INFO] 2026-04-23T14:47:40.340Z - TeamService.createTeam started by 5802aad8-8b22-4503-b846-aff2ef7e0f33 in project 85664a16-e493-4c62-937d-ae190a2d1006 for "Core Team"
+[INFO] 2026-04-23T14:47:40.341Z - [Team Coordinator] Processing batch of 1 new events
+[DEBUG] 2026-04-23T14:47:40.341Z - [Auth Listener] Aggregating count for user e275a261-6619-4277-b7e6-2882ca1b2a39: delta 1
+[INFO] 2026-04-23T14:47:40.341Z - [Auth Listener] Performing bulk projects_count update for 1 users (from 1 events)
+[INFO] 2026-04-23T14:47:40.341Z - TeamService.createTeam successful: f0094a4e-23e5-49ee-bfb0-dce974e471c2
+[DEBUG] 2026-04-23T14:47:40.341Z - ProjectService.getProjectsByIds called for 1 ids
+[DEBUG] 2026-04-23T14:47:40.341Z - AuthService.getUsersByIds called for 1 ids
+[INFO] 2026-04-23T14:47:40.342Z - [Team Coordinator] Wrote 1 signals for batch
+[DEBUG] 2026-04-23T14:47:40.343Z - E2E GQL Response Success [200]
+[DEBUG] 2026-04-23T14:47:40.343Z - E2E GQL Request: addTeamMembers
+[DEBUG] 2026-04-23T14:47:40.344Z - Context initialized for user: 5802aad8-8b22-4503-b846-aff2ef7e0f33
+[INFO] 2026-04-23T14:47:40.344Z - GraphQL Execution Started: Anonymous
+[INFO] 2026-04-23T14:47:40.344Z - TeamService.addTeamMembers started for team f0094a4e-23e5-49ee-bfb0-dce974e471c2 by 5802aad8-8b22-4503-b846-aff2ef7e0f33, users: 1
+[INFO] 2026-04-23T14:47:40.344Z - Outbox Relay: Processing batch of 2 events
+[DEBUG] 2026-04-23T14:47:40.344Z - Relaying 1 events of type "team.aggregated.sync_team_member_count" to topic "team-aggregated-events"
+[DEBUG] 2026-04-23T14:47:40.344Z - Relaying 1 events of type "team.created" to topic "team-events"
+[INFO] 2026-04-23T14:47:40.346Z - [TeamAggregated -> Project] Performing bulk update for 1 projects (from 1 events)
+[DEBUG] 2026-04-23T14:47:40.346Z - Database: New client connected to pool
+[INFO] 2026-04-23T14:47:40.347Z - TeamService.addTeamMembers completed: added 0 members
+[DEBUG] 2026-04-23T14:47:40.347Z - E2E GQL Response Success [200]
+(pass) Team Membership E2E > should fail to add a user who is not a project member [19.60ms]
+[INFO] 2026-04-23T14:47:40.348Z - [Project Coordinator] Processing batch of 1 new events
+[DEBUG] 2026-04-23T14:47:40.348Z - [Project Coordinator] Folding event project.created for project 85664a16-e493-4c62-937d-ae190a2d1006, user 5802aad8-8b22-4503-b846-aff2ef7e0f33
+[INFO] 2026-04-23T14:47:40.348Z - [Project Coordinator] Wrote 1 outbox entries for batch
+[INFO] 2026-04-23T14:47:40.350Z - Outbox Relay: Processing batch of 1 events
+[DEBUG] 2026-04-23T14:47:40.350Z - Relaying 1 events of type "project.aggregated.change_user_project_count" to topic "project-aggregated-events"
+[DEBUG] 2026-04-23T14:47:40.353Z - E2E GQL Request: createProject
+[DEBUG] 2026-04-23T14:47:40.354Z - Context initialized for user: e6792e18-87b3-425d-804d-f0f06ff3044c
+[INFO] 2026-04-23T14:47:40.354Z - GraphQL Execution Started: Anonymous
+[INFO] 2026-04-23T14:47:40.354Z - ProjectService.createProject started by e6792e18-87b3-425d-804d-f0f06ff3044c for "Collaboration Project"
+[INFO] 2026-04-23T14:47:40.354Z - ProjectService.createProject successful: f206ea10-e8f2-4607-a258-c7b2439b54a7
+[DEBUG] 2026-04-23T14:47:40.355Z - E2E GQL Response Success [200]
+[INFO] 2026-04-23T14:47:40.357Z - [TeamAggregated -> Team] Performing bulk update for 1 teams (from 1 events)
+[INFO] 2026-04-23T14:47:40.357Z - [Team Coordinator] Processing batch of 1 new events
+[DEBUG] 2026-04-23T14:47:40.358Z - E2E GQL Request: createTeam
+[DEBUG] 2026-04-23T14:47:40.359Z - Context initialized for user: e6792e18-87b3-425d-804d-f0f06ff3044c
+[INFO] 2026-04-23T14:47:40.359Z - GraphQL Execution Started: Anonymous
+[INFO] 2026-04-23T14:47:40.359Z - TeamService.createTeam started by e6792e18-87b3-425d-804d-f0f06ff3044c in project f206ea10-e8f2-4607-a258-c7b2439b54a7 for "Core Team"
+[INFO] 2026-04-23T14:47:40.359Z - Outbox Relay: Processing batch of 1 events
+[DEBUG] 2026-04-23T14:47:40.359Z - Relaying 1 events of type "project.created" to topic "project-events"
+[INFO] 2026-04-23T14:47:40.359Z - [Team Coordinator] Wrote 1 signals for batch
+[INFO] 2026-04-23T14:47:40.360Z - TeamService.createTeam successful: d75e0466-eced-4f20-ac0f-ca1172ea186f
+[DEBUG] 2026-04-23T14:47:40.360Z - ProjectService.getProjectsByIds called for 1 ids
+[DEBUG] 2026-04-23T14:47:40.360Z - AuthService.getUsersByIds called for 1 ids
+[INFO] 2026-04-23T14:47:40.361Z - Outbox Relay: Processing batch of 2 events
+[DEBUG] 2026-04-23T14:47:40.361Z - Relaying 1 events of type "team.aggregated.sync_project_team_count" to topic "team-aggregated-events"
+[DEBUG] 2026-04-23T14:47:40.361Z - Relaying 1 events of type "team.created" to topic "team-events"
+[DEBUG] 2026-04-23T14:47:40.362Z - E2E GQL Response Success [200]
+[DEBUG] 2026-04-23T14:47:40.362Z - [Auth Listener] Aggregating count for user 5802aad8-8b22-4503-b846-aff2ef7e0f33: delta 1
+[INFO] 2026-04-23T14:47:40.362Z - [Auth Listener] Performing bulk projects_count update for 1 users (from 1 events)
+[DEBUG] 2026-04-23T14:47:40.363Z - E2E GQL Request: addTeamMembers
+[DEBUG] 2026-04-23T14:47:40.363Z - Context initialized for user: 0cc5390c-3ca5-4360-a65a-300b8924838c
+[INFO] 2026-04-23T14:47:40.363Z - GraphQL Execution Started: Anonymous
+[INFO] 2026-04-23T14:47:40.363Z - TeamService.addTeamMembers started for team d75e0466-eced-4f20-ac0f-ca1172ea186f by 0cc5390c-3ca5-4360-a65a-300b8924838c, users: 1
+[INFO] 2026-04-23T14:47:40.364Z - TeamService.addTeamMembers completed: added 1 members
+[DEBUG] 2026-04-23T14:47:40.365Z - E2E GQL Response Success [200]
+(pass) Team Membership E2E > should allow project member to add other members to a team [17.44ms]
+[DEBUG] 2026-04-23T14:47:40.368Z - E2E GQL Request: createProject
+[DEBUG] 2026-04-23T14:47:40.369Z - Context initialized for user: d6c688f6-2982-48e8-849b-593ebe5c9e78
+[INFO] 2026-04-23T14:47:40.369Z - GraphQL Execution Started: Anonymous
+[INFO] 2026-04-23T14:47:40.369Z - ProjectService.createProject started by d6c688f6-2982-48e8-849b-593ebe5c9e78 for "Collaboration Project"
+[INFO] 2026-04-23T14:47:40.370Z - ProjectService.createProject successful: 17120825-0a4f-4896-aea7-eb25acf2b74d
+[INFO] 2026-04-23T14:47:40.370Z - [Project Coordinator] Processing batch of 1 new events
+[DEBUG] 2026-04-23T14:47:40.370Z - [Project Coordinator] Folding event project.created for project f206ea10-e8f2-4607-a258-c7b2439b54a7, user e6792e18-87b3-425d-804d-f0f06ff3044c
+[DEBUG] 2026-04-23T14:47:40.371Z - E2E GQL Response Success [200]
+[INFO] 2026-04-23T14:47:40.371Z - [Project Coordinator] Wrote 1 outbox entries for batch
+[INFO] 2026-04-23T14:47:40.371Z - Outbox Relay: Processing batch of 1 events
+[DEBUG] 2026-04-23T14:47:40.371Z - Relaying 1 events of type "project.created" to topic "project-events"
+[DEBUG] 2026-04-23T14:47:40.371Z - E2E GQL Request: createTeam
+[DEBUG] 2026-04-23T14:47:40.372Z - Context initialized for user: d6c688f6-2982-48e8-849b-593ebe5c9e78
+[INFO] 2026-04-23T14:47:40.372Z - GraphQL Execution Started: Anonymous
+[INFO] 2026-04-23T14:47:40.372Z - TeamService.createTeam started by d6c688f6-2982-48e8-849b-593ebe5c9e78 in project 17120825-0a4f-4896-aea7-eb25acf2b74d for "Core Team"
+[INFO] 2026-04-23T14:47:40.373Z - Outbox Relay: Processing batch of 1 events
+[DEBUG] 2026-04-23T14:47:40.373Z - Relaying 1 events of type "project.aggregated.change_user_project_count" to topic "project-aggregated-events"
+[INFO] 2026-04-23T14:47:40.373Z - [TeamAggregated -> Project] Performing bulk update for 1 projects (from 1 events)
+[INFO] 2026-04-23T14:47:40.373Z - [Team Coordinator] Processing batch of 1 new events
+[INFO] 2026-04-23T14:47:40.373Z - [Team Coordinator] Wrote 1 signals for batch
+[INFO] 2026-04-23T14:47:40.374Z - TeamService.createTeam successful: f4216aeb-d928-485c-8314-381d7afe2d37
+[DEBUG] 2026-04-23T14:47:40.374Z - ProjectService.getProjectsByIds called for 1 ids
+[DEBUG] 2026-04-23T14:47:40.374Z - AuthService.getUsersByIds called for 1 ids
+[INFO] 2026-04-23T14:47:40.377Z - Outbox Relay: Processing batch of 2 events
+[DEBUG] 2026-04-23T14:47:40.377Z - Relaying 1 events of type "team.aggregated.sync_project_team_count" to topic "team-aggregated-events"
+[DEBUG] 2026-04-23T14:47:40.377Z - Relaying 1 events of type "team.created" to topic "team-events"
+[DEBUG] 2026-04-23T14:47:40.378Z - E2E GQL Response Success [200]
+[DEBUG] 2026-04-23T14:47:40.378Z - E2E GQL Request: addTeamMembers
+[DEBUG] 2026-04-23T14:47:40.379Z - Context initialized for user: da92732b-58b2-4efa-bda8-2070ff2c2847
+[INFO] 2026-04-23T14:47:40.379Z - GraphQL Execution Started: Anonymous
+[INFO] 2026-04-23T14:47:40.379Z - TeamService.addTeamMembers started for team f4216aeb-d928-485c-8314-381d7afe2d37 by da92732b-58b2-4efa-bda8-2070ff2c2847, users: 1
+[DEBUG] 2026-04-23T14:47:40.381Z - Database: New client connected to pool
+[INFO] 2026-04-23T14:47:40.381Z - TeamService.addTeamMembers completed: added 0 members
+[DEBUG] 2026-04-23T14:47:40.382Z - E2E GQL Response Success [200]
+(pass) Team Membership E2E > should fail when a stranger tries to add team members [17.30ms]
+[INFO] 2026-04-23T14:47:40.382Z - [Project Coordinator] Processing batch of 1 new events
+[DEBUG] 2026-04-23T14:47:40.382Z - [Project Coordinator] Folding event project.created for project 17120825-0a4f-4896-aea7-eb25acf2b74d, user d6c688f6-2982-48e8-849b-593ebe5c9e78
+[INFO] 2026-04-23T14:47:40.383Z - [Project Coordinator] Wrote 1 outbox entries for batch
+[DEBUG] 2026-04-23T14:47:40.384Z - [Auth Listener] Aggregating count for user e6792e18-87b3-425d-804d-f0f06ff3044c: delta 1
+[INFO] 2026-04-23T14:47:40.384Z - [Auth Listener] Performing bulk projects_count update for 1 users (from 1 events)
+[INFO] 2026-04-23T14:47:40.385Z - Outbox Relay: Processing batch of 1 events
+[DEBUG] 2026-04-23T14:47:40.385Z - Relaying 1 events of type "project.aggregated.change_user_project_count" to topic "project-aggregated-events"
+[DEBUG] 2026-04-23T14:47:40.388Z - E2E GQL Request: createProject
+[INFO] 2026-04-23T14:47:40.388Z - [Team Coordinator] Processing batch of 1 new events
+[INFO] 2026-04-23T14:47:40.388Z - [TeamAggregated -> Project] Performing bulk update for 1 projects (from 1 events)
+[DEBUG] 2026-04-23T14:47:40.389Z - Context initialized for user: bff0e113-908f-4402-9576-31bddf1f7b87
+[INFO] 2026-04-23T14:47:40.389Z - GraphQL Execution Started: Anonymous
+[INFO] 2026-04-23T14:47:40.389Z - ProjectService.createProject started by bff0e113-908f-4402-9576-31bddf1f7b87 for "Collaboration Project"
+[INFO] 2026-04-23T14:47:40.389Z - [Team Coordinator] Wrote 1 signals for batch
+[INFO] 2026-04-23T14:47:40.389Z - ProjectService.createProject successful: 5651abb4-2910-4609-9092-50a612bfd0f5
+[DEBUG] 2026-04-23T14:47:40.390Z - E2E GQL Response Success [200]
+[INFO] 2026-04-23T14:47:40.390Z - Outbox Relay: Processing batch of 2 events
+[DEBUG] 2026-04-23T14:47:40.390Z - Relaying 1 events of type "team.aggregated.sync_project_team_count" to topic "team-aggregated-events"
+[DEBUG] 2026-04-23T14:47:40.390Z - Relaying 1 events of type "project.created" to topic "project-events"
+[DEBUG] 2026-04-23T14:47:40.390Z - E2E GQL Request: createTeam
+[DEBUG] 2026-04-23T14:47:40.391Z - Context initialized for user: bff0e113-908f-4402-9576-31bddf1f7b87
+[INFO] 2026-04-23T14:47:40.391Z - GraphQL Execution Started: Anonymous
+[INFO] 2026-04-23T14:47:40.391Z - TeamService.createTeam started by bff0e113-908f-4402-9576-31bddf1f7b87 in project 5651abb4-2910-4609-9092-50a612bfd0f5 for "Core Team"
+[INFO] 2026-04-23T14:47:40.391Z - TeamService.createTeam successful: 15ee6120-c4a7-4ce4-acf4-198041a8f776
+[DEBUG] 2026-04-23T14:47:40.392Z - ProjectService.getProjectsByIds called for 1 ids
+[DEBUG] 2026-04-23T14:47:40.392Z - AuthService.getUsersByIds called for 1 ids
+[INFO] 2026-04-23T14:47:40.395Z - Outbox Relay: Processing batch of 1 events
+[DEBUG] 2026-04-23T14:47:40.395Z - Relaying 1 events of type "team.created" to topic "team-events"
+[DEBUG] 2026-04-23T14:47:40.395Z - E2E GQL Response Success [200]
+[DEBUG] 2026-04-23T14:47:40.396Z - [Auth Listener] Aggregating count for user d6c688f6-2982-48e8-849b-593ebe5c9e78: delta 1
+[INFO] 2026-04-23T14:47:40.396Z - [Auth Listener] Performing bulk projects_count update for 1 users (from 1 events)
+[DEBUG] 2026-04-23T14:47:40.396Z - E2E GQL Request: removeTeamMembers
+[DEBUG] 2026-04-23T14:47:40.397Z - Context initialized for user: bff0e113-908f-4402-9576-31bddf1f7b87
+[INFO] 2026-04-23T14:47:40.397Z - GraphQL Execution Started: Anonymous
+[INFO] 2026-04-23T14:47:40.398Z - TeamService.removeTeamMembers started for team 15ee6120-c4a7-4ce4-acf4-198041a8f776 by bff0e113-908f-4402-9576-31bddf1f7b87, users: 1
+[INFO] 2026-04-23T14:47:40.399Z - TeamService.removeTeamMembers completed: removed 1 members
+[DEBUG] 2026-04-23T14:47:40.399Z - E2E GQL Response Success [200]
+[INFO] 2026-04-23T14:47:40.400Z - Outbox Relay: Processing batch of 1 events
+[DEBUG] 2026-04-23T14:47:40.400Z - Relaying 1 events of type "team.members_removed" to topic "team-events"
+(pass) Team Membership E2E > should allow removing team members [18.22ms]
+[INFO] 2026-04-23T14:47:40.401Z - [TeamAggregated -> Project] Performing bulk update for 1 projects (from 1 events)
+[INFO] 2026-04-23T14:47:40.401Z - [Project Coordinator] Processing batch of 1 new events
+[DEBUG] 2026-04-23T14:47:40.401Z - [Project Coordinator] Folding event project.created for project 5651abb4-2910-4609-9092-50a612bfd0f5, user bff0e113-908f-4402-9576-31bddf1f7b87
+[INFO] 2026-04-23T14:47:40.402Z - [Project Coordinator] Wrote 1 outbox entries for batch
+[INFO] 2026-04-23T14:47:40.403Z - Outbox Relay: Processing batch of 1 events
+[DEBUG] 2026-04-23T14:47:40.403Z - Relaying 1 events of type "project.aggregated.change_user_project_count" to topic "project-aggregated-events"
+[DEBUG] 2026-04-23T14:47:40.405Z - E2E GQL Request: createProject
+[DEBUG] 2026-04-23T14:47:40.405Z - Context initialized for user: b51f45f4-9db6-4592-9b19-d59ec4d438b0
+[INFO] 2026-04-23T14:47:40.405Z - GraphQL Execution Started: Anonymous
+[INFO] 2026-04-23T14:47:40.405Z - ProjectService.createProject started by b51f45f4-9db6-4592-9b19-d59ec4d438b0 for "Collaboration Project"
+[INFO] 2026-04-23T14:47:40.406Z - [Team Coordinator] Processing batch of 1 new events
+[INFO] 2026-04-23T14:47:40.406Z - ProjectService.createProject successful: 4d1c5d95-cd3c-4fe8-ba9b-0391d7680621
+[INFO] 2026-04-23T14:47:40.406Z - [Team Coordinator] Wrote 1 signals for batch
+[DEBUG] 2026-04-23T14:47:40.406Z - E2E GQL Response Success [200]
+[INFO] 2026-04-23T14:47:40.407Z - Outbox Relay: Processing batch of 2 events
+[DEBUG] 2026-04-23T14:47:40.407Z - Relaying 1 events of type "team.aggregated.sync_project_team_count" to topic "team-aggregated-events"
+[DEBUG] 2026-04-23T14:47:40.407Z - Relaying 1 events of type "project.created" to topic "project-events"
+[DEBUG] 2026-04-23T14:47:40.407Z - E2E GQL Request: createTeam
+[DEBUG] 2026-04-23T14:47:40.408Z - Context initialized for user: b51f45f4-9db6-4592-9b19-d59ec4d438b0
+[INFO] 2026-04-23T14:47:40.408Z - GraphQL Execution Started: Anonymous
+[INFO] 2026-04-23T14:47:40.408Z - TeamService.createTeam started by b51f45f4-9db6-4592-9b19-d59ec4d438b0 in project 4d1c5d95-cd3c-4fe8-ba9b-0391d7680621 for "Core Team"
+[INFO] 2026-04-23T14:47:40.409Z - TeamService.createTeam successful: 03eda21f-dcea-4798-9e0e-33490068c97e
+[DEBUG] 2026-04-23T14:47:40.409Z - ProjectService.getProjectsByIds called for 1 ids
+[DEBUG] 2026-04-23T14:47:40.409Z - AuthService.getUsersByIds called for 1 ids
+[INFO] 2026-04-23T14:47:40.409Z - Outbox Relay: Processing batch of 1 events
+[DEBUG] 2026-04-23T14:47:40.409Z - Relaying 1 events of type "team.created" to topic "team-events"
+[DEBUG] 2026-04-23T14:47:40.410Z - E2E GQL Response Success [200]
+[INFO] 2026-04-23T14:47:40.413Z - [Team Coordinator] Processing batch of 1 new events
+[DEBUG] 2026-04-23T14:47:40.413Z - E2E GQL Request: addTeamMembers
+[INFO] 2026-04-23T14:47:40.413Z - [Team Coordinator] Wrote 2 signals for batch
+[DEBUG] 2026-04-23T14:47:40.414Z - Context initialized for user: b51f45f4-9db6-4592-9b19-d59ec4d438b0
+[INFO] 2026-04-23T14:47:40.414Z - GraphQL Execution Started: Anonymous
+[INFO] 2026-04-23T14:47:40.414Z - TeamService.addTeamMembers started for team 03eda21f-dcea-4798-9e0e-33490068c97e by b51f45f4-9db6-4592-9b19-d59ec4d438b0, users: 3
+[DEBUG] 2026-04-23T14:47:40.415Z - [Auth Listener] Aggregating count for user bff0e113-908f-4402-9576-31bddf1f7b87: delta 1
+[INFO] 2026-04-23T14:47:40.415Z - [Auth Listener] Performing bulk projects_count update for 1 users (from 1 events)
+[INFO] 2026-04-23T14:47:40.415Z - TeamService.addTeamMembers completed: added 3 members
+[INFO] 2026-04-23T14:47:40.415Z - Outbox Relay: Processing batch of 3 events
+[DEBUG] 2026-04-23T14:47:40.415Z - Relaying 1 events of type "team.aggregated.sync_team_member_count" to topic "team-aggregated-events"
+[DEBUG] 2026-04-23T14:47:40.415Z - Relaying 1 events of type "team.aggregated.unassign_member_from_team_tasks" to topic "team-aggregated-events"
+[DEBUG] 2026-04-23T14:47:40.415Z - Relaying 1 events of type "team.members_added" to topic "team-events"
+[DEBUG] 2026-04-23T14:47:40.416Z - E2E GQL Response Success [200]
+[INFO] 2026-04-23T14:47:40.417Z - [TeamAggregated -> Project] Performing bulk update for 1 projects (from 1 events)
+[INFO] 2026-04-23T14:47:40.417Z - [Project Coordinator] Processing batch of 1 new events
+[DEBUG] 2026-04-23T14:47:40.418Z - [Project Coordinator] Folding event project.created for project 4d1c5d95-cd3c-4fe8-ba9b-0391d7680621, user b51f45f4-9db6-4592-9b19-d59ec4d438b0
+[INFO] 2026-04-23T14:47:40.418Z - [Project Coordinator] Wrote 1 outbox entries for batch
+[INFO] 2026-04-23T14:47:40.419Z - Outbox Relay: Processing batch of 1 events
+[DEBUG] 2026-04-23T14:47:40.419Z - Relaying 1 events of type "project.aggregated.change_user_project_count" to topic "project-aggregated-events"
+[INFO] 2026-04-23T14:47:40.420Z - [Team Coordinator] Processing batch of 1 new events
+[INFO] 2026-04-23T14:47:40.420Z - [Team Coordinator] Wrote 1 signals for batch
+[INFO] 2026-04-23T14:47:40.421Z - Outbox Relay: Processing batch of 1 events
+[DEBUG] 2026-04-23T14:47:40.421Z - Relaying 1 events of type "team.aggregated.sync_project_team_count" to topic "team-aggregated-events"
+[INFO] 2026-04-23T14:47:40.426Z - [TeamAggregated -> Team] Performing bulk update for 1 teams (from 1 events)
+[INFO] 2026-04-23T14:47:40.426Z - [Team Coordinator] Processing batch of 1 new events
+[INFO] 2026-04-23T14:47:40.427Z - [TeamAggregated -> Task] Unassigning 1 users from tasks in team 15ee6120-c4a7-4ce4-acf4-198041a8f776
+[INFO] 2026-04-23T14:47:40.427Z - [Team Coordinator] Wrote 1 signals for batch
+[INFO] 2026-04-23T14:47:40.430Z - Outbox Relay: Processing batch of 1 events
+[DEBUG] 2026-04-23T14:47:40.430Z - Relaying 1 events of type "team.aggregated.sync_team_member_count" to topic "team-aggregated-events"
+[DEBUG] 2026-04-23T14:47:40.430Z - [Auth Listener] Aggregating count for user b51f45f4-9db6-4592-9b19-d59ec4d438b0: delta 1
+[INFO] 2026-04-23T14:47:40.430Z - [Auth Listener] Performing bulk projects_count update for 1 users (from 1 events)
+[INFO] 2026-04-23T14:47:40.432Z - [TeamAggregated -> Project] Performing bulk update for 1 projects (from 1 events)
+[INFO] 2026-04-23T14:47:40.441Z - [TeamAggregated -> Team] Performing bulk update for 1 teams (from 1 events)
+(pass) Team Membership E2E > should eventually update team members_count (Event-Driven) [520.33ms]
+[INFO] 2026-04-23T14:47:40.921Z - [App] Shutting down...
+[INFO] 2026-04-23T14:47:40.921Z - Outbox Relay: Stopping relay...
+[INFO] 2026-04-23T14:47:40.922Z - [App] Shutdown complete
+
+ 6 pass
+ 0 fail
+ 15 expect() calls
+Ran 6 tests across 1 file. [1155.00ms]

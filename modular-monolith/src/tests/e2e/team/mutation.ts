@@ -21,3 +21,21 @@ export const CREATE_TEAM = `
         }
     }
 `;
+
+export const ADD_TEAM_MEMBERS = `
+    mutation AddTeamMembers($projectId: ID!, $teamId: ID!, $userIds: [ID!]!) {
+        addTeamMembers(projectId: $projectId, teamId: $teamId, userIds: $userIds) {
+            success
+            addedCount
+        }
+    }
+`;
+
+export const REMOVE_TEAM_MEMBERS = `
+    mutation RemoveTeamMembers($projectId: ID!, $teamId: ID!, $userIds: [ID!]!) {
+        removeTeamMembers(projectId: $projectId, teamId: $teamId, userIds: $userIds) {
+            success
+            removedCount
+        }
+    }
+`;
