@@ -53,3 +53,12 @@ export const UPDATE_TEAM = `
         }
     }
 `;
+
+export const DELETE_TEAMS = `
+    mutation DeleteTeams($projectId: ID!, $teamIds: [ID!]!) {
+        deleteTeams(projectId: $projectId, teamIds: $teamIds) {
+            success
+            deletedCount
+        }
+    }
+`;

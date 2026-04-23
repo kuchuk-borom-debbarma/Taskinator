@@ -390,6 +390,8 @@ export const deleteTeams = async (param: {
     const result = await sql<{ deletedCount: string }>`
         WITH authorized AS (
             SELECT 1 FROM project WHERE id = ${param.projectId}::uuid AND fk_user_id = ${param.actorId}::text
+            UNION ALL
+            SELECT 1 FROM project_member WHERE fk_project_id = ${param.projectId}::uuid AND fk_user_id = ${param.actorId}::text
             LIMIT 1
         ),
         deleted_teams AS (
