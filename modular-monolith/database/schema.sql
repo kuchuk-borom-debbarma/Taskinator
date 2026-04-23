@@ -71,6 +71,7 @@ CREATE TABLE project_task (
     total_outgoing_count INTEGER NOT NULL DEFAULT 0,
     incoming_label_counts JSONB NOT NULL DEFAULT '{}',
     outgoing_label_counts JSONB NOT NULL DEFAULT '{}',
+    priority INTEGER NOT NULL DEFAULT 0,
     CONSTRAINT fk_task_project_id CHECK (fk_project_id IS NOT NULL)
 );
 

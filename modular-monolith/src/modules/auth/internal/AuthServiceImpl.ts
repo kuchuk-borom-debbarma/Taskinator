@@ -138,7 +138,7 @@ export class AuthServiceImpl implements AuthService {
         const limit = Math.min(params.first || params.last || 10, 50);
 
         const rows = await sql<User>`
-            SELECT id, username, email
+            SELECT id, username, email, projects_count AS "projectsCount"
             FROM users
             WHERE
                 (
@@ -194,7 +194,7 @@ export class AuthServiceImpl implements AuthService {
         logger.debug(`AuthService.getUsersByIds called for ${ids.length} ids`);
         if (ids.length === 0) return [];
         const rows = await sql<User>`
-            SELECT id, username, email
+            SELECT id, username, email, projects_count AS "projectsCount"
             FROM users
             WHERE id::text = ANY(${ids}::text[])
         `.execute(db);

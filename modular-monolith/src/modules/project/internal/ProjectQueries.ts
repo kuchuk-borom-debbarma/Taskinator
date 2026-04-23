@@ -22,7 +22,10 @@ export async function insertProject(param: {
                 version, 
                 created_at AS "createdAt", 
                 created_at::text AS "epochPrecision",
-                updated_at AS "updatedAt"
+                updated_at AS "updatedAt",
+                members_count AS "membersCount",
+                tasks_count AS "tasksCount",
+                teams_count AS "teamsCount"
         ),
         inserted_outbox AS (
             INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
@@ -69,7 +72,10 @@ export async function updateProject(param: {
                 version, 
                 created_at AS "createdAt", 
                 created_at::text AS "epochPrecision",
-                updated_at AS "updatedAt"
+                updated_at AS "updatedAt",
+                members_count AS "membersCount",
+                tasks_count AS "tasksCount",
+                teams_count AS "teamsCount"
         ),
         inserted_outbox AS (
             INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
@@ -277,7 +283,10 @@ export const getProjects = async (
             created_at AS "createdAt",
             created_at::text as "epochPrecision",
             updated_at AS "updatedAt",
-            is_owner AS "isOwner"
+            is_owner AS "isOwner",
+            members_count AS "membersCount",
+            tasks_count AS "tasksCount",
+            teams_count AS "teamsCount"
         FROM combined_projects
         WHERE (
             ${cursorEpoch}::text IS NULL 
@@ -482,7 +491,10 @@ export const getProjectsByIds = async (
             version,
             created_at AS "createdAt",
             created_at::text AS "epochPrecision",
-            updated_at AS "updatedAt"
+            updated_at AS "updatedAt",
+            members_count AS "membersCount",
+            tasks_count AS "tasksCount",
+            teams_count AS "teamsCount"
         FROM project
         WHERE id = ANY(${projectIds}::uuid[])
     `.execute(db);
@@ -505,7 +517,10 @@ export const getProjectsByActorIdAndProjectIds = async (
             version,
             created_at AS "createdAt",
             created_at::text AS "epochPrecision",
-            updated_at AS "updatedAt"
+            updated_at AS "updatedAt",
+            members_count AS "membersCount",
+            tasks_count AS "tasksCount",
+            teams_count AS "teamsCount"
         FROM project
         WHERE id = ANY(${projectIds}::uuid[])
           AND (

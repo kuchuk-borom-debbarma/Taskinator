@@ -60,7 +60,13 @@ export const getTasksPage = async (
             priority,
             created_at AS "createdAt",
             created_at::text as "epochPrecision",
-            updated_at AS "updatedAt"
+            updated_at AS "updatedAt",
+            direct_incoming_count AS "directIncomingCount",
+            direct_outgoing_count AS "directOutgoingCount",
+            total_incoming_count AS "totalIncomingCount",
+            total_outgoing_count AS "totalOutgoingCount",
+            incoming_label_counts AS "incomingLabelCounts",
+            outgoing_label_counts AS "outgoingLabelCounts"
         FROM project_task
         WHERE EXISTS (SELECT 1 FROM auth_check)
           AND (
@@ -130,11 +136,17 @@ export const getTasksByIds = async (ids: string[]): Promise<Task[]> => {
             description,
             status,
             version,
-            fk_created_by AS "createdBy",
-            fk_updated_by AS "updatedBy",
+            created_by AS "createdBy",
+            updated_by AS "updatedBy",
             priority,
             created_at AS "createdAt",
-            updated_at AS "updatedAt"
+            updated_at AS "updatedAt",
+            direct_incoming_count AS "directIncomingCount",
+            direct_outgoing_count AS "directOutgoingCount",
+            total_incoming_count AS "totalIncomingCount",
+            total_outgoing_count AS "totalOutgoingCount",
+            incoming_label_counts AS "incomingLabelCounts",
+            outgoing_label_counts AS "outgoingLabelCounts"
         FROM project_task
         WHERE id = ANY(${ids}::uuid[])
     `.execute(db);
@@ -158,11 +170,17 @@ export const getTasksByActorIdAndIds = async (
             description,
             status,
             version,
-            fk_created_by AS "createdBy",
-            fk_updated_by AS "updatedBy",
+            created_by AS "createdBy",
+            updated_by AS "updatedBy",
             priority,
             created_at AS "createdAt",
-            updated_at AS "updatedAt"
+            updated_at AS "updatedAt",
+            direct_incoming_count AS "directIncomingCount",
+            direct_outgoing_count AS "directOutgoingCount",
+            total_incoming_count AS "totalIncomingCount",
+            total_outgoing_count AS "totalOutgoingCount",
+            incoming_label_counts AS "incomingLabelCounts",
+            outgoing_label_counts AS "outgoingLabelCounts"
         FROM project_task
         WHERE id = ANY(${ids}::uuid[])
           AND EXISTS (
@@ -211,10 +229,10 @@ export const getTaskLinksPage = async (
         SELECT 
             id, 
             fk_project_id AS "projectId", 
-            fk_source_task_id AS "sourceTaskId", 
-            fk_target_task_id AS "targetTaskId", 
+            source_task_id AS "sourceTaskId", 
+            target_task_id AS "targetTaskId", 
             label, 
-            fk_created_by AS "createdBy", 
+            created_by AS "createdBy", 
             created_at AS "createdAt",
             created_at::text as "epochPrecision"
         FROM task_link
@@ -303,13 +321,13 @@ export const getProjectTaskLinksPage = async (
         SELECT 
             id, 
             fk_project_id AS "projectId", 
-            fk_source_task_id AS "sourceTaskId", 
-            fk_target_task_id AS "targetTaskId", 
+            source_task_id AS "sourceTaskId", 
+            target_task_id AS "targetTaskId", 
             label, 
-            fk_created_by AS "createdBy", 
+            created_by AS "createdBy", 
             created_at AS "createdAt",
             created_at::text as "epochPrecision"
-        FROM project_task_link
+        FROM task_link
         WHERE EXISTS (SELECT 1 FROM auth_check)
           AND fk_project_id = ${projectId}::uuid
           AND (
@@ -442,7 +460,13 @@ export const insertTask = async (param: {
                 updated_by AS "updatedBy",
                 priority, 
                 created_at AS "createdAt", 
-                updated_at AS "updatedAt"
+                updated_at AS "updatedAt",
+                direct_incoming_count AS "directIncomingCount",
+                direct_outgoing_count AS "directOutgoingCount",
+                total_incoming_count AS "totalIncomingCount",
+                total_outgoing_count AS "totalOutgoingCount",
+                incoming_label_counts AS "incomingLabelCounts",
+                outgoing_label_counts AS "outgoingLabelCounts"
         ),
         inserted_outbox AS (
             INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
@@ -561,7 +585,13 @@ export const updateTask = async (param: {
                 updated_by AS "updatedBy",
                 priority, 
                 created_at AS "createdAt", 
-                updated_at AS "updatedAt"
+                updated_at AS "updatedAt",
+                direct_incoming_count AS "directIncomingCount",
+                direct_outgoing_count AS "directOutgoingCount",
+                total_incoming_count AS "totalIncomingCount",
+                total_outgoing_count AS "totalOutgoingCount",
+                incoming_label_counts AS "incomingLabelCounts",
+                outgoing_label_counts AS "outgoingLabelCounts"
         ),
         inserted_outbox AS (
             INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
@@ -885,7 +915,7 @@ export const deleteProjectTaskLinksByProjectIds = async (
     if (projectIds.length === 0) return { deletedCount: 0 };
 
     const result = await sql<{ id: string }>`
-        DELETE FROM project_task_link
+        DELETE FROM task_link
         WHERE fk_project_id = ANY(${projectIds}::uuid[])
         RETURNING id
     `.execute(db);
