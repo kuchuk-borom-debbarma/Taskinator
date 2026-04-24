@@ -1,0 +1,21 @@
+{
+    "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+    "testRunner": "command",
+    "coverageAnalysis": "off",
+    "concurrency": 2,
+    "tempDirName": ".stryker-tmp/task-flow",
+    "reporters": ["clear-text", "html", "json"],
+    "ignorePatterns": ["coverage", ".stryker-tmp", "reports"],
+    "mutate": [
+        "src/modules/task/internal/TaskQueries.ts:419-498",
+        "src/modules/task/internal/TaskQueries.ts:500-657"
+    ],
+    "commandRunner": {
+        "command": "DB_PORT=5435 KAFKA_BROKERS=localhost:9094 REDIS_URL=redis://localhost:6380 bun test src/tests/e2e/task/task.create.test.ts src/tests/e2e/task/task.update.test.ts --concurrency 1"
+    },
+    "thresholds": {
+        "high": 80,
+        "low": 70,
+        "break": 0
+    }
+}

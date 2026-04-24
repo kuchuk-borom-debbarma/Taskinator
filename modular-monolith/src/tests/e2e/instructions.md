@@ -19,6 +19,24 @@ bun run test:e2e
 4. Executes all `*.test.ts` files inside this directory.
 5. Safely tears down the containers and wipes the in-memory state.
 
+To measure which E2E paths are actually exercised, run:
+
+```bash
+bun run test:e2e:coverage
+```
+
+This writes Bun coverage output to `coverage/e2e` and prints a text summary in the terminal.
+
+To pressure-test important query branches with mutation testing, run:
+
+```bash
+bun run test:e2e:mutation
+```
+
+This currently targets the most critical write paths covered by the E2E suite:
+- project member add/remove
+- task create/update
+
 ---
 
 ## 🛠 The Manual Way (For Debugging / Scripting)
@@ -42,6 +60,14 @@ DB_PORT=5435 bun run src/tests/e2e/scripts/add-users.ts 100
 Once the environment is open, you can run tests repeatedly without waiting for Docker to spin up:
 ```bash
 bun run test:e2e:run
+```
+
+You can also run coverage or focused mutation checks against the already-open environment:
+
+```bash
+bun run test:e2e:coverage:run
+bun run test:e2e:mutation:project-members:dry:run
+bun run test:e2e:mutation:task-flow:dry:run
 ```
 
 ### 4. Close the Environment

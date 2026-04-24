@@ -190,6 +190,129 @@ describe('Task Update E2E', () => {
         expect(taskDb.version).toBe(2);
     });
 
+    it('should allow updating task status explicitly', async () => {
+        const res = await gqlRequest({
+            query: UPDATE_TASK,
+            variables: {
+                taskId,
+                input: {
+                    projectId,
+                    status: 'DONE',
+                    version: 1,
+                },
+            },
+            token: ownerToken,
+        });
+
+        expect(res.status).toBe(200);
+        expect(res.body.data.task.update.status).toBe('DONE');
+
+        const taskDb = await db
+            .selectFrom('project_task')
+            .select(['status', 'version', 'updated_by'])
+            .where('id', '=', taskId)
+            .executeTakeFirstOrThrow();
+        expect(taskDb.status).toBe('DONE');
+        expect(taskDb.version).toBe(2);
+        expect(taskDb.updated_by).toBe(owner.id);
+    });
+
+    it('should clear description to empty string when null is provided', async () => {
+        await gqlRequest({
+            query: UPDATE_TASK,
+            variables: {
+                taskId,
+                input: {
+                    projectId,
+                    description: 'Filled first',
+                    version: 1,
+                },
+            },
+            token: ownerToken,
+        });
+
+        const res = await gqlRequest({
+            query: UPDATE_TASK,
+            variables: {
+                taskId,
+                input: {
+                    projectId,
+                    description: null,
+                    version: 2,
+                },
+            },
+            token: ownerToken,
+        });
+
+        expect(res.status).toBe(200);
+        expect(res.body.data.task.update.description).toBe('');
+
+        const taskDb = await db
+            .selectFrom('project_task')
+            .select(['description', 'version'])
+            .where('id', '=', taskId)
+            .executeTakeFirstOrThrow();
+        expect(taskDb.description).toBe('');
+        expect(taskDb.version).toBe(3);
+    });
+
+    it('should preserve assigned member, status, and description when omitted from a later update', async () => {
+        await gqlRequest({
+            query: UPDATE_TASK,
+            variables: {
+                taskId,
+                input: {
+                    projectId,
+                    description: 'Persistent description',
+                    memberId: member.id,
+                    status: 'IN_PROGRESS',
+                    version: 1,
+                },
+            },
+            token: ownerToken,
+        });
+
+        const res = await gqlRequest({
+            query: UPDATE_TASK,
+            variables: {
+                taskId,
+                input: {
+                    projectId,
+                    title: 'Retitled Without Reassignment',
+                    version: 2,
+                },
+            },
+            token: ownerToken,
+        });
+
+        expect(res.status).toBe(200);
+        expect(res.body.data.task.update.title).toBe(
+            'Retitled Without Reassignment',
+        );
+        expect(res.body.data.task.update.description).toBe(
+            'Persistent description',
+        );
+        expect(res.body.data.task.update.status).toBe('IN_PROGRESS');
+        expect(res.body.data.task.update.assignedMember.id).toBe(member.id);
+
+        const taskDb = await db
+            .selectFrom('project_task')
+            .select([
+                'title',
+                'description',
+                'status',
+                'fk_member_id',
+                'version',
+            ])
+            .where('id', '=', taskId)
+            .executeTakeFirstOrThrow();
+        expect(taskDb.title).toBe('Retitled Without Reassignment');
+        expect(taskDb.description).toBe('Persistent description');
+        expect(taskDb.status).toBe('IN_PROGRESS');
+        expect(taskDb.fk_member_id).toBe(member.id);
+        expect(taskDb.version).toBe(3);
+    });
+
     it('should fail when assigning a member who is NOT in the project', async () => {
         const res = await gqlRequest({
             query: UPDATE_TASK,
@@ -419,7 +542,9 @@ describe('Task Update E2E', () => {
             token: ownerToken,
         });
 
-        expect(res.body.errors[0].message).toContain('not found');
+        expect(res.body.errors[0].message).toBe(
+            `Task with ID ${fakeTaskId} not found in project ${projectId}.`,
+        );
         const taskDb = await db
             .selectFrom('project_task')
             .select(['title', 'version'])
