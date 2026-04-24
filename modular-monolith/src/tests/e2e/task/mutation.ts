@@ -44,3 +44,39 @@ export const DELETE_TASK = `
     }
   }
 `;
+
+export const CREATE_TASK_LINK = `
+  mutation CreateTaskLink($input: CreateTaskLinkInput!) {
+    task {
+      createLink(input: $input) {
+        id
+        source { id }
+        target { id }
+        label
+        createdAt
+      }
+    }
+  }
+`;
+
+export const DELETE_TASK_LINK = `
+  mutation DeleteTaskLink($projectId: ID!, $linkId: ID!) {
+    task {
+      deleteLink(projectId: $projectId, linkId: $linkId)
+    }
+  }
+`;
+
+export const UPDATE_TASK_LINK = `
+  mutation UpdateTaskLink($input: UpdateTaskLinkInput!) {
+    task {
+      updateLink(input: $input) {
+        id
+        source { id }
+        target { id }
+        label
+        updatedAt
+      }
+    }
+  }
+`;

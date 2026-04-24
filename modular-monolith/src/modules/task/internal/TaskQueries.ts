@@ -805,7 +805,7 @@ export const deleteTaskLink = async (param: {
                 ${KAFKA_TOPICS.TASK},
                 id::text,
                 jsonb_build_object(
-                    'type', ${KAFKA_EVENTS.TASK_LINK.DELETED},
+                    'type', ${KAFKA_EVENTS.TASK_LINK.DELETED}::text,
                     'linkId', id,
                     'projectId', fk_project_id,
                     'sourceTaskId', source_task_id,
@@ -1360,6 +1360,14 @@ export const syncTaskGraphCounters = async (
     await sql`
         UPDATE project_task 
         SET 
+            direct_incoming_count = (
+                SELECT COUNT(*) FROM task_link 
+                WHERE target_task_id = project_task.id AND fk_project_id = ${projectId}::uuid
+            ),
+            direct_outgoing_count = (
+                SELECT COUNT(*) FROM task_link 
+                WHERE source_task_id = project_task.id AND fk_project_id = ${projectId}::uuid
+            ),
             total_incoming_count = (
                 SELECT COUNT(*) FROM task_reachability 
                 WHERE descendant_task_id = project_task.id AND fk_project_id = ${projectId}::uuid

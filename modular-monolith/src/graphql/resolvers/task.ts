@@ -352,6 +352,21 @@ export const taskResolvers = {
                 linkId,
             });
         },
+        updateLink: async (
+            _parent: any,
+            { input }: { input: UpdateTaskLinkInput },
+            context: GraphQLContext,
+        ): Promise<TaskLink> => {
+            if (!context.userId) throw new UnauthorizedError();
+            return await taskService.updateTaskLink({
+                actorId: context.userId,
+                projectId: input.projectId,
+                linkId: input.linkId,
+                sourceTaskId: input.sourceTaskId,
+                targetTaskId: input.targetTaskId,
+                label: input.label,
+            });
+        },
     },
     TaskLabelCount: {
         count: () => 0,

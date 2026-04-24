@@ -85,7 +85,8 @@ CREATE TABLE task_link (
     created_by TEXT NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT chk_task_link_not_self CHECK (source_task_id <> target_task_id),
-    CONSTRAINT chk_task_link_label_valid CHECK (length(trim(label)) BETWEEN 1 AND 50)
+    CONSTRAINT chk_task_link_label_valid CHECK (length(trim(label)) BETWEEN 1 AND 50),
+    CONSTRAINT uq_task_link_source_target UNIQUE (source_task_id, target_task_id)
 );
 
 -- Task Reachability (Transitive Index) Table
