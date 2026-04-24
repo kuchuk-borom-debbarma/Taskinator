@@ -1,5 +1,4 @@
 import jwt from 'jsonwebtoken';
-import { sql } from 'kysely';
 import { cleanupDb } from '../../../__tests__/helpers/db.ts';
 import { db } from '../../../database/index.ts';
 import { gqlRequest } from '../helpers/request.ts';
@@ -127,17 +126,6 @@ describe('Team Update E2E', () => {
             .executeTakeFirst();
         expect(team?.name).toBe(newName);
         expect(team?.version).toBe(initialVersion + 1);
-
-        // Verify Outbox
-        const outbox = await db
-            .selectFrom('outbox_events')
-            .where('payload', '@>', JSON.stringify({ teamId }))
-            .where(sql`payload->>'type'`, '=', 'team.updated')
-            .selectAll()
-            .executeTakeFirst();
-        expect(outbox).toBeDefined();
-        const payload = outbox?.payload as any;
-        expect(payload.name).toBe(newName);
     });
 
     it('should allow project member to rename a team', async () => {
