@@ -126,6 +126,12 @@ describe('Team Member Addition E2E', () => {
         });
 
         expect(res.body.data.addTeamMembers.addedCount).toBe(0);
+        const memberships = await db
+            .selectFrom('project_team_member')
+            .select('fk_user_id')
+            .where('fk_team_id', '=', teamId)
+            .execute();
+        expect(memberships).toHaveLength(0);
     });
 
     it('should allow project member to add other members to a team', async () => {
@@ -150,6 +156,13 @@ describe('Team Member Addition E2E', () => {
         });
 
         expect(res.body.data.addTeamMembers.addedCount).toBe(1);
+        const membership = await db
+            .selectFrom('project_team_member')
+            .select('fk_user_id')
+            .where('fk_team_id', '=', teamId)
+            .where('fk_user_id', '=', user3.id)
+            .executeTakeFirst();
+        expect(membership?.fk_user_id).toBe(user3.id);
     });
 
     it('should fail when a stranger tries to add team members', async () => {
@@ -160,6 +173,12 @@ describe('Team Member Addition E2E', () => {
         });
 
         expect(res.body.data.addTeamMembers.addedCount).toBe(0);
+        const memberships = await db
+            .selectFrom('project_team_member')
+            .select('fk_user_id')
+            .where('fk_team_id', '=', teamId)
+            .execute();
+        expect(memberships).toHaveLength(0);
     });
 
     it('should eventually update team members_count after addition (Event-Driven)', async () => {
@@ -225,6 +244,14 @@ describe('Team Member Addition E2E', () => {
         });
 
         expect(res.body.data.addTeamMembers.addedCount).toBe(1);
+        const memberships = await db
+            .selectFrom('project_team_member')
+            .select('fk_user_id')
+            .where('fk_team_id', '=', teamId)
+            .execute();
+        expect(memberships.map((m) => m.fk_user_id).sort()).toEqual(
+            [member.id, u3.id].sort(),
+        );
     });
 
     it('should handle partial additions (some valid, some invalid)', async () => {
@@ -235,6 +262,13 @@ describe('Team Member Addition E2E', () => {
         });
 
         expect(res.body.data.addTeamMembers.addedCount).toBe(1);
+        const memberships = await db
+            .selectFrom('project_team_member')
+            .select('fk_user_id')
+            .where('fk_team_id', '=', teamId)
+            .execute();
+        expect(memberships).toHaveLength(1);
+        expect(memberships[0]?.fk_user_id).toBe(member.id);
     });
 
     it('should fail to add members to a non-existent team', async () => {

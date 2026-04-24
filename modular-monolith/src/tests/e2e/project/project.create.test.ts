@@ -78,7 +78,7 @@ describe('Project Creation E2E', () => {
     }, 15000);
 
     it('should allow multiple projects with the same name (standard behavior)', async () => {
-        await gqlRequest({
+        const res1 = await gqlRequest({
             query: CREATE_PROJECT,
             variables: { name: 'Duplicate Name' },
             token: token1,
@@ -89,7 +89,18 @@ describe('Project Creation E2E', () => {
             token: token1,
         });
         expect(res2.status).toBe(200);
+        expect(res1.body.data.createProject.id).not.toBe(
+            res2.body.data.createProject.id,
+        );
         expect(res2.body.data.createProject.name).toBe('Duplicate Name');
+
+        const projects = await db
+            .selectFrom('project')
+            .select(['id', 'name', 'fk_user_id'])
+            .where('fk_user_id', '=', user1.id)
+            .where('name', '=', 'Duplicate Name')
+            .execute();
+        expect(projects).toHaveLength(2);
     });
 
     it('should fail for extremely long project names (>255 chars)', async () => {
@@ -103,6 +114,13 @@ describe('Project Creation E2E', () => {
         expect(res.body.errors[0].message).toContain(
             'Project name must be between 3 and 255 characters.',
         );
+
+        const projects = await db
+            .selectFrom('project')
+            .select('id')
+            .where('fk_user_id', '=', user1.id)
+            .execute();
+        expect(projects).toHaveLength(0);
     });
 
     it('should fail for short project names (<3 chars)', async () => {
@@ -115,6 +133,13 @@ describe('Project Creation E2E', () => {
         expect(res.body.errors[0].message).toContain(
             'Project name must be between 3 and 255 characters.',
         );
+
+        const projects = await db
+            .selectFrom('project')
+            .select('id')
+            .where('fk_user_id', '=', user1.id)
+            .execute();
+        expect(projects).toHaveLength(0);
     });
 
     it('should create a project with a description and special characters', async () => {
@@ -148,5 +173,8 @@ describe('Project Creation E2E', () => {
         });
         expect(res.body.errors).toBeDefined();
         expect(res.body.errors[0].message).toContain('userId not found');
+
+        const projects = await db.selectFrom('project').select('id').execute();
+        expect(projects).toHaveLength(0);
     });
 });

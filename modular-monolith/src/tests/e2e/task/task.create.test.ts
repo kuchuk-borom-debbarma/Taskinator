@@ -120,6 +120,10 @@ describe('Task Creation E2E', () => {
             .executeTakeFirst();
         expect(taskDb).toBeDefined();
         expect(taskDb?.title).toBe('Fix critical bug');
+        expect(taskDb?.description).toBe('The auth flow is broken in safari');
+        expect(taskDb?.status).toBe('IN_PROGRESS');
+        expect(taskDb?.created_by).toBe(owner.id);
+        expect(taskDb?.fk_project_id).toBe(projectId);
     });
 
     it('should default status to TODO if omitted', async () => {
@@ -135,6 +139,12 @@ describe('Task Creation E2E', () => {
         });
 
         expect(res.body.data.task.create.status).toBe('TODO');
+        const taskDb = await db
+            .selectFrom('project_task')
+            .select(['status'])
+            .where('id', '=', res.body.data.task.create.id)
+            .executeTakeFirstOrThrow();
+        expect(taskDb.status).toBe('TODO');
     });
 
     it('should allow a project member to create a task', async () => {
@@ -151,6 +161,13 @@ describe('Task Creation E2E', () => {
 
         expect(res.body.data.task.create.title).toBe('Member Task');
         expect(res.body.data.task.create.createdBy.id).toBe(member.id);
+        const taskDb = await db
+            .selectFrom('project_task')
+            .select(['created_by', 'fk_project_id'])
+            .where('id', '=', res.body.data.task.create.id)
+            .executeTakeFirstOrThrow();
+        expect(taskDb.created_by).toBe(member.id);
+        expect(taskDb.fk_project_id).toBe(projectId);
     });
 
     it('should fail when a stranger tries to create a task', async () => {
@@ -169,6 +186,13 @@ describe('Task Creation E2E', () => {
         expect(res.body.errors[0].message).toContain(
             'not found or you do not have permission',
         );
+
+        const tasks = await db
+            .selectFrom('project_task')
+            .select('id')
+            .where('fk_project_id', '=', projectId)
+            .execute();
+        expect(tasks).toHaveLength(0);
     });
 
     it('should fail when unauthenticated', async () => {
@@ -183,6 +207,12 @@ describe('Task Creation E2E', () => {
         });
 
         expect(res.status).toBe(401);
+        const tasks = await db
+            .selectFrom('project_task')
+            .select('id')
+            .where('fk_project_id', '=', projectId)
+            .execute();
+        expect(tasks).toHaveLength(0);
     });
 
     it('should fail if title is too short', async () => {
@@ -200,10 +230,22 @@ describe('Task Creation E2E', () => {
         // Backend validation should trigger
         expect(res.body.errors).toBeDefined();
         expect(res.body.errors[0].message).toContain('between 3 and 255');
+
+        const tasks = await db
+            .selectFrom('project_task')
+            .select('id')
+            .where('fk_project_id', '=', projectId)
+            .execute();
+        expect(tasks).toHaveLength(0);
     });
 
     it('should fail if project does not exist', async () => {
         const fakeProjectId = '00000000-0000-0000-0000-000000000000';
+        const beforeCount = await db
+            .selectFrom('project_task')
+            .select('id')
+            .where('fk_project_id', '=', projectId)
+            .execute();
         const res = await gqlRequest({
             query: CREATE_TASK,
             variables: {
@@ -217,6 +259,13 @@ describe('Task Creation E2E', () => {
 
         expect(res.body.errors).toBeDefined();
         expect(res.body.errors[0].message).toContain('not found');
+
+        const tasks = await db
+            .selectFrom('project_task')
+            .select('id')
+            .where('fk_project_id', '=', projectId)
+            .execute();
+        expect(tasks).toHaveLength(beforeCount.length);
     });
 
     it('should eventually update project tasks_count (Event-Driven)', async () => {

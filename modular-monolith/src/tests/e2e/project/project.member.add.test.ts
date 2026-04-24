@@ -80,9 +80,13 @@ describe('Project Member Add E2E', () => {
         // Verify in DB
         const members = await db
             .selectFrom('project_member')
+            .select(['fk_user_id'])
             .where('fk_project_id', '=', projectId)
             .execute();
         expect(members.length).toBe(2);
+        expect(members.map((m) => m.fk_user_id).sort()).toEqual(
+            [u2.id, u3.id].sort(),
+        );
 
         // Wait for background count increment
         let finalCount = 0;
@@ -141,9 +145,13 @@ describe('Project Member Add E2E', () => {
         expect(addRes.body.data.addProjectMembers.success).toBe(true);
         const members = await db
             .selectFrom('project_member')
+            .select(['fk_user_id'])
             .where('fk_project_id', '=', projectId)
             .execute();
         expect(members.length).toBe(2);
+        expect(members.map((m) => m.fk_user_id).sort()).toEqual(
+            [u2.id, u3.id].sort(),
+        );
     });
 
     it('should fail when a non-member tries to add members', async () => {
@@ -173,10 +181,11 @@ describe('Project Member Add E2E', () => {
 
         const members = await db
             .selectFrom('project_member')
-            .selectAll()
+            .select(['fk_user_id'])
             .where('fk_project_id', '=', projectId)
             .execute();
         expect(members.length).toBe(0);
+        expect(addRes.body.data.addProjectMembers.success).toBe(true);
     });
 
     it('should be idempotent when adding the same user multiple times', async () => {
@@ -204,9 +213,10 @@ describe('Project Member Add E2E', () => {
         expect(res2.body.data.addProjectMembers.success).toBe(true);
         const members = await db
             .selectFrom('project_member')
-            .selectAll()
+            .select(['fk_user_id'])
             .where('fk_project_id', '=', projectId)
             .execute();
         expect(members.length).toBe(1);
+        expect(members[0]?.fk_user_id).toBe(u2.id);
     });
 });

@@ -144,6 +144,13 @@ describe('Team Member Removal E2E', () => {
         });
 
         expect(res.body.data.removeTeamMembers.removedCount).toBe(1);
+        const membership = await db
+            .selectFrom('project_team_member')
+            .select('fk_user_id')
+            .where('fk_team_id', '=', teamId)
+            .where('fk_user_id', '=', member.id)
+            .executeTakeFirst();
+        expect(membership).toBeUndefined();
     });
 
     it('should handle batch removal correctly', async () => {
@@ -183,6 +190,12 @@ describe('Team Member Removal E2E', () => {
         });
 
         expect(res.body.data.removeTeamMembers.removedCount).toBe(2);
+        const memberships = await db
+            .selectFrom('project_team_member')
+            .select('fk_user_id')
+            .where('fk_team_id', '=', teamId)
+            .execute();
+        expect(memberships).toHaveLength(0);
     });
 
     it('should return removedCount: 0 when removing non-members', async () => {
@@ -193,6 +206,12 @@ describe('Team Member Removal E2E', () => {
         });
 
         expect(res.body.data.removeTeamMembers.removedCount).toBe(0);
+        const memberships = await db
+            .selectFrom('project_team_member')
+            .select('fk_user_id')
+            .where('fk_team_id', '=', teamId)
+            .execute();
+        expect(memberships).toHaveLength(0);
     });
 
     it('should eventually update team members_count after removal (Event-Driven)', async () => {

@@ -128,6 +128,16 @@ describe('Task Update E2E', () => {
         expect(task.title).toBe('Updated Title');
         expect(task.description).toBe('New Description');
         expect(task.version).toBe(2);
+
+        const taskDb = await db
+            .selectFrom('project_task')
+            .select(['title', 'description', 'version', 'updated_by'])
+            .where('id', '=', taskId)
+            .executeTakeFirstOrThrow();
+        expect(taskDb.title).toBe('Updated Title');
+        expect(taskDb.description).toBe('New Description');
+        expect(taskDb.version).toBe(2);
+        expect(taskDb.updated_by).toBe(owner.id);
     });
 
     it('should allow assigning a team to a task', async () => {
@@ -145,6 +155,14 @@ describe('Task Update E2E', () => {
         });
 
         expect(res.body.data.task.update.team.id).toBe(teamId);
+        const taskDb = await db
+            .selectFrom('project_task')
+            .select(['fk_team_id', 'fk_member_id', 'version'])
+            .where('id', '=', taskId)
+            .executeTakeFirstOrThrow();
+        expect(taskDb.fk_team_id).toBe(teamId);
+        expect(taskDb.fk_member_id).toBeNull();
+        expect(taskDb.version).toBe(2);
     });
 
     it('should allow assigning a member to a task', async () => {
@@ -162,6 +180,14 @@ describe('Task Update E2E', () => {
         });
 
         expect(res.body.data.task.update.assignedMember.id).toBe(member.id);
+        const taskDb = await db
+            .selectFrom('project_task')
+            .select(['fk_member_id', 'fk_team_id', 'version'])
+            .where('id', '=', taskId)
+            .executeTakeFirstOrThrow();
+        expect(taskDb.fk_member_id).toBe(member.id);
+        expect(taskDb.fk_team_id).toBeNull();
+        expect(taskDb.version).toBe(2);
     });
 
     it('should fail when assigning a member who is NOT in the project', async () => {
@@ -182,6 +208,14 @@ describe('Task Update E2E', () => {
         expect(res.body.errors[0].message).toContain(
             'Unauthorized or validation failed',
         );
+
+        const taskDb = await db
+            .selectFrom('project_task')
+            .select(['fk_member_id', 'version'])
+            .where('id', '=', taskId)
+            .executeTakeFirstOrThrow();
+        expect(taskDb.fk_member_id).toBeNull();
+        expect(taskDb.version).toBe(1);
     });
 
     it('should fail if member is assigned to a team they are NOT part of', async () => {
@@ -201,6 +235,14 @@ describe('Task Update E2E', () => {
         });
 
         expect(res.body.errors).toBeDefined();
+        const taskDb = await db
+            .selectFrom('project_task')
+            .select(['fk_team_id', 'fk_member_id', 'version'])
+            .where('id', '=', taskId)
+            .executeTakeFirstOrThrow();
+        expect(taskDb.fk_team_id).toBeNull();
+        expect(taskDb.fk_member_id).toBeNull();
+        expect(taskDb.version).toBe(1);
     });
 
     it('should succeed if member IS in the assigned team and update team tasks_count', async () => {
@@ -231,6 +273,16 @@ describe('Task Update E2E', () => {
         expect(res.status).toBe(200);
         expect(res.body.data.task.update.team.id).toBe(teamId);
         expect(res.body.data.task.update.assignedMember.id).toBe(member.id);
+
+        const taskDb = await db
+            .selectFrom('project_task')
+            .select(['fk_team_id', 'fk_member_id', 'version', 'updated_by'])
+            .where('id', '=', taskId)
+            .executeTakeFirstOrThrow();
+        expect(taskDb.fk_team_id).toBe(teamId);
+        expect(taskDb.fk_member_id).toBe(member.id);
+        expect(taskDb.version).toBe(2);
+        expect(taskDb.updated_by).toBe(owner.id);
 
         // Verify Team Counter (Eventually Consistent)
         let team: any;
@@ -269,6 +321,14 @@ describe('Task Update E2E', () => {
 
         expect(res.body.errors).toBeDefined();
         expect(res.body.errors[0].message).toContain('version mismatch');
+
+        const taskDb = await db
+            .selectFrom('project_task')
+            .select(['title', 'version'])
+            .where('id', '=', taskId)
+            .executeTakeFirstOrThrow();
+        expect(taskDb.title).toBe('Updated V2');
+        expect(taskDb.version).toBe(2);
     });
 
     it('should allow a project member to update a task', async () => {
@@ -286,6 +346,14 @@ describe('Task Update E2E', () => {
         });
 
         expect(res.body.data.task.update.title).toBe('Member Update');
+        const taskDb = await db
+            .selectFrom('project_task')
+            .select(['title', 'updated_by', 'version'])
+            .where('id', '=', taskId)
+            .executeTakeFirstOrThrow();
+        expect(taskDb.title).toBe('Member Update');
+        expect(taskDb.updated_by).toBe(member.id);
+        expect(taskDb.version).toBe(2);
     });
 
     it('should fail when a stranger tries to update a task', async () => {
@@ -303,6 +371,13 @@ describe('Task Update E2E', () => {
         });
 
         expect(res.body.errors).toBeDefined();
+        const taskDb = await db
+            .selectFrom('project_task')
+            .select(['title', 'version'])
+            .where('id', '=', taskId)
+            .executeTakeFirstOrThrow();
+        expect(taskDb.title).toBe('Initial Task');
+        expect(taskDb.version).toBe(1);
     });
 
     it('should fail if title is too short', async () => {
@@ -320,6 +395,13 @@ describe('Task Update E2E', () => {
         });
 
         expect(res.body.errors[0].message).toContain('between 3 and 255');
+        const taskDb = await db
+            .selectFrom('project_task')
+            .select(['title', 'version'])
+            .where('id', '=', taskId)
+            .executeTakeFirstOrThrow();
+        expect(taskDb.title).toBe('Initial Task');
+        expect(taskDb.version).toBe(1);
     });
 
     it('should fail if task does not exist', async () => {
@@ -338,6 +420,13 @@ describe('Task Update E2E', () => {
         });
 
         expect(res.body.errors[0].message).toContain('not found');
+        const taskDb = await db
+            .selectFrom('project_task')
+            .select(['title', 'version'])
+            .where('id', '=', taskId)
+            .executeTakeFirstOrThrow();
+        expect(taskDb.title).toBe('Initial Task');
+        expect(taskDb.version).toBe(1);
     });
 
     it('should fail if project ID does not match the task', async () => {
@@ -363,5 +452,13 @@ describe('Task Update E2E', () => {
         });
 
         expect(res.body.errors[0].message).toContain('not found');
+        const taskDb = await db
+            .selectFrom('project_task')
+            .select(['title', 'fk_project_id', 'version'])
+            .where('id', '=', taskId)
+            .executeTakeFirstOrThrow();
+        expect(taskDb.title).toBe('Initial Task');
+        expect(taskDb.fk_project_id).toBe(projectId);
+        expect(taskDb.version).toBe(1);
     });
 });

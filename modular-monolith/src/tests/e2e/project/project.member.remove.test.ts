@@ -86,6 +86,13 @@ describe('Project Member Remove E2E', () => {
 
         expect(removeRes.body.data.removeProjectMembers.success).toBe(true);
 
+        const membershipsAfterDelete = await db
+            .selectFrom('project_member')
+            .select('fk_user_id')
+            .where('fk_project_id', '=', projectId)
+            .execute();
+        expect(membershipsAfterDelete).toHaveLength(0);
+
         // [3] Background Check
         let finalCount = 1;
         attempts = 0;
@@ -149,9 +156,12 @@ describe('Project Member Remove E2E', () => {
         // Verify member still exists
         const members = await db
             .selectFrom('project_member')
+            .select('fk_user_id')
             .where('fk_project_id', '=', projectId)
             .execute();
         expect(members.length).toBe(1);
+        expect(members[0]?.fk_user_id).toBe(u2.id);
+        expect(removeRes.body.data.removeProjectMembers.success).toBe(true);
     });
 
     it('should handle non-existent member removal gracefully', async () => {
@@ -162,6 +172,13 @@ describe('Project Member Remove E2E', () => {
             token: token1,
         });
         expect(removeRes.body.data.removeProjectMembers.success).toBe(true);
+
+        const members = await db
+            .selectFrom('project_member')
+            .select('fk_user_id')
+            .where('fk_project_id', '=', projectId)
+            .execute();
+        expect(members).toHaveLength(0);
     });
 
     it('should allow an existing member to remove another member (Permissive Role)', async () => {

@@ -83,6 +83,14 @@ describe('Project Update E2E', () => {
         });
         expect(updateRes.body.errors).toBeDefined();
         expect(updateRes.body.errors[0].message).toContain('Version mismatch');
+
+        const project = await db
+            .selectFrom('project')
+            .select(['name', 'version'])
+            .where('id', '=', projectId)
+            .executeTakeFirstOrThrow();
+        expect(project.name).toBe('Versioning Test');
+        expect(project.version).toBe(1);
     });
 
     it('should update name only and preserve description (Partial Update)', async () => {
@@ -114,6 +122,15 @@ describe('Project Update E2E', () => {
             'Original Description',
         );
         expect(updateRes.body.data.updateProject.version).toBe(oldVersion + 1);
+
+        const project = await db
+            .selectFrom('project')
+            .select(['name', 'description', 'version'])
+            .where('id', '=', projectId)
+            .executeTakeFirstOrThrow();
+        expect(project.name).toBe('Renamed Project');
+        expect(project.description).toBe('Original Description');
+        expect(project.version).toBe(oldVersion + 1);
     });
 
     it('should increment version even if values are identical (No-Op Update)', async () => {
@@ -132,6 +149,14 @@ describe('Project Update E2E', () => {
 
         expect(updateRes.body.data.updateProject.name).toBe(name);
         expect(updateRes.body.data.updateProject.version).toBe(version + 1);
+
+        const project = await db
+            .selectFrom('project')
+            .select(['name', 'version'])
+            .where('id', '=', id)
+            .executeTakeFirstOrThrow();
+        expect(project.name).toBe(name);
+        expect(project.version).toBe(version + 1);
     });
 
     it('should fail when setting name to a string too short (<3 chars)', async () => {
@@ -152,6 +177,14 @@ describe('Project Update E2E', () => {
         expect(updateRes.body.errors[0].message).toContain(
             'Project name must be between 3 and 255 characters.',
         );
+
+        const project = await db
+            .selectFrom('project')
+            .select(['name', 'version'])
+            .where('id', '=', id)
+            .executeTakeFirstOrThrow();
+        expect(project.name).toBe('Something');
+        expect(project.version).toBe(version);
     });
 
     it('should NOT allow clearing description by setting it to null (Sticky Field behavior)', async () => {
@@ -179,6 +212,14 @@ describe('Project Update E2E', () => {
         expect(updateRes.body.data.updateProject.description).toBe(
             'I am sticky',
         );
+
+        const project = await db
+            .selectFrom('project')
+            .select(['description', 'version'])
+            .where('id', '=', id)
+            .executeTakeFirstOrThrow();
+        expect(project.description).toBe('I am sticky');
+        expect(project.version).toBe(version + 1);
     });
 
     it('should fail when updating a project owned by another user', async () => {
@@ -233,5 +274,8 @@ describe('Project Update E2E', () => {
             token: token1,
         });
         expect(res.body.errors).toBeDefined();
+
+        const projects = await db.selectFrom('project').select('id').execute();
+        expect(projects).toHaveLength(0);
     });
 });
