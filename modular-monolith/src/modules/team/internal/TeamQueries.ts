@@ -437,6 +437,9 @@ export const insertTeamMembers = async (param: {
             SELECT 1 FROM project_member WHERE fk_project_id = ${param.projectId}::uuid AND fk_user_id = ${param.actorId}::text
             LIMIT 1
         ),
+        valid_team AS (
+            SELECT 1 FROM project_team WHERE id = ${param.teamId}::uuid AND fk_project_id = ${param.projectId}::uuid
+        ),
         valid_users AS (
             SELECT fk_user_id 
             FROM project_member 
@@ -448,6 +451,7 @@ export const insertTeamMembers = async (param: {
             SELECT ${param.teamId}::uuid, ${param.projectId}::uuid, vu.fk_user_id
             FROM valid_users vu
             WHERE EXISTS (SELECT 1 FROM authorized)
+              AND EXISTS (SELECT 1 FROM valid_team)
             ON CONFLICT DO NOTHING
             RETURNING fk_user_id
         ),

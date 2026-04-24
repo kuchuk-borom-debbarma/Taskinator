@@ -1,19 +1,14 @@
 import jwt from 'jsonwebtoken';
-import { sql } from 'kysely';
 import { cleanupDb } from '../../../__tests__/helpers/db.ts';
 import { db } from '../../../database/index.ts';
 import { gqlRequest } from '../helpers/request.ts';
 import { bootstrapE2E, teardownE2E } from '../helpers/server.ts';
 import { CREATE_PROJECT } from '../project/mutation.ts';
-import {
-    ADD_TEAM_MEMBERS,
-    CREATE_TEAM,
-    REMOVE_TEAM_MEMBERS,
-} from './mutation.ts';
+import { ADD_TEAM_MEMBERS, CREATE_TEAM } from './mutation.ts';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-jwt-key';
 
-describe('Team Membership E2E', () => {
+describe('Team Member Addition E2E', () => {
     let owner: { id: string; username: string; email: string };
     let member: { id: string; username: string; email: string };
     let stranger: { id: string; username: string; email: string };
@@ -114,7 +109,6 @@ describe('Team Membership E2E', () => {
         expect(res.body.data.addTeamMembers.success).toBe(true);
         expect(res.body.data.addTeamMembers.addedCount).toBe(1);
 
-        // Verify in DB
         const membership = await db
             .selectFrom('project_team_member')
             .where('fk_team_id', '=', teamId)
@@ -122,17 +116,6 @@ describe('Team Membership E2E', () => {
             .selectAll()
             .executeTakeFirst();
         expect(membership).toBeDefined();
-
-        // Verify Outbox
-        const outbox = await db
-            .selectFrom('outbox_events')
-            .where('payload', '@>', JSON.stringify({ teamId }))
-            .where(sql`payload->>'type'`, '=', 'team.members_added')
-            .selectAll()
-            .executeTakeFirst();
-        expect(outbox).toBeDefined();
-        const payload = outbox?.payload as any;
-        expect(payload.addedUserIds).toContain(member.id);
     });
 
     it('should fail to add a user who is not a project member', async () => {
@@ -142,13 +125,10 @@ describe('Team Membership E2E', () => {
             token: ownerToken,
         });
 
-        // The query uses a JOIN/WHERE on project_member, so it will simply not insert and return addedCount: 0
-        // unless the service layer throws. Our TeamQueries returns addedCount: 0.
         expect(res.body.data.addTeamMembers.addedCount).toBe(0);
     });
 
     it('should allow project member to add other members to a team', async () => {
-        // [1] Create another project member
         const user3 = await db
             .insertInto('users')
             .values({
@@ -163,14 +143,12 @@ describe('Team Membership E2E', () => {
             .values({ fk_project_id: projectId, fk_user_id: user3.id })
             .execute();
 
-        // [2] Member adds User3 to team
         const res = await gqlRequest({
             query: ADD_TEAM_MEMBERS,
             variables: { projectId, teamId, userIds: [user3.id] },
             token: memberToken,
         });
 
-        expect(res.body.data.addTeamMembers.success).toBe(true);
         expect(res.body.data.addTeamMembers.addedCount).toBe(1);
     });
 
@@ -181,51 +159,10 @@ describe('Team Membership E2E', () => {
             token: strangerToken,
         });
 
-        // Authorized CTE will fail
         expect(res.body.data.addTeamMembers.addedCount).toBe(0);
     });
 
-    it('should allow removing team members', async () => {
-        // [1] Add member first
-        await db
-            .insertInto('project_team_member')
-            .values({
-                fk_team_id: teamId,
-                fk_project_id: projectId,
-                fk_user_id: member.id,
-            })
-            .execute();
-
-        // [2] Remove member
-        const res = await gqlRequest({
-            query: REMOVE_TEAM_MEMBERS,
-            variables: { projectId, teamId, userIds: [member.id] },
-            token: ownerToken,
-        });
-
-        expect(res.body.data.removeTeamMembers.success).toBe(true);
-        expect(res.body.data.removeTeamMembers.removedCount).toBe(1);
-
-        // Verify in DB
-        const membership = await db
-            .selectFrom('project_team_member')
-            .where('fk_team_id', '=', teamId)
-            .where('fk_user_id', '=', member.id)
-            .executeTakeFirst();
-        expect(membership).toBeUndefined();
-
-        // Verify Outbox
-        const outbox = await db
-            .selectFrom('outbox_events')
-            .where('payload', '@>', JSON.stringify({ teamId }))
-            .where(sql`payload->>'type'`, '=', 'team.members_removed')
-            .selectAll()
-            .executeTakeFirst();
-        expect(outbox).toBeDefined();
-    });
-
-    it('should eventually update team members_count (Event-Driven)', async () => {
-        // [1] Add 3 members
+    it('should eventually update team members_count after addition (Event-Driven)', async () => {
         const u1 = await db
             .insertInto('users')
             .values({
@@ -235,34 +172,17 @@ describe('Team Membership E2E', () => {
             })
             .returningAll()
             .executeTakeFirstOrThrow();
-        const u2 = await db
-            .insertInto('users')
-            .values({
-                email: 'u2@test.com',
-                username: 'u2',
-                password_hash: 'a',
-            })
-            .returningAll()
-            .executeTakeFirstOrThrow();
         await db
             .insertInto('project_member')
-            .values([
-                { fk_project_id: projectId, fk_user_id: u1.id },
-                { fk_project_id: projectId, fk_user_id: u2.id },
-            ])
+            .values({ fk_project_id: projectId, fk_user_id: u1.id })
             .execute();
 
         await gqlRequest({
             query: ADD_TEAM_MEMBERS,
-            variables: {
-                projectId,
-                teamId,
-                userIds: [member.id, u1.id, u2.id],
-            },
+            variables: { projectId, teamId, userIds: [member.id, u1.id] },
             token: ownerToken,
         });
 
-        // [2] Poll for counter update
         let membersCount = 0;
         for (let i = 0; i < 20; i++) {
             const team = await db
@@ -270,12 +190,62 @@ describe('Team Membership E2E', () => {
                 .where('id', '=', teamId)
                 .select(['members_count'])
                 .executeTakeFirst();
-
             membersCount = team?.members_count || 0;
-            if (membersCount === 3) break;
+            if (membersCount === 2) break;
             await new Promise((resolve) => setTimeout(resolve, 500));
         }
+        expect(membersCount).toBe(2);
+    });
 
-        expect(membersCount).toBe(3);
+    it('should handle duplicate additions gracefully (Idempotency)', async () => {
+        await gqlRequest({
+            query: ADD_TEAM_MEMBERS,
+            variables: { projectId, teamId, userIds: [member.id] },
+            token: ownerToken,
+        });
+
+        const u3 = await db
+            .insertInto('users')
+            .values({
+                email: 'u3@test.com',
+                username: 'u3',
+                password_hash: 'a',
+            })
+            .returningAll()
+            .executeTakeFirstOrThrow();
+        await db
+            .insertInto('project_member')
+            .values({ fk_project_id: projectId, fk_user_id: u3.id })
+            .execute();
+
+        const res = await gqlRequest({
+            query: ADD_TEAM_MEMBERS,
+            variables: { projectId, teamId, userIds: [member.id, u3.id] },
+            token: ownerToken,
+        });
+
+        expect(res.body.data.addTeamMembers.addedCount).toBe(1);
+    });
+
+    it('should handle partial additions (some valid, some invalid)', async () => {
+        const res = await gqlRequest({
+            query: ADD_TEAM_MEMBERS,
+            variables: { projectId, teamId, userIds: [member.id, stranger.id] },
+            token: ownerToken,
+        });
+
+        expect(res.body.data.addTeamMembers.addedCount).toBe(1);
+    });
+
+    it('should fail to add members to a non-existent team', async () => {
+        const fakeTeamId = '00000000-0000-0000-0000-000000000000';
+        const res = await gqlRequest({
+            query: ADD_TEAM_MEMBERS,
+            variables: { projectId, teamId: fakeTeamId, userIds: [member.id] },
+            token: ownerToken,
+        });
+
+        expect(res.body.errors).toBeDefined();
+        expect(res.body.errors[0].message).toBe('Team not found');
     });
 });

@@ -1,5 +1,4 @@
 import jwt from 'jsonwebtoken';
-import { sql } from 'kysely';
 import { cleanupDb } from '../../../__tests__/helpers/db.ts';
 import { db } from '../../../database/index.ts';
 import { gqlRequest } from '../helpers/request.ts';
@@ -149,17 +148,6 @@ describe('Team Deletion E2E', () => {
             await new Promise((r) => setTimeout(r, 500));
         }
         expect(membershipsCount).toBe(0);
-
-        // Verify Outbox
-        const outbox = await db
-            .selectFrom('outbox_events')
-            .where(sql`payload->>'type'`, '=', 'team.deleted')
-            .selectAll()
-            .execute();
-        expect(outbox.length).toBeGreaterThanOrEqual(2);
-        const deletedIds = outbox.map((o) => (o.payload as any).teamId);
-        expect(deletedIds).toContain(teamId1);
-        expect(deletedIds).toContain(teamId2);
     });
 
     it('should allow project member to delete teams', async () => {

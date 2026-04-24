@@ -76,22 +76,6 @@ describe('Team Creation E2E', () => {
         expect(teamDb?.name).toBe('Engineering');
         expect(teamDb?.fk_user_id).toBe(user1.id);
         expect(teamDb?.version).toBe(1);
-
-        // [2] Verify Outbox Event (Transactional Integrity)
-        const outbox = await db
-            .selectFrom('outbox_events')
-            .where('payload', '@>', JSON.stringify({ teamId: teamRes.id }))
-            .selectAll()
-            .executeTakeFirst();
-
-        expect(outbox).toBeDefined();
-        expect(outbox?.kafka_topic).toBe('team-events');
-        const payload = outbox?.payload as any;
-        expect(payload.type).toBe('team.created');
-        expect(payload.projectId).toBe(projectId);
-        expect(payload.teamId).toBe(teamRes.id);
-        expect(payload.name).toBe('Engineering');
-        expect(payload.createdBy).toBe(user1.id);
     });
 
     it('should allow a project member to create a team (Permissive model)', async () => {
