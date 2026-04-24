@@ -477,6 +477,8 @@ export const insertTask = async (param: {
                     'type', 'task.created',
                     'taskId', id,
                     'projectId', "projectId",
+                    'teamId', "teamId",
+                    'memberId', "memberId",
                     'title', title,
                     'actorId', ${param.actorId}::text
                 )
@@ -533,11 +535,10 @@ export const updateTask = async (param: {
     const setClause = sql.join(updates, sql`, `);
 
     const result = await sql<Task>`
-        WITH current_state AS (
-            SELECT id, fk_project_id, fk_team_id, fk_member_id, title, status, version
-            FROM project_task
-            WHERE id = ${param.taskId}::uuid AND fk_project_id = ${param.projectId}::uuid
-            FOR UPDATE
+        WITH old_state AS (
+            SELECT fk_team_id, fk_member_id, title, status 
+            FROM project_task 
+            WHERE id = ${param.taskId}::uuid
         ),
         authorized AS (
             -- Actor must be project owner or member
@@ -596,16 +597,17 @@ export const updateTask = async (param: {
         inserted_outbox AS (
             INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
             SELECT 
-                'task.updated',
+                'task-events',
                 u.id::text,
                 jsonb_build_object(
+                    'type', 'task.updated',
                     'taskId', u.id,
                     'projectId', u."projectId",
                     'old', jsonb_build_object(
-                        'teamId', c.fk_team_id,
-                        'memberId', c.fk_member_id,
-                        'title', c.title,
-                        'status', c.status
+                        'teamId', o.fk_team_id,
+                        'memberId', o.fk_member_id,
+                        'title', o.title,
+                        'status', o.status
                     ),
                     'new', jsonb_build_object(
                         'teamId', u."teamId",
@@ -613,10 +615,9 @@ export const updateTask = async (param: {
                         'title', u.title,
                         'status', u.status
                     ),
-                    'actorId', ${param.actorId}
+                    'actorId', ${param.actorId}::text
                 )
-            FROM updated_task u
-            CROSS JOIN current_state c
+            FROM updated_task u, old_state o
         )
         SELECT * FROM updated_task
     `.execute(db);
@@ -673,7 +674,7 @@ export const deleteTask = async (param: {
             WHERE id = ${param.taskId}::uuid
               AND fk_project_id = ${param.projectId}::uuid
               AND EXISTS (SELECT 1 FROM authorized)
-            RETURNING id, fk_project_id AS "projectId", fk_team_id AS "teamId"
+            RETURNING id, fk_project_id, fk_team_id
         ),
         inserted_outbox AS (
             INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
@@ -683,9 +684,9 @@ export const deleteTask = async (param: {
                 jsonb_build_object(
                     'type', 'task.deleted',
                     'taskId', id,
-                    'projectId', projectId,
-                    'teamId', "teamId",
-                    'actorId', ${param.actorId}
+                    'projectId', fk_project_id,
+                    'teamId', fk_team_id,
+                    'actorId', ${param.actorId}::text
                 )
             FROM deleted_task
         )
@@ -725,17 +726,17 @@ export const insertTaskLink = async (param: {
         ),
         inserted_link AS (
             INSERT INTO task_link (fk_project_id, source_task_id, target_task_id, label, created_by)
-            SELECT ${param.projectId}::uuid, ${param.sourceTaskId}::uuid, ${param.targetTaskId}::uuid, ${param.label}, ${param.actorId}
+            SELECT ${param.projectId}::uuid, ${param.sourceTaskId}::uuid, ${param.targetTaskId}::uuid, ${param.label}, ${param.actorId}::text
             WHERE EXISTS (SELECT 1 FROM authorized)
               AND EXISTS (SELECT 1 FROM validation)
             RETURNING 
                 id, 
-                fk_project_id AS "projectId", 
-                source_task_id AS "sourceTaskId", 
-                target_task_id AS "targetTaskId", 
+                fk_project_id, 
+                source_task_id, 
+                target_task_id, 
                 label, 
-                created_by AS "createdBy", 
-                created_at AS "createdAt"
+                created_by, 
+                created_at
         ),
         inserted_outbox AS (
             INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
@@ -743,17 +744,25 @@ export const insertTaskLink = async (param: {
                 ${KAFKA_TOPICS.TASK},
                 id::text,
                 jsonb_build_object(
-                    'type', ${KAFKA_EVENTS.TASK_LINK.CREATED},
+                    'type', ${KAFKA_EVENTS.TASK_LINK.CREATED}::text,
                     'linkId', id,
-                    'projectId', projectId,
-                    'sourceTaskId', sourceTaskId,
-                    'targetTaskId', targetTaskId,
+                    'projectId', fk_project_id,
+                    'sourceTaskId', source_task_id,
+                    'targetTaskId', target_task_id,
                     'label', label,
-                    'actorId', ${param.actorId}
+                    'actorId', ${param.actorId}::text
                 )
             FROM inserted_link
         )
-        SELECT * FROM inserted_link
+        SELECT 
+            id, 
+            fk_project_id AS "projectId", 
+            source_task_id AS "sourceTaskId", 
+            target_task_id AS "targetTaskId", 
+            label, 
+            created_by AS "createdBy", 
+            created_at AS "createdAt"
+        FROM inserted_link
     `.execute(db);
 
     const link = result.rows[0];
@@ -786,9 +795,9 @@ export const deleteTaskLink = async (param: {
               AND EXISTS (SELECT 1 FROM authorized)
             RETURNING 
                 id, 
-                fk_project_id AS "projectId",
-                source_task_id AS "sourceTaskId",
-                target_task_id AS "targetTaskId"
+                fk_project_id,
+                source_task_id,
+                target_task_id
         ),
         inserted_outbox AS (
             INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
@@ -798,10 +807,10 @@ export const deleteTaskLink = async (param: {
                 jsonb_build_object(
                     'type', ${KAFKA_EVENTS.TASK_LINK.DELETED},
                     'linkId', id,
-                    'projectId', projectId,
-                    'sourceTaskId', sourceTaskId,
-                    'targetTaskId', targetTaskId,
-                    'actorId', ${param.actorId}
+                    'projectId', fk_project_id,
+                    'sourceTaskId', source_task_id,
+                    'targetTaskId', target_task_id,
+                    'actorId', ${param.actorId}::text
                 )
             FROM deleted_link
         )
@@ -857,12 +866,12 @@ export const updateTaskLink = async (param: {
               AND EXISTS (SELECT 1 FROM validation)
             RETURNING 
                 id, 
-                fk_project_id AS "projectId", 
-                source_task_id AS "sourceTaskId", 
-                target_task_id AS "targetTaskId", 
+                fk_project_id, 
+                source_task_id, 
+                target_task_id, 
                 label, 
-                created_by AS "createdBy", 
-                created_at AS "createdAt"
+                created_by, 
+                created_at
         ),
         inserted_outbox AS (
             INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
@@ -870,19 +879,27 @@ export const updateTaskLink = async (param: {
                 ${KAFKA_TOPICS.TASK},
                 id::text,
                 jsonb_build_object(
-                    'type', ${KAFKA_EVENTS.TASK_LINK.UPDATED},
+                    'type', ${KAFKA_EVENTS.TASK_LINK.UPDATED}::text,
                     'linkId', id,
-                    'projectId', projectId,
+                    'projectId', fk_project_id,
                     'oldSourceTaskId', (SELECT source_task_id FROM current_link),
                     'oldTargetTaskId', (SELECT target_task_id FROM current_link),
-                    'newSourceTaskId', sourceTaskId,
-                    'newTargetTaskId', targetTaskId,
+                    'newSourceTaskId', source_task_id,
+                    'newTargetTaskId', target_task_id,
                     'label', label,
-                    'actorId', ${param.actorId}
+                    'actorId', ${param.actorId}::text
                 )
             FROM updated_link
         )
-        SELECT * FROM updated_link
+        SELECT 
+            id, 
+            fk_project_id AS "projectId", 
+            source_task_id AS "sourceTaskId", 
+            target_task_id AS "targetTaskId", 
+            label, 
+            created_by AS "createdBy", 
+            created_at AS "createdAt"
+        FROM updated_link
     `.execute(db);
 
     const link = result.rows[0];
@@ -1326,6 +1343,8 @@ export const expandTaskReachability = async (
                 UNION ALL 
                 SELECT ${targetId}::uuid, 0
             ) des
+        WHERE EXISTS (SELECT 1 FROM project_task WHERE id = ${sourceId}::uuid)
+          AND EXISTS (SELECT 1 FROM project_task WHERE id = ${targetId}::uuid)
         ON CONFLICT (fk_project_id, ancestor_task_id, descendant_task_id) 
         DO UPDATE SET depth = LEAST(task_reachability.depth, EXCLUDED.depth)
     `.execute(trx);

@@ -122,6 +122,13 @@ export class TaskEvents_BatchAggregator {
                     case KAFKA_EVENTS.TASK.UPDATED: {
                         const { old, new: newState } = data;
 
+                        if (!old || !newState) {
+                            logger.warn(
+                                `[Task Coordinator] Skipping update event for task ${taskId} due to missing old/new state`,
+                            );
+                            break;
+                        }
+
                         // Team Changes (Folding team task counts)
                         if (old.teamId !== newState.teamId) {
                             if (old.teamId)
