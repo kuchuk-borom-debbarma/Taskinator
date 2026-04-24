@@ -87,6 +87,9 @@ export class TaskServiceImpl implements TaskService {
         logger.info(
             `TaskService.createTask started by ${param.actorId} in project ${param.projectId} for "${param.title}"`,
         );
+        if (param.title.length < 3 || param.title.length > 255) {
+            throw new Error('Task title must be between 3 and 255 characters.');
+        }
         const result = await insertTask(param);
         logger.info(`TaskService.createTask successful: ${result.id}`);
         return result;
@@ -106,6 +109,12 @@ export class TaskServiceImpl implements TaskService {
         logger.info(
             `TaskService.updateTask started for ${param.taskId} by ${param.actorId}`,
         );
+        if (
+            param.title &&
+            (param.title.length < 3 || param.title.length > 255)
+        ) {
+            throw new Error('Task title must be between 3 and 255 characters.');
+        }
         const result = await updateTask(param);
         logger.info(`TaskService.updateTask successful: ${param.taskId}`);
         return result;

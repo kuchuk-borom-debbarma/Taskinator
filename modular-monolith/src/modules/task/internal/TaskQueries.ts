@@ -478,7 +478,7 @@ export const insertTask = async (param: {
                     'taskId', id,
                     'projectId', "projectId",
                     'title', title,
-                    'actorId', ${param.actorId}
+                    'actorId', ${param.actorId}::text
                 )
             FROM inserted_task
         )
