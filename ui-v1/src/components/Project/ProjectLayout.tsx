@@ -7,10 +7,10 @@ export const ProjectLayout: React.FC = () => {
   const location = useLocation();
 
   const navItems = [
-    { label: 'Dashboard', icon: Layout, to: `/projects/${projectId}` },
-    { label: 'Tasks', icon: Kanban, to: `/projects/${projectId}/tasks` },
-    { label: 'Teams', icon: Users, to: `/projects/${projectId}/teams` },
-    { label: 'Members', icon: Users, to: `/projects/${projectId}/members` },
+    { label: 'Dashboard', icon: Layout, to: '/projects/$projectId/' as const },
+    { label: 'Tasks', icon: Kanban, to: '/projects/$projectId/tasks' as const },
+    { label: 'Teams', icon: Users, to: '/projects/$projectId/teams' as const },
+    { label: 'Members', icon: Users, to: '/projects/$projectId/members' as const },
   ];
 
   return (
@@ -21,12 +21,13 @@ export const ProjectLayout: React.FC = () => {
           {navItems.map((item) => {
             const reallyActive = item.label === 'Dashboard' 
               ? location.pathname === `/projects/${projectId}` || location.pathname === `/projects/${projectId}/`
-              : location.pathname.startsWith(item.to);
+              : location.pathname.includes(item.to.replace('$projectId', projectId));
 
             return (
               <Link
                 key={item.label}
                 to={item.to}
+                params={{ projectId }}
                 className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
                   reallyActive 
                     ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' 

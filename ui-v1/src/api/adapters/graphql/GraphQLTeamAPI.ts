@@ -96,10 +96,32 @@ export class GraphQLTeamAPI implements TeamAPI {
     };
   }
 
-  async getTeamMembers(projectId: string, teamId: string, first?: number, after?: string): Promise<{ members: TeamMember[], hasNextPage: boolean, endCursor: string | null }> {
+  async getTeam(teamId: string): Promise<Team | null> {
     const data = await this.query<any>(gql`
-      query GetTeamMembers($projectId: ID!, $teamId: ID!, $first: Int, $after: String) {
-        teamMembers(projectId: $projectId, teamId: $teamId, first: $first, after: $after) {
+      query GetTeam($teamId: ID!) {
+        team(id: $teamId) {
+          id
+          name
+          createdAt
+          updatedAt
+          version
+          createdBy { id username }
+          project { id name }
+        }
+      }
+    `, { teamId });
+    return data.team || null;
+  }
+
+  async getTeamMembers(
+    projectId: string, 
+    teamId: string, 
+    params: { first?: number, after?: string, last?: number, before?: string } = {}
+  ): Promise<{ members: TeamMember[], hasNextPage: boolean, hasPreviousPage: boolean, endCursor: string | null, startCursor: string | null }> {
+    const { first, after, last, before } = params;
+    const data = await this.query<any>(gql`
+      query GetTeamMembers($projectId: ID!, $teamId: ID!, $first: Int, $after: String, $last: Int, $before: String) {
+        teamMembers(projectId: $projectId, teamId: $teamId, first: $first, after: $after, last: $last, before: $before) {
           edges {
             node {
               id
@@ -110,16 +132,20 @@ export class GraphQLTeamAPI implements TeamAPI {
           }
           pageInfo {
             hasNextPage
+            hasPreviousPage
+            startCursor
             endCursor
           }
         }
       }
-    `, { projectId, teamId, first, after });
+    `, { projectId, teamId, first, after, last, before });
 
     return {
       members: data.teamMembers.edges.map((e: any) => e.node),
-      hasNextPage: data.teamMembers.pageInfo.hasNextPage,
+      hasNextPage: data.teamMembers.pageInfo.hasNextPage || false,
+      hasPreviousPage: data.teamMembers.pageInfo.hasPreviousPage || false,
       endCursor: data.teamMembers.pageInfo.endCursor || null,
+      startCursor: data.teamMembers.pageInfo.startCursor || null,
     };
   }
 

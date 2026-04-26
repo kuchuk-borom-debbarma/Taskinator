@@ -26,6 +26,7 @@ interface TaskListViewProps {
 
 export const TaskListView: React.FC<TaskListViewProps> = ({
   tasks,
+  _projectId,
   hasNextPage,
   hasPreviousPage,
   isFetchingNextPage,
@@ -93,7 +94,7 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
       ) : (
         <div className="flex flex-col">
           {tasks.map((task) => (
-            <TaskListItem key={task.id} task={task} />
+            <TaskListItem key={task.id} task={task} _projectId={_projectId} />
           ))}
         </div>
       )}
@@ -103,8 +104,8 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
 
 // ─── Task Card ──────────────────────────────────────────────────────────────
 
-const TaskListItem: React.FC<{ task: ProjectTask }> = ({ task }) => {
-  const projectId = task.project?.id;
+const TaskListItem: React.FC<{ task: ProjectTask; _projectId: string }> = ({ task, _projectId }) => {
+  const projectId = task.project?.id || _projectId;
 
   return (
     <Link

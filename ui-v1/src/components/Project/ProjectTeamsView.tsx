@@ -1,4 +1,4 @@
-import { useParams, useNavigate, useSearch } from '@tanstack/react-router';
+import { useParams, useNavigate, useSearch, Link } from '@tanstack/react-router';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useApi } from '../../hooks/useApi';
 import type { Team } from '../../api/types';
@@ -66,7 +66,7 @@ export default function ProjectTeamsView() {
         <div className="flex flex-col gap-8">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {teams.map((team) => (
-              <TeamCard key={team.id} team={team} />
+              <TeamCard key={team.id} team={team} projectId={projectId} />
             ))}
 
             {teams.length === 0 && (
@@ -139,17 +139,21 @@ export default function ProjectTeamsView() {
   );
 }
 
-function TeamCard({ team }: { team: Team }) {
+function TeamCard({ team, projectId }: { team: Team, projectId: string }) {
   return (
     <div className="glass-panel p-6 border border-white/5 bg-white/[0.02] rounded-[32px] hover:border-white/10 transition-all group relative overflow-hidden">
       <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
         <Users size={64} />
       </div>
       
-      <div className="flex flex-col gap-6 h-full relative z-10">
+      <Link 
+        to="/projects/$projectId/teams/$teamId" 
+        params={{ projectId: projectId, teamId: team.id }}
+        className="flex flex-col gap-6 h-full relative z-10 group/card"
+      >
         <div className="flex items-start justify-between">
           <div className="flex flex-col">
-            <h3 className="text-lg font-black text-white group-hover:text-blue-400 transition-colors uppercase tracking-tight">
+            <h3 className="text-lg font-black text-white group-hover/card:text-blue-400 transition-colors uppercase tracking-tight">
               {team.name}
             </h3>
             {team.createdBy && (
@@ -168,7 +172,7 @@ function TeamCard({ team }: { team: Team }) {
           )}
           <div className="text-[10px] font-black text-slate-700 uppercase">v{team.version}</div>
         </div>
-      </div>
+      </Link>
     </div>
   );
 }

@@ -109,7 +109,7 @@ export default function ProjectDashboardView() {
             {tasks.slice(0, 5).map(tk => (
               <Link 
                 key={tk.id} 
-                to={`/projects/$projectId/tasks/$taskId`}
+                to="/projects/$projectId/tasks/$taskId"
                 params={{ projectId, taskId: tk.id }}
                 className="p-4 bg-white/[0.02] border border-white/5 rounded-2xl hover:border-white/10 transition-all flex flex-col gap-2 group"
               >

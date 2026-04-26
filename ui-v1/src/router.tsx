@@ -160,6 +160,18 @@ const projectMembersRoute = createRoute({
   component: lazyRouteComponent(() => import('./ProjectMembersView.lazy.tsx')),
 });
 
+const teamDetailRoute = createRoute({
+  getParentRoute: () => projectLayoutRoute,
+  path: 'teams/$teamId',
+  validateSearch: (search: Record<string, unknown>): TaskSearch => {
+    return {
+      cursor: (search.cursor as string) || undefined,
+      direction: (search.direction as 'forward' | 'backward') || undefined,
+    };
+  },
+  component: lazyRouteComponent(() => import('./TeamDetailPage.lazy.tsx')),
+});
+
 import { TaskGraphView } from './components/Tasks/TaskGraphView';
 
 const projectGraphRoute = createRoute({
@@ -212,6 +224,7 @@ export const routeTree = rootRoute.addChildren([
       projectTasksRoute,
       projectTeamsRoute,
       projectMembersRoute,
+      teamDetailRoute,
       taskDetailRoute,
     ]),
   ]),
