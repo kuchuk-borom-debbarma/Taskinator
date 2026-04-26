@@ -1,14 +1,14 @@
 import React, { useMemo } from 'react';
 import { useParams, useSearch, Link } from '@tanstack/react-router';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
 import { useApi } from '../../hooks/useApi';
 import { Loader2, Network, ArrowLeft, Info, Sparkles, Zap } from 'lucide-react';
 import { TaskMap } from '../Graph/TaskMap';
 import type { TaskNeighbourhood, GraphNode, GraphEdge } from '../../api/types';
 
 export const TaskGraphView: React.FC = () => {
-  const { projectId } = useParams({ strict: false }) as any;
-  const search = useSearch({ from: '/authenticated-layout/projects/$projectId/graph' }) as any;
+  const { projectId } = useParams({ from: '/fullscreen-layout/graph/$projectId' });
+  const search = useSearch({ from: '/fullscreen-layout/graph/$projectId' }) as any;
   const focusedTaskId = search.taskId;
   const { taskApi } = useApi();
 
@@ -18,38 +18,60 @@ export const TaskGraphView: React.FC = () => {
     enabled: !!focusedTaskId,
   });
 
-  const { data: neighbourLinksResult, isLoading: isNeighboursLoading } = useQuery({
-    queryKey: ['task-neighbours-lattice', focusedTaskId],
-    queryFn: () => taskApi.getTaskNeighbourLinks(focusedTaskId!, 'both', 1),
+  const { 
+    data: neighbourPages, 
+    isLoading: isNeighboursLoading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage
+  } = useInfiniteQuery({
+    queryKey: ['task-neighbours-lattice-infinite', focusedTaskId],
+    queryFn: ({ pageParam }) => taskApi.getTaskNeighbourLinks(focusedTaskId!, 'both', 1, pageParam),
+    initialPageParam: undefined as string | undefined,
+    getNextPageParam: (lastPage) => lastPage.hasNextPage ? lastPage.endCursor : undefined,
     enabled: !!focusedTaskId,
   });
 
   const neighbourhood = useMemo<TaskNeighbourhood | null>(() => {
-    if (!focusedTask || !neighbourLinksResult) return null;
+    if (!focusedTask || !neighbourPages) return null;
 
     const nodes: GraphNode[] = [];
     const edges: any[] = [];
     const seenIds = new Set([focusedTask.id]);
 
-    neighbourLinksResult.links.forEach(link => {
-      const isSource = link.source.id === focusedTaskId;
-      const neighbour = isSource ? link.target : link.source;
-      const direction = isSource ? 'outgoing' : 'incoming';
+    neighbourPages.pages.forEach(page => {
+      page.links.forEach(link => {
+        // Source and target IDs
+        const sId = link.source.id;
+        const tId = link.target.id;
 
-      if (!seenIds.has(neighbour.id)) {
-        nodes.push({
-          task: neighbour,
-          direction: direction as any,
-          depth: 1
+        // Process source node
+        if (!seenIds.has(sId)) {
+          nodes.push({
+            task: link.source,
+            direction: sId === focusedTaskId ? 'focused' : (tId === focusedTaskId ? 'incoming' : 'outgoing'),
+            depth: 1
+          });
+          seenIds.add(sId);
+        }
+
+        // Process target node
+        if (!seenIds.has(tId)) {
+          nodes.push({
+            task: link.target,
+            direction: tId === focusedTaskId ? 'focused' : (sId === focusedTaskId ? 'outgoing' : 'incoming'),
+            depth: 1
+          });
+          seenIds.add(tId);
+        }
+
+        // Always push the edge
+        edges.push({
+          id: link.id,
+          source: sId,
+          target: tId,
+          label: link.label
         });
-        seenIds.add(neighbour.id);
-      }
-
-      edges.push({
-        id: link.id,
-        source: link.source.id,
-        target: link.target.id,
-        label: link.label
       });
     });
 
@@ -59,9 +81,10 @@ export const TaskGraphView: React.FC = () => {
       edges,
       incomingStories: [],
       outgoingStories: [],
-      hasNextPage: false
+      hasNextPage: !!hasNextPage,
+      endCursor: undefined // Not needed for memo
     };
-  }, [focusedTask, neighbourLinksResult, focusedTaskId]);
+  }, [focusedTask, neighbourPages, focusedTaskId, hasNextPage]);
 
   if (isTaskLoading || isNeighboursLoading) {
     return (
@@ -83,64 +106,26 @@ export const TaskGraphView: React.FC = () => {
   if (!neighbourhood || !focusedTask) return null;
 
   return (
-    <div className="flex-1 w-full h-[calc(100vh-64px)] relative bg-[#0B0F1A] overflow-hidden">
+    <div className="flex-1 w-full h-screen relative bg-[#0B0F1A] overflow-hidden">
+      {/* Floating Back Button */}
+      <div className="absolute top-8 left-8 z-50">
+        <Link 
+          to="/projects/$projectId/tasks" 
+          params={{ projectId }}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#111827]/80 border border-white/10 text-white/60 hover:text-white hover:border-white/30 transition-all backdrop-blur-xl group shadow-2xl"
+        >
+          <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
+          <span className="text-[11px] font-bold uppercase tracking-widest">Back to Workspace</span>
+        </Link>
+      </div>
+
       <TaskMap 
         projectId={projectId || ''} 
         taskId={focusedTaskId || ''} 
         neighbourhood={neighbourhood} 
+        fetchNextPage={fetchNextPage}
+        isFetchingNextPage={isFetchingNextPage}
       />
-
-      {/* Modern UI Overlays */}
-      <div className="absolute top-8 left-8 flex flex-col gap-5 z-50 pointer-events-none">
-        <div className="p-6 rounded-[32px] border border-white/10 bg-[#111827]/80 backdrop-blur-2xl shadow-premium flex flex-col gap-4 min-w-[320px] pointer-events-auto">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-[#3b82f6]/10 flex items-center justify-center border border-[#3b82f6]/20">
-                <Sparkles size={20} className="text-[#3b82f6]" />
-              </div>
-              <div>
-                <h2 className="text-sm font-black text-white tracking-tight">Discovery Engine</h2>
-                <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest">Nexus Bridge v2.0</p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="border-t border-white/5 pt-4 mt-2 flex flex-col gap-2">
-            <span className="text-[10px] font-black text-white/20 uppercase tracking-[0.2em]">Active Perspective</span>
-            <div className="flex items-center gap-3">
-               <div className={`w-3 h-3 rounded-full ${focusedTask.status === 'DONE' ? 'bg-[#10b981]' : focusedTask.status === 'IN_PROGRESS' ? 'bg-[#3b82f6]' : 'bg-[#64748b]'}`} />
-               <p className="text-[14px] font-black text-white line-clamp-1">{focusedTask.title}</p>
-            </div>
-          </div>
-        </div>
-
-        <Link 
-          to="/projects/$projectId/tasks/$taskId"
-          params={{ projectId: projectId || '', taskId: focusedTaskId || '' }}
-          className="group flex items-center justify-between px-6 py-4 bg-[#111827]/80 backdrop-blur-2xl border border-white/10 rounded-3xl text-[12px] font-black text-white/40 hover:text-white hover:border-[#3b82f6]/40 transition-all shadow-premium pointer-events-auto"
-        >
-          <div className="flex items-center gap-3">
-            <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
-            <span>EXIT GRAPH</span>
-          </div>
-          <span className="text-[10px] px-2 py-0.5 rounded-lg bg-white/5 font-bold uppercase tracking-tighter ml-4">ESC</span>
-        </Link>
-      </div>
-
-      <div className="absolute bottom-8 left-8 flex items-center gap-4 px-6 py-3 bg-[#3b82f6]/10 border border-[#3b82f6]/20 rounded-full text-[11px] font-black text-[#3b82f6] backdrop-blur-2xl shadow-lg uppercase tracking-[0.2em] z-50">
-        <Zap size={16} />
-        Low Latency Discovery Active
-      </div>
-      
-      <style>{`
-        @keyframes progress {
-          0% { transform: translateX(-100%); }
-          100% { transform: translateX(100%); }
-        }
-        .animate-progress {
-          animation: progress 2s infinite linear;
-        }
-      `}</style>
     </div>
   );
 };

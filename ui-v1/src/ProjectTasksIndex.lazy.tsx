@@ -1,6 +1,6 @@
 import { useParams, useNavigate, useSearch } from '@tanstack/react-router';
 import { useApi } from './hooks/useApi';
-import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { TaskListView } from './components/Tasks/TaskListView';
 import { useState } from 'react';
 import { Plus, Loader2, X, Check } from 'lucide-react';
@@ -20,42 +20,22 @@ export default function ProjectTasksIndex() {
   const [newTitle, setNewTitle] = useState('');
   const [newDesc, setNewDesc] = useState('');
 
-  const {
-    data: tasksData,
-    isLoading,
-    hasNextPage: _hasNextPage,
-    isFetchingNextPage,
-    hasPreviousPage: _hasPreviousPage,
-    isFetchingPreviousPage,
-  } = useInfiniteQuery({
+  const { data: tasksResult, isLoading, isPlaceholderData } = useQuery({
     queryKey: ['tasks', projectId, cursor, direction],
-    queryFn: ({ pageParam }: { pageParam: CursorParam }) => {
-      const activeParam = pageParam || (cursor ? { direction: direction || 'forward', cursor } : undefined);
-
-      if (activeParam?.direction === 'backward') {
-        return taskApi.getTasks(projectId!, { last: 5, before: activeParam.cursor });
+    queryFn: () => {
+      if (direction === 'backward') {
+        return taskApi.getTasks(projectId!, { last: 10, before: cursor });
       }
       return taskApi.getTasks(projectId!, {
-        first: 5,
-        after: activeParam?.direction === 'forward' ? activeParam.cursor : undefined,
+        first: 10,
+        after: direction === 'forward' ? cursor : undefined,
       });
     },
-    initialPageParam: (cursor ? { direction: direction || 'forward', cursor } : undefined) as CursorParam,
-    getNextPageParam: (lastPage) =>
-      lastPage.hasNextPage
-        ? { direction: 'forward' as const, cursor: lastPage.endCursor }
-        : undefined,
-    getPreviousPageParam: (firstPage) =>
-      firstPage.hasPreviousPage
-        ? { direction: 'backward' as const, cursor: firstPage.startCursor }
-        : undefined,
+    placeholderData: (prev) => prev,
     enabled: !!projectId,
-    maxPages: 1,
   });
 
-  const allTasks = tasksData?.pages.flatMap((page) => page.tasks) ?? [];
-  const firstPage = tasksData?.pages[0];
-  const lastPage = tasksData?.pages[tasksData.pages.length - 1];
+  const allTasks = tasksResult?.tasks ?? [];
 
   const createMutation = useMutation({
     mutationFn: () =>
@@ -86,20 +66,18 @@ export default function ProjectTasksIndex() {
       <TaskListView
         tasks={allTasks}
         _projectId={projectId!}
-        hasNextPage={lastPage?.hasNextPage}
-        hasPreviousPage={firstPage?.hasPreviousPage}
-        isFetchingNextPage={isFetchingNextPage}
-        isFetchingPreviousPage={isFetchingPreviousPage}
+        hasNextPage={tasksResult?.hasNextPage}
+        hasPreviousPage={tasksResult?.hasPreviousPage}
+        isFetchingNextPage={isLoading || isPlaceholderData}
+        isFetchingPreviousPage={isLoading || isPlaceholderData}
         onLoadMore={() => {
-          const lp = tasksData?.pages[tasksData.pages.length - 1];
-          if (lp?.hasNextPage) {
-            (navigate as any)({ search: (prev: any) => ({ ...prev, cursor: lp.endCursor!, direction: 'forward' as const }) });
+          if (tasksResult?.hasNextPage) {
+            (navigate as any)({ search: (prev: any) => ({ ...prev, cursor: tasksResult.endCursor!, direction: 'forward' as const }) });
           }
         }}
         onLoadPrev={() => {
-          const fp = tasksData?.pages[0];
-          if (fp?.hasPreviousPage) {
-            (navigate as any)({ search: (prev: any) => ({ ...prev, cursor: fp.startCursor!, direction: 'backward' as const }) });
+          if (tasksResult?.hasPreviousPage) {
+            (navigate as any)({ search: (prev: any) => ({ ...prev, cursor: tasksResult.startCursor!, direction: 'backward' as const }) });
           }
         }}
       />

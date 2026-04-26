@@ -1,5 +1,5 @@
-import { useParams } from '@tanstack/react-router';
-import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useParams, useNavigate, useSearch } from '@tanstack/react-router';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useApi } from '../../hooks/useApi';
 import type { Team } from '../../api/types';
 import { Users, Plus, Loader2, Layers } from 'lucide-react';
@@ -7,34 +7,39 @@ import { useState } from 'react';
 
 export default function ProjectTeamsView() {
   const { projectId } = useParams({ from: '/authenticated-layout/projects/$projectId/teams' });
+  const { cursor, direction } = useSearch({ from: '/authenticated-layout/projects/$projectId/teams' }) as any;
+  const navigate = useNavigate();
   const { teamApi } = useApi();
   const queryClient = useQueryClient();
   const [showCreate, setShowCreate] = useState(false);
   const [newTeamName, setNewTeamName] = useState('');
+  const [pageSize] = useState(20);
 
-  const {
-    data: teamsData,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-    isLoading
-  } = useInfiniteQuery({
-    queryKey: ['project-teams', projectId],
-    queryFn: ({ pageParam }) => teamApi.getTeams(projectId, 20, pageParam),
-    initialPageParam: undefined as string | undefined,
-    getNextPageParam: (lastPage) => lastPage.hasNextPage ? lastPage.endCursor : undefined,
+  const { data: teamsResult, isLoading, isPlaceholderData } = useQuery({
+    queryKey: ['project-teams', projectId, cursor, direction],
+    queryFn: () => {
+      if (direction === 'backward') {
+        return teamApi.getTeams(projectId, { last: pageSize, before: cursor });
+      }
+      return teamApi.getTeams(projectId, {
+        first: pageSize,
+        after: direction === 'forward' ? cursor : undefined,
+      });
+    },
+    placeholderData: (prev) => prev,
+    enabled: !!projectId,
   });
 
   const createMutation = useMutation({
     mutationFn: () => teamApi.createTeam(projectId, newTeamName.trim()),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['project-teams', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['project-teams'] });
       setNewTeamName('');
       setShowCreate(false);
     },
   });
 
-  const teams = teamsData?.pages.flatMap(p => p.teams) || [];
+  const teams = teamsResult?.teams || [];
 
   return (
     <div className="p-8 max-w-7xl mx-auto animate-in fade-in slide-in-from-bottom-2 duration-500">
@@ -58,25 +63,38 @@ export default function ProjectTeamsView() {
           <span className="text-sm font-medium">Loading teams...</span>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {teams.map((team) => (
-            <TeamCard key={team.id} team={team} />
-          ))}
+        <div className="flex flex-col gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {teams.map((team) => (
+              <TeamCard key={team.id} team={team} />
+            ))}
 
-          {hasNextPage && (
-            <button 
-              onClick={() => fetchNextPage()} 
-              disabled={isFetchingNextPage}
-              className="col-span-full py-4 text-[11px] font-black uppercase tracking-widest text-blue-400 hover:text-white transition-all bg-white/[0.02] rounded-2xl border border-dashed border-white/10 hover:bg-white/5 active:scale-[0.99]"
-            >
-              {isFetchingNextPage ? 'Loading more...' : 'Load More Teams'}
-            </button>
-          )}
+            {teams.length === 0 && (
+              <div className="col-span-full py-20 bg-white/[0.02] border border-dashed border-white/10 rounded-[32px] flex flex-col items-center justify-center text-slate-500 italic">
+                <Layers size={48} className="opacity-10 mb-4" />
+                <p>No teams in this project.</p>
+              </div>
+            )}
+          </div>
 
-          {teams.length === 0 && (
-            <div className="col-span-full py-20 bg-white/[0.02] border border-dashed border-white/10 rounded-[32px] flex flex-col items-center justify-center text-slate-500 italic">
-              <Layers size={48} className="opacity-10 mb-4" />
-              <p>No teams in this project.</p>
+          {/* Pagination Controls */}
+          {(teamsResult?.hasNextPage || teamsResult?.hasPreviousPage) && (
+            <div className="flex items-center justify-center gap-4 mt-4">
+              <button
+                disabled={!teamsResult?.hasPreviousPage || isPlaceholderData}
+                onClick={() => navigate({ search: (prev: any) => ({ ...prev, cursor: teamsResult?.startCursor || undefined, direction: 'backward' as const }) })}
+                className="px-6 py-2 rounded-xl bg-white/[0.03] border border-white/5 text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-white hover:bg-white/5 disabled:opacity-20 transition-all active:scale-95"
+              >
+                ← Previous
+              </button>
+              <div className="w-px h-4 bg-white/10" />
+              <button
+                disabled={!teamsResult?.hasNextPage || isPlaceholderData}
+                onClick={() => navigate({ search: (prev: any) => ({ ...prev, cursor: teamsResult?.endCursor || undefined, direction: 'forward' as const }) })}
+                className="px-6 py-2 rounded-xl bg-white/[0.03] border border-white/5 text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-white hover:bg-white/5 disabled:opacity-20 transition-all active:scale-95"
+              >
+                Next →
+              </button>
             </div>
           )}
         </div>

@@ -94,6 +94,11 @@ export default function ProjectDashboardView() {
               </Link>
             ))}
             {teams.length === 0 && <div className="p-10 text-center text-xs text-slate-600 italic">No teams in this project.</div>}
+            {teams.length > 0 && (
+              <Link to="/projects/$projectId/teams" params={{ projectId }} className="text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-blue-400 mt-2 text-center">
+                View All Teams →
+              </Link>
+            )}
           </div>
         </div>
 

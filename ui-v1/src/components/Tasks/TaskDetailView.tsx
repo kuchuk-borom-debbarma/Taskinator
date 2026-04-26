@@ -106,7 +106,7 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
             <div className="flex items-center justify-between">
               <div className="text-[11px] font-bold text-text-dim uppercase tracking-[0.2em] opacity-40">Dependencies</div>
               <Link 
-                to="/projects/$projectId/graph" 
+                to="/graph/$projectId" 
                 params={{ projectId: task.project?.id || '' }}
                 search={{ taskId }}
                 className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-bg-secondary border border-border-notion text-[11px] font-black uppercase tracking-widest text-text-dim hover:text-focus-blue hover:border-focus-blue/30 transition-all active:scale-95 shadow-sm"

@@ -41,6 +41,8 @@ interface TaskMapProps {
   projectId: string;
   taskId: string;
   neighbourhood: TaskNeighbourhood;
+  fetchNextPage?: () => void;
+  isFetchingNextPage?: boolean;
 }
 
 const ControlButton: React.FC<{ onClick: () => void, active?: boolean, title: string, children: React.ReactNode }> = ({ onClick, active, title, children }) => (
@@ -87,7 +89,7 @@ const RelationshipTooltip: React.FC<{ edgeId: string, mapData: { nodes: MapNode[
   );
 };
 
-export const TaskMap: React.FC<TaskMapProps> = ({ projectId, taskId, neighbourhood }) => {
+export const TaskMap: React.FC<TaskMapProps> = ({ projectId, taskId, neighbourhood, fetchNextPage, isFetchingNextPage }) => {
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
   const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null);
   const [transform, setTransform] = useState({ x: 0, y: 0, scale: 0.8 });
@@ -164,6 +166,10 @@ export const TaskMap: React.FC<TaskMapProps> = ({ projectId, taskId, neighbourho
         <ControlButton onClick={() => setKeyboardEnabled(!keyboardEnabled)} active={keyboardEnabled} title="Keyboard Navigation: Arrow keys to pan">
           <Keyboard size={18} />
         </ControlButton>
+        <div className="w-px h-6 bg-white/10 mx-1" />
+        <ControlButton onClick={() => setTransform({ x: 0, y: 0, scale: 0.8 })} title="Re-center View">
+          <Target size={18} />
+        </ControlButton>
       </div>
 
       <div 
@@ -230,7 +236,11 @@ export const TaskMap: React.FC<TaskMapProps> = ({ projectId, taskId, neighbourho
               <div className={`p-5 rounded-3xl border transition-all duration-500 bg-[#111827]/90 backdrop-blur-xl shadow-2xl
                 ${isFocus ? 'w-72 border-[#3b82f6] ring-8 ring-[#3b82f6]/10' : 'w-60 border-white/10 hover:border-white/30'}
               `}>
-                <Link to="/projects/$projectId/tasks/$taskId" params={{ projectId: node.task.projectId || projectId, taskId: node.task.id }}>
+                <Link 
+                  to="/graph/$projectId" 
+                  params={{ projectId }} 
+                  search={{ taskId: node.task.id }}
+                >
                   <div className="flex items-center justify-between mb-3">
                     <div className="px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-[0.2em] text-white" style={{ backgroundColor: color }}>
                       {node.task.status}
@@ -247,6 +257,27 @@ export const TaskMap: React.FC<TaskMapProps> = ({ projectId, taskId, neighbourho
       </div>
 
       {hoveredEdgeId && <RelationshipTooltip edgeId={hoveredEdgeId} mapData={mapData} />}
+
+      {/* Dedicated Discovery Expander */}
+      {neighbourhood.hasNextPage && fetchNextPage && (
+        <div className="absolute bottom-8 right-8 z-50">
+          <button
+            onClick={() => fetchNextPage()}
+            disabled={isFetchingNextPage}
+            className="p-4 rounded-full bg-[#3b82f6] text-white shadow-[0_0_30px_rgba(59,130,246,0.5)] hover:scale-110 active:scale-95 transition-all group disabled:opacity-50 disabled:scale-100"
+            title="Discover Next Layer"
+          >
+            {isFetchingNextPage ? (
+              <Loader2 size={24} className="animate-spin" />
+            ) : (
+              <div className="flex items-center gap-2 px-1">
+                <PlusCircle size={24} />
+                <span className="text-[11px] font-black uppercase tracking-widest overflow-hidden max-w-0 group-hover:max-w-[120px] transition-all duration-500 whitespace-nowrap">Expand Nexus</span>
+              </div>
+            )}
+          </button>
+        </div>
+      )}
     </div>
   );
 };

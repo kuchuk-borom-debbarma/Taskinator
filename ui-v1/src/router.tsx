@@ -71,6 +71,19 @@ const publicLayoutRoute = createRoute({
   component: () => <Outlet />,
 });
 
+// Fullscreen Dedicated Layout (No Sidebar)
+const fullscreenLayoutRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  id: 'fullscreen-layout',
+  beforeLoad: ({ context }) => {
+    if (context.auth.isLoading) return;
+    if (!context.auth.isAuthenticated) {
+      throw redirect({ to: '/auth' });
+    }
+  },
+  component: () => <Outlet />,
+});
+
 // --- Auth Routes ---
 
 const authRoute = createRoute({
@@ -132,6 +145,12 @@ const projectTasksRoute = createRoute({
 const projectTeamsRoute = createRoute({
   getParentRoute: () => projectLayoutRoute,
   path: 'teams',
+  validateSearch: (search: Record<string, unknown>): TaskSearch => {
+    return {
+      cursor: (search.cursor as string) || undefined,
+      direction: (search.direction as 'forward' | 'backward') || undefined,
+    };
+  },
   component: lazyRouteComponent(() => import('./ProjectTeamsView.lazy.tsx')),
 });
 
@@ -144,8 +163,8 @@ const projectMembersRoute = createRoute({
 import { TaskGraphView } from './components/Tasks/TaskGraphView';
 
 const projectGraphRoute = createRoute({
-  getParentRoute: () => projectLayoutRoute,
-  path: 'graph',
+  getParentRoute: () => fullscreenLayoutRoute,
+  path: 'graph/$projectId',
   validateSearch: (search: Record<string, unknown>): LinkSearch => {
     return {
       taskId: (search.taskId as string) || undefined,
@@ -193,9 +212,11 @@ export const routeTree = rootRoute.addChildren([
       projectTasksRoute,
       projectTeamsRoute,
       projectMembersRoute,
-      projectGraphRoute,
       taskDetailRoute,
     ]),
+  ]),
+  fullscreenLayoutRoute.addChildren([
+    projectGraphRoute,
   ]),
 ]);
 
