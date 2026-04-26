@@ -26,6 +26,12 @@ export interface MapNode {
   rank: number;
 }
 
+const WORLD_SIZE = 4000;
+const WORLD_CENTER = WORLD_SIZE / 2;
+const NODE_WIDTH = 288;
+const NODE_HEIGHT = 140;
+const VIEWPORT_PADDING = 180;
+
 interface TaskMapProps {
   projectId: string;
   taskId: string;
@@ -37,8 +43,8 @@ interface TaskMapProps {
 const ControlButton: React.FC<{ onClick: () => void, active?: boolean, title: string, children: React.ReactNode }> = ({ onClick, active, title, children }) => (
   <button
     onClick={onClick}
-    className={`pointer-events-auto p-3 border rounded-xl shadow-lg transition-all active:scale-95 flex items-center justify-center
-      ${active ? 'bg-focus-blue border-focus-blue text-white' : 'bg-white/88 border-border-notion text-text-dim hover:border-slate-300 hover:text-text-notion'}
+    className={`pointer-events-auto flex items-center justify-center rounded-2xl border p-3 shadow-lg transition-all active:scale-95
+      ${active ? 'border-app-accent bg-app-accent text-white' : 'border-app-line bg-white/88 text-app-muted hover:border-app-ink/20 hover:text-app-ink'}
     `}
     title={title}
   >
@@ -64,15 +70,15 @@ const RelationshipTooltip: React.FC<{ edgeId: string, mapData: { nodes: MapNode[
 
   return (
     <div
-      className="fixed z-[100] pointer-events-none flex flex-col gap-1 px-4 py-3 bg-white/96 border border-border-notion rounded-xl shadow-xl"
+      className="fixed z-[100] pointer-events-none flex flex-col gap-1 rounded-2xl border border-app-line bg-white/96 px-4 py-3 shadow-xl"
       style={{ left: pos.x + 20, top: pos.y - 40 }}
     >
       <div className="flex items-center gap-2">
-        <span className="text-[11px] font-bold text-text-notion truncate max-w-[120px]">{s.task.title}</span>
+        <span className="max-w-[120px] truncate text-[11px] font-bold text-app-ink">{s.task.title}</span>
         <div className="px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider text-white" style={{ backgroundColor: getLinkLabelColor(edge.label) }}>
           {edge.label}
         </div>
-        <span className="text-[11px] font-bold text-text-notion truncate max-w-[120px]">{t.task.title}</span>
+        <span className="max-w-[120px] truncate text-[11px] font-bold text-app-ink">{t.task.title}</span>
       </div>
     </div>
   );
@@ -84,19 +90,93 @@ export const TaskMap: React.FC<TaskMapProps> = ({ projectId, taskId, neighbourho
   const [transform, setTransform] = useState({ x: 0, y: 0, scale: 0.8 });
   const [inputMode, setInputMode] = useState<'mouse' | 'trackpad'>('mouse');
   const [keyboardEnabled, setKeyboardEnabled] = useState(true);
-  const [mapData, setMapData] = useState<{ nodes: MapNode[], allEdges: any[] }>({ nodes: [], allEdges: [] });
+  const mapData = useMemo(() => {
+    const allTasks = new Map<string, ProjectTask>();
+    const allEdges = neighbourhood.edges.map((edge) => ({
+      ...edge,
+      source: edge.sourceTaskId,
+      target: edge.targetTaskId,
+    }));
+    const nodeDepths = new Map<string, { depth: number; direction: string }>();
+
+    allTasks.set(neighbourhood.focusedTask.id, neighbourhood.focusedTask);
+    nodeDepths.set(neighbourhood.focusedTask.id, { depth: 0, direction: 'both' });
+
+    for (const node of neighbourhood.nodes) {
+      allTasks.set(node.task.id, node.task);
+      nodeDepths.set(node.task.id, {
+        depth: node.depth ?? 1,
+        direction: node.direction,
+      });
+    }
+
+    const nodesList = Array.from(allTasks.values());
+    const ranks = new Map<string, number>();
+    ranks.set(taskId, 0);
+
+    for (const task of nodesList) {
+      const info = nodeDepths.get(task.id);
+      if (!info) continue;
+      if (task.id === taskId) {
+        ranks.set(task.id, 0);
+        continue;
+      }
+      const rankValue = info.direction === 'incoming' ? -info.depth : info.depth;
+      ranks.set(task.id, rankValue);
+    }
+
+    const byRank = new Map<number, ProjectTask[]>();
+    for (const task of nodesList) {
+      const rank = ranks.get(task.id) ?? 0;
+      const row = byRank.get(rank) ?? [];
+      row.push(task);
+      byRank.set(rank, row);
+    }
+
+    for (const [, row] of byRank) {
+      row.sort((a, b) => a.title.localeCompare(b.title));
+    }
+
+    const nodes = nodesList.map((task) => {
+      const rank = ranks.get(task.id) ?? 0;
+      const row = byRank.get(rank) ?? [task];
+      const index = row.findIndex((entry) => entry.id === task.id);
+      const x = (index - (row.length - 1) / 2) * 350;
+      const y = rank * 220;
+      return { task, x, y, rank };
+    });
+
+    return { nodes, allEdges };
+  }, [neighbourhood, taskId]);
 
   useEffect(() => {
-    const worker = new Worker(new URL('./layoutWorker.ts', import.meta.url), { type: 'module' });
-    worker.onmessage = (e) => setMapData(e.data);
-    worker.postMessage({
-      pages: [neighbourhood],
-      taskId,
-      horizontalSpacing: 350,
-      verticalSpacing: 220
+    if (mapData.nodes.length === 0) return;
+
+    const viewportWidth = window.innerWidth * 0.58;
+    const viewportHeight = Math.max(window.innerHeight * 0.72, 620);
+    const xs = mapData.nodes.map((node) => node.x);
+    const ys = mapData.nodes.map((node) => node.y);
+    const minX = Math.min(...xs) - NODE_WIDTH / 2 - VIEWPORT_PADDING;
+    const maxX = Math.max(...xs) + NODE_WIDTH / 2 + VIEWPORT_PADDING;
+    const minY = Math.min(...ys) - NODE_HEIGHT / 2 - VIEWPORT_PADDING;
+    const maxY = Math.max(...ys) + NODE_HEIGHT / 2 + VIEWPORT_PADDING;
+
+    const contentWidth = Math.max(maxX - minX, NODE_WIDTH + VIEWPORT_PADDING * 2);
+    const contentHeight = Math.max(maxY - minY, NODE_HEIGHT + VIEWPORT_PADDING * 2);
+    const nextScale = Math.max(
+      0.32,
+      Math.min(1, Math.min(viewportWidth / contentWidth, viewportHeight / contentHeight))
+    );
+
+    const centerX = (minX + maxX) / 2;
+    const centerY = (minY + maxY) / 2;
+
+    setTransform({
+      x: -centerX * nextScale,
+      y: -centerY * nextScale,
+      scale: nextScale,
     });
-    return () => worker.terminate();
-  }, [neighbourhood, taskId]);
+  }, [mapData.nodes]);
 
   useEffect(() => {
     if (!keyboardEnabled) return;
@@ -115,6 +195,9 @@ export const TaskMap: React.FC<TaskMapProps> = ({ projectId, taskId, neighbourho
   }, [keyboardEnabled, transform.scale]);
 
   const handleWheel = (e: React.WheelEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
     if (inputMode === 'trackpad') {
       if (e.ctrlKey) setTransform(t => ({ ...t, scale: Math.max(0.1, t.scale * (1 - e.deltaY * 0.01)) }));
       else setTransform(t => ({ ...t, x: t.x - e.deltaX, y: t.y - e.deltaY }));
@@ -127,7 +210,7 @@ export const TaskMap: React.FC<TaskMapProps> = ({ projectId, taskId, neighbourho
     const set = new Set<string>();
     if (hoveredNodeId) {
       set.add(hoveredNodeId);
-      mapData.allEdges.forEach(e => {
+      mapData.allEdges.forEach((e: any) => {
         const sId = typeof e.source === 'string' ? e.source : e.source.id;
         const tId = typeof e.target === 'string' ? e.target : e.target.id;
         if (sId === hoveredNodeId) set.add(tId);
@@ -139,15 +222,15 @@ export const TaskMap: React.FC<TaskMapProps> = ({ projectId, taskId, neighbourho
 
   return (
     <div 
-      className="relative w-full h-full overflow-hidden cursor-crosshair select-none"
+      className="relative h-full w-full cursor-crosshair overflow-hidden overscroll-none select-none"
       style={{
         background:
-          'radial-gradient(circle at top left, rgba(96, 165, 250, 0.12), transparent 24%), linear-gradient(180deg, #f8fbff 0%, #eef4fb 100%)'
+          'radial-gradient(circle at top left, rgba(255, 132, 84, 0.18), transparent 24%), radial-gradient(circle at top right, rgba(15, 139, 141, 0.12), transparent 20%), linear-gradient(180deg, #f9f2e9 0%, #f2eadd 100%)'
       }}
       onWheel={handleWheel}
     >
       {/* Interaction Mode Overlay */}
-      <div className="absolute top-8 right-8 z-50 flex gap-2 pointer-events-none">
+      <div className="pointer-events-none absolute right-6 top-6 z-50 flex flex-wrap gap-2">
         <ControlButton onClick={() => setInputMode('mouse')} active={inputMode === 'mouse'} title="Mouse Mode: Scroll to zoom, Drag to pan">
           <MousePointer size={18} />
         </ControlButton>
@@ -157,18 +240,50 @@ export const TaskMap: React.FC<TaskMapProps> = ({ projectId, taskId, neighbourho
         <ControlButton onClick={() => setKeyboardEnabled(!keyboardEnabled)} active={keyboardEnabled} title="Keyboard Navigation: Arrow keys to pan">
           <Keyboard size={18} />
         </ControlButton>
-        <div className="w-px h-6 bg-border-notion mx-1" />
-        <ControlButton onClick={() => setTransform({ x: 0, y: 0, scale: 0.8 })} title="Re-center View">
+        <div className="mx-1 h-6 w-px bg-app-line" />
+        <ControlButton onClick={() => {
+          const xs = mapData.nodes.map((node) => node.x);
+          const ys = mapData.nodes.map((node) => node.y);
+          if (xs.length === 0 || ys.length === 0) {
+            setTransform({ x: 0, y: 0, scale: 0.8 });
+            return;
+          }
+
+          const minX = Math.min(...xs) - NODE_WIDTH / 2 - VIEWPORT_PADDING;
+          const maxX = Math.max(...xs) + NODE_WIDTH / 2 + VIEWPORT_PADDING;
+          const minY = Math.min(...ys) - NODE_HEIGHT / 2 - VIEWPORT_PADDING;
+          const maxY = Math.max(...ys) + NODE_HEIGHT / 2 + VIEWPORT_PADDING;
+          const contentWidth = Math.max(maxX - minX, NODE_WIDTH + VIEWPORT_PADDING * 2);
+          const contentHeight = Math.max(maxY - minY, NODE_HEIGHT + VIEWPORT_PADDING * 2);
+          const viewportWidth = window.innerWidth * 0.58;
+          const viewportHeight = Math.max(window.innerHeight * 0.72, 620);
+          const nextScale = Math.max(
+            0.32,
+            Math.min(1, Math.min(viewportWidth / contentWidth, viewportHeight / contentHeight))
+          );
+          const centerX = (minX + maxX) / 2;
+          const centerY = (minY + maxY) / 2;
+
+          setTransform({ x: -centerX * nextScale, y: -centerY * nextScale, scale: nextScale });
+        }} title="Re-center View">
           <Target size={18} />
         </ControlButton>
       </div>
 
-      <div 
-        className="absolute inset-0 transition-transform duration-75"
-        style={{ transform: `translate(calc(50% + ${transform.x}px), calc(50% + ${transform.y}px)) scale(${transform.scale})` }}
+      <div
+        className="absolute left-1/2 top-1/2 transition-transform duration-75"
+        style={{
+          width: WORLD_SIZE,
+          height: WORLD_SIZE,
+          transform: `translate(-50%, -50%) translate(${transform.x}px, ${transform.y}px) scale(${transform.scale})`,
+          transformOrigin: 'center center',
+        }}
       >
-        <svg className="absolute inset-0 pointer-events-none overflow-visible w-full h-full">
-          {mapData.allEdges.map(edge => {
+        <svg
+          className="absolute inset-0 h-full w-full pointer-events-none overflow-visible"
+          viewBox={`0 0 ${WORLD_SIZE} ${WORLD_SIZE}`}
+        >
+          {mapData.allEdges.map((edge: any) => {
             const sId = typeof edge.source === 'string' ? edge.source : edge.source.id;
             const tId = typeof edge.target === 'string' ? edge.target : edge.target.id;
             const s = mapData.nodes.find(n => n.task.id === sId);
@@ -179,10 +294,10 @@ export const TaskMap: React.FC<TaskMapProps> = ({ projectId, taskId, neighbourho
             const isDimmed = (hoveredNodeId || hoveredEdgeId) && !isHighlight;
             const color = getLinkLabelColor(edge.label);
 
-            const sx = s.x;
-            const sy = s.y + (s.task.id === taskId ? 60 : 50);
-            const tx = t.x;
-            const ty = t.y - (t.task.id === taskId ? 60 : 50);
+            const sx = WORLD_CENTER + s.x;
+            const sy = WORLD_CENTER + s.y + (s.task.id === taskId ? 60 : 50);
+            const tx = WORLD_CENTER + t.x;
+            const ty = WORLD_CENTER + t.y - (t.task.id === taskId ? 60 : 50);
 
             const cpOffset = Math.abs(ty - sy) * 0.5;
             const pathD = `M ${sx} ${sy} C ${sx} ${sy + cpOffset}, ${tx} ${ty - cpOffset}, ${tx} ${ty}`;
@@ -221,24 +336,29 @@ export const TaskMap: React.FC<TaskMapProps> = ({ projectId, taskId, neighbourho
               key={node.task.id}
               onMouseEnter={() => setHoveredNodeId(node.task.id)}
               onMouseLeave={() => setHoveredNodeId(null)}
-              className={`absolute transition-all transform -translate-x-1/2 -translate-y-1/2 ${isActuallyDimmed ? 'opacity-20 grayscale' : 'opacity-100'}`}
-              style={{ left: node.x, top: node.y }}
+              className={`absolute -translate-x-1/2 -translate-y-1/2 transform transition-all ${isActuallyDimmed ? 'grayscale opacity-20' : 'opacity-100'}`}
+              style={{ left: WORLD_CENTER + node.x, top: WORLD_CENTER + node.y }}
             >
-              <div className={`p-5 rounded-3xl border transition-all duration-500 bg-white/92 backdrop-blur-xl shadow-[0_20px_50px_rgba(15,23,42,0.08)]
-                ${isFocus ? 'w-72 border-focus-blue ring-8 ring-focus-blue/10' : 'w-60 border-border-notion hover:border-slate-300'}
+              <div className={`rounded-[28px] border bg-white/92 p-5 shadow-[0_24px_60px_rgba(24,33,47,0.10)] backdrop-blur-xl transition-all duration-500
+                ${isFocus ? 'w-72 border-app-accent ring-8 ring-app-accent/10' : 'w-60 border-app-line hover:border-app-ink/20'}
               `}>
                 <Link
                   to="/projects/$projectId/tasks/$taskId"
                   params={{ projectId, taskId: node.task.id }}
                 >
                   <div className="flex items-center justify-between mb-3">
-                    <div className="px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-[0.2em] text-white shadow-sm" style={{ backgroundColor: color }}>
+                    <div className="rounded-full px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.2em] text-white shadow-sm" style={{ backgroundColor: color }}>
                       {node.task.status}
                     </div>
                   </div>
-                  <p className={`leading-tight font-black text-text-notion ${isFocus ? 'text-[16px]' : 'text-[14px]'}`}>
+                  <p className={`leading-tight font-black text-app-ink ${isFocus ? 'text-[16px]' : 'text-[14px]'}`}>
                     {node.task.title}
                   </p>
+                  {!isFocus && (
+                    <p className="mt-2 text-[11px] font-medium text-app-muted">
+                      {node.task.team?.name || 'No team assigned'}
+                    </p>
+                  )}
                 </Link>
               </div>
             </div>
@@ -254,7 +374,7 @@ export const TaskMap: React.FC<TaskMapProps> = ({ projectId, taskId, neighbourho
           <button
             onClick={() => fetchNextPage()}
             disabled={isFetchingNextPage}
-            className="p-4 rounded-full bg-focus-blue text-white shadow-[0_12px_30px_rgba(59,130,246,0.3)] hover:scale-110 active:scale-95 transition-all group disabled:opacity-50 disabled:scale-100"
+            className="group rounded-full bg-app-accent p-4 text-white shadow-[0_14px_36px_rgba(255,106,61,0.35)] transition-all hover:scale-110 active:scale-95 disabled:scale-100 disabled:opacity-50"
             title="Discover Next Layer"
           >
             {isFetchingNextPage ? (

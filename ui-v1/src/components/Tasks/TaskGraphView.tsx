@@ -1,10 +1,11 @@
 import { useMemo } from 'react';
 import { Link, useParams, useSearch } from '@tanstack/react-router';
 import { useInfiniteQuery } from '@tanstack/react-query';
-import { ArrowLeft, Loader2, Network, Orbit } from 'lucide-react';
+import { ArrowLeft, Loader2, Network } from 'lucide-react';
 import { useApi } from '../../hooks/useApi';
-import type { ProjectTask } from '../../api/types';
-import { EmptyState, PriorityBadge, StatusBadge, SurfaceCard, SurfaceCardStrong } from '../shared/workspace';
+import type { GraphEdge, GraphNode, TaskNeighbourhood } from '../../api/types';
+import { EmptyState, PriorityBadge, StatusBadge, SurfaceCardStrong } from '../shared/workspace';
+import { TaskMap } from '../Graph/TaskMap';
 
 export const TaskGraphView: React.FC = () => {
   const { projectId } = useParams({ from: '/fullscreen-layout/graph/$projectId' });
@@ -12,7 +13,7 @@ export const TaskGraphView: React.FC = () => {
   const focusedTaskId = search.taskId;
   const { taskApi } = useApi();
 
-  const { data, isLoading } = useInfiniteQuery({
+  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
     queryKey: ['task-graph-page', focusedTaskId],
     queryFn: ({ pageParam }) => {
       const cursor = pageParam as string | undefined;
@@ -24,23 +25,76 @@ export const TaskGraphView: React.FC = () => {
     staleTime: 1000 * 60 * 3,
   });
 
-  const graph = useMemo(() => {
+  const neighbourhood = useMemo<TaskNeighbourhood | null>(() => {
     const pages = data?.pages ?? [];
-    const task = pages[0]?.task ?? null;
-    const incomingMap = new Map<string, ProjectTask>();
-    const outgoingMap = new Map<string, ProjectTask>();
+    const focusedTask = pages[0]?.task ?? null;
+    if (!focusedTask) return null;
+
+    const nodeMap = new Map<string, GraphNode>();
+    const edgeMap = new Map<string, GraphEdge>();
+    const forward = new Map<string, string[]>();
+    const backward = new Map<string, string[]>();
 
     for (const page of pages) {
       for (const link of page.links) {
-        incomingMap.set(link.source.id, { ...link.source, description: '', version: 1, createdAt: '', updatedAt: '', status: link.source.status as any, priority: link.source.priority } as ProjectTask);
-        outgoingMap.set(link.target.id, { ...link.target, description: '', version: 1, createdAt: '', updatedAt: '', status: link.target.status as any, priority: link.target.priority } as ProjectTask);
+        edgeMap.set(link.id, {
+          id: link.id,
+          sourceTaskId: link.source.id,
+          targetTaskId: link.target.id,
+          label: link.label,
+        });
+
+        const sourceNode = nodeMap.get(link.source.id);
+        nodeMap.set(link.source.id, {
+          task: { ...link.source, description: sourceNode?.task.description ?? '', version: sourceNode?.task.version ?? 1, createdAt: sourceNode?.task.createdAt ?? '', updatedAt: sourceNode?.task.updatedAt ?? '' } as any,
+          direction: sourceNode?.direction ?? 'incoming',
+          depth: sourceNode?.depth ?? Number.POSITIVE_INFINITY,
+        });
+
+        const targetNode = nodeMap.get(link.target.id);
+        nodeMap.set(link.target.id, {
+          task: { ...link.target, description: targetNode?.task.description ?? '', version: targetNode?.task.version ?? 1, createdAt: targetNode?.task.createdAt ?? '', updatedAt: targetNode?.task.updatedAt ?? '' } as any,
+          direction: targetNode?.direction ?? 'outgoing',
+          depth: targetNode?.depth ?? Number.POSITIVE_INFINITY,
+        });
+
+        forward.set(link.source.id, [...(forward.get(link.source.id) ?? []), link.target.id]);
+        backward.set(link.target.id, [...(backward.get(link.target.id) ?? []), link.source.id]);
       }
     }
 
+    const incomingDepths = bfs(backward, focusedTask.id);
+    const outgoingDepths = bfs(forward, focusedTask.id);
+
+    const nodes = Array.from(nodeMap.values())
+      .filter((node) => node.task.id !== focusedTask.id)
+      .map((node) => {
+        const incomingDepth = incomingDepths.get(node.task.id);
+        const outgoingDepth = outgoingDepths.get(node.task.id);
+        const direction = getNodeDirection(incomingDepth, outgoingDepth);
+        const depth = Math.min(incomingDepth ?? Number.POSITIVE_INFINITY, outgoingDepth ?? Number.POSITIVE_INFINITY);
+
+        return {
+          ...node,
+          direction,
+          depth: Number.isFinite(depth) ? depth : 1,
+        };
+      })
+      .sort((a, b) => {
+        if ((a.depth ?? 0) !== (b.depth ?? 0)) {
+          return (a.depth ?? 0) - (b.depth ?? 0);
+        }
+        return a.task.title.localeCompare(b.task.title);
+      });
+
     return {
-      task,
-      incoming: Array.from(incomingMap.values()),
-      outgoing: Array.from(outgoingMap.values()),
+      focusedTask,
+      nodes,
+      edges: Array.from(edgeMap.values()),
+      incomingStories: [],
+      outgoingStories: [],
+      hasNextPage: !!hasNextPage,
+      endCursor: pages[pages.length - 1]?.endCursor || undefined,
     };
   }, [data]);
 
@@ -54,7 +108,7 @@ export const TaskGraphView: React.FC = () => {
     );
   }
 
-  if (!graph.task) {
+  if (!neighbourhood) {
     return (
       <div className="page-frame">
         <EmptyState
@@ -82,71 +136,75 @@ export const TaskGraphView: React.FC = () => {
         <p className="eyebrow mb-3">Flow map</p>
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="max-w-3xl">
-            <h1 className="text-4xl font-semibold tracking-[-0.05em] text-app-ink">{graph.task.title}</h1>
+            <h1 className="text-4xl font-semibold tracking-[-0.05em] text-app-ink">{neighbourhood.focusedTask.title}</h1>
             <p className="mt-3 text-base leading-7 text-app-muted">
-              This map trades the old dense graph canvas for a clearer upstream and downstream dependency story.
+              The interactive task map is back, now styled to match the new workspace. Pan, zoom, and inspect the dependency web around the focused task.
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
-            <StatusBadge status={graph.task.status} />
-            <PriorityBadge priority={graph.task.priority} />
+            <StatusBadge status={neighbourhood.focusedTask.status} />
+            <PriorityBadge priority={neighbourhood.focusedTask.priority} />
           </div>
         </div>
       </SurfaceCardStrong>
 
-      <div className="mt-8 grid gap-6 xl:grid-cols-[1fr_0.8fr_1fr]">
-        <FlowColumn
-          title="Upstream blockers"
-          subtitle="Things that feed into this task"
-          tasks={graph.incoming}
-        />
-        <SurfaceCardStrong className="flex flex-col items-center justify-center p-6 text-center">
-          <div className="rounded-full bg-app-accent-soft p-4 text-app-accent">
-            <Orbit size={28} />
+      <SurfaceCardStrong className="mt-8 overflow-hidden p-0">
+        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-app-line px-5 py-4">
+          <div>
+            <p className="eyebrow mb-1">Interactive canvas</p>
+            <p className="text-sm text-app-muted">Full graph view. Hover edge inspect label. Hover node isolate nearby links.</p>
           </div>
-          <p className="eyebrow mt-4">Focused task</p>
-          <h2 className="mt-2 text-2xl font-semibold tracking-[-0.04em] text-app-ink">{graph.task.title}</h2>
-          <p className="mt-3 text-sm leading-7 text-app-muted">{graph.task.description || 'No additional description is available for this task.'}</p>
-        </SurfaceCardStrong>
-        <FlowColumn
-          title="Downstream impact"
-          subtitle="Things this task unlocks or affects"
-          tasks={graph.outgoing}
-        />
-      </div>
+          <div className="flex flex-wrap gap-3 text-sm text-app-muted">
+            <div className="rounded-full bg-app-ink/4 px-4 py-2">
+              {neighbourhood.nodes.length} connected tasks
+            </div>
+            <div className="rounded-full bg-app-ink/4 px-4 py-2">
+              {neighbourhood.edges.length} relationships
+            </div>
+          </div>
+        </div>
+        <div className="h-[80vh] min-h-[46rem]">
+          <TaskMap
+            projectId={projectId}
+            taskId={focusedTaskId || neighbourhood.focusedTask.id}
+            neighbourhood={neighbourhood}
+            fetchNextPage={hasNextPage ? fetchNextPage : undefined}
+            isFetchingNextPage={isFetchingNextPage}
+          />
+        </div>
+      </SurfaceCardStrong>
     </div>
   );
 };
 
-function FlowColumn({
-  title,
-  subtitle,
-  tasks,
-}: {
-  title: string;
-  subtitle: string;
-  tasks: ProjectTask[];
-}) {
-  return (
-    <SurfaceCard className="p-5">
-      <p className="eyebrow mb-2">{title}</p>
-      <p className="mb-4 text-sm leading-6 text-app-muted">{subtitle}</p>
-      <div className="space-y-3">
-        {tasks.length === 0 ? (
-          <p className="text-sm leading-6 text-app-muted">No linked tasks in this direction yet.</p>
-        ) : (
-          tasks.map((task) => (
-            <div key={task.id} className="rounded-[24px] border border-app-line bg-white/75 px-4 py-4">
-              <p className="text-sm font-semibold text-app-ink">{task.title}</p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <StatusBadge status={task.status} />
-                <PriorityBadge priority={task.priority} />
-              </div>
-              <p className="mt-2 text-xs text-app-muted">{task.team?.name || 'No team assigned'}</p>
-            </div>
-          ))
-        )}
-      </div>
-    </SurfaceCard>
-  );
+function bfs(adjacency: Map<string, string[]>, startId: string) {
+  const depths = new Map<string, number>();
+  const queue: Array<{ id: string; depth: number }> = [{ id: startId, depth: 0 }];
+  depths.set(startId, 0);
+
+  while (queue.length) {
+    const current = queue.shift()!;
+    const neighbors = adjacency.get(current.id) ?? [];
+
+    for (const neighborId of neighbors) {
+      if (depths.has(neighborId)) continue;
+      depths.set(neighborId, current.depth + 1);
+      queue.push({ id: neighborId, depth: current.depth + 1 });
+    }
+  }
+
+  depths.delete(startId);
+  return depths;
+}
+
+function getNodeDirection(incomingDepth?: number, outgoingDepth?: number): GraphNode['direction'] {
+  if (incomingDepth !== undefined && outgoingDepth !== undefined) {
+    if (incomingDepth < outgoingDepth) return 'incoming';
+    if (outgoingDepth < incomingDepth) return 'outgoing';
+    return 'both';
+  }
+
+  if (incomingDepth !== undefined) return 'incoming';
+  if (outgoingDepth !== undefined) return 'outgoing';
+  return 'both';
 }
