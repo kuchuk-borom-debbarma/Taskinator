@@ -7,7 +7,7 @@ import {
   redirect
 } from '@tanstack/react-router';
 import { Sidebar } from './components/Layout/Sidebar';
-import { useAuth, type AuthContextType } from './context/AuthContext';
+import { type AuthContextType } from './context/AuthContext';
 import { AuthScreen } from './components/Auth/AuthScreen';
 import { NotFoundComponent, GlobalErrorComponent } from './components/Layout/RouterFeedback';
 import { RootComponent } from './components/Layout/RootComponent';

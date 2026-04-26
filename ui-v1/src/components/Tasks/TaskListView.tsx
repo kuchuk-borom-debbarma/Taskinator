@@ -5,11 +5,7 @@ import {
   Circle,
   CheckCircle2,
   Clock,
-  ArrowDownLeft,
-  ArrowUpRight,
   Loader2,
-  AlertCircle,
-  Eye,
   Archive,
   ChevronLeft,
   ChevronRight,
@@ -30,7 +26,6 @@ interface TaskListViewProps {
 
 export const TaskListView: React.FC<TaskListViewProps> = ({
   tasks,
-  _projectId,
   hasNextPage,
   hasPreviousPage,
   isFetchingNextPage,
@@ -58,14 +53,11 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
                 <PanelLeft size={20} />
               </button>
             )}
-            Navigation
+            Tasks
             <span className="text-[11px] font-black uppercase tracking-[0.2em] px-2 py-0.5 bg-focus-blue/20 text-focus-blue border border-focus-blue/30 rounded-full">
-              {tasks.length} Current
+              {tasks.length} Loaded
             </span>
           </h1>
-          <p className="text-text-dim text-sm font-medium">
-            Project: High-performance task orchestration.
-          </p>
         </div>
 
         <div className="flex items-center gap-3">
@@ -96,7 +88,7 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
             <Archive size={32} />
           </div>
           <p className="text-lg font-bold text-white mb-1">No tasks in this project</p>
-          <p className="text-sm text-text-dim">Your workspace is currently quiet. Try a different range.</p>
+          <p className="text-sm text-text-dim">Create your first task to get started.</p>
         </div>
       ) : (
         <div className="flex flex-col">
@@ -109,28 +101,15 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
   );
 };
 
-// ─── Task Card (Premium Revamp) ────────────────────────────────────────────────
+// ─── Task Card ──────────────────────────────────────────────────────────────
 
 const TaskListItem: React.FC<{ task: ProjectTask }> = ({ task }) => {
-  const incomingCount = task.directIncomingLinksCount ?? 0;
-  const outgoingCount = task.directOutgoingLinksCount ?? 0;
-  
-  // Aggregate label counts
-  const labelMap = new Map<string, number>();
-  [...(task.incomingLabelCounts || []), ...(task.outgoingLabelCounts || [])].forEach(lc => {
-    labelMap.set(lc.label, (labelMap.get(lc.label) || 0) + lc.count);
-  });
-  
-  const aggregatedLabels = Array.from(labelMap.entries())
-    .map(([label, count]) => ({ label, count }))
-    .sort((a, b) => b.count - a.count); // Show highest counts first
-  
-  const displayLabels = aggregatedLabels.slice(0, 3);
+  const projectId = task.project?.id;
 
   return (
     <Link
       to="/projects/$projectId/tasks/$taskId"
-      params={{ projectId: task.projectId, taskId: task.id } as any}
+      params={{ projectId: projectId || '', taskId: task.id } as any}
       className="group flex flex-col gap-6 p-7 mb-6 bg-white/[0.03] border border-white/5 rounded-2xl transition-all duration-300 hover:bg-white/[0.05] hover:border-focus-blue/30 hover:shadow-[0_20px_50px_rgba(0,0,0,0.3)] relative overflow-hidden"
     >
       {/* Selection Glow Effect */}
@@ -146,12 +125,14 @@ const TaskListItem: React.FC<{ task: ProjectTask }> = ({ task }) => {
         </div>
 
         {/* Body: Description */}
-        <p className="text-[14px] text-slate-400 leading-relaxed font-medium line-clamp-3">
-          {task.description || "No description provided for this task orchestration node."}
-        </p>
+        {task.description && (
+          <p className="text-[14px] text-slate-400 leading-relaxed font-medium line-clamp-3">
+            {task.description}
+          </p>
+        )}
       </div>
 
-      {/* Meta Bar: Tags, Team, Assignee, Priority */}
+      {/* Meta Bar: Team, Assignee, Priority */}
       <div className="flex flex-wrap items-center gap-3">
         <PriorityBadge priority={task.priority} />
 
@@ -162,58 +143,30 @@ const TaskListItem: React.FC<{ task: ProjectTask }> = ({ task }) => {
           </div>
         )}
 
-        {task.assignee && (
+        {task.assignedMember && (
           <div className="flex items-center gap-2 px-3 py-1 bg-white/5 border border-white/10 rounded-lg text-[11px] font-bold text-slate-300 shadow-sm">
             <span className="opacity-40 font-black">@</span>
-            {task.assignee.username}
-          </div>
-        )}
-
-        {displayLabels.length > 0 && (
-          <div className="flex items-center gap-1.5 ml-1">
-            {displayLabels.map(({ label, count }) => (
-              <span key={label} className="text-[10px] font-black uppercase tracking-wider text-focus-blue/80 bg-focus-blue/10 px-2 py-0.5 rounded border border-focus-blue/20">
-                {label} <span className="opacity-40 ml-0.5">({count})</span>
-              </span>
-            ))}
-            {aggregatedLabels.length > 3 && (
-              <span className="text-[10px] text-slate-500 font-bold ml-1">+{aggregatedLabels.length - 3}</span>
-            )}
+            {task.assignedMember.username}
           </div>
         )}
       </div>
 
-      {/* Footer: Links and Time */}
+      {/* Footer: Time */}
       <div className="pt-5 border-t border-white/[0.05] flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 group-hover:gap-3 transition-all">
-            {incomingCount > 0 && (
-              <div className="flex items-center gap-1.5 px-2 py-1 bg-incoming/10 text-incoming rounded-md border border-incoming/20">
-                <ArrowDownLeft size={12} strokeWidth={3} />
-                <span className="text-[10px] font-black">{incomingCount}</span>
-              </div>
-            )}
-            {outgoingCount > 0 && (
-              <div className="flex items-center gap-1.5 px-2 py-1 bg-outgoing/10 text-outgoing rounded-md border border-outgoing/20">
-                <ArrowUpRight size={12} strokeWidth={3} />
-                <span className="text-[10px] font-black">{outgoingCount}</span>
-              </div>
-            )}
-            {incomingCount === 0 && outgoingCount === 0 && (
-              <span className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">Isolated Node</span>
-            )}
-          </div>
+        <div className="flex items-center gap-2">
+          <span className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">
+            {task.status.replace('_', ' ')}
+          </span>
         </div>
-
         <div className="flex items-center gap-3">
-            <span className="text-[11px] font-bold text-slate-500 uppercase tracking-tighter tabular-nums opacity-60">
-              Update {new Date(task.updatedAt).toLocaleDateString(undefined, {
-                day: '2-digit',
-                month: 'short',
-                year: 'numeric'
-              })}
-            </span>
-            <div className="w-1.5 h-1.5 rounded-full bg-slate-700 group-hover:bg-focus-blue transition-all duration-300" />
+          <span className="text-[11px] font-bold text-slate-500 uppercase tracking-tighter tabular-nums opacity-60">
+            Updated {new Date(task.updatedAt).toLocaleDateString(undefined, {
+              day: '2-digit',
+              month: 'short',
+              year: 'numeric'
+            })}
+          </span>
+          <div className="w-1.5 h-1.5 rounded-full bg-slate-700 group-hover:bg-focus-blue transition-all duration-300" />
         </div>
       </div>
     </Link>
@@ -255,16 +208,6 @@ const StatusBadge: React.FC<{ status: string }> = ({ status }) => {
       label = "In Progress"; 
       classes = "bg-incoming/10 border-incoming/20 text-incoming"; 
       Icon = Clock; 
-      break;
-    case 'IN_REVIEW': 
-      label = "In Review"; 
-      classes = "bg-sky-400/10 border-sky-400/20 text-sky-400"; 
-      Icon = Eye; 
-      break;
-    case 'BLOCKED': 
-      label = "Blocked"; 
-      classes = "bg-red-500/10 border-red-500/20 text-red-500"; 
-      Icon = AlertCircle; 
       break;
   }
 

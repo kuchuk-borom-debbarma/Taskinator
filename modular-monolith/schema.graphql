@@ -1,14 +1,3 @@
-union RealtimeEvent = InternalNotification
-
-type Subscription {
-    """
-    A unified real-time stream for all events relevant to the authenticated user.
-    Automatically filters notifications by userId.
-    """
-    realtimeStream(projectId: String): RealtimeEvent!
-    _empty: String
-}
-
 type Query {
     _empty: String
     notifications(
@@ -38,6 +27,14 @@ type Query {
     Fetches multiple projects by ID. Returns only those the user is authorized to view.
     """
     projects(ids: [ID!]): [Project!]!
+    """
+    Fetches a single task by ID. Returns null if not found or not authorized.
+    """
+    task(id: ID!): Task
+    """
+    Fetches multiple tasks by ID. Returns only those the user is authorized to view.
+    """
+    tasks(ids: [ID!]!): [Task!]!
     """
     Fetches a single team by ID.
     """
@@ -69,14 +66,6 @@ type Query {
         """
         before: String
     ): TeamMemberConnection!
-    """
-    Fetches a single task by ID. Returns null if not found or not authorized.
-    """
-    task(id: ID!): Task
-    """
-    Fetches multiple tasks by ID. Returns only those the user is authorized to view.
-    """
-    tasks(ids: [ID!]!): [Task!]!
 }
 
 type Mutation {
@@ -84,13 +73,22 @@ type Mutation {
     markNotificationAsRead(id: ID!): Boolean
     markAllNotificationsAsRead: Boolean
     """
+    Signs in a user and returns a JWT token.
+    """
+    signIn(email: String!, password_raw: String!): SignInPayload!
+    """
     Creates a new project. Returns the created project.
     """
     createProject(name: String!, description: String): Project
     """
     Updates a project's name or description. Returns the updated project.
     """
-    updateProject(id: ID!, name: String, description: String): Project
+    updateProject(
+        id: ID!
+        version: Int!
+        name: String
+        description: String
+    ): Project
     """
     Permanently deletes one or more projects.
     """
@@ -109,6 +107,7 @@ type Mutation {
         projectId: ID!
         memberIds: [ID!]!
     ): RemoveProjectMembersPayload!
+    task: TaskMutation!
     """
     Creates a new team within a project.
     """
@@ -133,7 +132,24 @@ type Mutation {
         teamId: ID!
         userIds: [ID!]!
     ): RemoveTeamMembersPayload!
-    task: TaskMutation!
+    """
+    Updates a team's details with optimistic locking.
+    """
+    updateTeam(
+        projectId: ID!
+        teamId: ID!
+        name: String!
+        version: Int!
+    ): UpdateTeamPayload!
+}
+
+type Subscription {
+    _empty: String
+    """
+    A unified real-time stream for all events relevant to the authenticated user.
+    Automatically filters notifications by userId.
+    """
+    realtimeStream(projectId: String): RealtimeEvent!
 }
 
 """
@@ -180,6 +196,8 @@ type NotificationConnection {
     pageInfo: PageInfo!
 }
 
+union RealtimeEvent = InternalNotification
+
 """
 An authenticated user of the application.
 """
@@ -193,9 +211,22 @@ type User {
     """
     username: String!
     """
+    The user's email address.
+    """
+    email: String!
+    """
+    The number of projects the user is a member of.
+    """
+    projectsCount: Int!
+    """
     All projects the user is a member of.
     """
-    projects: ProjectConnection!
+    projects(
+        first: Int
+        after: String
+        last: Int
+        before: String
+    ): ProjectConnection!
 }
 
 """
@@ -209,6 +240,13 @@ type UserConnection {
 type UserEdge {
     node: User!
     cursor: String!
+}
+
+"""
+Payload for the signIn mutation.
+"""
+type SignInPayload {
+    token: String
 }
 
 """
@@ -260,37 +298,10 @@ type Project {
     ISO 8601 last-updated timestamp.
     """
     updatedAt: String
-    """
-    Optimistic-concurrency version counter.
-    Incremented on every write. Use to detect stale updates.
-    """
     version: Int!
-    """
-    ID of the most recent event applied to this project.
-    Useful for event-sourcing consumers.
-    """
-    lastEventId: ID
-    """
-    Paginated list of teams within this project.
-    """
-    teams(
-        """
-        Forward pagination — return the first N teams.
-        """
-        first: Int
-        """
-        Forward pagination — return teams after this cursor.
-        """
-        after: String
-        """
-        Backward pagination — return the last N teams.
-        """
-        last: Int
-        """
-        Backward pagination — return members before this cursor.
-        """
-        before: String
-    ): TeamConnection!
+    projectMembersCount: Int!
+    tasksCount: Int!
+    teamsCount: Int!
     """
     Paginated list of all tasks in this project.
     Optionally filtered by team or assigned member.
@@ -336,6 +347,27 @@ type Project {
         """
         before: String
     ): TaskConnection!
+    """
+    Paginated list of teams within this project.
+    """
+    teams(
+        """
+        Forward pagination — return the first N teams.
+        """
+        first: Int
+        """
+        Forward pagination — return teams after this cursor.
+        """
+        after: String
+        """
+        Backward pagination — return the last N teams.
+        """
+        last: Int
+        """
+        Backward pagination — return members before this cursor.
+        """
+        before: String
+    ): TeamConnection!
 }
 
 """
@@ -397,22 +429,10 @@ type ProjectMemberEdge {
 
 type AddProjectMembersPayload {
     success: Boolean!
-    """
-    The updated project after members were added.
-    """
-    project: Project
 }
 
 type RemoveProjectMembersPayload {
     success: Boolean!
-    """
-    Number of members successfully removed.
-    """
-    removedCount: Int!
-    """
-    The updated project after members were removed.
-    """
-    project: Project
 }
 
 type DeleteProjectsPayload {
@@ -421,177 +441,6 @@ type DeleteProjectsPayload {
     Number of projects successfully deleted.
     """
     deletedCount: Int!
-}
-
-"""
-A group of users collaborating within a project.
-"""
-type Team {
-    """
-    Unique identifier for the team.
-    """
-    id: ID!
-    """
-    Display name of the team.
-    """
-    name: String!
-    """
-    Project this team belongs to.
-    """
-    project: Project
-    """
-    Paginated list of members belonging to this team.
-    """
-    members(
-        """
-        Forward pagination — return the first N members.
-        """
-        first: Int
-        """
-        Forward pagination — return members after this cursor.
-        """
-        after: String
-        """
-        Backward pagination — return the last N members.
-        """
-        last: Int
-        """
-        Backward pagination — return members before this cursor.
-        """
-        before: String
-    ): TeamMemberConnection!
-    """
-    Paginated list of tasks assigned to this team.
-    """
-    tasks(
-        """
-        Forward pagination — return the first N tasks.
-        """
-        first: Int
-        """
-        Forward pagination — return tasks after this cursor.
-        """
-        after: String
-        """
-        Backward pagination — return the last N tasks.
-        """
-        last: Int
-        """
-        Backward pagination — return tasks before this cursor.
-        """
-        before: String
-    ): TaskConnection!
-    """
-    User who created this team.
-    """
-    createdBy: User!
-    """
-    ISO 8601 creation timestamp.
-    """
-    createdAt: String!
-    """
-    ISO 8601 last-updated timestamp.
-    """
-    updatedAt: String
-    """
-    Optimistic-concurrency version counter.
-    Incremented on every write. Use to detect stale updates.
-    """
-    version: Int!
-    """
-    ID of the most recent event applied to this team.
-    Useful for event-sourcing consumers.
-    """
-    lastEventId: ID
-}
-
-"""
-A membership record joining a user to a team.
-"""
-type TeamMember {
-    """
-    Unique identifier for this membership record.
-    """
-    id: ID!
-    """
-    The user who is a member of the team.
-    """
-    user: User
-    """
-    The team this membership belongs to.
-    """
-    team: Team
-    """
-    ISO 8601 timestamp of when the user joined the team.
-    """
-    createdAt: String!
-    """
-    Optimistic-concurrency version counter.
-    Incremented on every write. Use to detect stale updates.
-    """
-    version: Int!
-}
-
-"""
-Relay-style paginated list of teams.
-"""
-type TeamConnection {
-    edges: [TeamEdge!]!
-    pageInfo: PageInfo!
-}
-
-type TeamEdge {
-    node: Team!
-    cursor: String!
-}
-
-"""
-Relay-style paginated list of team members.
-"""
-type TeamMemberConnection {
-    edges: [TeamMemberEdge!]!
-    pageInfo: PageInfo!
-}
-
-type TeamMemberEdge {
-    node: TeamMember!
-    cursor: String!
-}
-
-type CreateTeamPayload {
-    success: Boolean!
-    """
-    The newly created team.
-    """
-    team: Team
-}
-
-type DeleteTeamsPayload {
-    success: Boolean!
-    """
-    Number of teams successfully deleted.
-    """
-    deletedCount: Int!
-    """
-    The project the teams belonged to.
-    """
-    project: Project
-}
-
-type AddTeamMembersPayload {
-    success: Boolean!
-    """
-    The updated team after members were added.
-    """
-    team: Team
-}
-
-type RemoveTeamMembersPayload {
-    success: Boolean!
-    """
-    The updated team after members were removed.
-    """
-    team: Team
 }
 
 input CreateTaskInput {
@@ -611,17 +460,17 @@ input CreateTaskInput {
     Initial lifecycle status. Defaults to server-defined value if omitted.
     """
     status: String
-    """
-    Team to assign this task to.
-    """
-    teamId: ID
-    """
-    Member to assign this task to.
-    """
-    memberId: ID
 }
 
 input UpdateTaskInput {
+    """
+    Project the task belongs to.
+    """
+    projectId: ID!
+    """
+    Optimistic lock version.
+    """
+    version: Int!
     """
     Updated title. Omit to leave unchanged.
     """
@@ -634,6 +483,14 @@ input UpdateTaskInput {
     Updated status. Omit to leave unchanged.
     """
     status: String
+    """
+    Team to assign this task to.
+    """
+    teamId: ID
+    """
+    Member to assign this task to.
+    """
+    memberId: ID
 }
 
 input CreateTaskLinkInput {
@@ -655,6 +512,29 @@ input CreateTaskLinkInput {
     label: String!
 }
 
+input UpdateTaskLinkInput {
+    """
+    Project both tasks belong to.
+    """
+    projectId: ID!
+    """
+    The link to update.
+    """
+    linkId: ID!
+    """
+    The originating task (dependency source).
+    """
+    sourceTaskId: ID
+    """
+    The destination task (dependency target).
+    """
+    targetTaskId: ID
+    """
+    Semantic label for the relationship.
+    """
+    label: String
+}
+
 """
 Namespaced task mutations.
 """
@@ -670,7 +550,7 @@ type TaskMutation {
     """
     Permanently deletes a task. Returns the ID of the deleted task.
     """
-    delete(taskId: ID!): ID!
+    delete(projectId: ID!, taskId: ID!): ID!
     """
     Creates a directed, labelled link between two tasks.
     """
@@ -678,7 +558,11 @@ type TaskMutation {
     """
     Removes a task link by ID. Returns the ID of the deleted link.
     """
-    deleteLink(linkId: ID!): ID!
+    deleteLink(projectId: ID!, linkId: ID!): ID!
+    """
+    Updates a task link (label, source, or target).
+    """
+    updateLink(input: UpdateTaskLinkInput!): TaskLink!
 }
 
 """
@@ -753,16 +637,7 @@ type Task {
         """
         before: String
     ): TaskLinkConnection!
-    """
-    Optimistic-concurrency version counter.
-    Incremented on every write. Use to detect stale updates.
-    """
     version: Int!
-    """
-    ID of the most recent event applied to this task.
-    Useful for event-sourcing consumers.
-    """
-    lastEventId: ID
     """
     User who created this task.
     """
@@ -873,6 +748,180 @@ Aggregated count of a link label across a set of tasks. Useful for summarising d
 type TaskLabelCount {
     label: String!
     count: Int!
+}
+
+"""
+A group of users collaborating within a project.
+"""
+type Team {
+    """
+    Unique identifier for the team.
+    """
+    id: ID!
+    """
+    Display name of the team.
+    """
+    name: String!
+    """
+    Project this team belongs to.
+    """
+    project: Project
+    """
+    Paginated list of members belonging to this team.
+    """
+    members(
+        """
+        Forward pagination — return the first N members.
+        """
+        first: Int
+        """
+        Forward pagination — return members after this cursor.
+        """
+        after: String
+        """
+        Backward pagination — return the last N members.
+        """
+        last: Int
+        """
+        Backward pagination — return members before this cursor.
+        """
+        before: String
+    ): TeamMemberConnection!
+    """
+    Paginated list of tasks assigned to this team.
+    """
+    tasks(
+        """
+        Forward pagination — return the first N tasks.
+        """
+        first: Int
+        """
+        Forward pagination — return tasks after this cursor.
+        """
+        after: String
+        """
+        Backward pagination — return the last N tasks.
+        """
+        last: Int
+        """
+        Backward pagination — return tasks before this cursor.
+        """
+        before: String
+    ): TaskConnection!
+    """
+    User who created this team.
+    """
+    createdBy: User!
+    """
+    ISO 8601 creation timestamp.
+    """
+    createdAt: String!
+    """
+    ISO 8601 last-updated timestamp.
+    """
+    updatedAt: String
+    version: Int!
+    """
+    Number of members in the team.
+    """
+    membersCount: Int!
+    """
+    Number of tasks assigned to the team.
+    """
+    tasksCount: Int!
+}
+
+"""
+A membership record joining a user to a team.
+"""
+type TeamMember {
+    """
+    Unique identifier for this membership record.
+    """
+    id: ID!
+    """
+    The user who is a member of the team.
+    """
+    user: User
+    """
+    The team this membership belongs to.
+    """
+    team: Team
+    """
+    ISO 8601 timestamp of when the user joined the team.
+    """
+    createdAt: String!
+    """
+    Optimistic-concurrency version counter.
+    Incremented on every write. Use to detect stale updates.
+    """
+    version: Int!
+}
+
+"""
+Relay-style paginated list of teams.
+"""
+type TeamConnection {
+    edges: [TeamEdge!]!
+    pageInfo: PageInfo!
+}
+
+type TeamEdge {
+    node: Team!
+    cursor: String!
+}
+
+"""
+Relay-style paginated list of team members.
+"""
+type TeamMemberConnection {
+    edges: [TeamMemberEdge!]!
+    pageInfo: PageInfo!
+}
+
+type TeamMemberEdge {
+    node: TeamMember!
+    cursor: String!
+}
+
+type CreateTeamPayload {
+    success: Boolean!
+    """
+    The newly created team.
+    """
+    team: Team
+}
+
+type DeleteTeamsPayload {
+    success: Boolean!
+    """
+    Number of teams successfully deleted.
+    """
+    deletedCount: Int!
+}
+
+type AddTeamMembersPayload {
+    success: Boolean!
+    """
+    Number of members successfully added.
+    """
+    addedCount: Int!
+}
+
+type RemoveTeamMembersPayload {
+    success: Boolean!
+    """
+    Number of members successfully removed.
+    """
+    removedCount: Int!
+}
+
+type UpdateTeamPayload {
+    success: Boolean!
+    """
+    The updated team.
+    """
+    team: Team
 }
 
 schema {

@@ -1,10 +1,8 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useApi } from '../../hooks/useApi';
-import { TaskMap } from '../Graph/TaskMap';
-import { TaskMapModal } from '../Graph/TaskMapModal';
-import { ChevronLeft, Calendar, Map as MapIcon, Layers, Users, User, Clock, CheckCircle2, Type, Copy, Circle, Edit3, Check, X, PanelLeft } from 'lucide-react';
 import { TaskLinkColumn } from './TaskLinkColumn';
+import { ChevronLeft, Calendar, Layers, Users, User, Clock, CheckCircle2, Copy, Circle, Edit3, Check, X, PanelLeft } from 'lucide-react';
 import { useLayout } from '../../context/LayoutContext';
 
 interface TaskDetailViewProps {
@@ -15,286 +13,110 @@ interface TaskDetailViewProps {
 const STATUS_OPTIONS = ['TODO', 'IN_PROGRESS', 'DONE'] as const;
 
 const getStatusInfo = (s: string) => {
-  const statuses: Record<string, { label: string; color: string; icon: React.ReactNode }> = {
-    'TODO':        { label: 'To Do',       color: '#94a3b8', icon: <Circle size={13} className="text-todo" /> },
-    'IN_PROGRESS': { label: 'In Progress', color: 'var(--color-focus-blue)', icon: <Clock size={13} className="text-focus-blue" /> },
-    'DONE':        { label: 'Done',        color: 'var(--color-done)', icon: <CheckCircle2 size={13} className="text-done" /> },
+  const statuses: Record<string, { label: string; icon: React.ReactNode }> = {
+    'TODO':        { label: 'To Do',       icon: <Circle size={13} className="text-todo" /> },
+    'IN_PROGRESS': { label: 'In Progress', icon: <Clock size={13} className="text-focus-blue" /> },
+    'DONE':        { label: 'Done',        icon: <CheckCircle2 size={13} className="text-done" /> },
   };
-  return statuses[s] || { label: s, color: '#888', icon: null };
+  return statuses[s] || { label: s, icon: null };
 };
 
 export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose }) => {
   const { taskApi } = useApi();
-  const queryClient = useQueryClient();
+  const qc = useQueryClient();
   const { isSidebarCollapsed, toggleSidebar } = useLayout();
-  const [isMapOpen, setIsMapOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [editingStatus, setEditingStatus] = useState(false);
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState('');
 
-  const { data: task, isLoading: isTaskLoading } = useQuery({
+  const { data: task, isLoading } = useQuery({
     queryKey: ['task', taskId],
     queryFn: () => taskApi.getTask(taskId),
   });
 
-  const updateMutation = useMutation({
-    mutationFn: (updates: { status?: string; title?: string; description?: string }) =>
-      taskApi.updateTask(taskId, updates as any),
-    onSuccess: (updated) => {
-      queryClient.setQueryData(['task', taskId], updated);
-      queryClient.invalidateQueries({ queryKey: ['tasks'] });
-      setEditingStatus(false);
-      setEditingTitle(false);
+  const updateMut = useMutation({
+    mutationFn: (u: { status?: string; title?: string }) => {
+      if (!task) throw new Error('Task not loaded');
+      return taskApi.updateTask(taskId, { projectId: task.project?.id || '', version: task.version, ...u });
     },
+    onSuccess: (d) => { qc.setQueryData(['task', taskId], d); qc.invalidateQueries({ queryKey: ['tasks'] }); setEditingStatus(false); setEditingTitle(false); },
   });
 
-  if (isTaskLoading || !task) {
-    return (
-      <div className="p-20 text-text-dim text-center animate-pulse font-medium tracking-tight h-screen flex items-center justify-center bg-bg-notion">
-        Loading task properties...
-      </div>
-    );
-  }
+  if (isLoading || !task) return <div className="p-20 text-text-dim text-center animate-pulse h-screen flex items-center justify-center bg-bg-notion">Loading...</div>;
 
-  const statusInfo = getStatusInfo(task.status);
-
-  const handleCopyId = () => {
-    navigator.clipboard.writeText(task.id);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
-  const handleStatusChange = (newStatus: string) => {
-    updateMutation.mutate({ status: newStatus });
-  };
-
-  const handleTitleSave = () => {
-    if (titleDraft.trim() && titleDraft !== task.title) {
-      updateMutation.mutate({ title: titleDraft.trim() });
-    } else {
-      setEditingTitle(false);
-    }
-  };
+  const si = getStatusInfo(task.status);
 
   return (
-    <div className="w-full min-h-screen bg-bg-notion flex flex-col items-center overflow-x-hidden selection:bg-focus-blue/10 selection:text-focus-blue">
+    <div className="w-full min-h-screen bg-bg-notion flex flex-col items-center overflow-x-hidden">
       <div className="w-full max-w-4xl px-8 py-12 flex flex-col gap-12">
-        
-        {/* Breadcrumbs */}
         <nav className="flex items-center gap-2">
-          {isSidebarCollapsed && (
-            <button 
-              onClick={toggleSidebar}
-              className="p-1.5 mr-2 rounded-lg bg-bg-secondary border border-border-notion text-text-dim hover:text-text-notion hover:bg-bg-secondary transition-all active:scale-95"
-              title="Expand Sidebar"
-            >
-              <PanelLeft size={16} />
-            </button>
-          )}
-          <button 
-            onClick={onClose} 
-            className="flex items-center gap-1.5 text-text-dim text-[13px] font-semibold py-1 px-2 rounded-md -ml-2 hover:bg-bg-secondary hover:text-text-notion transition-colors"
-          >
-            <ChevronLeft size={16} />
-            Back
-          </button>
-          <div className="w-px h-3 bg-border-notion mx-1" />
-          <span className="text-[13px] font-medium text-text-dim opacity-60">Task Detail</span>
+          {isSidebarCollapsed && <button onClick={toggleSidebar} className="p-1.5 mr-2 rounded-lg bg-bg-secondary border border-border-notion text-text-dim hover:text-text-notion transition-all active:scale-95"><PanelLeft size={16} /></button>}
+          <button onClick={onClose} className="flex items-center gap-1.5 text-text-dim text-[13px] font-semibold py-1 px-2 rounded-md -ml-2 hover:bg-bg-secondary hover:text-text-notion transition-colors"><ChevronLeft size={16} />Back</button>
+          <div className="w-px h-3 bg-border-notion mx-1" /><span className="text-[13px] font-medium text-text-dim opacity-60">Task Detail</span>
         </nav>
 
-        {/* Primary Header */}
         <header className="flex flex-col gap-4">
           <div className="flex items-center gap-2">
-            <div className="px-2 py-0.5 rounded border border-border-notion text-[9px] font-bold uppercase tracking-tighter text-text-dim w-fit opacity-50">
-              {task.id}
-            </div>
-            <button 
-              onClick={handleCopyId}
-              className={`p-1 rounded hover:bg-bg-secondary transition-all ${copied ? 'text-done scale-110' : 'text-text-dim opacity-30 hover:opacity-100'}`}
-              title="Copy ID"
-            >
-              {copied ? <CheckCircle2 size={12} /> : <Copy size={12} />}
-            </button>
+            <div className="px-2 py-0.5 rounded border border-border-notion text-[9px] font-bold uppercase tracking-tighter text-text-dim w-fit opacity-50">{task.id}</div>
+            <button onClick={() => { navigator.clipboard.writeText(task.id); setCopied(true); setTimeout(() => setCopied(false), 2000); }} className={`p-1 rounded hover:bg-bg-secondary transition-all ${copied ? 'text-done' : 'text-text-dim opacity-30 hover:opacity-100'}`}>{copied ? <CheckCircle2 size={12} /> : <Copy size={12} />}</button>
           </div>
-
-          {/* Editable Title */}
           {editingTitle ? (
             <div className="flex items-start gap-3">
-              <textarea
-                autoFocus
-                className="flex-1 text-[38px] font-bold tracking-tight text-text-notion leading-tight bg-bg-secondary border border-focus-blue/40 rounded-xl px-4 py-3 resize-none focus:outline-none focus:border-focus-blue"
-                value={titleDraft}
-                onChange={e => setTitleDraft(e.target.value)}
-                rows={2}
-                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleTitleSave(); } if (e.key === 'Escape') setEditingTitle(false); }}
-              />
+              <textarea autoFocus className="flex-1 text-[38px] font-bold tracking-tight text-text-notion leading-tight bg-bg-secondary border border-focus-blue/40 rounded-xl px-4 py-3 resize-none focus:outline-none" value={titleDraft} onChange={e => setTitleDraft(e.target.value)} rows={2} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (titleDraft.trim() && titleDraft !== task.title) updateMut.mutate({ title: titleDraft.trim() }); else setEditingTitle(false); } if (e.key === 'Escape') setEditingTitle(false); }} />
               <div className="flex flex-col gap-1.5 mt-2">
-                <button onClick={handleTitleSave} className="p-2 rounded-lg bg-focus-blue text-white hover:bg-focus-blue/90 transition-colors shadow-sm"><Check size={14} /></button>
-                <button onClick={() => setEditingTitle(false)} className="p-2 rounded-lg bg-bg-secondary border border-border-notion text-text-dim hover:text-text-notion transition-colors"><X size={14} /></button>
+                <button onClick={() => { if (titleDraft.trim() && titleDraft !== task.title) updateMut.mutate({ title: titleDraft.trim() }); else setEditingTitle(false); }} className="p-2 rounded-lg bg-focus-blue text-white"><Check size={14} /></button>
+                <button onClick={() => setEditingTitle(false)} className="p-2 rounded-lg bg-bg-secondary border border-border-notion text-text-dim"><X size={14} /></button>
               </div>
             </div>
           ) : (
             <div className="group relative flex items-start gap-3">
-              <h1 className="text-[42px] font-bold tracking-tight text-text-notion leading-tight flex-1">
-                {task.title}
-              </h1>
-              <button
-                onClick={() => { setTitleDraft(task.title); setEditingTitle(true); }}
-                className="mt-3 p-2 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-bg-secondary text-text-dim transition-all"
-                title="Edit title"
-              >
-                <Edit3 size={15} />
-              </button>
+              <h1 className="text-[42px] font-bold tracking-tight text-text-notion leading-tight flex-1">{task.title}</h1>
+              <button onClick={() => { setTitleDraft(task.title); setEditingTitle(true); }} className="mt-3 p-2 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-bg-secondary text-text-dim transition-all"><Edit3 size={15} /></button>
             </div>
           )}
         </header>
 
-        {/* ─── PROPERTIES DASHBOARD ─── */}
         <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-y-6 gap-x-12 p-8 border border-border-notion rounded-2xl bg-white shadow-sm">
-          
-          {/* Status — Editable */}
           <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-2 text-text-dim opacity-50">
-              <Layers size={14} />
-              <span className="text-[11px] font-bold uppercase tracking-wider">Status</span>
-            </div>
+            <div className="flex items-center gap-2 text-text-dim opacity-50"><Layers size={14} /><span className="text-[11px] font-bold uppercase tracking-wider">Status</span></div>
             {editingStatus ? (
               <div className="flex flex-col gap-1.5">
-                {STATUS_OPTIONS.map(s => {
-                  const info = getStatusInfo(s);
-                  return (
-                    <button
-                      key={s}
-                      onClick={() => handleStatusChange(s)}
-                      disabled={updateMutation.isPending}
-                      className={`flex items-center gap-2 px-3 py-2 rounded-lg text-[13px] font-semibold border transition-all ${task.status === s ? 'border-focus-blue bg-focus-blue/5 text-focus-blue' : 'border-border-notion hover:border-text-dim text-text-notion'}`}
-                    >
-                      {info.icon}
-                      {info.label}
-                    </button>
-                  );
-                })}
-                <button onClick={() => setEditingStatus(false)} className="text-[11px] text-text-dim hover:text-text-notion transition-colors mt-1">Cancel</button>
+                {STATUS_OPTIONS.map(s => { const info = getStatusInfo(s); return (<button key={s} onClick={() => updateMut.mutate({ status: s })} disabled={updateMut.isPending} className={`flex items-center gap-2 px-3 py-2 rounded-lg text-[13px] font-semibold border transition-all ${task.status === s ? 'border-focus-blue bg-focus-blue/5 text-focus-blue' : 'border-border-notion hover:border-text-dim text-text-notion'}`}>{info.icon}{info.label}</button>); })}
+                <button onClick={() => setEditingStatus(false)} className="text-[11px] text-text-dim mt-1">Cancel</button>
               </div>
             ) : (
-              <button
-                onClick={() => setEditingStatus(true)}
-                className="flex items-center gap-2 text-[15px] font-semibold text-text-notion hover:text-focus-blue transition-colors group"
-              >
-                {statusInfo.icon}
-                <span>{statusInfo.label}</span>
-                <Edit3 size={11} className="opacity-0 group-hover:opacity-40 transition-opacity ml-1" />
-              </button>
+              <button onClick={() => setEditingStatus(true)} className="flex items-center gap-2 text-[15px] font-semibold text-text-notion hover:text-focus-blue transition-colors group">{si.icon}<span>{si.label}</span><Edit3 size={11} className="opacity-0 group-hover:opacity-40 ml-1" /></button>
             )}
           </div>
-
-          <PropertyBlock 
-            icon={<Users size={14} />} 
-            label="Assigned Team" 
-            value={task.team?.name || 'Unassigned'} 
-            isDimmed={!task.team}
-          />
-          <PropertyBlock 
-            icon={<User size={14} />} 
-            label="Assignee" 
-            value={task.assignee?.username || 'Unassigned'} 
-            isDimmed={!task.assignee}
-          />
-          <PropertyBlock 
-            icon={<Calendar size={14} />} 
-            label="Created" 
-            value={new Date(task.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })} 
-          />
-          <PropertyBlock 
-            icon={<Clock size={14} />} 
-            label="Updated" 
-            value={new Date(task.updatedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })} 
-          />
-
-          {/* Semantic Tags Section */}
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-2 text-text-dim opacity-50">
-              <MapIcon size={14} />
-              <span className="text-[11px] font-bold uppercase tracking-wider">Semantic Tags</span>
-            </div>
-            <div className="flex flex-wrap gap-1.5">
-              {(() => {
-                const labelMap = new Map<string, number>();
-                [...(task.incomingLabelCounts || []), ...(task.outgoingLabelCounts || [])].forEach(lc => {
-                  labelMap.set(lc.label, (labelMap.get(lc.label) || 0) + lc.count);
-                });
-                const labels = Array.from(labelMap.entries());
-                if (labels.length === 0) return <span className="text-[13px] font-medium text-text-dim opacity-40 italic">No connections</span>;
-                return labels.map(([label, count]) => (
-                  <span key={label} className="text-[10px] font-black uppercase tracking-wider text-focus-blue bg-focus-blue/10 px-2 py-0.5 rounded border border-focus-blue/20">
-                    {label} <span className="opacity-40 ml-0.5">({count})</span>
-                  </span>
-                ));
-              })()}
-            </div>
-          </div>
+          <PB icon={<Users size={14} />} label="Team" value={task.team?.name || 'Unassigned'} dim={!task.team} />
+          <PB icon={<User size={14} />} label="Assignee" value={task.assignedMember?.username || 'Unassigned'} dim={!task.assignedMember} />
+          <PB icon={<Calendar size={14} />} label="Created" value={new Date(task.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })} />
+          <PB icon={<Clock size={14} />} label="Updated" value={new Date(task.updatedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })} />
+          {task.createdBy && <PB icon={<User size={14} />} label="Created By" value={task.createdBy.username} />}
         </section>
 
-        {/* ─── SUPPORTING CONTENT ─── */}
         <div className="flex flex-col gap-16">
-          
-          {/* Description Section */}
           <section className="flex flex-col gap-6">
-            <div className="flex items-center gap-2 text-[11px] font-bold text-text-dim uppercase tracking-[0.2em] opacity-40">
-              <Type size={14} /> Description
-            </div>
-            <p className="text-[17px] leading-relaxed text-text-notion/90 whitespace-pre-wrap max-w-2xl">
-              {task.description || "No description provided."}
-            </p>
-            </section>
-
-          {/* ─── TASK GRAPH CONNECTIONS ─── */}
+            <div className="text-[11px] font-bold text-text-dim uppercase tracking-[0.2em] opacity-40">Description</div>
+            {task.description ? <p className="text-[17px] leading-relaxed text-text-notion/90 whitespace-pre-wrap max-w-2xl">{task.description}</p> : <p className="text-[15px] text-text-dim italic opacity-40">No description provided.</p>}
+          </section>
           <section className="flex flex-col gap-10">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-[11px] font-bold text-text-dim uppercase tracking-[0.2em] opacity-40">
-                Lattice Connectivity
-              </div>
-              <button 
-                onClick={() => setIsMapOpen(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-bg-secondary hover:bg-focus-blue/10 border border-border-notion hover:border-focus-blue/40 rounded-xl text-[12px] font-bold text-text-notion transition-all group"
-              >
-                <MapIcon size={14} className="group-hover:text-focus-blue" />
-                Open Global Map
-              </button>
-            </div>
-
+            <div className="text-[11px] font-bold text-text-dim uppercase tracking-[0.2em] opacity-40">Dependencies</div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 bg-white border border-border-notion rounded-3xl p-8 shadow-sm">
               <TaskLinkColumn taskId={taskId} direction="incoming" title="Incoming Dependencies" />
               <TaskLinkColumn taskId={taskId} direction="outgoing" title="Outgoing Impacts" />
             </div>
           </section>
         </div>
-
-        <TaskMapModal 
-          isOpen={isMapOpen} 
-          onClose={() => setIsMapOpen(false)} 
-          title={task.title}
-        >
-          <TaskMap projectId={task.projectId} taskId={taskId} />
-        </TaskMapModal>
-
-        <footer className="w-full flex justify-between items-center opacity-30 mt-20">
-          <div className="text-[10px] font-bold uppercase tracking-widest text-text-dim">Taskinator</div>
-        </footer>
       </div>
     </div>
   );
 };
 
-const PropertyBlock: React.FC<{ icon: React.ReactNode; label: string; value: React.ReactNode; isDimmed?: boolean }> = ({ icon, label, value, isDimmed }) => (
+const PB: React.FC<{ icon: React.ReactNode; label: string; value: React.ReactNode; dim?: boolean }> = ({ icon, label, value, dim }) => (
   <div className="flex flex-col gap-2">
-    <div className="flex items-center gap-2 text-text-dim opacity-50">
-      {icon}
-      <span className="text-[11px] font-bold uppercase tracking-wider">{label}</span>
-    </div>
-    <div className={`text-[15px] font-semibold ${isDimmed ? 'text-text-dim font-medium opacity-40' : 'text-text-notion'}`}>
-      {value}
-    </div>
+    <div className="flex items-center gap-2 text-text-dim opacity-50">{icon}<span className="text-[11px] font-bold uppercase tracking-wider">{label}</span></div>
+    <div className={`text-[15px] font-semibold ${dim ? 'text-text-dim font-medium opacity-40' : 'text-text-notion'}`}>{value}</div>
   </div>
 );

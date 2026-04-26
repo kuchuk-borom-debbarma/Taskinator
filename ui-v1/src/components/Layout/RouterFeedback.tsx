@@ -1,10 +1,8 @@
 import React from 'react';
-import { useNavigate, Link } from '@tanstack/react-router';
+import { Link } from '@tanstack/react-router';
 import { Home, AlertTriangle, ArrowLeft, RefreshCw, Construction } from 'lucide-react';
 
 export const NotFoundComponent: React.FC = () => {
-  const navigate = useNavigate();
-
   return (
     <div className="h-screen w-full flex flex-col items-center justify-center bg-bg-notion p-8 text-center animate-in fade-in duration-500">
       <div className="w-20 h-20 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-500 mb-8 shadow-sm border border-amber-100">

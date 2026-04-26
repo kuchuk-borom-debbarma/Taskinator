@@ -1,13 +1,13 @@
 import { useParams } from '@tanstack/react-router';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { useApi } from '../../hooks/useApi';
-import { Users, Plus, Loader2, Mail, ExternalLink, ShieldCheck } from 'lucide-react';
+import type { ProjectMember } from '../../api/types';
+import { Users, Loader2, ShieldCheck } from 'lucide-react';
 
 export default function ProjectMembersView() {
   const { projectId } = useParams({ from: '/authenticated-layout/projects/$projectId/members' });
   const { projectApi } = useApi();
 
-  // Paginated member list
   const {
     data: membersData,
     fetchNextPage,
@@ -27,19 +27,15 @@ export default function ProjectMembersView() {
     <div className="p-8 max-w-7xl mx-auto animate-in fade-in slide-in-from-bottom-2 duration-500">
       <div className="flex items-center justify-between mb-10">
         <div>
-          <h1 className="text-3xl font-black tracking-tight text-white mb-2">Authorized Agents</h1>
-          <p className="text-slate-400 text-sm">Members with direct reachability into the project graph.</p>
+          <h1 className="text-3xl font-black tracking-tight text-white mb-2">Project Members</h1>
+          <p className="text-slate-400 text-sm">Members with access to this project.</p>
         </div>
-        <button className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-white/5 text-white font-bold text-sm hover:bg-white/10 transition-all border border-white/10 active:scale-95">
-          <Plus size={18} />
-          Invite Agent
-        </button>
       </div>
 
       {isLoading ? (
         <div className="flex flex-col items-center justify-center py-20 text-slate-500 gap-4">
           <Loader2 className="animate-spin" size={32} />
-          <span className="text-sm font-medium">Synchronizing permissions...</span>
+          <span className="text-sm font-medium">Loading members...</span>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -53,14 +49,14 @@ export default function ProjectMembersView() {
               disabled={isFetchingNextPage}
               className="col-span-full py-4 text-[11px] font-black uppercase tracking-widest text-blue-400 hover:text-white transition-all bg-white/[0.02] rounded-2xl border border-dashed border-white/10 hover:bg-white/5 active:scale-[0.99]"
             >
-              {isFetchingNextPage ? 'Retrieving records...' : 'Fetch More Agents'}
+              {isFetchingNextPage ? 'Loading more...' : 'Load More Members'}
             </button>
           )}
 
           {members.length === 0 && (
             <div className="col-span-full py-20 bg-white/[0.02] border border-dashed border-white/10 rounded-[32px] flex flex-col items-center justify-center text-slate-500 italic">
               <Users size={48} className="opacity-10 mb-4" />
-              <p>No external agents registered for this project node.</p>
+              <p>No members found in this project.</p>
             </div>
           )}
         </div>
@@ -69,41 +65,29 @@ export default function ProjectMembersView() {
   );
 }
 
-function MemberCard({ member }: { member: any }) {
-  // member.user context usually contains username and email via ProjectMember resolver
-  const user = member.user || { username: 'Unknown', email: 'N/A' };
+function MemberCard({ member }: { member: ProjectMember }) {
+  const user = member.user;
+  const username = user?.username || 'Unknown';
   
   return (
     <div className="glass-panel p-6 border border-white/5 bg-white/[0.02] rounded-[32px] hover:border-white/10 transition-all group">
       <div className="flex items-start gap-4 mb-6">
         <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 border border-white/10 flex items-center justify-center text-white font-black text-lg group-hover:scale-110 transition-transform">
-          {user.username.slice(0, 1).toUpperCase()}
+          {username.slice(0, 1).toUpperCase()}
         </div>
         <div className="flex flex-col">
           <h3 className="text-base font-black text-white group-hover:text-blue-400 transition-colors">
-            {user.username}
+            {username}
           </h3>
           <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 uppercase tracking-tighter">
             <ShieldCheck size={12} className="text-emerald-500" />
-            Active Participant
+            Active Member
           </div>
         </div>
       </div>
 
-      <div className="flex flex-col gap-3 mb-6">
-        <div className="flex items-center gap-2 p-2 rounded-xl bg-white/5 border border-white/5 text-[11px] font-medium text-slate-400">
-          <Mail size={12} />
-          {user.email}
-        </div>
-      </div>
-
-      <div className="flex gap-2">
-        <button className="flex-1 py-2.5 rounded-xl bg-white/5 text-white/60 hover:bg-white/10 hover:text-white transition-all font-bold text-[10px] uppercase tracking-wider">
-          Profile
-        </button>
-        <button className="p-2.5 rounded-xl bg-white/5 text-white/20 hover:text-red-400 hover:bg-red-400/10 transition-all">
-          <ExternalLink size={16} />
-        </button>
+      <div className="text-[10px] text-slate-600 font-medium">
+        Joined {new Date(member.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Outlet, Link, useParams, useLocation } from '@tanstack/react-router';
-import { Layout, Users, Kanban, BarChart3, Settings } from 'lucide-react';
+import { Layout, Users, Kanban } from 'lucide-react';
 
 export const ProjectLayout: React.FC = () => {
   const { projectId } = useParams({ from: '/authenticated-layout/projects/$projectId' });
@@ -19,8 +19,6 @@ export const ProjectLayout: React.FC = () => {
       <div className="flex items-center px-6 py-2 border-b border-white/5 bg-white/5 backdrop-blur-md">
         <div className="flex gap-1">
           {navItems.map((item) => {
-            const isActive = location.pathname === item.to || (item.label === 'Dashboard' && location.pathname === `/projects/${projectId}`);
-            // Special handling for Dashboard to not highlight if we are in a sub-page
             const reallyActive = item.label === 'Dashboard' 
               ? location.pathname === `/projects/${projectId}` || location.pathname === `/projects/${projectId}/`
               : location.pathname.startsWith(item.to);

@@ -1,13 +1,12 @@
-import type { Project } from '../types';
+import type { Project, ProjectMember } from '../types';
 
 export interface ProjectAPI {
-  getProjects(first?: number, after?: string): Promise<{ projects: Project[], hasNextPage: boolean, endCursor: string | null }>;
+  getProjects(first?: number, after?: string): Promise<{ projects: Project[], hasNextPage: boolean, endCursor: string | null, totalCount?: number }>;
   getProject(id: string): Promise<Project | null>;
   createProject(name: string, description?: string): Promise<Project>;
+  updateProject(id: string, version: number, name?: string, description?: string): Promise<Project>;
   deleteProjects(projectIds: string[]): Promise<{ success: boolean; deletedCount: number }>;
   addProjectMembers(projectId: string, userIds: string[]): Promise<{ success: boolean }>;
-  removeProjectMembers(projectId: string, memberIds: string[]): Promise<{ success: boolean; removedCount: number }>;
-  getProjectStats(projectId: string): Promise<{ teamCount: number; taskCount: number }>;
-  getWorkspaceStats(): Promise<{ projectCount: number; teamCount: number; assignedTaskCount: number }>;
-  getProjectMembers(projectId: string, first?: number, after?: string): Promise<{ members: any[], hasNextPage: boolean, endCursor: string | null }>;
+  removeProjectMembers(projectId: string, memberIds: string[]): Promise<{ success: boolean }>;
+  getProjectMembers(projectId: string, first?: number, after?: string): Promise<{ members: ProjectMember[], hasNextPage: boolean, endCursor: string | null }>;
 }

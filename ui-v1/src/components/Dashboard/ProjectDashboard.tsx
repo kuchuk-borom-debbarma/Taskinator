@@ -1,13 +1,10 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
-import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery } from '@tanstack/react-query';
 import { useApi } from '../../hooks/useApi';
 import { useAuth } from '../../context/AuthContext';
 import { CreateProjectModal } from '../Layout/Sidebar';
 import { 
-  Folder, 
-  Zap, 
-  Users, 
   Plus, 
   Loader2,
   ArrowRight,
@@ -22,12 +19,6 @@ export function ProjectDashboard() {
   const { projectApi } = useApi();
   const { isSidebarCollapsed, toggleSidebar } = useLayout();
   const [showCreate, setShowCreate] = useState(false);
-
-  // ─── Workspace Stats ───────────────────────────────────────────────────────
-  const { data: workspaceStats } = useQuery({
-    queryKey: ['workspace-stats'],
-    queryFn: () => projectApi.getWorkspaceStats(),
-  });
 
   // ─── Project List ──────────────────────────────────────────────────────────
   const {
@@ -64,32 +55,6 @@ export function ProjectDashboard() {
         <h1 className="text-4xl font-black tracking-tight text-text-notion">
           Welcome, <span className="text-focus-blue">{user?.username || 'Architect'}</span>
         </h1>
-        <p className="text-text-dim text-sm font-medium opacity-60">System online. All workspace nodes and relational maps are active.</p>
-      </div>
-
-      {/* Analytical Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-        <StatCard 
-          label="Active Projects" 
-          value={workspaceStats?.projectCount || 0} 
-          icon={<Folder size={18} />} 
-          color="blue"
-          sublabel="Primary initiatives"
-        />
-        <StatCard 
-          label="Assigned Tasks" 
-          value={workspaceStats?.assignedTaskCount || 0} 
-          icon={<Zap size={18} />} 
-          color="amber"
-          sublabel="Pending DAG nodes"
-        />
-        <StatCard 
-          label="Collaboration" 
-          value={workspaceStats?.teamCount || 0} 
-          icon={<Users size={18} />} 
-          color="emerald"
-          sublabel="Sync clusters"
-        />
       </div>
 
       {/* Project Selection Section */}
@@ -131,7 +96,7 @@ export function ProjectDashboard() {
                   </div>
                   <div className="flex items-center gap-4">
                     <div className="text-[10px] font-black text-text-dim/20 uppercase tracking-widest hidden sm:block">
-                      Version {project.version}
+                      v{project.version}
                     </div>
                     <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-text-dim opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0">
                       <ArrowRight size={14} />
@@ -161,36 +126,6 @@ export function ProjectDashboard() {
       </div>
 
       {showCreate && <CreateProjectModal onClose={() => setShowCreate(false)} />}
-    </div>
-  );
-}
-
-function StatCard({ label, value, icon, sublabel, color }: { label: string, value: number, icon: React.ReactNode, sublabel: string, color: string }) {
-  const colors: Record<string, string> = {
-    blue: 'text-focus-blue bg-focus-blue/10',
-    amber: 'text-amber-400 bg-amber-400/10',
-    emerald: 'text-emerald-400 bg-emerald-400/10',
-  };
-
-  return (
-    <div className="glass-card p-6 rounded-[28px] border border-white/10 bg-gradient-to-br from-white/5 to-transparent hover:border-white/20 transition-all group overflow-hidden relative shadow-premium">
-      <div className={`absolute -right-4 -top-4 w-24 h-24 rounded-full blur-[40px] opacity-10 group-hover:opacity-20 transition-opacity ${colors[color].split(' ')[1]}`} />
-      
-      <div className="flex flex-col gap-4">
-        <div className="flex items-center gap-4">
-          <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${colors[color]}`}>
-            {icon}
-          </div>
-          <div className="flex flex-col">
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-text-dim opacity-50">{label}</span>
-            <span className="text-[10px] font-bold text-text-dim/30">{sublabel}</span>
-          </div>
-        </div>
-        <div className="flex items-baseline gap-2">
-          <span className="text-4xl font-black text-text-notion tracking-tighter tabular-nums">{value}</span>
-          <span className="text-xs font-bold text-incoming tracking-tight">+{(value % 5) + 1}</span>
-        </div>
-      </div>
     </div>
   );
 }

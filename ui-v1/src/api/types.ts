@@ -1,98 +1,74 @@
 export type TaskStatus = 'TODO' | 'IN_PROGRESS' | 'DONE';
 
+export interface User {
+  id: string;
+  username: string;
+}
+
 export interface Project {
   id: string;
   name: string;
   description?: string;
+  creator?: User;
+  createdAt: string;
+  updatedAt?: string;
+  version: number;
+  lastEventId?: string;
+}
+
+export interface ProjectMember {
+  id: string;
+  user?: User;
   createdAt: string;
   version: number;
-  
-  // Dashboard fields
-  teamCount?: number;
-  taskCount?: number;
-  memberCount?: number;
-  taskLabelCounts?: { label: string; count: number }[];
-
-  // Connections
-  myTeams?: Team[];
-  myTasks?: ProjectTask[];
 }
 
 export interface ProjectTask {
   id: string;
-  projectId: string;
-  teamId?: string;
-  memberId?: string;
   title: string;
   description: string;
   status: TaskStatus;
   priority: number;
-  createdById: string;
   dueDate?: string;
+  project?: Project;
+  team?: Team;
+  assignedMember?: User;
+  createdBy?: User;
+  updatedBy?: User;
   version: number;
+  lastEventId?: string;
   createdAt: string;
   updatedAt: string;
-  totalIncomingLinksCount: number;
-  totalOutgoingLinksCount: number;
-  directIncomingLinksCount: number;
-  directOutgoingLinksCount: number;
-  incomingLabelCounts: { label: string; count: number }[];
-  outgoingLabelCounts: { label: string; count: number }[];
-  team?: Team;
-  assignee?: Member;
 }
 
 export interface TaskLink {
   id: string;
-  projectId: string;
-  sourceTaskId: string;
-  targetTaskId: string;
+  source: ProjectTask;
+  target: ProjectTask;
   label: string;
+  createdBy?: User;
   createdAt: string;
+  updatedBy?: User;
+  updatedAt?: string;
 }
 
 export type NeighbourDirection = 'incoming' | 'outgoing' | 'both';
 
-export interface NeighbourhoodNode {
-  task: ProjectTask;
-  depth: number;
-  direction: NeighbourDirection;
-}
-
-export interface TaskStoryNode {
-  taskId: string;
-  title: string;
-  label: string;
-}
-
-export interface TaskStory {
-  id: string; // Unique path identifier
-  depth: number;
-  direction: 'incoming' | 'outgoing';
-  path: TaskStoryNode[]; // The discovery chain [Focus -> Link A -> Task A]
-  finalTask: ProjectTask;
-}
-
-export interface TaskNeighbourhood {
-  focusedTask: ProjectTask;
-  nodes: NeighbourhoodNode[];
-  edges: TaskLink[];
-  incomingStories: TaskStory[];
-  outgoingStories: TaskStory[];
-  hasNextPage: boolean;
-  endCursor?: string;
-}
-
 export interface Team {
   id: string;
   name: string;
-  projectId: string;
-  memberCount?: number;
-  taskCount?: number;
+  project?: Project;
+  createdBy?: User;
+  createdAt?: string;
+  updatedAt?: string;
+  version?: number;
+  lastEventId?: string;
 }
 
-export interface Member {
+export interface TeamMember {
   id: string;
-  username: string;
-  email: string;
+  user?: User;
+  team?: Team;
+  createdAt: string;
+  version: number;
 }

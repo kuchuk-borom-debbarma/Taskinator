@@ -1,44 +1,57 @@
 import type { TaskAPI } from '../../interfaces/TaskAPI';
-import type { ProjectTask, TaskLink, TaskNeighbourhood } from '../../types';
-import { graphql } from '../../../gql';
-import { print } from 'graphql';
-import type { 
-  GetProjectTasksQuery, 
-  GetTaskQuery, 
-  GetNeighbourhoodQuery,
-  CreateTaskMutation,
-  UpdateTaskMutation,
-  CreateLinkMutation 
-} from '../../../gql/graphql';
+import type { ProjectTask, TaskLink, NeighbourDirection } from '../../types';
 import { AuthenticationError } from '../../errors';
 
 const GRAPHQL_URL = 'http://localhost:3000/graphql';
 
+const gql = String.raw;
+
+const TASK_FIELDS = `
+  id
+  title
+  description
+  status
+  priority
+  dueDate
+  version
+  lastEventId
+  createdAt
+  updatedAt
+  project { id name }
+  team { id name }
+  assignedMember { id username }
+  createdBy { id username }
+  updatedBy { id username }
+`;
+
+const TASK_LINK_FIELDS = `
+  id
+  label
+  createdAt
+  updatedAt
+  source {
+    id title status priority
+    team { id name }
+    assignedMember { id username }
+  }
+  target {
+    id title status priority
+    team { id name }
+    assignedMember { id username }
+  }
+  createdBy { id username }
+`;
+
 export class GraphQLTaskAPI implements TaskAPI {
   private token: string | null;
   private onUnauthorized?: () => void;
-  private static queryCache = new Map<any, string>();
 
   constructor(token: string | null, options?: { onUnauthorized?: () => void }) {
     this.token = token;
     this.onUnauthorized = options?.onUnauthorized;
   }
 
-  private async query<T>(query: any, variables: any = {}): Promise<T> {
-    let queryStr: string;
-    
-    if (typeof query === 'string') {
-      queryStr = query;
-    } else {
-      // Use cache for DocumentNode to avoid redundant print() overhead
-      if (GraphQLTaskAPI.queryCache.has(query)) {
-        queryStr = GraphQLTaskAPI.queryCache.get(query)!;
-      } else {
-        queryStr = print(query);
-        GraphQLTaskAPI.queryCache.set(query, queryStr);
-      }
-    }
-
+  private async query<T>(queryStr: string, variables: any = {}): Promise<T> {
     const operationMatch = queryStr.match(/(query|mutation)\s+(\w+)/);
     const opName = operationMatch?.[2] || 'Anonymous';
     const start = performance.now();
@@ -49,7 +62,7 @@ export class GraphQLTaskAPI implements TaskAPI {
         'Content-Type': 'application/json',
         ...(this.token ? { 'Authorization': `Bearer ${this.token}` } : {}),
       },
-      body: JSON.stringify({ query: queryStr, variables }),
+      body: JSON.stringify({ query: queryStr, variables, operationName: opName }),
     });
 
     const result = await response.json();
@@ -64,7 +77,6 @@ export class GraphQLTaskAPI implements TaskAPI {
       );
       console.error('Errors:', result.errors);
       console.log('Variables:', variables);
-      console.log('Query:', queryStr);
       console.groupEnd();
 
       const firstError = result.errors[0];
@@ -75,271 +87,163 @@ export class GraphQLTaskAPI implements TaskAPI {
       throw new Error(firstError.message);
     }
 
-    console.groupCollapsed(
-      `%c[GQL SUCCESS] %c${opName} %c(${duration}ms)`,
-      'color: #10b981; font-size: 10px;',
-      'color: #3b82f6; font-weight: bold;',
-      'color: #94a3b8; font-weight: normal;'
-    );
-    console.log('Data:', result.data);
-    console.log('Variables:', variables);
-    console.groupEnd();
-
     return result.data as T;
   }
 
-  private mapTask(t: any): ProjectTask {
-    if (!t) return t;
-    return {
-      ...t,
-      createdById: t.createdBy,
-      incomingLinksCount: t.totalIncomingLinksCount,
-      outgoingLinksCount: t.totalOutgoingLinksCount,
-      incomingLabelCounts: t.incomingLabelCounts,
-      outgoingLabelCounts: t.outgoingLabelCounts,
-      team: t.team ? { id: t.team.id, name: t.team.name, projectId: t.projectId } : undefined,
-      assignee: t.assignee ? { id: t.assignee.id, username: t.assignee.username, email: '' } : undefined,
-    } as unknown as ProjectTask;
-  }
-
   async getTasks(
-    projectId: string, 
+    projectId: string,
     params: {
       teamId?: string,
       memberId?: string,
-      first?: number, 
-      after?: string, 
-      last?: number, 
+      first?: number,
+      after?: string,
+      last?: number,
       before?: string
     } = {}
   ): Promise<{ tasks: ProjectTask[], hasNextPage: boolean, hasPreviousPage: boolean, endCursor: string | null, startCursor: string | null }> {
     const { teamId, memberId, first, after, last, before } = params;
-    const data = await this.query<GetProjectTasksQuery>(graphql(`
-      query GetProjectTasks($projectId: ID!, $teamId: ID, $memberId: String, $first: Int, $after: String, $last: Int, $before: String) {
-        projectTasks(projectId: $projectId, teamId: $teamId, memberId: $memberId, first: $first, after: $after, last: $last, before: $before) {
-          edges {
-            node {
-              id projectId teamId memberId title description status priority dueDate version createdAt updatedAt createdBy
-      totalIncomingLinksCount totalOutgoingLinksCount directIncomingLinksCount directOutgoingLinksCount 
-      incomingLabelCounts { label count } 
-      outgoingLabelCounts { label count }
-              team { id name }
-              assignee { id username }
+    const data = await this.query<any>(gql`
+      query GetProjectTasks($projectId: ID!, $teamId: ID, $memberId: ID, $first: Int, $after: String, $last: Int, $before: String) {
+        project(id: $projectId) {
+          projectTasks(teamId: $teamId, memberId: $memberId, first: $first, after: $after, last: $last, before: $before) {
+            edges {
+              node {
+                ${TASK_FIELDS}
+              }
             }
-          }
-          pageInfo {
-            hasNextPage
-            hasPreviousPage
-            startCursor
-            endCursor
+            pageInfo {
+              hasNextPage
+              hasPreviousPage
+              startCursor
+              endCursor
+            }
           }
         }
       }
-    `), { projectId, teamId, memberId, first, after, last, before });
-    
-    return {
-      tasks: data.projectTasks.edges.map(e => this.mapTask(e.node)),
-      hasNextPage: data.projectTasks.pageInfo.hasNextPage || false,
-      hasPreviousPage: data.projectTasks.pageInfo.hasPreviousPage || false,
-      endCursor: data.projectTasks.pageInfo.endCursor || null,
-      startCursor: data.projectTasks.pageInfo.startCursor || null
-    };
-  }
+    `, { projectId, teamId, memberId, first, after, last, before });
 
-  async getProjectLinks(projectId: string, first?: number, after?: string): Promise<{ links: TaskLink[], hasNextPage: boolean, endCursor: string | null }> {
-    const data = await this.query<{ projectTaskLinks: { edges: { node: TaskLink }[], pageInfo: { hasNextPage: boolean, endCursor: string | null } } }>(
-      `query GetProjectTaskLinks($projectId: ID!, $first: Int, $after: String) {
-        projectTaskLinks(projectId: $projectId, first: $first, after: $after) {
-          edges {
-            node {
-              id projectId sourceTaskId targetTaskId label createdAt
-            }
-          }
-          pageInfo {
-            hasNextPage
-            endCursor
-          }
-        }
-      }`,
-      { projectId, first, after }
-    );
+    const conn = data.project?.projectTasks;
+    if (!conn) return { tasks: [], hasNextPage: false, hasPreviousPage: false, endCursor: null, startCursor: null };
+
     return {
-      links: data.projectTaskLinks.edges.map(e => e.node),
-      hasNextPage: data.projectTaskLinks.pageInfo.hasNextPage,
-      endCursor: data.projectTaskLinks.pageInfo.endCursor
+      tasks: conn.edges.map((e: any) => e.node),
+      hasNextPage: conn.pageInfo.hasNextPage || false,
+      hasPreviousPage: conn.pageInfo.hasPreviousPage || false,
+      endCursor: conn.pageInfo.endCursor || null,
+      startCursor: conn.pageInfo.startCursor || null,
     };
   }
 
   async getTask(id: string): Promise<ProjectTask | null> {
-    const data = await this.query<GetTaskQuery>(graphql(`
+    const data = await this.query<any>(gql`
       query GetTask($id: ID!) {
         task(id: $id) {
-          id projectId teamId memberId title description status priority dueDate version createdAt updatedAt createdBy
-      totalIncomingLinksCount totalOutgoingLinksCount directIncomingLinksCount directOutgoingLinksCount 
-      incomingLabelCounts { label count } 
-      outgoingLabelCounts { label count }
-          team { id name }
-          assignee { id username }
+          ${TASK_FIELDS}
         }
       }
-    `), { id });
-    return data.task ? this.mapTask(data.task) : null;
+    `, { id });
+    return data.task || null;
   }
 
-  async getTaskNeighbourhood(projectId: string, taskId: string, maxDepth?: number, limit?: number, after?: string): Promise<TaskNeighbourhood> {
-    const data = await this.query<GetNeighbourhoodQuery>(graphql(`
-      query GetNeighbourhood($projectId: ID!, $taskId: ID!, $maxDepth: Int, $first: Int, $after: String) {
-        taskNeighbourhood(projectId: $projectId, taskId: $taskId, maxDepth: $maxDepth, first: $first, after: $after) {
-          focusedTask {
-            id projectId teamId memberId title description status priority dueDate version createdAt updatedAt createdBy
-            totalIncomingLinksCount totalOutgoingLinksCount directIncomingLinksCount directOutgoingLinksCount 
-      incomingLabelCounts { label count } 
-      outgoingLabelCounts { label count }
-            team { id name }
-            assignee { id username }
-          }
-          nodes {
-            edges {
-              node {
-                task {
-                  id projectId teamId memberId title description status priority dueDate version createdAt updatedAt createdBy
-                  totalIncomingLinksCount totalOutgoingLinksCount directIncomingLinksCount directOutgoingLinksCount 
-      incomingLabelCounts { label count } 
-      outgoingLabelCounts { label count }
-                  team { id name }
-                  assignee { id username }
-                }
-                depth
-                direction
-              }
-            }
-          }
-          edges {
-            edges {
-              node {
-                id projectId sourceTaskId targetTaskId label createdAt
-              }
-            }
-          }
-          pageInfo {
-            hasNextPage
-            endCursor
+  async createTask(input: { projectId: string; title: string; description?: string; status?: string; teamId?: string; memberId?: string }): Promise<ProjectTask> {
+    const data = await this.query<any>(gql`
+      mutation CreateTask($input: CreateTaskInput!) {
+        task {
+          create(input: $input) {
+            ${TASK_FIELDS}
           }
         }
       }
-    `), { projectId, taskId, maxDepth, first: limit, after });
-
-    const n = data.taskNeighbourhood;
-    if (!n) {
-      throw new Error("Task Neighbourhood not found or unauthorized");
-    }
-
-    return {
-      focusedTask: this.mapTask(n.focusedTask),
-      nodes: (n.nodes?.edges || []).map((e: any) => ({
-        ...e.node,
-        task: this.mapTask(e.node.task)
-      })),
-      edges: (n.edges?.edges || []).map((e: any) => e.node),
-      incomingStories: [],
-      outgoingStories: [],
-      hasNextPage: n.pageInfo?.hasNextPage || false,
-      endCursor: n.pageInfo?.endCursor || undefined
-    };
+    `, { input });
+    return data.task.create;
   }
 
-  async createTask(projectId: string, title: string, description?: string): Promise<ProjectTask> {
-    const data = await this.query<CreateTaskMutation>(graphql(`
-      mutation CreateTask($projectId: ID!, $title: String!, $description: String) {
-        createTask(projectId: $projectId, title: $title, description: $description) {
-          id projectId teamId memberId title description status priority dueDate version createdAt updatedAt createdBy
-      totalIncomingLinksCount totalOutgoingLinksCount directIncomingLinksCount directOutgoingLinksCount 
-      incomingLabelCounts { label count } 
-      outgoingLabelCounts { label count }
-          team { id name }
-          assignee { id username }
+  async updateTask(taskId: string, input: { projectId: string; version: number; title?: string; description?: string; status?: string; teamId?: string; memberId?: string }): Promise<ProjectTask> {
+    const data = await this.query<any>(gql`
+      mutation UpdateTask($taskId: ID!, $input: UpdateTaskInput!) {
+        task {
+          update(taskId: $taskId, input: $input) {
+            ${TASK_FIELDS}
+          }
         }
       }
-    `), { projectId, title, description });
-    return this.mapTask(data.createTask);
+    `, { taskId, input });
+    return data.task.update;
   }
 
-  async updateTask(taskId: string, updates: Partial<ProjectTask>): Promise<ProjectTask> {
-    const data = await this.query<UpdateTaskMutation>(graphql(`
-      mutation UpdateTask($taskId: ID!, $title: String, $description: String, $status: String) {
-        updateTask(taskId: $taskId, title: $title, description: $description, status: $status) {
-          id projectId teamId memberId title description status priority dueDate version createdAt updatedAt createdBy
-      totalIncomingLinksCount totalOutgoingLinksCount directIncomingLinksCount directOutgoingLinksCount 
-      incomingLabelCounts { label count } 
-      outgoingLabelCounts { label count }
-          team { id name }
-          assignee { id username }
+  async deleteTask(projectId: string, taskId: string): Promise<string> {
+    const data = await this.query<any>(gql`
+      mutation DeleteTask($projectId: ID!, $taskId: ID!) {
+        task {
+          delete(projectId: $projectId, taskId: $taskId)
         }
       }
-    `), { taskId, ...updates });
-    return this.mapTask(data.updateTask);
+    `, { projectId, taskId });
+    return data.task.delete;
   }
 
-  async createTaskLink(projectId: string, sourceId: string, targetId: string, label: string): Promise<TaskLink> {
-    const data = await this.query<CreateLinkMutation>(graphql(`
-      mutation CreateLink($projectId: ID!, $sourceId: ID!, $targetId: ID!, $label: String!) {
-        createTaskLink(projectId: $projectId, sourceTaskId: $sourceId, targetTaskId: $targetId, label: $label) {
-          id projectId sourceTaskId targetTaskId label createdAt
+  async createTaskLink(input: { projectId: string; sourceTaskId: string; targetTaskId: string; label: string }): Promise<TaskLink> {
+    const data = await this.query<any>(gql`
+      mutation CreateTaskLink($input: CreateTaskLinkInput!) {
+        task {
+          createLink(input: $input) {
+            ${TASK_LINK_FIELDS}
+          }
         }
       }
-    `), { projectId, sourceId, targetId, label });
-    return data.createTaskLink;
+    `, { input });
+    return data.task.createLink;
   }
 
-  async getTaskIncomingLinks(taskId: string, first?: number, after?: string, last?: number, before?: string): Promise<{ links: TaskLink[], hasNextPage: boolean, hasPreviousPage: boolean, endCursor: string | null, startCursor: string | null }> {
-    const data = await this.query<any>(`
-      query GetTaskIncomingLinks($taskId: ID!, $first: Int, $after: String, $last: Int, $before: String) {
+  async deleteTaskLink(projectId: string, linkId: string): Promise<string> {
+    const data = await this.query<any>(gql`
+      mutation DeleteTaskLink($projectId: ID!, $linkId: ID!) {
+        task {
+          deleteLink(projectId: $projectId, linkId: $linkId)
+        }
+      }
+    `, { projectId, linkId });
+    return data.task.deleteLink;
+  }
+
+  async getTaskNeighbourLinks(
+    taskId: string,
+    direction: NeighbourDirection = 'both',
+    depthLimit: number = 1,
+    first?: number,
+    after?: string,
+    last?: number,
+    before?: string
+  ): Promise<{ links: TaskLink[], hasNextPage: boolean, hasPreviousPage: boolean, endCursor: string | null, startCursor: string | null }> {
+    const data = await this.query<any>(gql`
+      query GetTaskNeighbourLinks($taskId: ID!, $direction: NeighbourDirection, $depthLimit: Int, $first: Int, $after: String, $last: Int, $before: String) {
         task(id: $taskId) {
-          incomingLinks(first: $first, after: $after, last: $last, before: $before) {
+          neighbourLinks(direction: $direction, depthLimit: $depthLimit, first: $first, after: $after, last: $last, before: $before) {
             edges {
               node {
-                id projectId sourceTaskId targetTaskId label createdAt
-                sourceTask { id title status }
+                ${TASK_LINK_FIELDS}
               }
             }
-            pageInfo { hasNextPage hasPreviousPage endCursor startCursor }
+            pageInfo {
+              hasNextPage
+              hasPreviousPage
+              startCursor
+              endCursor
+            }
           }
         }
       }
-    `, { taskId, first, after, last, before });
-    const conn = data.task.incomingLinks;
-    return {
-      links: conn.edges.map((e: any) => e.node),
-      hasNextPage: conn.pageInfo.hasNextPage,
-      hasPreviousPage: conn.pageInfo.hasPreviousPage,
-      endCursor: conn.pageInfo.endCursor,
-      startCursor: conn.pageInfo.startCursor
-    };
-  }
+    `, { taskId, direction, depthLimit, first, after, last, before });
 
-  async getTaskOutgoingLinks(taskId: string, first?: number, after?: string, last?: number, before?: string): Promise<{ links: TaskLink[], hasNextPage: boolean, hasPreviousPage: boolean, endCursor: string | null, startCursor: string | null }> {
-    const data = await this.query<any>(`
-      query GetTaskOutgoingLinks($taskId: ID!, $first: Int, $after: String, $last: Int, $before: String) {
-        task(id: $taskId) {
-          outgoingLinks(first: $first, after: $after, last: $last, before: $before) {
-            edges {
-              node {
-                id projectId sourceTaskId targetTaskId label createdAt
-                targetTask { id title status }
-              }
-            }
-            pageInfo { hasNextPage hasPreviousPage endCursor startCursor }
-          }
-        }
-      }
-    `, { taskId, first, after, last, before });
-    const conn = data.task.outgoingLinks;
+    const conn = data.task?.neighbourLinks;
+    if (!conn) return { links: [], hasNextPage: false, hasPreviousPage: false, endCursor: null, startCursor: null };
+
     return {
       links: conn.edges.map((e: any) => e.node),
       hasNextPage: conn.pageInfo.hasNextPage || false,
       hasPreviousPage: conn.pageInfo.hasPreviousPage || false,
       endCursor: conn.pageInfo.endCursor || null,
-      startCursor: conn.pageInfo.startCursor || null
+      startCursor: conn.pageInfo.startCursor || null,
     };
   }
 }

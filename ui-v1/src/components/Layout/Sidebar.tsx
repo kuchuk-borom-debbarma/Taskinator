@@ -38,7 +38,6 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ onClose 
     onSuccess: (project) => {
       queryClient.invalidateQueries({ queryKey: ['sidebar-projects'] });
       queryClient.invalidateQueries({ queryKey: ['workspace-projects-list'] });
-      queryClient.invalidateQueries({ queryKey: ['workspace-stats'] });
       onClose();
       navigate({ to: '/projects/$projectId', params: { projectId: project.id } });
     },
@@ -294,7 +293,7 @@ export const Sidebar: React.FC = () => {
                     {user?.username || 'Administrator'}
                   </p>
                   <p className="text-[10px] font-medium text-white/20 truncate tracking-wide">
-                    {user?.email || ''}
+                    Workspace Member
                   </p>
                 </div>
                 <Settings size={14} className="text-white/10 group-hover:text-white/40 cursor-pointer transition-colors" />

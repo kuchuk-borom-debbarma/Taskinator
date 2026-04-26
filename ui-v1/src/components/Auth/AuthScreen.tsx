@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { LogIn, UserPlus, Sparkles, AlertCircle, Loader2, ArrowRight, Command, Mail, ShieldCheck, Check } from 'lucide-react';
+import { Sparkles, AlertCircle, Loader2, ArrowRight, Command, Mail, ShieldCheck, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const API_BASE = 'http://localhost:3000/auth';

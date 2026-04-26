@@ -3,7 +3,6 @@ import React, { createContext, useContext, useEffect, useState, useMemo } from '
 interface AuthUser {
   id: string;
   username: string;
-  email: string;
 }
 
 export interface AuthContextType {
@@ -34,7 +33,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           'Authorization': `Bearer ${authToken}`,
         },
         body: JSON.stringify({
-          query: `query GetMe { me { id username email } }`,
+          query: `query GetMe { me { id username } }`,
         }),
       });
 
