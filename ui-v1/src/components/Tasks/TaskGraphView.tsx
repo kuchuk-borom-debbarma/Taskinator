@@ -41,9 +41,9 @@ export const TaskGraphView: React.FC = () => {
       return taskApi.getTaskGraphPage(
         focusedTaskId!,
         {
-          first: isBackward ? undefined : 50,
+          first: isBackward ? undefined : 10,
           after: isBackward ? undefined : cursorParam?.cursor,
-          last: isBackward ? 50 : undefined,
+          last: isBackward ? 10 : undefined,
           before: isBackward ? cursorParam?.cursor : undefined,
         }
       );
