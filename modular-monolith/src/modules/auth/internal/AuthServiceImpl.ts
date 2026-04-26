@@ -32,20 +32,20 @@ export class AuthServiceImpl implements AuthService {
         const uid = uuidv4();
 
         await sql`
-            WITH inserted_pending AS (
-                INSERT INTO pending_users (id, email, username, password_hash)
-                VALUES (${uid}::uuid, ${data.email}, ${data.username}, ${password_hash})
+            WITH inserted_user AS (
+                INSERT INTO users (id, email, username, password_hash)
+                VALUES (${uid}::uuid, ${data.email}::text, ${data.username}::text, ${password_hash}::text)
                 RETURNING *
             )
             INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
-            SELECT ${KAFKA_TOPICS.AUTH},
+            SELECT ${KAFKA_TOPICS.AUTH}::text,
                    ${uid}::text,
                    jsonb_build_object(
-                       'type', ${KAFKA_EVENTS.AUTH.SIGNUP_STARTED},
+                       'type', ${KAFKA_EVENTS.AUTH.USER_CREATED}::text,
                        'email', email,
                        'uid', id
                    )
-            FROM inserted_pending
+            FROM inserted_user
         `.execute(db);
 
         logger.info(`Inserted pending user with email ${data.email}`);

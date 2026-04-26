@@ -1,186 +1,212 @@
-import { useParams, Link } from '@tanstack/react-router';
-import { useQuery } from '@tanstack/react-query';
+import { Link, useParams } from '@tanstack/react-router';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { ArrowRight, BriefcaseBusiness, LayoutGrid, Orbit, Users } from 'lucide-react';
 import { useApi } from '../../hooks/useApi';
-import { 
-  BarChart3, 
-  Users, 
-  Kanban, 
-  Layers, 
-  ArrowRight,
-  Network
-} from 'lucide-react';
+import type { Project } from '../../api/types';
+import { EmptyState, LoadingPane, PageHeader, PriorityBadge, StatCard, StatusBadge, SurfaceCard, SurfaceCardStrong, formatDate } from '../shared/workspace';
+
+const getCachedProject = (queryClient: ReturnType<typeof useQueryClient>, projectId: string) => {
+  const direct = queryClient.getQueryData<Project>(['project', projectId]);
+  if (direct) return direct;
+
+  const projectLists = [
+    ...queryClient.getQueriesData<{ projects: Project[] }>({ queryKey: ['workspace-projects-list'] }),
+    ...queryClient.getQueriesData<{ projects: Project[] }>({ queryKey: ['sidebar-projects'] }),
+  ];
+
+  for (const [, page] of projectLists) {
+    const match = page?.projects?.find((entry) => entry.id === projectId);
+    if (match) return match;
+  }
+
+  return undefined;
+};
 
 export default function ProjectDashboardView() {
-  const { projectId } = useParams({ strict: false }) as any;
-  console.log('[ProjectDashboardView] Rendering for ID:', projectId);
-  const { projectApi, taskApi } = useApi();
+  const { projectId } = useParams({ strict: false }) as { projectId?: string };
+  const { projectApi } = useApi();
+  const queryClient = useQueryClient();
 
-  // Fetch Core Project Stats
-  const { data: project, isLoading, error } = useQuery({
+  const { data, isLoading, isError, error } = useQuery({
     queryKey: ['project-dashboard', projectId],
-    queryFn: () => projectApi.getProject(projectId),
+    queryFn: () => projectApi.getProjectDashboardData(projectId!),
+    enabled: !!projectId,
+    staleTime: 1000 * 60 * 3,
+    placeholderData: () => {
+      if (!projectId) return undefined;
+      const project = getCachedProject(queryClient, projectId);
+      return project ? { project, teams: [], tasks: [], members: [] } : undefined;
+    },
   });
 
-  console.log('[ProjectDashboardView] Query result:', { project, isLoading, error: error?.message });
+  const project = data?.project;
+  const tasks = data?.tasks ?? [];
+  const teams = data?.teams ?? [];
+  const members = data?.members ?? [];
+  const resolvedProjectId = projectId ?? project?.id;
+  const doneCount = tasks.filter((task) => task.status === 'DONE').length;
+  const inProgressCount = tasks.filter((task) => task.status === 'IN_PROGRESS').length;
 
-  // Fetch My Personal Context (could be optimized into one GraphQL query later)
-  // For now we'll simulate or use what we updated in ProjectAPI if ready.
-  // Actually, I'll use the counts from 'project' which we updated to include stats.
-
-  if (isLoading || !project) {
+  if (isLoading) {
     return (
-      <div className="flex-1 flex items-center justify-center">
-        <div className="animate-pulse flex flex-col items-center gap-4">
-          <div className="w-12 h-12 rounded-full bg-white/5" />
-          <div className="h-4 w-32 bg-white/5 rounded" />
-        </div>
+      <div className="page-frame">
+        <LoadingPane title="Loading project workspace" message="Pulling task, team, and member summaries." />
       </div>
     );
   }
 
-  const stats = [
-    { label: 'Calculated Teams', value: project.teamCount || 0, icon: Layers, color: 'blue', sub: 'Active teams' },
-    { label: 'Network Tasks', value: project.taskCount || 0, icon: Kanban, color: 'purple', sub: 'Active DAG nodes' },
-    { label: 'Collaborators', value: project.memberCount || 0, icon: Users, color: 'emerald', sub: 'Authorized agents' },
-  ];
+  if (isError || !project) {
+    return (
+      <div className="page-frame">
+        <EmptyState
+          icon={BriefcaseBusiness}
+          title="Project unavailable"
+          description={(error as Error | undefined)?.message || 'We could not load this project right now.'}
+        />
+      </div>
+    );
+  }
 
   return (
-    <div className="p-8 max-w-7xl mx-auto animate-in fade-in slide-in-from-bottom-2 duration-500">
-      {/* Project Header */}
-      <div className="mb-10">
-        <h1 className="text-3xl font-black tracking-tight text-white mb-2">{project.name}</h1>
-        <p className="text-slate-400 text-sm max-w-2xl leading-relaxed">
-          {project.description || 'System operating in default mode. No project description defined.'}
-        </p>
+    <div className="page-frame">
+      <SurfaceCardStrong className="hero-gradient overflow-hidden p-6 md:p-8">
+        <PageHeader
+          eyebrow="Project overview"
+          title={project.name}
+          description={project.description || 'This project does not have a written brief yet, but the execution view below still gives the team a clear operating picture.'}
+          actions={
+            <>
+              <Link
+                to="/projects/$projectId/tasks"
+                params={{ projectId: resolvedProjectId! }}
+                className="inline-flex items-center gap-2 rounded-full bg-app-ink px-5 py-3 text-sm font-semibold text-white transition hover:bg-app-ink/92"
+              >
+                Open tasks
+                <ArrowRight size={16} />
+              </Link>
+              <Link
+                to="/graph/$projectId"
+                params={{ projectId: resolvedProjectId! }}
+                className="inline-flex items-center gap-2 rounded-full border border-app-line bg-white/80 px-5 py-3 text-sm font-semibold text-app-ink transition hover:border-app-ink/20"
+              >
+                <Orbit size={16} />
+                View flow map
+              </Link>
+            </>
+          }
+        />
+      </SurfaceCardStrong>
+
+      <div className="mt-6 grid gap-4 md:grid-cols-4">
+        <StatCard label="Tasks" value={project.tasksCount} hint="Current recorded scope." />
+        <StatCard label="Done" value={doneCount} hint="Execution items completed." accent="teal" />
+        <StatCard label="In progress" value={inProgressCount} hint="Tasks actively moving." accent="ink" />
+        <StatCard label="Teams" value={project.teamsCount} hint="Groups attached to this project." />
       </div>
 
-      {/* Numerical Analysis */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-        {stats.map((s) => (
-          <div key={s.label} className="glass-panel p-6 border border-white/5 bg-white/[0.02] rounded-3xl hover:border-white/10 transition-all group">
-            <div className="flex items-center gap-4 mb-4">
-              <div className={`p-2.5 rounded-xl bg-${s.color}-500/10 text-${s.color}-400`}>
-                <s.icon size={18} />
-              </div>
-              <div className="flex flex-col">
-                <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">{s.label}</span>
-                <span className="text-[10px] font-medium text-slate-600">{s.sub}</span>
-              </div>
+      <div className="mt-8 space-y-6">
+        <SurfaceCardStrong className="p-5 md:p-6">
+          <div className="mb-5 flex items-center justify-between gap-4">
+            <div>
+              <p className="eyebrow mb-2">Tasks</p>
+              <h2 className="text-2xl font-semibold tracking-[-0.04em] text-app-ink">Recent tasks</h2>
             </div>
-            <div className="text-4xl font-black text-white tabular-nums tracking-tighter">
-              {s.value}
-            </div>
+            <Link to="/projects/$projectId/tasks" params={{ projectId: resolvedProjectId! }} className="text-sm font-semibold text-app-accent">
+              View all
+            </Link>
           </div>
-        ))}
-      </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Resource Distribution */}
-        <div className="flex flex-col gap-6">
-           <SectionHeader icon={BarChart3} title="Resource Distribution" />
-           <div className="glass-panel p-8 border border-white/5 bg-white/[0.01] rounded-[32px] flex flex-col gap-4 min-h-[200px]">
-              {project.taskLabelCounts?.map((lc) => (
-                <div key={lc.label} className="flex flex-col gap-2">
-                  <div className="flex justify-between text-[11px] font-bold uppercase tracking-wider">
-                    <span className="text-slate-400">{lc.label}</span>
-                    <span className="text-white">{lc.count}</span>
+          <div className="space-y-3">
+            {tasks.length === 0 ? (
+              <EmptyState
+                icon={LayoutGrid}
+                title="No tasks yet"
+                description="No tasks returned for this project."
+              />
+            ) : (
+              tasks.map((task) => (
+                <Link
+                  key={task.id}
+                  to="/projects/$projectId/tasks/$taskId"
+                  params={{ projectId: resolvedProjectId!, taskId: task.id }}
+                  className="block rounded-[24px] border border-app-line bg-white/75 p-4 transition hover:border-app-accent/30"
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="max-w-2xl">
+                      <h3 className="text-lg font-semibold text-app-ink">{task.title}</h3>
+                      {task.description ? (
+                        <p className="mt-2 truncate-2 text-sm leading-6 text-app-muted">{task.description}</p>
+                      ) : null}
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <StatusBadge status={task.status} />
+                      <PriorityBadge priority={task.priority} />
+                    </div>
                   </div>
-                  <div className="h-1.5 w-full bg-white/5 rounded-full overflow-hidden">
-                    <div 
-                      className="h-full bg-blue-500 transition-all duration-1000" 
-                      style={{ width: `${Math.min(100, (lc.count / (project.taskCount || 1)) * 100)}%` }} 
-                    />
+
+                  <div className="mt-4 flex flex-wrap gap-5 text-sm text-app-muted">
+                    {task.team?.name ? <span>{task.team.name}</span> : null}
+                    {task.assignedMember?.username ? <span>{task.assignedMember.username}</span> : null}
+                    <span>Updated {formatDate(task.updatedAt)}</span>
                   </div>
+                </Link>
+              ))
+            )}
+          </div>
+        </SurfaceCardStrong>
+
+        <div className="grid gap-6 lg:grid-cols-2">
+          <SurfaceCard className="p-5">
+            <div className="mb-4 flex items-center gap-3">
+              <div className="rounded-full bg-app-accent-soft p-3 text-app-accent">
+                <Users size={18} />
+              </div>
+              <div>
+                <p className="eyebrow">Teams</p>
+                <h3 className="text-xl font-semibold text-app-ink">Teams</h3>
+              </div>
+            </div>
+            <div className="space-y-3">
+              {teams.slice(0, 4).map((team) => (
+                <Link
+                  key={team.id}
+                  to="/projects/$projectId/teams/$teamId"
+                  params={{ projectId: resolvedProjectId!, teamId: team.id }}
+                  className="flex items-center justify-between rounded-2xl border border-app-line bg-white/75 px-4 py-3 transition hover:border-app-ink/20"
+                >
+                  <div>
+                    <p className="text-sm font-semibold text-app-ink">{team.name}</p>
+                    {team.createdAt ? <p className="text-xs text-app-muted">Created {formatDate(team.createdAt)}</p> : null}
+                  </div>
+                  <ArrowRight size={16} className="text-app-muted" />
+                </Link>
+              ))}
+              {teams.length === 0 ? <p className="text-sm leading-6 text-app-muted">No teams returned.</p> : null}
+            </div>
+          </SurfaceCard>
+
+          <SurfaceCard className="p-5">
+            <div className="mb-4 flex items-center gap-3">
+              <div className="rounded-full bg-app-accent-2-soft p-3 text-app-accent-2">
+                <Users size={18} />
+              </div>
+              <div>
+                <p className="eyebrow">Members</p>
+                <h3 className="text-xl font-semibold text-app-ink">Members</h3>
+              </div>
+            </div>
+            <div className="space-y-3">
+              {members.slice(0, 5).map((member) => (
+                <div key={member.id} className="rounded-2xl border border-app-line bg-white/75 px-4 py-3">
+                  <p className="text-sm font-semibold text-app-ink">{member.user?.username || 'Unknown member'}</p>
+                  <p className="text-xs text-app-muted">Joined {formatDate(member.createdAt)}</p>
                 </div>
               ))}
-              {(!project.taskLabelCounts || project.taskLabelCounts.length === 0) && (
-                <div className="flex-1 flex items-center justify-center opacity-30 italic text-xs text-slate-500">
-                  No task metrics recorded.
-                </div>
-              )}
-           </div>
-        </div>
-
-        {/* My Teams */}
-        <div className="flex flex-col gap-6">
-          <SectionHeader icon={Network} title="Assigned Teams" />
-          <div className="flex flex-col gap-3 min-h-[200px]">
-             <PersonalTeamsList projectId={projectId} teams={project.myTeams || []} />
-          </div>
-        </div>
-
-        {/* My Tasks */}
-        <div className="flex flex-col gap-6 lg:col-span-2">
-          <SectionHeader icon={Kanban} title="Assigned Tasks" />
-          <div className="min-h-[200px]">
-             <PersonalTasksList projectId={projectId} tasks={project.myTasks || []} />
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function PersonalTeamsList({ projectId, teams }: { projectId: string; teams: any[] }) {
-  const displayTeams = teams.slice(0, 3);
-
-  return (
-    <div className="flex flex-col gap-2">
-      {displayTeams.map(t => (
-        <Link 
-          key={t.id} 
-          to={`/projects/${projectId}/teams`} 
-          className="flex items-center justify-between p-4 bg-white/[0.03] border border-white/5 rounded-2xl hover:bg-white/[0.06] transition-all group"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-400 flex items-center justify-center">
-               <Layers size={14} />
+              {members.length === 0 ? <p className="text-sm leading-6 text-app-muted">No members returned.</p> : null}
             </div>
-            <span className="text-sm font-bold text-white uppercase tracking-tight">{t.name}</span>
-          </div>
-          <ArrowRight size={14} className="text-slate-600 group-hover:text-white transition-all" />
-        </Link>
-      ))}
-      {displayTeams.length === 0 && <div className="p-10 text-center text-xs text-slate-600 italic">No assigned teams detected.</div>}
-      {teams.length > 0 && (
-        <Link to={`/projects/${projectId}/teams`} className="text-[10px] font-black uppercase tracking-widest text-slate-500 hover:text-blue-400 mt-2 text-center">
-          Manage Project Teams
-        </Link>
-      )}
-    </div>
-  );
-}
-
-function PersonalTasksList({ projectId, tasks }: { projectId: string; tasks: any[] }) {
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-      {tasks.map(tk => (
-        <Link 
-          key={tk.id} 
-          to={`/projects/$projectId/tasks/$taskId`}
-          params={{ projectId, taskId: tk.id }}
-          className="p-4 bg-white/[0.02] border border-white/5 rounded-2xl hover:border-white/10 transition-all flex flex-col gap-2 group"
-        >
-          <div className="flex justify-between items-start">
-            <span className="text-sm font-bold text-slate-200 group-hover:text-blue-400 transition-colors line-clamp-1">{tk.title}</span>
-            <div className="px-2 py-0.5 rounded-md bg-white/5 text-[9px] font-black text-slate-500 uppercase">{tk.status}</div>
-          </div>
-          <p className="text-[11px] text-slate-500 line-clamp-1">{tk.description}</p>
-        </Link>
-      ))}
-      {tasks.length === 0 && <div className="col-span-full py-10 text-center text-xs text-slate-600 italic">No assigned nodes detected.</div>}
-    </div>
-  );
-}
-
-function SectionHeader({ icon: Icon, title }: { icon: any, title: string }) {
-  return (
-    <div className="flex items-center gap-3 px-2">
-      <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center text-slate-400">
-        <Icon size={16} />
+          </SurfaceCard>
+        </div>
       </div>
-      <h2 className="text-sm font-bold text-slate-200 tracking-tight">{title}</h2>
     </div>
   );
 }
-

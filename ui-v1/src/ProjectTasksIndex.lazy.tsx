@@ -1,225 +1,335 @@
-import { useParams, useNavigate, useSearch } from '@tanstack/react-router';
+import { useMemo, useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Link, useNavigate, useParams, useSearch } from '@tanstack/react-router';
+import { ArrowRight, Filter, FolderKanban, Loader2, Plus, Search } from 'lucide-react';
 import { useApi } from './hooks/useApi';
-import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { TaskListView } from './components/Tasks/TaskListView';
-import { useState } from 'react';
-import { Plus, Loader2, X, Check } from 'lucide-react';
+import type { ProjectTask } from './api/types';
+import {
+  AppModal,
+  EmptyState,
+  PageHeader,
+  PriorityBadge,
+  StatCard,
+  StatusBadge,
+  SurfaceCard,
+  SurfaceCardStrong,
+  TextAreaField,
+  TextField,
+  formatDate,
+} from './components/shared/workspace';
 
-type CursorParam =
-  | { direction: 'forward'; cursor: string | undefined }
-  | { direction: 'backward'; cursor: string | undefined }
-  | undefined;
+type TaskSearch = {
+  cursor?: string;
+  direction?: 'forward' | 'backward';
+};
 
 export default function ProjectTasksIndex() {
-  const { projectId } = useParams({ strict: false });
-  const { cursor, direction } = useSearch({ from: '/authenticated-layout/projects/$projectId/' }) as any;
+  const { projectId } = useParams({ strict: false }) as { projectId?: string };
+  const { cursor, direction } = useSearch({ from: '/authenticated-layout/projects/$projectId/tasks' }) as TaskSearch;
   const { taskApi } = useApi();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const [query, setQuery] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'TODO' | 'IN_PROGRESS' | 'DONE'>('ALL');
   const [showCreate, setShowCreate] = useState(false);
-  const [newTitle, setNewTitle] = useState('');
-  const [newDesc, setNewDesc] = useState('');
+  const [title, setTitle] = useState('');
+  const [description, setDescription] = useState('');
 
-  const {
-    data: tasksData,
-    isLoading,
-    hasNextPage: _hasNextPage,
-    isFetchingNextPage,
-    hasPreviousPage: _hasPreviousPage,
-    isFetchingPreviousPage,
-  } = useInfiniteQuery({
+  const { data, isLoading, isPlaceholderData } = useQuery({
     queryKey: ['tasks', projectId, cursor, direction],
-    queryFn: ({ pageParam }: { pageParam: CursorParam }) => {
-      // Use the pageParam if provided (e.g. by fetchNextPage), otherwise fall back to URL cursor
-      const activeParam = pageParam || (cursor ? { direction: direction || 'forward', cursor } : undefined);
-      
-      if (activeParam?.direction === 'backward') {
-        return taskApi.getProjectTasks(
-          projectId!,
-          undefined,
-          undefined,
-          undefined,
-          5,
-          activeParam.cursor,
-        );
+    queryFn: () => {
+      if (direction === 'backward') {
+        return taskApi.getTasks(projectId!, { last: 12, before: cursor });
       }
-      return taskApi.getProjectTasks(
-        projectId!,
-        undefined,
-        5,
-        activeParam?.direction === 'forward' ? activeParam.cursor : undefined,
-      );
-    },
-    initialPageParam: (cursor ? { direction: direction || 'forward', cursor } : undefined) as CursorParam,
-    getNextPageParam: (lastPage) =>
-      lastPage.hasNextPage
-        ? { direction: 'forward' as const, cursor: lastPage.endCursor }
-        : undefined,
-    getPreviousPageParam: (firstPage) =>
-      firstPage.hasPreviousPage
-        ? { direction: 'backward' as const, cursor: firstPage.startCursor }
-        : undefined,
-    enabled: !!projectId,
-    maxPages: 1, 
-  });
-
-  const allTasks = tasksData?.pages.flatMap((page) => page.tasks) ?? [];
-  const firstPage = tasksData?.pages[0];
-  const lastPage = tasksData?.pages[tasksData.pages.length - 1];
-
-  const createMutation = useMutation({
-    mutationFn: () =>
-      taskApi.createTask(projectId!, newTitle.trim(), newDesc.trim() || undefined),
-    onSuccess: (task) => {
-      queryClient.invalidateQueries({ queryKey: ['tasks', projectId] });
-      setNewTitle('');
-      setNewDesc('');
-      setShowCreate(false);
-      navigate({
-        to: '/projects/$projectId/tasks/$taskId',
-        params: { projectId: projectId!, taskId: task.id } as any,
+      return taskApi.getTasks(projectId!, {
+        first: 12,
+        after: direction === 'forward' ? cursor : undefined,
       });
     },
+    enabled: !!projectId,
+    placeholderData: (previous) => previous,
+    staleTime: 1000 * 60 * 3,
   });
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-64 gap-3 text-text-dim">
-        <Loader2 size={20} className="animate-spin text-focus-blue" />
-        <span className="text-[13px] font-medium">Loading tasks...</span>
-      </div>
-    );
-  }
+  const createTask = useMutation({
+    mutationFn: () => taskApi.createTask({ projectId: projectId!, title: title.trim(), description: description.trim() || undefined }),
+    onSuccess: (task) => {
+      queryClient.invalidateQueries({ queryKey: ['tasks', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['project-dashboard', projectId] });
+      queryClient.setQueryData(['task', task.id], task);
+      setShowCreate(false);
+      setTitle('');
+      setDescription('');
+      navigate({ to: '/projects/$projectId/tasks/$taskId', params: { projectId: projectId!, taskId: task.id } });
+    },
+  });
+
+  const tasks = data?.tasks ?? [];
+  const filteredTasks = useMemo(() => {
+    return tasks.filter((task) => {
+      const matchesStatus = statusFilter === 'ALL' || task.status === statusFilter;
+      const q = query.trim().toLowerCase();
+      const matchesQuery =
+        q.length === 0 ||
+        task.title.toLowerCase().includes(q) ||
+        task.description.toLowerCase().includes(q) ||
+        task.team?.name?.toLowerCase().includes(q) ||
+        task.assignedMember?.username?.toLowerCase().includes(q);
+      return matchesStatus && matchesQuery;
+    });
+  }, [query, statusFilter, tasks]);
+
+  const doneCount = tasks.filter((task) => task.status === 'DONE').length;
+  const inProgressCount = tasks.filter((task) => task.status === 'IN_PROGRESS').length;
 
   return (
-    <div className="relative">
-      <TaskListView
-        tasks={allTasks}
-        _projectId={projectId!}
-        hasNextPage={lastPage?.hasNextPage}
-        hasPreviousPage={firstPage?.hasPreviousPage}
-        isFetchingNextPage={isFetchingNextPage}
-        isFetchingPreviousPage={isFetchingPreviousPage}
-        onLoadMore={() => {
-          const lastPage = tasksData?.pages[tasksData.pages.length - 1];
-          if (lastPage?.hasNextPage) {
-            (navigate as any)({
-              search: (prev: any) => ({ 
-                ...prev, 
-                cursor: lastPage.endCursor!, 
-                direction: 'forward' as const 
-              }) as any,
-            });
-          }
-        }}
-        onLoadPrev={() => {
-          const firstPage = tasksData?.pages[0];
-          if (firstPage?.hasPreviousPage) {
-            (navigate as any)({
-              search: (prev: any) => ({ 
-                ...prev, 
-                cursor: firstPage.startCursor!, 
-                direction: 'backward' as const 
-              }) as any,
-            });
-          }
-        }}
-      />
-
-      {/* Floating Create Task Button */}
-      <button
-        onClick={() => setShowCreate(true)}
-        className="fixed bottom-8 right-8 w-14 h-14 bg-focus-blue text-white rounded-full shadow-2xl shadow-focus-blue/40 flex items-center justify-center hover:bg-focus-blue/90 hover:scale-105 active:scale-95 transition-all z-40"
-        title="Create Task"
-      >
-        <Plus size={24} strokeWidth={2.5} />
-      </button>
-
-      {/* Create Task Modal */}
-      {showCreate && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
-          <div
-            className="absolute inset-0 bg-black/30 backdrop-blur-sm"
-            onClick={() => setShowCreate(false)}
-          />
-          <div className="relative z-10 w-full max-w-lg bg-white border border-border-notion rounded-2xl shadow-2xl p-6 animate-in slide-in-from-bottom-4 duration-300">
-            <div className="flex items-center justify-between mb-5">
-              <h3 className="font-bold text-text-notion text-base tracking-tight">New Task</h3>
-              <button
-                onClick={() => setShowCreate(false)}
-                className="p-1.5 rounded-lg text-text-dim hover:bg-bg-secondary transition-all"
-              >
-                <X size={14} />
-              </button>
-            </div>
-
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                if (newTitle.trim()) createMutation.mutate();
-              }}
-              className="flex flex-col gap-4"
+    <div className="page-frame">
+      <SurfaceCardStrong className="hero-gradient p-6 md:p-8">
+        <PageHeader
+          eyebrow="Task management"
+          title="Execution board"
+          description="A calmer list experience with useful filtering, direct task entry, and fast drill-down into dependency context."
+          actions={
+            <button
+              onClick={() => setShowCreate(true)}
+              className="inline-flex items-center gap-2 rounded-full bg-app-accent px-5 py-3 text-sm font-semibold text-white transition hover:bg-app-accent/90"
             >
-              <div>
-                <label className="block text-[10px] font-black text-text-dim uppercase tracking-[0.2em] mb-2">
-                  Title
-                </label>
-                <input
-                  autoFocus
-                  type="text"
-                  value={newTitle}
-                  onChange={(e) => setNewTitle(e.target.value)}
-                  placeholder="What needs to be done?"
-                  className="w-full px-4 py-3 bg-bg-secondary border border-border-notion rounded-xl text-[14px] font-medium text-text-notion focus:outline-none focus:border-focus-blue/50 placeholder:text-text-dim/40 transition-all"
-                  required
-                />
-              </div>
+              <Plus size={16} />
+              New task
+            </button>
+          }
+        />
+      </SurfaceCardStrong>
 
-              <div>
-                <label className="block text-[10px] font-black text-text-dim uppercase tracking-[0.2em] mb-2">
-                  Description{' '}
-                  <span className="normal-case font-medium opacity-50">(optional)</span>
-                </label>
-                <textarea
-                  value={newDesc}
-                  onChange={(e) => setNewDesc(e.target.value)}
-                  placeholder="Add details..."
-                  rows={3}
-                  className="w-full px-4 py-3 bg-bg-secondary border border-border-notion rounded-xl text-[14px] font-medium text-text-notion focus:outline-none focus:border-focus-blue/50 placeholder:text-text-dim/40 transition-all resize-none"
-                />
-              </div>
+      <div className="mt-6 grid gap-4 md:grid-cols-3">
+        <StatCard label="All tasks" value={tasks.length} hint="Tasks in the current page window." />
+        <StatCard label="In progress" value={inProgressCount} hint="Active execution work right now." accent="teal" />
+        <StatCard label="Done" value={doneCount} hint="Completed work in this view." accent="ink" />
+      </div>
 
-              {createMutation.isError && (
-                <p className="text-red-500 text-xs font-bold">
-                  {(createMutation.error as Error).message}
-                </p>
-              )}
+      <div className="mt-8 grid gap-6 xl:grid-cols-[0.78fr_1.22fr]">
+        <SurfaceCard className="p-5">
+          <p className="eyebrow mb-2">Filter tasks</p>
+          <h2 className="text-2xl font-semibold tracking-[-0.04em] text-app-ink">Focus the current slice</h2>
 
-              <div className="flex gap-3 mt-1">
+          <label className="mt-5 block">
+            <span className="mb-2 flex items-center gap-2 text-sm font-medium text-app-ink">
+              <Search size={15} />
+              Search
+            </span>
+            <input
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Title, description, team, or assignee"
+              className="w-full rounded-2xl border border-app-line bg-white/80 px-4 py-3 text-sm text-app-ink outline-none transition focus:border-app-accent focus:ring-4 focus:ring-app-accent/10"
+            />
+          </label>
+
+          <div className="mt-5">
+            <span className="mb-3 flex items-center gap-2 text-sm font-medium text-app-ink">
+              <Filter size={15} />
+              Status
+            </span>
+            <div className="flex flex-wrap gap-2">
+              {(['ALL', 'TODO', 'IN_PROGRESS', 'DONE'] as const).map((option) => (
                 <button
-                  type="button"
-                  onClick={() => setShowCreate(false)}
-                  className="flex-1 py-3 border border-border-notion rounded-xl text-text-dim hover:text-text-notion font-bold text-[13px] transition-all hover:bg-bg-secondary"
+                  key={option}
+                  onClick={() => setStatusFilter(option)}
+                  className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                    statusFilter === option
+                      ? 'bg-app-ink text-white'
+                      : 'border border-app-line bg-white/75 text-app-ink hover:border-app-ink/20'
+                  }`}
                 >
-                  Cancel
+                  {option === 'ALL' ? 'All' : option.replace('_', ' ')}
                 </button>
-                <button
-                  type="submit"
-                  disabled={createMutation.isPending || !newTitle.trim()}
-                  className="flex-1 py-3 bg-focus-blue text-white rounded-xl font-bold text-[13px] flex items-center justify-center gap-2 hover:bg-focus-blue/90 transition-all disabled:opacity-50 shadow-md shadow-focus-blue/20"
-                >
-                  {createMutation.isPending ? (
-                    <Loader2 size={14} className="animate-spin" />
-                  ) : (
-                    <Check size={14} />
-                  )}
-                  {createMutation.isPending ? 'Creating...' : 'Create Task'}
-                </button>
-              </div>
-            </form>
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+
+          <div className="mt-6 space-y-3">
+            <MiniInsight
+              label="Filtered results"
+              value={filteredTasks.length}
+              description="Tasks that match the active search and status."
+            />
+            <MiniInsight
+              label="Page state"
+              value={isPlaceholderData ? 'Syncing' : 'Fresh'}
+              description="Whether React Query is serving placeholder data during paging."
+            />
+          </div>
+        </SurfaceCard>
+
+        <SurfaceCardStrong className="p-5 md:p-6">
+          <div className="mb-6 flex items-center justify-between gap-4">
+            <div>
+              <p className="eyebrow mb-2">Task list</p>
+              <h2 className="text-2xl font-semibold tracking-[-0.04em] text-app-ink">Prioritized work</h2>
+            </div>
+            <div className="rounded-full bg-app-ink/5 px-3 py-1.5 text-xs font-semibold text-app-muted">
+              {filteredTasks.length} shown
+            </div>
+          </div>
+
+          {isLoading ? (
+            <div className="flex min-h-[18rem] items-center justify-center">
+              <Loader2 size={28} className="animate-spin text-app-accent" />
+            </div>
+          ) : filteredTasks.length === 0 ? (
+            <EmptyState
+              icon={FolderKanban}
+              title="No tasks match this view"
+              description="Try another filter or create a task to start building the execution plan."
+              action={
+                <button
+                  onClick={() => setShowCreate(true)}
+                  className="rounded-full bg-app-accent px-5 py-3 text-sm font-semibold text-white transition hover:bg-app-accent/90"
+                >
+                  Create task
+                </button>
+              }
+            />
+          ) : (
+            <div className="space-y-3">
+              {filteredTasks.map((task) => (
+                <TaskRow key={task.id} task={task} projectId={projectId!} />
+              ))}
+            </div>
+          )}
+
+          <div className="mt-6 flex flex-wrap gap-3">
+            <PagingButton
+              disabled={!data?.hasPreviousPage}
+              onClick={() =>
+                navigate({
+                  to: '/projects/$projectId/tasks',
+                  params: { projectId: projectId! },
+                  search: {
+                    cursor: data?.startCursor ?? undefined,
+                    direction: 'backward',
+                  },
+                })
+              }
+            >
+              Previous page
+            </PagingButton>
+            <PagingButton
+              disabled={!data?.hasNextPage}
+              onClick={() =>
+                navigate({
+                  to: '/projects/$projectId/tasks',
+                  params: { projectId: projectId! },
+                  search: {
+                    cursor: data?.endCursor ?? undefined,
+                    direction: 'forward',
+                  },
+                })
+              }
+            >
+              Next page
+            </PagingButton>
+          </div>
+        </SurfaceCardStrong>
+      </div>
+
+      <AppModal
+        open={showCreate}
+        title="Create a task"
+        description="Capture the unit of work, then refine team assignment and dependency flow inside the task detail."
+        onClose={() => setShowCreate(false)}
+      >
+        <form
+          className="space-y-4"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (!title.trim()) return;
+            createTask.mutate();
+          }}
+        >
+          <TextField label="Title" value={title} onChange={setTitle} placeholder="Write launch checklist" required />
+          <TextAreaField label="Description" value={description} onChange={setDescription} placeholder="Describe the outcome and any key notes." />
+          <div className="flex flex-wrap gap-3 pt-2">
+            <button
+              type="button"
+              onClick={() => setShowCreate(false)}
+              className="rounded-full border border-app-line bg-white/80 px-5 py-3 text-sm font-semibold text-app-ink transition hover:border-app-ink/20"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={createTask.isPending || !title.trim()}
+              className="inline-flex items-center gap-2 rounded-full bg-app-accent px-5 py-3 text-sm font-semibold text-white transition hover:bg-app-accent/90 disabled:opacity-60"
+            >
+              {createTask.isPending ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
+              Create task
+            </button>
+          </div>
+        </form>
+      </AppModal>
     </div>
+  );
+}
+
+function TaskRow({ task, projectId }: { task: ProjectTask; projectId: string }) {
+  return (
+    <Link
+      to="/projects/$projectId/tasks/$taskId"
+      params={{ projectId, taskId: task.id }}
+      className="block rounded-[24px] border border-app-line bg-white/75 p-4 transition hover:border-app-accent/30"
+    >
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="max-w-2xl">
+          <h3 className="text-lg font-semibold text-app-ink">{task.title}</h3>
+          <p className="mt-2 truncate-2 text-sm leading-6 text-app-muted">
+            {task.description || 'No description added yet.'}
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <StatusBadge status={task.status} />
+          <PriorityBadge priority={task.priority} />
+        </div>
+      </div>
+      <div className="mt-4 flex flex-wrap items-center gap-4 text-sm text-app-muted">
+        <span>{task.team?.name || 'No team assigned'}</span>
+        <span>{task.assignedMember?.username || 'No assignee'}</span>
+        <span>Updated {formatDate(task.updatedAt)}</span>
+        <span className="inline-flex items-center gap-1 font-semibold text-app-accent">
+          Open details
+          <ArrowRight size={14} />
+        </span>
+      </div>
+    </Link>
+  );
+}
+
+function MiniInsight({ label, value, description }: { label: string; value: string | number; description: string }) {
+  return (
+    <div className="rounded-2xl bg-app-ink/4 px-4 py-4">
+      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-app-muted">{label}</p>
+      <p className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-app-ink">{value}</p>
+      <p className="mt-2 text-sm leading-6 text-app-muted">{description}</p>
+    </div>
+  );
+}
+
+function PagingButton({
+  disabled,
+  onClick,
+  children,
+}: {
+  disabled?: boolean;
+  onClick: () => void;
+  children: string;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className="rounded-full border border-app-line bg-white/80 px-5 py-3 text-sm font-semibold text-app-ink transition hover:border-app-ink/20 disabled:cursor-not-allowed disabled:opacity-40"
+    >
+      {children}
+    </button>
   );
 }

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useMemo } from 'react';
+import React, { createContext, useMemo } from 'react';
 import type { ProjectAPI } from '../api/interfaces/ProjectAPI';
 import type { TaskAPI } from '../api/interfaces/TaskAPI';
 import type { TeamAPI } from '../api/interfaces/TeamAPI';
@@ -30,4 +30,3 @@ export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     </ApiContext.Provider>
   );
 };
-

@@ -1,6 +1,5 @@
-import type { ProjectTask, TaskLink, NeighbourhoodNode } from '../../api/types';
+import type { ProjectTask } from '../../api/types';
 
-// Standardized Node interface for the worker output
 export interface MapNode {
   task: ProjectTask;
   x: number;
@@ -17,7 +16,7 @@ export interface WorkerInput {
 
 export interface WorkerOutput {
   nodes: MapNode[];
-  allEdges: TaskLink[];
+  allEdges: any[];
   layoutTime: number;
 }
 
@@ -26,40 +25,37 @@ self.onmessage = (e: MessageEvent<WorkerInput>) => {
   const startTime = performance.now();
 
   const allTasks = new Map<string, ProjectTask>();
-  const edgeMap = new Map<string, TaskLink>();
+  const edgeMap = new Map<string, any>();
   const nodeDepths = new Map<string, { depth: number, direction: string }>();
 
-  // 1. Accumulate unique entities
   pages.forEach(p => {
-    // ── CRITICAL: Add the focused task at rank 0 ──
-    // The API returns focusedTask separately from nodes (neighbours).
-    // Without this, every edge connecting to/from the focused task
-    // has no MapNode, causing them to return null in the SVG render.
     if (p.focusedTask) {
       allTasks.set(p.focusedTask.id, p.focusedTask);
-      // Focused task is always at depth 0 — do not overwrite with neighbour data
       if (!nodeDepths.has(p.focusedTask.id)) {
         nodeDepths.set(p.focusedTask.id, { depth: 0, direction: 'outgoing' });
       }
     }
 
-    p.nodes.forEach((n: NeighbourhoodNode) => {
-      allTasks.set(n.task.id, n.task);
-      const existing = nodeDepths.get(n.task.id);
-      if (!existing || n.depth < existing.depth) {
-        nodeDepths.set(n.task.id, { depth: n.depth, direction: n.direction });
-      }
-    });
+    if (p.nodes) {
+      p.nodes.forEach((n: any) => {
+        allTasks.set(n.task.id, n.task);
+        const existing = nodeDepths.get(n.task.id);
+        if (!existing || n.depth < existing.depth) {
+          nodeDepths.set(n.task.id, { depth: n.depth, direction: n.direction });
+        }
+      });
+    }
 
-    p.edges.forEach((e: TaskLink) => {
-      edgeMap.set(e.id, e);
-    });
+    if (p.edges) {
+      p.edges.forEach((e: any) => {
+        edgeMap.set(e.id, e);
+      });
+    }
   });
 
   const nodesList = Array.from(allTasks.values());
   const allEdges = Array.from(edgeMap.values());
 
-  // 2. Rank by Depth
   const ranks = new Map<string, number>();
   ranks.set(taskId, 0);
 
@@ -71,26 +67,27 @@ self.onmessage = (e: MessageEvent<WorkerInput>) => {
     }
   });
 
-  // 3. Refine disconnected (path-based propagation)
   let changed = true;
   let iterations = 0;
   while (changed && iterations < 20) {
     changed = false;
     iterations++;
     allEdges.forEach(edge => {
-      const s = ranks.get(edge.sourceTaskId);
-      const t = ranks.get(edge.targetTaskId);
+      const sourceId = typeof edge.source === 'string' ? edge.source : edge.source.id;
+      const targetId = typeof edge.target === 'string' ? edge.target : edge.target.id;
+      
+      const s = ranks.get(sourceId);
+      const t = ranks.get(targetId);
       if (s !== undefined && t === undefined) {
-        ranks.set(edge.targetTaskId, s + 1);
+        ranks.set(targetId, s + 1);
         changed = true;
       } else if (t !== undefined && s === undefined) {
-        ranks.set(edge.sourceTaskId, t - 1);
+        ranks.set(sourceId, t - 1);
         changed = true;
       }
     });
   }
 
-  // 4. Group by rank for horizontal distribution
   const byRank: Record<number, ProjectTask[]> = {};
   nodesList.forEach(task => {
     const r = ranks.get(task.id) ?? 0;
@@ -98,12 +95,10 @@ self.onmessage = (e: MessageEvent<WorkerInput>) => {
     byRank[r].push(task);
   });
 
-  // Sort each rank consistently
   Object.keys(byRank).forEach(r => {
     byRank[Number(r)].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   });
 
-  // 5. Position nodes
   const positionedNodes: MapNode[] = nodesList.map(task => {
     const r = ranks.get(task.id) ?? 0;
     const row = byRank[r];

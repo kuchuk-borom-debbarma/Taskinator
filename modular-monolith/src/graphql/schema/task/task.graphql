@@ -66,7 +66,7 @@ type Task {
         Maximum hop depth to traverse from this task.
         1 = direct neighbours only. Server may enforce a hard maximum.
         """
-        depthLimit: Int = 1
+        depthLimit: Int
 
         """
         Forward pagination — return the first N links.

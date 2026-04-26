@@ -1,26 +1,11 @@
 import React, { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { useApi } from '../../hooks/useApi';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useLocation, useNavigate } from '@tanstack/react-router';
-import {
-  LayoutDashboard,
-  Settings,
-  LogOut,
-  User,
-  Plus,
-  Search,
-  Hash,
-  Loader2,
-  ChevronLeft,
-  ChevronRight,
-  X,
-  Check,
-  PanelLeftClose
-} from 'lucide-react';
+import { FolderPlus, Home, Loader2, LogOut, PanelLeftClose, PanelLeftOpen, Rocket, User2 } from 'lucide-react';
+import { useApi } from '../../hooks/useApi';
 import { useAuth } from '../../context/AuthContext';
 import { useLayout } from '../../context/LayoutContext';
-
-// ─── Create Project Modal ────────────────────────────────────────────────────
+import { AppModal, EmptyState, SurfaceCard, TextAreaField, TextField, formatRelativeVolume } from '../shared/workspace';
 
 interface CreateProjectModalProps {
   onClose: () => void;
@@ -33,308 +18,247 @@ export const CreateProjectModal: React.FC<CreateProjectModalProps> = ({ onClose 
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
 
-  const mutation = useMutation({
+  const createProject = useMutation({
     mutationFn: () => projectApi.createProject(name.trim(), description.trim() || undefined),
     onSuccess: (project) => {
-      queryClient.invalidateQueries({ queryKey: ['sidebar-projects'] });
       queryClient.invalidateQueries({ queryKey: ['workspace-projects-list'] });
-      queryClient.invalidateQueries({ queryKey: ['workspace-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['sidebar-projects'] });
       onClose();
       navigate({ to: '/projects/$projectId', params: { projectId: project.id } });
     },
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!name.trim()) return;
-    mutation.mutate();
-  };
-
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative z-10 w-full max-w-md bg-[#09090b] border border-white/10 rounded-2xl shadow-2xl p-6 animate-in slide-in-from-bottom-4 duration-300">
-        <div className="flex items-center justify-between mb-6">
-          <h3 className="text-white font-bold text-[15px] tracking-tight">Create New Project</h3>
-          <button onClick={onClose} className="p-1.5 rounded-lg text-white/30 hover:text-white hover:bg-white/5 transition-all">
-            <X size={14} />
+    <AppModal
+      open
+      title="Create a new project"
+      description="Start with a lightweight brief. You can shape tasks and teams after the project exists."
+      onClose={onClose}
+    >
+      <form
+        className="space-y-4"
+        onSubmit={(event) => {
+          event.preventDefault();
+          if (!name.trim()) return;
+          createProject.mutate();
+        }}
+      >
+        <TextField
+          label="Project name"
+          value={name}
+          onChange={setName}
+          placeholder="Q3 launch prep"
+          required
+        />
+        <TextAreaField
+          label="Description"
+          value={description}
+          onChange={setDescription}
+          placeholder="What this project is for, who it serves, and how success will look."
+        />
+        <div className="flex flex-wrap gap-3 pt-2">
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-full border border-app-line bg-white/80 px-5 py-3 text-sm font-semibold text-app-ink transition hover:border-app-ink/20"
+          >
+            Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={createProject.isPending || !name.trim()}
+            className="inline-flex items-center gap-2 rounded-full bg-app-accent px-5 py-3 text-sm font-semibold text-white transition hover:bg-app-accent/90 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {createProject.isPending ? <Loader2 size={16} className="animate-spin" /> : <FolderPlus size={16} />}
+            Create project
           </button>
         </div>
-        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-          <div>
-            <label className="block text-[10px] font-black text-white/30 uppercase tracking-[0.2em] mb-2">Project Name</label>
-            <input
-              autoFocus
-              type="text"
-              value={name}
-              onChange={e => setName(e.target.value)}
-              placeholder="e.g. Q3 Roadmap"
-              className="w-full px-4 py-3 bg-white/[0.03] border border-white/5 rounded-xl text-[14px] text-white font-medium focus:outline-none focus:border-focus-blue/40 placeholder:text-white/10 transition-all"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-[10px] font-black text-white/30 uppercase tracking-[0.2em] mb-2">Description</label>
-            <textarea
-              value={description}
-              onChange={e => setDescription(e.target.value)}
-              placeholder="Strategic goals and objectives..."
-              rows={3}
-              className="w-full px-4 py-3 bg-white/[0.03] border border-white/5 rounded-xl text-[14px] text-white font-medium focus:outline-none focus:border-focus-blue/40 placeholder:text-white/10 transition-all resize-none"
-            />
-          </div>
-          {mutation.isError && (
-             <p className="text-red-400 text-[11px] font-bold">{(mutation.error as Error).message}</p>
-          )}
-          <div className="flex gap-3 mt-2">
-            <button type="button" onClick={onClose} className="flex-1 py-3 border border-white/10 rounded-xl text-white/40 hover:text-white font-bold text-[13px] transition-all hover:bg-white/5">
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={mutation.isPending || !name.trim()}
-              className="flex-1 py-3 bg-focus-blue text-white rounded-xl font-bold text-[13px] flex items-center justify-center gap-2 hover:bg-focus-blue/90 transition-all disabled:opacity-50"
-            >
-              {mutation.isPending ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
-              {mutation.isPending ? 'Creating...' : 'Launch Project'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+      </form>
+    </AppModal>
   );
 };
 
-// ─── Sidebar ─────────────────────────────────────────────────────────────────
-
-const PAGE_SIZE = 8;
-
 export const Sidebar: React.FC = () => {
+  const { user, logout } = useAuth();
   const { projectApi } = useApi();
-  const { logout, user } = useAuth();
-  const { isSidebarCollapsed, toggleSidebar } = useLayout();
   const location = useLocation();
-  const [showCreateProject, setShowCreateProject] = useState(false);
+  const { isSidebarCollapsed, toggleSidebar } = useLayout();
+  const [showCreate, setShowCreate] = useState(false);
 
-  // Pagination State (Persisted)
-  const [currentCursor, setCurrentCursor] = React.useState<string | undefined>(() => 
-    localStorage.getItem('taskinator_sidebar_cursor') || undefined
-  );
-  const [cursorHistory, setCursorHistory] = React.useState<string[]>(() => {
-    try {
-      return JSON.parse(localStorage.getItem('taskinator_sidebar_history') || '[]');
-    } catch {
-      return [];
-    }
+  const { data, isLoading } = useQuery({
+    queryKey: ['sidebar-projects'],
+    queryFn: () => projectApi.getProjects(12),
+    staleTime: 1000 * 60 * 3,
   });
 
-  // Sync state to localStorage
-  React.useEffect(() => {
-    if (currentCursor) {
-      localStorage.setItem('taskinator_sidebar_cursor', currentCursor);
-    } else {
-      localStorage.removeItem('taskinator_sidebar_cursor');
-    }
-    localStorage.setItem('taskinator_sidebar_history', JSON.stringify(cursorHistory));
-  }, [currentCursor, cursorHistory]);
-
-  const {
-    data,
-    isLoading,
-    isFetching
-  } = useQuery({
-    queryKey: ['sidebar-projects', currentCursor],
-    queryFn: () => projectApi.getProjects(PAGE_SIZE, currentCursor),
-  });
-
-  const projects = data?.projects || [];
-  const hasNextPage = data?.hasNextPage || false;
-  const nextCursor = data?.endCursor;
-
-  const handleNextPage = () => {
-    if (nextCursor && hasNextPage) {
-      setCursorHistory([...cursorHistory, currentCursor as string]);
-      setCurrentCursor(nextCursor);
-    }
-  };
-
-  const handlePrevPage = () => {
-    if (cursorHistory.length > 0) {
-      const prevHistory = [...cursorHistory];
-      const prevCursor = prevHistory.pop();
-      setCursorHistory(prevHistory);
-      setCurrentCursor(prevCursor);
-    }
-  };
+  const projects = data?.projects ?? [];
 
   return (
     <>
-      <aside 
-        className={`h-screen glass-dark text-white flex flex-col overflow-hidden shrink-0 select-none m-3 mr-0 rounded-[28px] transition-all duration-300 ease-in-out ${
-          isSidebarCollapsed ? 'w-0 opacity-0 m-0 border-0 shadow-none' : 'w-72 opacity-100'
+      <aside
+        className={`surface-sidebar custom-scrollbar hidden h-screen shrink-0 flex-col overflow-y-auto px-4 py-5 text-white transition-all duration-300 md:flex ${
+          isSidebarCollapsed ? 'w-[88px]' : 'w-[320px]'
         }`}
       >
-        <div className="w-72 flex flex-col h-full"> {/* Inner wrapper to prevent width collapse issues */}
-          {/* Workspace Header */}
-          <div className="p-5 flex items-center justify-between group cursor-default border-b border-white/8">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 bg-gradient-to-br from-focus-blue to-blue-400 rounded-xl flex items-center justify-center text-white text-[10px] font-black shadow-lg shadow-focus-blue/30">
-                T
-              </div>
-              <div className="flex flex-col">
-                <span className="text-sm font-bold text-white tracking-tight leading-none mb-0.5">Taskinator Workspace</span>
-                <span className="text-[10px] font-medium text-white/35 uppercase tracking-[0.28em] leading-none">Pro Edition</span>
-              </div>
-            </div>
-            <button 
-              onClick={toggleSidebar}
-              className="p-1.5 rounded-lg text-white/20 hover:text-white hover:bg-white/5 transition-all"
-            >
-              <PanelLeftClose size={16} />
-            </button>
+        <div className="mb-6 flex items-center justify-between gap-3">
+          <div className={`overflow-hidden transition-all ${isSidebarCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'}`}>
+            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-white/50">Taskinator</p>
+            <h2 className="mt-1 text-2xl font-semibold tracking-[-0.04em] text-white">Workspace</h2>
           </div>
+          <button
+            onClick={toggleSidebar}
+            className="rounded-full border border-white/10 bg-white/5 p-2 text-white/80 transition hover:bg-white/10 hover:text-white"
+            aria-label={isSidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+          >
+            {isSidebarCollapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+          </button>
+        </div>
 
-          {/* Global Actions */}
-          <div className="px-3 pt-4 space-y-1">
-            <button
-              onClick={() => {
-                const input = document.querySelector('input[type="search"]') as HTMLInputElement;
-                if (input) input.focus();
-              }}
-              className="w-full flex items-center justify-between px-3.5 py-2.5 text-white/55 hover:text-white/80 hover:bg-white/[0.05] rounded-xl transition-all text-xs font-medium group border border-transparent hover:border-white/8"
-            >
-              <div className="flex items-center gap-2.5">
-                <Search size={14} />
-                <span>Search</span>
+        <nav className="space-y-2">
+          <SidebarLink
+            to="/"
+            label="Workspace Home"
+            icon={<Home size={18} />}
+            active={location.pathname === '/'}
+            collapsed={isSidebarCollapsed}
+          />
+          <button
+            onClick={() => setShowCreate(true)}
+            className={`flex w-full items-center gap-3 rounded-[22px] border border-white/10 bg-white/6 px-4 py-3 text-left text-sm font-semibold text-white/88 transition hover:bg-white/10 ${
+              isSidebarCollapsed ? 'justify-center px-0' : ''
+            }`}
+          >
+            <FolderPlus size={18} className="shrink-0" />
+            {!isSidebarCollapsed ? 'New project' : null}
+          </button>
+        </nav>
+
+        <div className="mt-8">
+          {!isSidebarCollapsed ? (
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-white/45">Projects</p>
+                <p className="mt-1 text-sm text-white/65">
+                  {formatRelativeVolume(projects.length, 'active project')}
+                </p>
               </div>
-              <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                <span className="px-1 py-0.5 bg-white/5 border border-white/10 rounded text-[9px] font-bold">⌘</span>
-                <span className="px-1 py-0.5 bg-white/5 border border-white/10 rounded text-[9px] font-bold">K</span>
+            </div>
+          ) : null}
+
+          <div className="space-y-2">
+            {isLoading ? (
+              <div className="flex items-center gap-2 rounded-[22px] border border-white/10 bg-white/5 px-4 py-3 text-sm text-white/70">
+                <Loader2 size={16} className="animate-spin" />
+                {!isSidebarCollapsed ? 'Loading projects' : null}
               </div>
-            </button>
+            ) : null}
+
+            {!isLoading &&
+              projects.map((project) => (
+                <SidebarLink
+                  key={project.id}
+                  to="/projects/$projectId"
+                  params={{ projectId: project.id }}
+                  label={project.name}
+                  subtitle={!isSidebarCollapsed ? `${project.tasksCount} tasks` : undefined}
+                  icon={<Rocket size={18} />}
+                  active={location.pathname.startsWith(`/projects/${project.id}`)}
+                  collapsed={isSidebarCollapsed}
+                />
+              ))}
+
+            {!isLoading && projects.length === 0 ? (
+              isSidebarCollapsed ? null : (
+                <EmptyState
+                  icon={FolderPlus}
+                  title="No projects yet"
+                  description="Create the first project to populate your new workspace shell."
+                  className="border border-white/10 bg-white/5 text-white"
+                  action={
+                    <button
+                      onClick={() => setShowCreate(true)}
+                      className="rounded-full bg-white px-4 py-2 text-sm font-semibold text-app-ink transition hover:bg-white/90"
+                    >
+                      Create project
+                    </button>
+                  }
+                />
+              )
+            ) : null}
           </div>
+        </div>
 
-          {/* Navigation */}
-          <nav className="flex-1 px-3 pt-8 flex flex-col overflow-hidden">
-            <div className="mb-1">
-              <SidebarItem 
-                to="/" 
-                icon={<LayoutDashboard size={14} />} 
-                label="Dashboard" 
-                active={location.pathname === '/'} 
-              />
+        <div className="mt-auto pt-6">
+          <SurfaceCard className="border border-white/10 bg-white/8 p-4 text-white shadow-none">
+            <div className={`flex items-center gap-3 ${isSidebarCollapsed ? 'justify-center' : ''}`}>
+              <div className="flex h-11 w-11 items-center justify-center rounded-full bg-white/12 text-white">
+                <User2 size={18} />
+              </div>
+              {!isSidebarCollapsed ? (
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-white">{user?.username ?? 'Workspace user'}</p>
+                  <p className="text-xs text-white/55">Authenticated session</p>
+                </div>
+              ) : null}
             </div>
-
-            {/* Project List Section */}
-            <div className="mt-8 flex flex-col flex-1 overflow-hidden">
-              <div className="px-3 pb-3 flex items-center justify-between group">
-                <div className="flex items-center gap-2">
-                  <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-white/20">Projects</h3>
-                  <button 
-                    onClick={() => setShowCreateProject(true)}
-                    className="p-1 rounded-md hover:bg-white/5 text-white/20 opacity-0 group-hover:opacity-100 transition-all"
-                  >
-                    <Plus size={12} />
-                  </button>
-                </div>
-
-                {/* Minimal Pagination Inline */}
-                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
-                  <button
-                    onClick={handlePrevPage}
-                    disabled={cursorHistory.length === 0}
-                    className="p-1 rounded-md hover:bg-white/5 text-white/20 hover:text-white/60 disabled:opacity-0 transition-all border border-transparent hover:border-white/10"
-                  >
-                    <ChevronLeft size={13} />
-                  </button>
-                  <button
-                    onClick={handleNextPage}
-                    disabled={!hasNextPage || isFetching}
-                    className="p-1 rounded-md hover:bg-white/5 text-white/20 hover:text-white/60 disabled:opacity-0 transition-all border border-transparent hover:border-white/10"
-                  >
-                    {isFetching ? <Loader2 size={11} className="animate-spin text-focus-blue" /> : <ChevronRight size={13} />}
-                  </button>
-                </div>
-              </div>
-
-              <div className="flex-1 overflow-hidden space-y-0.5">
-                {isLoading ? (
-                  <div className="flex items-center gap-2 px-3 py-2 text-xs text-white/20 italic">
-                    <Loader2 size={12} className="animate-spin" /> Syncing...
-                  </div>
-                ) : (
-                  projects.map(p => (
-                    <SidebarItem 
-                      key={p.id} 
-                      to="/projects/$projectId" 
-                      params={{ projectId: p.id }} 
-                      icon={<Hash size={14} />} 
-                      label={p.name} 
-                      active={location.pathname.startsWith(`/projects/${p.id}`)} 
-                    />
-                  ))
-                )}
-                
-                {!isLoading && projects.length === 0 && (
-                  <div className="px-3 py-2 text-[10px] text-white/15 italic">Isolated space. No projects found.</div>
-                )}
-              </div>
-            </div>
-          </nav>
-
-          {/* User Footer Section */}
-          <div className="mt-auto p-3 border-t border-white/8">
-            <div className="flex flex-col gap-1">
-              <div className="flex items-center gap-3 p-3 bg-white/[0.03] hover:bg-white/[0.05] rounded-2xl transition-colors group cursor-default border border-white/6">
-                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-focus-blue/20 to-sky-200/10 border border-white/8 flex items-center justify-center text-focus-blue overflow-hidden shadow-inner">
-                  <User size={18} strokeWidth={2.5} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[13px] font-bold text-white/80 leading-none mb-1 truncate">
-                    {user?.username || 'Administrator'}
-                  </p>
-                  <p className="text-[10px] font-medium text-white/20 truncate tracking-wide">
-                    {user?.email || ''}
-                  </p>
-                </div>
-                <Settings size={14} className="text-white/10 group-hover:text-white/40 cursor-pointer transition-colors" />
-              </div>
-
+            {!isSidebarCollapsed ? (
               <button
-                onClick={() => logout()}
-                className="w-full mt-1 px-3 py-2.5 flex items-center gap-2.5 text-[11px] font-bold text-red-500/60 hover:text-red-400 hover:bg-red-500/5 rounded-lg transition-all duration-300 group"
+                onClick={logout}
+                className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full border border-white/10 bg-white/8 px-4 py-3 text-sm font-semibold text-white transition hover:bg-white/12"
               >
-                <div className="w-6 h-6 rounded-md bg-red-400/0 group-hover:bg-red-500/10 flex items-center justify-center transition-all">
-                  <LogOut size={14} className="group-hover:-translate-x-0.5 transition-transform" />
-                </div>
-                <span className="uppercase tracking-widest">Terminate Session</span>
+                <LogOut size={16} />
+                Sign out
               </button>
-            </div>
-          </div>
+            ) : (
+              <button
+                onClick={logout}
+                className="mt-4 inline-flex w-full items-center justify-center rounded-full border border-white/10 bg-white/8 p-3 text-white transition hover:bg-white/12"
+                aria-label="Sign out"
+              >
+                <LogOut size={16} />
+              </button>
+            )}
+          </SurfaceCard>
         </div>
       </aside>
 
-      {showCreateProject && <CreateProjectModal onClose={() => setShowCreateProject(false)} />}
+      {showCreate ? <CreateProjectModal onClose={() => setShowCreate(false)} /> : null}
     </>
   );
 };
 
-const SidebarItem: React.FC<{
-  to: string;
-  icon?: React.ReactNode;
+function SidebarLink({
+  to,
+  params,
+  label,
+  subtitle,
+  icon,
+  active,
+  collapsed,
+}: {
+  to: '/' | '/projects/$projectId';
+  params?: { projectId: string };
   label: string;
-  params?: any;
-  active?: boolean;
-}> = ({ to, icon, label, params, active }) => (
-  <Link
-    to={to as any}
-    params={params}
-    className={`group px-3.5 py-2.5 flex items-center gap-2.5 text-[13px] font-medium rounded-xl transition-all duration-200 border ${active
-        ? 'bg-white/[0.08] text-white border-white/14 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_0_0_1px_rgba(35,131,226,0.35)]'
-        : 'text-white/45 border-transparent hover:text-white/75 hover:bg-white/[0.04] hover:border-white/8'
-      }`}
-  >
-    {icon && <span className={`shrink-0 ${active ? 'text-focus-blue' : 'opacity-45 group-hover:opacity-75'} transition-opacity`}>{icon}</span>}
-    <span className="truncate tracking-tight uppercase tracking-widest text-[11px] font-bold">{label}</span>
-  </Link>
-);
+  subtitle?: string;
+  icon: React.ReactNode;
+  active: boolean;
+  collapsed: boolean;
+}) {
+  return (
+    <Link
+      to={to}
+      params={params as never}
+      className={`flex items-center gap-3 rounded-[22px] px-4 py-3 transition ${
+        active ? 'bg-white text-app-ink shadow-lg' : 'bg-white/5 text-white/80 hover:bg-white/10 hover:text-white'
+      } ${collapsed ? 'justify-center px-0' : ''}`}
+    >
+      <div className={active ? 'text-app-accent' : 'text-white/70'}>{icon}</div>
+      {!collapsed ? (
+        <div className="min-w-0">
+          <p className="truncate text-sm font-semibold">{label}</p>
+          {subtitle ? <p className={`text-xs ${active ? 'text-app-muted' : 'text-white/45'}`}>{subtitle}</p> : null}
+        </div>
+      ) : null}
+    </Link>
+  );
+}

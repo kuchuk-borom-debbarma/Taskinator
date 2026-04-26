@@ -84,13 +84,26 @@ type Mutation {
     markNotificationAsRead(id: ID!): Boolean
     markAllNotificationsAsRead: Boolean
     """
+    Signs in a user and returns a JWT token.
+    """
+    signIn(email: String!, password_raw: String!): SignInPayload!
+    """
+    Starts the sign up process for a new user.
+    """
+    signUp(email: String!, username: String!, password_raw: String!): Boolean!
+    """
     Creates a new project. Returns the created project.
     """
     createProject(name: String!, description: String): Project
     """
     Updates a project's name or description. Returns the updated project.
     """
-    updateProject(id: ID!, name: String, description: String): Project
+    updateProject(
+        id: ID!
+        version: Int!
+        name: String
+        description: String
+    ): Project
     """
     Permanently deletes one or more projects.
     """
@@ -133,6 +146,15 @@ type Mutation {
         teamId: ID!
         userIds: [ID!]!
     ): RemoveTeamMembersPayload!
+    """
+    Updates a team's details with optimistic locking.
+    """
+    updateTeam(
+        projectId: ID!
+        teamId: ID!
+        name: String!
+        version: Int!
+    ): UpdateTeamPayload!
     task: TaskMutation!
 }
 
@@ -193,9 +215,22 @@ type User {
     """
     username: String!
     """
+    The user's email address.
+    """
+    email: String!
+    """
+    The number of projects the user is a member of.
+    """
+    projectsCount: Int!
+    """
     All projects the user is a member of.
     """
-    projects: ProjectConnection!
+    projects(
+        first: Int
+        after: String
+        last: Int
+        before: String
+    ): ProjectConnection!
 }
 
 """
@@ -209,6 +244,13 @@ type UserConnection {
 type UserEdge {
     node: User!
     cursor: String!
+}
+
+"""
+Payload for the signIn mutation.
+"""
+type SignInPayload {
+    token: String
 }
 
 """
@@ -260,16 +302,10 @@ type Project {
     ISO 8601 last-updated timestamp.
     """
     updatedAt: String
-    """
-    Optimistic-concurrency version counter.
-    Incremented on every write. Use to detect stale updates.
-    """
     version: Int!
-    """
-    ID of the most recent event applied to this project.
-    Useful for event-sourcing consumers.
-    """
-    lastEventId: ID
+    projectMembersCount: Int!
+    tasksCount: Int!
+    teamsCount: Int!
     """
     Paginated list of teams within this project.
     """
@@ -397,22 +433,10 @@ type ProjectMemberEdge {
 
 type AddProjectMembersPayload {
     success: Boolean!
-    """
-    The updated project after members were added.
-    """
-    project: Project
 }
 
 type RemoveProjectMembersPayload {
     success: Boolean!
-    """
-    Number of members successfully removed.
-    """
-    removedCount: Int!
-    """
-    The updated project after members were removed.
-    """
-    project: Project
 }
 
 type DeleteProjectsPayload {
@@ -493,16 +517,15 @@ type Team {
     ISO 8601 last-updated timestamp.
     """
     updatedAt: String
-    """
-    Optimistic-concurrency version counter.
-    Incremented on every write. Use to detect stale updates.
-    """
     version: Int!
     """
-    ID of the most recent event applied to this team.
-    Useful for event-sourcing consumers.
+    Number of members in the team.
     """
-    lastEventId: ID
+    membersCount: Int!
+    """
+    Number of tasks assigned to the team.
+    """
+    tasksCount: Int!
 }
 
 """
@@ -572,24 +595,28 @@ type DeleteTeamsPayload {
     Number of teams successfully deleted.
     """
     deletedCount: Int!
-    """
-    The project the teams belonged to.
-    """
-    project: Project
 }
 
 type AddTeamMembersPayload {
     success: Boolean!
     """
-    The updated team after members were added.
+    Number of members successfully added.
     """
-    team: Team
+    addedCount: Int!
 }
 
 type RemoveTeamMembersPayload {
     success: Boolean!
     """
-    The updated team after members were removed.
+    Number of members successfully removed.
+    """
+    removedCount: Int!
+}
+
+type UpdateTeamPayload {
+    success: Boolean!
+    """
+    The updated team.
     """
     team: Team
 }
@@ -611,17 +638,17 @@ input CreateTaskInput {
     Initial lifecycle status. Defaults to server-defined value if omitted.
     """
     status: String
-    """
-    Team to assign this task to.
-    """
-    teamId: ID
-    """
-    Member to assign this task to.
-    """
-    memberId: ID
 }
 
 input UpdateTaskInput {
+    """
+    Project the task belongs to.
+    """
+    projectId: ID!
+    """
+    Optimistic lock version.
+    """
+    version: Int!
     """
     Updated title. Omit to leave unchanged.
     """
@@ -634,6 +661,14 @@ input UpdateTaskInput {
     Updated status. Omit to leave unchanged.
     """
     status: String
+    """
+    Team to assign this task to.
+    """
+    teamId: ID
+    """
+    Member to assign this task to.
+    """
+    memberId: ID
 }
 
 input CreateTaskLinkInput {
@@ -655,6 +690,29 @@ input CreateTaskLinkInput {
     label: String!
 }
 
+input UpdateTaskLinkInput {
+    """
+    Project both tasks belong to.
+    """
+    projectId: ID!
+    """
+    The link to update.
+    """
+    linkId: ID!
+    """
+    The originating task (dependency source).
+    """
+    sourceTaskId: ID
+    """
+    The destination task (dependency target).
+    """
+    targetTaskId: ID
+    """
+    Semantic label for the relationship.
+    """
+    label: String
+}
+
 """
 Namespaced task mutations.
 """
@@ -670,7 +728,7 @@ type TaskMutation {
     """
     Permanently deletes a task. Returns the ID of the deleted task.
     """
-    delete(taskId: ID!): ID!
+    delete(projectId: ID!, taskId: ID!): ID!
     """
     Creates a directed, labelled link between two tasks.
     """
@@ -678,7 +736,11 @@ type TaskMutation {
     """
     Removes a task link by ID. Returns the ID of the deleted link.
     """
-    deleteLink(linkId: ID!): ID!
+    deleteLink(projectId: ID!, linkId: ID!): ID!
+    """
+    Updates a task link (label, source, or target).
+    """
+    updateLink(input: UpdateTaskLinkInput!): TaskLink!
 }
 
 """
@@ -735,7 +797,7 @@ type Task {
         Maximum hop depth to traverse from this task.
         1 = direct neighbours only. Server may enforce a hard maximum.
         """
-        depthLimit: Int = 1
+        depthLimit: Int
         """
         Forward pagination — return the first N links.
         """
@@ -753,16 +815,7 @@ type Task {
         """
         before: String
     ): TaskLinkConnection!
-    """
-    Optimistic-concurrency version counter.
-    Incremented on every write. Use to detect stale updates.
-    """
     version: Int!
-    """
-    ID of the most recent event applied to this task.
-    Useful for event-sourcing consumers.
-    """
-    lastEventId: ID
     """
     User who created this task.
     """

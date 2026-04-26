@@ -1,91 +1,241 @@
-import { useParams } from '@tanstack/react-router';
-import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Link, useNavigate, useParams, useSearch } from '@tanstack/react-router';
+import { ArrowRight, Layers3, Loader2, Plus, Users } from 'lucide-react';
 import { useApi } from '../../hooks/useApi';
-import { Users, Plus, ArrowRight, Loader2, Layers } from 'lucide-react';
+import type { Team } from '../../api/types';
+import { AppModal, EmptyState, PageHeader, SurfaceCard, SurfaceCardStrong, TextField, formatDate } from '../shared/workspace';
+
+type TeamSearch = {
+  cursor?: string;
+  direction?: 'forward' | 'backward';
+};
+
+const getCachedTeams = (queryClient: ReturnType<typeof useQueryClient>) => {
+  const teamPages = queryClient.getQueriesData<{ teams: Team[] }>({ queryKey: ['project-teams'] });
+  for (const [, page] of teamPages) {
+    if (page?.teams?.length) return page.teams;
+  }
+  return undefined;
+};
 
 export default function ProjectTeamsView() {
   const { projectId } = useParams({ from: '/authenticated-layout/projects/$projectId/teams' });
+  const { cursor, direction } = useSearch({ from: '/authenticated-layout/projects/$projectId/teams' }) as TeamSearch;
   const { teamApi } = useApi();
+  const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const [showCreate, setShowCreate] = useState(false);
+  const [name, setName] = useState('');
 
-  // For now we'll just fetch first 20 teams. 
-  // In a real app we'd use useInfiniteQuery.
-  const { data: teamsData, isLoading } = useQuery({
-    queryKey: ['project-teams', projectId],
-    queryFn: () => teamApi.getTeams(projectId), 
+  const { data, isLoading } = useQuery({
+    queryKey: ['project-teams', projectId, cursor, direction],
+    queryFn: () => {
+      if (direction === 'backward') {
+        return teamApi.getTeams(projectId, { last: 12, before: cursor });
+      }
+      return teamApi.getTeams(projectId, { first: 12, after: direction === 'forward' ? cursor : undefined });
+    },
+    enabled: !!projectId,
+    initialData: () => {
+      if (cursor || direction) return undefined;
+      const teams = getCachedTeams(queryClient);
+      return teams
+        ? { teams, hasNextPage: false, hasPreviousPage: false, endCursor: null, startCursor: null }
+        : undefined;
+    },
+    staleTime: 1000 * 60 * 3,
   });
 
-  const teams = teamsData?.teams || [];
+  const createTeam = useMutation({
+    mutationFn: () => teamApi.createTeam(projectId, name.trim()),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['project-teams', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['project-dashboard', projectId] });
+      setName('');
+      setShowCreate(false);
+    },
+  });
+
+  const teams = data?.teams ?? [];
 
   return (
-    <div className="p-8 max-w-7xl mx-auto animate-in fade-in slide-in-from-bottom-2 duration-500">
-      <div className="flex items-center justify-between mb-10">
-        <div>
-          <h1 className="text-3xl font-black tracking-tight text-white mb-2">Calculated Teams</h1>
-          <p className="text-slate-400 text-sm">Cluster groups governing subsets of the task graph.</p>
-        </div>
-        <button className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-blue-500 text-white font-bold text-sm hover:bg-blue-600 transition-all active:scale-95 shadow-lg shadow-blue-500/20">
-          <Plus size={18} />
-          Form New Team
-        </button>
-      </div>
+    <div className="page-frame">
+      <SurfaceCardStrong className="hero-gradient p-6 md:p-8">
+        <PageHeader
+          eyebrow="Teams"
+          title="Delivery groups"
+          description="Each team now gets a cleaner summary path so you can understand who owns what without leaving the project context."
+          actions={
+            <button
+              onClick={() => setShowCreate(true)}
+              className="inline-flex items-center gap-2 rounded-full bg-app-accent px-5 py-3 text-sm font-semibold text-white transition hover:bg-app-accent/90"
+            >
+              <Plus size={16} />
+              New team
+            </button>
+          }
+        />
+      </SurfaceCardStrong>
 
-      {isLoading ? (
-        <div className="flex flex-col items-center justify-center py-20 text-slate-500 gap-4">
-          <Loader2 className="animate-spin" size={32} />
-          <span className="text-sm font-medium">Resolving clusters...</span>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {teams.map((team) => (
-            <TeamCard key={team.id} team={team} />
-          ))}
-          {teams.length === 0 && (
-            <div className="col-span-full py-20 bg-white/[0.02] border border-dashed border-white/10 rounded-[32px] flex flex-col items-center justify-center text-slate-500 italic">
-              <Layers size={48} className="opacity-10 mb-4" />
-              <p>No teams detected in this project's hierarchy.</p>
+      <div className="mt-8 grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+        <SurfaceCardStrong className="p-5 md:p-6">
+          <div className="mb-6 flex items-center justify-between gap-4">
+            <div>
+              <p className="eyebrow mb-2">Team roster</p>
+              <h2 className="text-2xl font-semibold tracking-[-0.04em] text-app-ink">Current groups</h2>
+            </div>
+            <div className="rounded-full bg-app-ink/5 px-3 py-1.5 text-xs font-semibold text-app-muted">
+              {teams.length} loaded
+            </div>
+          </div>
+
+          {isLoading ? (
+            <div className="flex min-h-[18rem] items-center justify-center">
+              <Loader2 size={28} className="animate-spin text-app-accent" />
+            </div>
+          ) : teams.length === 0 ? (
+            <EmptyState
+              icon={Users}
+              title="No teams yet"
+              description="Create a team to organize responsibilities and team membership inside this project."
+              action={
+                <button
+                  onClick={() => setShowCreate(true)}
+                  className="rounded-full bg-app-accent px-5 py-3 text-sm font-semibold text-white transition hover:bg-app-accent/90"
+                >
+                  Create team
+                </button>
+              }
+            />
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2">
+              {teams.map((team) => (
+                <Link
+                  key={team.id}
+                  to="/projects/$projectId/teams/$teamId"
+                  params={{ projectId, teamId: team.id }}
+                  className="rounded-[28px] border border-app-line bg-white/75 p-5 transition hover:border-app-accent/30"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <div className="mb-3 inline-flex rounded-full bg-app-accent-2-soft px-3 py-1 text-xs font-semibold text-app-accent-2">
+                        Team
+                      </div>
+                      <h3 className="text-xl font-semibold text-app-ink">{team.name}</h3>
+                      <p className="mt-2 text-sm text-app-muted">Created {formatDate(team.createdAt)}</p>
+                    </div>
+                    <ArrowRight size={16} className="text-app-muted" />
+                  </div>
+                </Link>
+              ))}
             </div>
           )}
-        </div>
-      )}
+
+          <div className="mt-6 flex flex-wrap gap-3">
+            <PagingButton
+              disabled={!data?.hasPreviousPage}
+              onClick={() =>
+                navigate({
+                  to: '/projects/$projectId/teams',
+                  params: { projectId },
+                  search: {
+                    cursor: data?.startCursor ?? undefined,
+                    direction: 'backward',
+                  },
+                })
+              }
+            >
+              Previous page
+            </PagingButton>
+            <PagingButton
+              disabled={!data?.hasNextPage}
+              onClick={() =>
+                navigate({
+                  to: '/projects/$projectId/teams',
+                  params: { projectId },
+                  search: {
+                    cursor: data?.endCursor ?? undefined,
+                    direction: 'forward',
+                  },
+                })
+              }
+            >
+              Next page
+            </PagingButton>
+          </div>
+        </SurfaceCardStrong>
+
+        <SurfaceCard className="p-5">
+          <div className="flex items-center gap-3">
+            <div className="rounded-full bg-app-accent-soft p-3 text-app-accent">
+              <Layers3 size={18} />
+            </div>
+            <div>
+              <p className="eyebrow">Why this view matters</p>
+              <h3 className="text-xl font-semibold text-app-ink">Better ownership visibility</h3>
+            </div>
+          </div>
+          <p className="mt-4 text-sm leading-7 text-app-muted">
+            Team cards now give a short, direct path into who belongs to a group and when it was created, instead of burying that detail in scattered controls.
+          </p>
+        </SurfaceCard>
+      </div>
+
+      <AppModal
+        open={showCreate}
+        title="Create a team"
+        description="Keep team names simple and recognizable so the task flow reads clearly."
+        onClose={() => setShowCreate(false)}
+      >
+        <form
+          className="space-y-4"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (!name.trim()) return;
+            createTeam.mutate();
+          }}
+        >
+          <TextField label="Team name" value={name} onChange={setName} placeholder="Platform squad" required />
+          <div className="flex flex-wrap gap-3 pt-2">
+            <button
+              type="button"
+              onClick={() => setShowCreate(false)}
+              className="rounded-full border border-app-line bg-white/80 px-5 py-3 text-sm font-semibold text-app-ink transition hover:border-app-ink/20"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={createTeam.isPending || !name.trim()}
+              className="inline-flex items-center gap-2 rounded-full bg-app-accent px-5 py-3 text-sm font-semibold text-white transition hover:bg-app-accent/90 disabled:opacity-60"
+            >
+              {createTeam.isPending ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
+              Create team
+            </button>
+          </div>
+        </form>
+      </AppModal>
     </div>
   );
 }
 
-function TeamCard({ team }: { team: any }) {
+function PagingButton({
+  disabled,
+  onClick,
+  children,
+}: {
+  disabled?: boolean;
+  onClick: () => void;
+  children: string;
+}) {
   return (
-    <div className="glass-panel p-6 border border-white/5 bg-white/[0.02] rounded-[32px] hover:border-white/10 transition-all group relative overflow-hidden">
-      <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-        <Users size={64} />
-      </div>
-      
-      <div className="flex flex-col gap-6 h-full relative z-10">
-        <div className="flex items-start justify-between">
-          <div className="flex flex-col">
-            <h3 className="text-lg font-black text-white group-hover:text-blue-400 transition-colors uppercase tracking-tight">
-              {team.name}
-            </h3>
-            <span className="text-[10px] font-bold text-slate-500 tracking-widest uppercase">
-              ID: {team.id.slice(0, 8)}
-            </span>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-6 mt-auto">
-           <div className="flex flex-col">
-             <span className="text-xl font-black text-white">{team.memberCount || 0}</span>
-             <span className="text-[10px] font-bold text-slate-500 uppercase">Members</span>
-           </div>
-           <div className="flex flex-col">
-             <span className="text-xl font-black text-white">{team.taskCount || 0}</span>
-             <span className="text-[10px] font-bold text-slate-500 uppercase">Tasks</span>
-           </div>
-        </div>
-
-        <button className="flex items-center justify-center gap-2 w-full py-3 rounded-2xl bg-white/5 text-white/40 group-hover:bg-blue-500 group-hover:text-white transition-all font-bold text-xs">
-          View Detail
-          <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform" />
-        </button>
-      </div>
-    </div>
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className="rounded-full border border-app-line bg-white/80 px-5 py-3 text-sm font-semibold text-app-ink transition hover:border-app-ink/20 disabled:cursor-not-allowed disabled:opacity-40"
+    >
+      {children}
+    </button>
   );
 }

@@ -1,13 +1,13 @@
-import { 
-  createRootRouteWithContext, 
-  createRoute, 
-  createRouter, 
-  Outlet, 
+import {
+  createRootRouteWithContext,
+  createRoute,
+  createRouter,
+  Outlet,
   lazyRouteComponent,
   redirect
 } from '@tanstack/react-router';
 import { Sidebar } from './components/Layout/Sidebar';
-import { useAuth, type AuthContextType } from './context/AuthContext';
+import { type AuthContextType } from './context/AuthContext';
 import { AuthScreen } from './components/Auth/AuthScreen';
 import { NotFoundComponent, GlobalErrorComponent } from './components/Layout/RouterFeedback';
 import { RootComponent } from './components/Layout/RootComponent';
@@ -30,10 +30,10 @@ export const rootRoute = createRootRouteWithContext<MyRouterContext>()({
 const AuthenticatedLayout = () => {
   const { isSidebarCollapsed } = useLayout();
   return (
-    <div className="flex h-screen overflow-hidden bg-bg-notion">
+    <div className="flex h-screen overflow-hidden bg-bg-notion text-text-notion">
       <Sidebar />
       <main className={`flex-1 h-screen overflow-y-auto p-3 transition-all duration-300 ${isSidebarCollapsed ? 'pl-3' : 'pl-0'}`}>
-        <div className="glass-panel-dark rounded-[32px] min-h-full overflow-hidden text-slate-100 flex flex-col">
+        <div className="glass-panel rounded-[32px] min-h-full overflow-hidden flex flex-col">
           <Outlet />
         </div>
       </main>
@@ -66,6 +66,19 @@ const publicLayoutRoute = createRoute({
     if (context.auth.isLoading) return;
     if (context.auth.isAuthenticated) {
       throw redirect({ to: '/' });
+    }
+  },
+  component: () => <Outlet />,
+});
+
+// Fullscreen Dedicated Layout (No Sidebar)
+const fullscreenLayoutRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  id: 'fullscreen-layout',
+  beforeLoad: ({ context }) => {
+    if (context.auth.isLoading) return;
+    if (!context.auth.isAuthenticated) {
+      throw redirect({ to: '/auth' });
     }
   },
   component: () => <Outlet />,
@@ -132,6 +145,12 @@ const projectTasksRoute = createRoute({
 const projectTeamsRoute = createRoute({
   getParentRoute: () => projectLayoutRoute,
   path: 'teams',
+  validateSearch: (search: Record<string, unknown>): TaskSearch => {
+    return {
+      cursor: (search.cursor as string) || undefined,
+      direction: (search.direction as 'forward' | 'backward') || undefined,
+    };
+  },
   component: lazyRouteComponent(() => import('./ProjectTeamsView.lazy.tsx')),
 });
 
@@ -141,7 +160,37 @@ const projectMembersRoute = createRoute({
   component: lazyRouteComponent(() => import('./ProjectMembersView.lazy.tsx')),
 });
 
+const teamDetailRoute = createRoute({
+  getParentRoute: () => projectLayoutRoute,
+  path: 'teams/$teamId',
+  validateSearch: (search: Record<string, unknown>): TaskSearch => {
+    return {
+      cursor: (search.cursor as string) || undefined,
+      direction: (search.direction as 'forward' | 'backward') || undefined,
+    };
+  },
+  component: lazyRouteComponent(() => import('./TeamDetailPage.lazy.tsx')),
+});
+
+import { TaskGraphView } from './components/Tasks/TaskGraphView';
+
+const projectGraphRoute = createRoute({
+  getParentRoute: () => fullscreenLayoutRoute,
+  path: 'graph/$projectId',
+  validateSearch: (search: Record<string, unknown>): LinkSearch => {
+    return {
+      taskId: (search.taskId as string) || undefined,
+      inCursor: (search.inCursor as string) || undefined,
+      inDir: (search.inDir as 'forward' | 'backward') || undefined,
+      outCursor: (search.outCursor as string) || undefined,
+      outDir: (search.outDir as 'forward' | 'backward') || undefined,
+    };
+  },
+  component: TaskGraphView,
+});
+
 type LinkSearch = {
+  taskId?: string;
   inCursor?: string;
   inDir?: 'forward' | 'backward';
   outCursor?: string;
@@ -175,15 +224,19 @@ export const routeTree = rootRoute.addChildren([
       projectTasksRoute,
       projectTeamsRoute,
       projectMembersRoute,
+      teamDetailRoute,
       taskDetailRoute,
     ]),
   ]),
+  fullscreenLayoutRoute.addChildren([
+    projectGraphRoute,
+  ]),
 ]);
 
-export const router = createRouter({ 
+export const router = createRouter({
   routeTree,
   context: {
-    auth: undefined! 
+    auth: undefined!
   },
   defaultNotFoundComponent: NotFoundComponent,
   defaultErrorComponent: GlobalErrorComponent,

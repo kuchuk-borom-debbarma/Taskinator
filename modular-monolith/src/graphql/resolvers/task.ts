@@ -64,23 +64,22 @@ export const taskResolvers = {
             parent: Task,
             args: PaginationParams & {
                 direction: 'incoming' | 'outgoing' | 'both';
-                depthLimit: number;
+                depthLimit?: number;
             },
             context: GraphQLContext,
         ) => {
-            if (!context.userId) throw new UnauthorizedError();
+            const userId = context.userId;
+            if (!userId) throw new UnauthorizedError();
 
             const { direction, depthLimit, ...pagination } = args;
-
             const { links, nextCursor, prevCursor } =
                 await taskService.getTaskLinks(
                     {
-                        userId: context.userId,
+                        userId,
                         projectId: parent.projectId,
                         taskId: parent.id,
-                        direction: (direction === 'both'
-                            ? 'incoming'
-                            : direction) as 'incoming' | 'outgoing',
+                        direction,
+                        depthLimit,
                     },
                     pagination,
                 );
@@ -88,7 +87,13 @@ export const taskResolvers = {
             return {
                 edges: links.map((l: any) => ({
                     node: l,
-                    cursor: encodeCursor(l.createdAt.toISOString(), l.id),
+                    cursor:
+                        direction === 'both' && typeof l.graphDepth === 'number'
+                            ? encodeCursor(
+                                  `${l.graphDepth}~${l.createdAt.toISOString()}`,
+                                  l.id,
+                              )
+                            : encodeCursor(l.createdAt.toISOString(), l.id),
                 })),
                 pageInfo: {
                     hasNextPage: !!nextCursor,
@@ -239,6 +244,33 @@ export const taskResolvers = {
                         t.epochPrecision || t.createdAt.toISOString(),
                         t.id,
                     ),
+                })),
+                pageInfo: {
+                    hasNextPage: !!nextCursor,
+                    hasPreviousPage: !!prevCursor,
+                    startCursor: prevCursor,
+                    endCursor: nextCursor,
+                },
+            };
+        },
+        projectLinks: async (
+            parent: Project,
+            args: PaginationParams,
+            context: GraphQLContext,
+        ) => {
+            if (!context.userId) throw new UnauthorizedError();
+
+            const { links, nextCursor, prevCursor } =
+                await taskService.getProjectLinks(
+                    context.userId,
+                    parent.id,
+                    args,
+                );
+
+            return {
+                edges: links.map((l: any) => ({
+                    node: l,
+                    cursor: encodeCursor(l.createdAt.toISOString(), l.id),
                 })),
                 pageInfo: {
                     hasNextPage: !!nextCursor,

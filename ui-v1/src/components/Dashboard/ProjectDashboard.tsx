@@ -1,196 +1,161 @@
-import React, { useState } from 'react';
-import { useNavigate } from '@tanstack/react-router';
-import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
+import { useInfiniteQuery } from '@tanstack/react-query';
+import { Link, useNavigate } from '@tanstack/react-router';
+import { ArrowRight, FolderPlus, FolderSearch, Loader2, Rocket } from 'lucide-react';
 import { useApi } from '../../hooks/useApi';
 import { useAuth } from '../../context/AuthContext';
 import { CreateProjectModal } from '../Layout/Sidebar';
-import { 
-  Folder, 
-  Zap, 
-  Users, 
-  Plus, 
-  Loader2,
-  ArrowRight,
-  Layout,
-  PanelLeft
-} from 'lucide-react';
-import { useLayout } from '../../context/LayoutContext';
+import { EmptyState, PageHeader, StatCard, SurfaceCardStrong, formatDate } from '../shared/workspace';
 
 export function ProjectDashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { projectApi } = useApi();
-  const { isSidebarCollapsed, toggleSidebar } = useLayout();
   const [showCreate, setShowCreate] = useState(false);
 
-  // ─── Workspace Stats ───────────────────────────────────────────────────────
-  const { data: workspaceStats } = useQuery({
-    queryKey: ['workspace-stats'],
-    queryFn: () => projectApi.getWorkspaceStats(),
-  });
-
-  // ─── Project List ──────────────────────────────────────────────────────────
   const {
-    data: projectsData,
+    data,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
-    isLoading
+    isLoading,
   } = useInfiniteQuery({
     queryKey: ['workspace-projects-list'],
-    queryFn: ({ pageParam }) => projectApi.getProjects(10, pageParam),
+    queryFn: ({ pageParam }) => projectApi.getProjects(9, pageParam),
     initialPageParam: undefined as string | undefined,
-    getNextPageParam: (lastPage) => lastPage.hasNextPage ? lastPage.endCursor : undefined,
+    getNextPageParam: (lastPage) => (lastPage.hasNextPage ? lastPage.endCursor ?? undefined : undefined),
+    staleTime: 1000 * 60 * 3,
   });
 
-  const projects = projectsData?.pages.flatMap(p => p.projects) || [];
+  const projects = data?.pages.flatMap((page) => page.projects) ?? [];
+  const totalProjects = data?.pages[0]?.totalCount ?? projects.length;
+  const totalTasks = projects.reduce((sum, project) => sum + project.tasksCount, 0);
+  const totalTeams = projects.reduce((sum, project) => sum + project.teamsCount, 0);
 
   return (
-    <div className="p-8 md:p-10 animate-in fade-in slide-in-from-bottom-2 duration-500 max-w-5xl mx-auto">
-      {/* Header Section */}
-      <div className="flex flex-col gap-2 mb-12">
-        <div className="flex items-center gap-4 mb-2">
-          {isSidebarCollapsed && (
-            <button 
-              onClick={toggleSidebar}
-              className="p-2 rounded-xl bg-white/5 border border-white/10 text-white/40 hover:text-white hover:bg-white/10 transition-all active:scale-95"
-              title="Expand Sidebar"
-            >
-              <PanelLeft size={20} />
-            </button>
-          )}
-          <p className="text-[11px] font-black uppercase tracking-[0.3em] text-focus-blue">Workspace Dashboard</p>
-        </div>
-        <h1 className="text-4xl font-black tracking-tight text-text-notion">
-          Welcome, <span className="text-focus-blue">{user?.username || 'Architect'}</span>
-        </h1>
-        <p className="text-text-dim text-sm font-medium opacity-60">System online. All workspace nodes and relational maps are active.</p>
-      </div>
-
-      {/* Analytical Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-        <StatCard 
-          label="Active Projects" 
-          value={workspaceStats?.projectCount || 0} 
-          icon={<Folder size={18} />} 
-          color="blue"
-          sublabel="Primary initiatives"
-        />
-        <StatCard 
-          label="Assigned Tasks" 
-          value={workspaceStats?.assignedTaskCount || 0} 
-          icon={<Zap size={18} />} 
-          color="amber"
-          sublabel="Pending DAG nodes"
-        />
-        <StatCard 
-          label="Collaboration" 
-          value={workspaceStats?.teamCount || 0} 
-          icon={<Users size={18} />} 
-          color="emerald"
-          sublabel="Sync clusters"
-        />
-      </div>
-
-      {/* Project Selection Section */}
-      <div className="glass-card rounded-[32px] border border-white/10 shadow-2xl overflow-hidden bg-white/[0.01]">
-        <div className="p-6 border-b border-white/5 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-             <div className="w-8 h-8 rounded-lg bg-focus-blue/10 flex items-center justify-center text-focus-blue">
-               <Layout size={16} />
-             </div>
-             <h2 className="text-[14px] font-bold text-text-notion">Your Projects</h2>
-          </div>
-          <button 
-            onClick={() => setShowCreate(true)}
-            className="p-2 rounded-xl bg-focus-blue/10 text-focus-blue hover:bg-focus-blue hover:text-white transition-all active:scale-95"
-          >
-            <Plus size={16} />
-          </button>
-        </div>
-
-        <div className="p-4 min-h-[400px]">
-          {isLoading ? (
-            <div className="flex items-center justify-center h-64 gap-3 text-text-dim">
-              <Loader2 className="w-5 h-5 animate-spin" />
-              <span className="text-xs font-medium">Loading workspace...</span>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 gap-3">
-              {projects.map(project => (
-                <div 
-                  key={project.id}
-                  onClick={() => navigate({ to: '/projects/$projectId', params: { projectId: project.id } })}
-                  className="p-5 rounded-2xl bg-white/[0.03] border border-white/5 hover:bg-white/[0.06] hover:border-white/10 transition-all group cursor-pointer flex items-center justify-between"
+    <div className="page-frame">
+      <SurfaceCardStrong className="hero-gradient mesh-backdrop overflow-hidden p-6 md:p-8">
+        <PageHeader
+          eyebrow="Workspace overview"
+          title={`Welcome back${user?.username ? `, ${user.username}` : ''}`}
+          description="Your projects now live in a clearer workspace: less hunting, faster decisions, and stronger execution context from the first click."
+          actions={
+            <>
+              <button
+                onClick={() => setShowCreate(true)}
+                className="inline-flex items-center gap-2 rounded-full bg-app-accent px-5 py-3 text-sm font-semibold text-white transition hover:bg-app-accent/90"
+              >
+                <FolderPlus size={16} />
+                New project
+              </button>
+              {projects[0] ? (
+                <button
+                  onClick={() => navigate({ to: '/projects/$projectId', params: { projectId: projects[0].id } })}
+                  className="inline-flex items-center gap-2 rounded-full border border-app-line bg-white/80 px-5 py-3 text-sm font-semibold text-app-ink transition hover:border-app-ink/20"
                 >
-                  <div className="flex flex-col gap-1">
-                    <h3 className="text-sm font-bold text-text-notion group-hover:text-focus-blue transition-colors">{project.name}</h3>
-                    <p className="text-xs text-text-dim opacity-60 leading-relaxed max-w-md line-clamp-1">
-                      {project.description || 'No description provided.'}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <div className="text-[10px] font-black text-text-dim/20 uppercase tracking-widest hidden sm:block">
-                      Version {project.version}
-                    </div>
-                    <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center text-text-dim opacity-0 group-hover:opacity-100 transition-all translate-x-2 group-hover:translate-x-0">
-                      <ArrowRight size={14} />
-                    </div>
-                  </div>
-                </div>
-              ))}
-              
-              {hasNextPage && (
-                <button 
-                  onClick={() => fetchNextPage()}
-                  disabled={isFetchingNextPage}
-                  className="w-full py-4 mt-4 text-[11px] font-bold text-focus-blue bg-focus-blue/5 rounded-2xl hover:bg-focus-blue/10 transition-all border border-dashed border-focus-blue/20"
-                >
-                  {isFetchingNextPage ? 'Loading more projects...' : 'View More Projects'}
+                  Resume latest
+                  <ArrowRight size={16} />
                 </button>
-              )}
+              ) : null}
+            </>
+          }
+        />
+      </SurfaceCardStrong>
 
-              {projects.length === 0 && (
-                <div className="flex flex-col items-center justify-center h-48 py-10 opacity-30 italic text-sm text-text-dim">
-                  <p>No projects found in this workspace context.</p>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
+      <div className="mt-6 grid gap-4 md:grid-cols-3">
+        <StatCard label="Projects" value={totalProjects} hint="Active spaces you can step into." />
+        <StatCard label="Tasks in view" value={totalTasks} hint="Current workload across the fetched project set." accent="teal" />
+        <StatCard label="Teams" value={totalTeams} hint="Operating groups currently attached to these projects." accent="ink" />
       </div>
 
-      {showCreate && <CreateProjectModal onClose={() => setShowCreate(false)} />}
+      <div className="mt-8">
+        <SurfaceCardStrong className="p-5 md:p-6">
+          <div className="mb-6 flex items-center justify-between gap-4">
+            <div>
+              <p className="eyebrow mb-2">Project lineup</p>
+              <h2 className="text-2xl font-semibold tracking-[-0.04em] text-app-ink">Choose the workstream to enter</h2>
+            </div>
+            <div className="rounded-full bg-app-ink/5 px-3 py-1.5 text-xs font-semibold text-app-muted">
+              {projects.length} loaded
+            </div>
+          </div>
+
+          {isLoading ? (
+            <div className="flex min-h-[20rem] items-center justify-center">
+              <Loader2 size={28} className="animate-spin text-app-accent" />
+            </div>
+          ) : projects.length === 0 ? (
+            <EmptyState
+              icon={FolderSearch}
+              title="No projects yet"
+              description="Create the first project to kick off the redesigned workspace flow."
+              action={
+                <button
+                  onClick={() => setShowCreate(true)}
+                  className="rounded-full bg-app-accent px-5 py-3 text-sm font-semibold text-white transition hover:bg-app-accent/90"
+                >
+                  Create project
+                </button>
+              }
+            />
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2">
+              {projects.map((project) => (
+                <Link
+                  key={project.id}
+                  to="/projects/$projectId"
+                  params={{ projectId: project.id }}
+                  className="group rounded-[28px] border border-app-line bg-white/75 p-5 transition hover:-translate-y-0.5 hover:border-app-accent/30 hover:shadow-xl"
+                >
+                  <div className="mb-6 flex items-start justify-between gap-4">
+                    <div>
+                      <div className="mb-3 inline-flex rounded-full bg-app-accent-soft px-3 py-1 text-xs font-semibold text-app-accent">
+                        v{project.version}
+                      </div>
+                      <h3 className="text-xl font-semibold tracking-[-0.03em] text-app-ink">{project.name}</h3>
+                      <p className="mt-2 truncate-2 text-sm leading-6 text-app-muted">
+                        {project.description || 'No project description yet. Open the project to shape its direction.'}
+                      </p>
+                    </div>
+                    <div className="rounded-full border border-app-line bg-white p-2 text-app-muted transition group-hover:text-app-accent">
+                      <ArrowRight size={16} />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-3 text-sm">
+                    <Metric label="Tasks" value={project.tasksCount} />
+                    <Metric label="Teams" value={project.teamsCount} />
+                    <Metric label="Members" value={project.projectMembersCount} />
+                  </div>
+                  <p className="mt-4 text-xs text-app-muted">Updated {formatDate(project.updatedAt || project.createdAt)}</p>
+                </Link>
+              ))}
+            </div>
+          )}
+
+          {hasNextPage ? (
+            <button
+              onClick={() => fetchNextPage()}
+              disabled={isFetchingNextPage}
+              className="mt-6 inline-flex items-center gap-2 rounded-full border border-app-line bg-white/80 px-5 py-3 text-sm font-semibold text-app-ink transition hover:border-app-ink/20 disabled:opacity-60"
+            >
+              {isFetchingNextPage ? <Loader2 size={16} className="animate-spin" /> : <Rocket size={16} />}
+              Load more projects
+            </button>
+          ) : null}
+        </SurfaceCardStrong>
+      </div>
+
+      {showCreate ? <CreateProjectModal onClose={() => setShowCreate(false)} /> : null}
     </div>
   );
 }
 
-function StatCard({ label, value, icon, sublabel, color }: { label: string, value: number, icon: React.ReactNode, sublabel: string, color: string }) {
-  const colors: Record<string, string> = {
-    blue: 'text-focus-blue bg-focus-blue/10',
-    amber: 'text-amber-400 bg-amber-400/10',
-    emerald: 'text-emerald-400 bg-emerald-400/10',
-  };
-
+function Metric({ label, value }: { label: string; value: number }) {
   return (
-    <div className="glass-card p-6 rounded-[28px] border border-white/10 bg-gradient-to-br from-white/5 to-transparent hover:border-white/20 transition-all group overflow-hidden relative shadow-premium">
-      <div className={`absolute -right-4 -top-4 w-24 h-24 rounded-full blur-[40px] opacity-10 group-hover:opacity-20 transition-opacity ${colors[color].split(' ')[1]}`} />
-      
-      <div className="flex flex-col gap-4">
-        <div className="flex items-center gap-4">
-          <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${colors[color]}`}>
-            {icon}
-          </div>
-          <div className="flex flex-col">
-            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-text-dim opacity-50">{label}</span>
-            <span className="text-[10px] font-bold text-text-dim/30">{sublabel}</span>
-          </div>
-        </div>
-        <div className="flex items-baseline gap-2">
-          <span className="text-4xl font-black text-text-notion tracking-tighter tabular-nums">{value}</span>
-          <span className="text-xs font-bold text-incoming tracking-tight">+{(value % 5) + 1}</span>
-        </div>
-      </div>
+    <div className="rounded-2xl bg-app-ink/4 px-3 py-3">
+      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-app-muted">{label}</p>
+      <p className="mt-2 text-xl font-semibold tracking-[-0.03em] text-app-ink">{value}</p>
     </div>
   );
 }
