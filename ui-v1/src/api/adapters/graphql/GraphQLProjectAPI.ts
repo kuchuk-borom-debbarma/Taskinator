@@ -140,7 +140,7 @@ export class GraphQLProjectAPI implements ProjectAPI {
           tasksCount
           teamsCount
           creator { id username }
-          projectTeams(first: $teamsFirst) {
+          teams(first: $teamsFirst) {
             edges {
               node {
                 id
@@ -194,7 +194,7 @@ export class GraphQLProjectAPI implements ProjectAPI {
         ...data.project,
         description: data.project.description ?? undefined,
       },
-      teams: data.project.projectTeams?.edges.map((e: any) => e.node) || [],
+      teams: data.project.teams?.edges.map((e: any) => e.node) || [],
       tasks: data.project.projectTasks?.edges.map((e: any) => e.node) || [],
       members: data.project.projectMembers?.edges.map((e: any) => e.node) || [],
     };

@@ -13,6 +13,12 @@ import {
 } from 'lucide-react';
 import { useLayout } from '../../context/LayoutContext';
 
+const listDateFormatter = new Intl.DateTimeFormat(undefined, {
+  day: '2-digit',
+  month: 'short',
+  year: 'numeric',
+});
+
 interface TaskListViewProps {
   tasks: ProjectTask[];
   _projectId: string;
@@ -42,13 +48,13 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
       ref={parentRef}
       className="h-[calc(100vh-120px)] overflow-y-auto px-4 py-8 md:px-12 w-full max-w-6xl mx-auto custom-scrollbar flex flex-col"
     >
-      <header className="mb-10 flex items-center justify-between border-b border-white/5 pb-8">
+      <header className="mb-10 flex items-center justify-between border-b border-border-notion pb-8">
         <div className="flex flex-col gap-1.5">
-          <h1 className="text-3xl font-bold tracking-tight text-white flex items-center gap-3">
+          <h1 className="text-3xl font-bold tracking-tight text-text-notion flex items-center gap-3">
             {isSidebarCollapsed && (
               <button 
                 onClick={toggleSidebar}
-                className="p-2 mr-2 rounded-xl bg-white/5 border border-white/10 text-white/40 hover:text-white hover:bg-white/10 transition-all active:scale-95"
+                className="p-2 mr-2 rounded-xl bg-white border border-border-notion text-text-dim hover:text-text-notion hover:bg-bg-secondary transition-all active:scale-95"
                 title="Expand Sidebar"
               >
                 <PanelLeft size={20} />
@@ -65,14 +71,14 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
           <button
             onClick={onLoadPrev}
             disabled={!hasPreviousPage || isFetchingPreviousPage}
-            className="group flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-white shadow-sm transition-all hover:bg-white/10 active:scale-95 disabled:opacity-20 disabled:pointer-events-none"
+            className="group flex h-10 w-10 items-center justify-center rounded-xl border border-border-notion bg-white text-text-notion shadow-sm transition-all hover:bg-bg-secondary active:scale-95 disabled:opacity-20 disabled:pointer-events-none"
           >
             <ChevronLeft size={18} />
           </button>
           <button
             onClick={onLoadMore}
             disabled={!hasNextPage || isFetchingNextPage}
-            className="group flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-white shadow-sm transition-all hover:bg-white/10 active:scale-95 disabled:opacity-20 disabled:pointer-events-none"
+            className="group flex h-10 w-10 items-center justify-center rounded-xl border border-border-notion bg-white text-text-notion shadow-sm transition-all hover:bg-bg-secondary active:scale-95 disabled:opacity-20 disabled:pointer-events-none"
           >
             {isFetchingNextPage || isFetchingPreviousPage ? (
               <Loader2 size={18} className="animate-spin text-focus-blue" />
@@ -85,10 +91,10 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
 
       {tasks.length === 0 && !isFetchingNextPage && !isFetchingPreviousPage ? (
         <div className="flex flex-col items-center justify-center py-32 text-center">
-          <div className="w-16 h-16 rounded-3xl bg-white/5 border border-white/10 flex items-center justify-center mb-6 text-white/20">
+          <div className="w-16 h-16 rounded-3xl bg-white border border-border-notion flex items-center justify-center mb-6 text-text-dim shadow-sm">
             <Archive size={32} />
           </div>
-          <p className="text-lg font-bold text-white mb-1">No tasks in this project</p>
+          <p className="text-lg font-bold text-text-notion mb-1">No tasks in this project</p>
           <p className="text-sm text-text-dim">Create your first task to get started.</p>
         </div>
       ) : (
@@ -104,14 +110,14 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
 
 // ─── Task Card ──────────────────────────────────────────────────────────────
 
-const TaskListItem: React.FC<{ task: ProjectTask; _projectId: string }> = ({ task, _projectId }) => {
+const TaskListItemComponent: React.FC<{ task: ProjectTask; _projectId: string }> = ({ task, _projectId }) => {
   const projectId = task.project?.id || _projectId;
 
   return (
     <Link
       to="/projects/$projectId/tasks/$taskId"
       params={{ projectId: projectId || '', taskId: task.id } as any}
-      className="group flex flex-col gap-6 p-7 mb-6 bg-white/[0.03] border border-white/5 rounded-2xl transition-all duration-300 hover:bg-white/[0.05] hover:border-focus-blue/30 hover:shadow-[0_20px_50px_rgba(0,0,0,0.3)] relative overflow-hidden"
+      className="group flex flex-col gap-6 p-7 mb-6 bg-white/78 border border-border-notion rounded-2xl transition-all duration-300 hover:bg-white hover:border-focus-blue/20 hover:shadow-[0_20px_50px_rgba(15,23,42,0.08)] relative overflow-hidden"
     >
       {/* Selection Glow Effect */}
       <div className="absolute top-0 left-0 w-1 h-0 bg-focus-blue group-hover:h-full transition-all duration-500" />
@@ -119,7 +125,7 @@ const TaskListItem: React.FC<{ task: ProjectTask; _projectId: string }> = ({ tas
       <div className="flex flex-col gap-4">
         {/* Header: Title and Status */}
         <div className="flex items-start justify-between gap-4">
-          <h3 className="text-xl font-bold text-slate-100 group-hover:text-focus-blue transition-colors leading-tight">
+          <h3 className="text-xl font-bold text-text-notion group-hover:text-focus-blue transition-colors leading-tight">
             {task.title}
           </h3>
           <StatusBadge status={task.status} />
@@ -127,7 +133,7 @@ const TaskListItem: React.FC<{ task: ProjectTask; _projectId: string }> = ({ tas
 
         {/* Body: Description */}
         {task.description && (
-          <p className="text-[14px] text-slate-400 leading-relaxed font-medium line-clamp-3">
+          <p className="text-[14px] text-text-dim leading-relaxed font-medium line-clamp-3">
             {task.description}
           </p>
         )}
@@ -138,14 +144,14 @@ const TaskListItem: React.FC<{ task: ProjectTask; _projectId: string }> = ({ tas
         <PriorityBadge priority={task.priority} />
 
         {task.team && (
-          <div className="flex items-center gap-2 px-3 py-1 bg-white/5 border border-white/10 rounded-lg text-[11px] font-bold text-slate-300 shadow-sm">
+          <div className="flex items-center gap-2 px-3 py-1 bg-bg-secondary border border-border-notion rounded-lg text-[11px] font-bold text-text-notion shadow-sm">
             <div className="w-2 h-2 rounded-full bg-focus-blue/40" />
             {task.team.name}
           </div>
         )}
 
         {task.assignedMember && (
-          <div className="flex items-center gap-2 px-3 py-1 bg-white/5 border border-white/10 rounded-lg text-[11px] font-bold text-slate-300 shadow-sm">
+          <div className="flex items-center gap-2 px-3 py-1 bg-bg-secondary border border-border-notion rounded-lg text-[11px] font-bold text-text-notion shadow-sm">
             <span className="opacity-40 font-black">@</span>
             {task.assignedMember.username}
           </div>
@@ -153,26 +159,24 @@ const TaskListItem: React.FC<{ task: ProjectTask; _projectId: string }> = ({ tas
       </div>
 
       {/* Footer: Time */}
-      <div className="pt-5 border-t border-white/[0.05] flex items-center justify-between">
+      <div className="pt-5 border-t border-border-notion flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="text-[10px] font-bold text-slate-600 uppercase tracking-widest">
+          <span className="text-[10px] font-bold text-text-dim uppercase tracking-widest">
             {task.status.replace('_', ' ')}
           </span>
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-[11px] font-bold text-slate-500 uppercase tracking-tighter tabular-nums opacity-60">
-            Updated {new Date(task.updatedAt).toLocaleDateString(undefined, {
-              day: '2-digit',
-              month: 'short',
-              year: 'numeric'
-            })}
+          <span className="text-[11px] font-bold text-text-dim uppercase tracking-tighter tabular-nums opacity-60">
+            Updated {listDateFormatter.format(new Date(task.updatedAt))}
           </span>
-          <div className="w-1.5 h-1.5 rounded-full bg-slate-700 group-hover:bg-focus-blue transition-all duration-300" />
+          <div className="w-1.5 h-1.5 rounded-full bg-slate-300 group-hover:bg-focus-blue transition-all duration-300" />
         </div>
       </div>
     </Link>
   );
 };
+
+const TaskListItem = React.memo(TaskListItemComponent);
 
 // ─── Sub-Components ──────────────────────────────────────────────────────────
 

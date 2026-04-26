@@ -1,5 +1,5 @@
 import React, { useRef, useMemo } from 'react';
-import { useInfiniteQuery } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { useApi } from '../../hooks/useApi';
 import { getLinkLabelColor } from '../../utils/color';
 import { Loader2, ArrowRight, ChevronRight, ChevronLeft } from 'lucide-react';
@@ -23,34 +23,28 @@ export const TaskLinkColumn: React.FC<TaskLinkColumnProps> = ({ taskId, directio
 
   const {
     data,
-    isFetchingNextPage,
-    isFetchingPreviousPage,
-    isLoading
-  } = useInfiniteQuery({
+    isFetching,
+    isLoading,
+  } = useQuery({
     queryKey: ['task-links', taskId, direction, cursor, dir],
-    queryFn: ({ pageParam }) => {
-      const activeParam = pageParam || (cursor ? { direction: dir || 'forward', cursor } : undefined);
-      const isBackward = activeParam?.direction === 'backward';
-      const c = activeParam?.cursor;
-
+    queryFn: () => {
+      const isBackward = dir === 'backward';
       return taskApi.getTaskNeighbourLinks(
         taskId,
         direction,
         1,
         isBackward ? undefined : 2,
-        isBackward ? undefined : c,
+        isBackward ? undefined : cursor,
         isBackward ? 2 : undefined,
-        isBackward ? c : undefined
+        isBackward ? cursor : undefined
       );
     },
-    initialPageParam: (cursor ? { direction: dir || 'forward', cursor } : undefined) as { direction: 'forward' | 'backward', cursor: string } | undefined,
-    getNextPageParam: (lastPage) => lastPage.hasNextPage ? { direction: 'forward' as const, cursor: lastPage.endCursor! } : undefined,
-    getPreviousPageParam: (firstPage) => firstPage.hasPreviousPage ? { direction: 'backward' as const, cursor: firstPage.startCursor! } : undefined,
-    maxPages: 1,
+    placeholderData: (prev) => prev,
+    staleTime: 1000 * 60 * 3,
   });
 
   const virtualData = useMemo(() => {
-    const allLinks = data?.pages.flatMap(p => p.links) || [];
+    const allLinks = data?.links || [];
     const groups: Record<string, { label: string; items: any[] }> = {};
     allLinks.forEach(link => {
       const displayLabel = (link.label || 'Related').trim();
@@ -68,8 +62,8 @@ export const TaskLinkColumn: React.FC<TaskLinkColumnProps> = ({ taskId, directio
     return items;
   }, [data]);
 
-  const firstPage = data?.pages[0];
-  const lastPage = data?.pages[data.pages.length - 1];
+  const firstPage = data;
+  const lastPage = data;
 
   if (isLoading) {
     return (
@@ -97,7 +91,7 @@ export const TaskLinkColumn: React.FC<TaskLinkColumnProps> = ({ taskId, directio
                 });
               }
             }}
-            disabled={!firstPage?.hasPreviousPage || isFetchingPreviousPage}
+            disabled={!firstPage?.hasPreviousPage || isFetching}
             className="p-1.5 rounded-lg bg-bg-secondary border border-border-notion text-text-notion disabled:opacity-20 hover:bg-bg-notion transition-all active:scale-95 flex items-center justify-center shadow-sm"
           >
             <ChevronLeft size={14} />
@@ -114,10 +108,10 @@ export const TaskLinkColumn: React.FC<TaskLinkColumnProps> = ({ taskId, directio
                 });
               }
             }}
-            disabled={!lastPage?.hasNextPage || isFetchingNextPage}
+            disabled={!lastPage?.hasNextPage || isFetching}
             className="p-1.5 rounded-lg bg-bg-secondary border border-border-notion text-text-notion disabled:opacity-20 hover:bg-bg-notion transition-all active:scale-95 flex items-center justify-center shadow-sm"
           >
-            {isFetchingNextPage || isFetchingPreviousPage ? (
+            {isFetching ? (
               <Loader2 size={14} className="animate-spin text-focus-blue" />
             ) : (
               <ChevronRight size={14} />

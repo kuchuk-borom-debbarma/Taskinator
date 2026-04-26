@@ -5,11 +5,6 @@ import { TaskListView } from './components/Tasks/TaskListView';
 import { useState } from 'react';
 import { Plus, Loader2, X, Check } from 'lucide-react';
 
-type CursorParam =
-  | { direction: 'forward'; cursor: string | null | undefined }
-  | { direction: 'backward'; cursor: string | null | undefined }
-  | undefined;
-
 export default function ProjectTasksIndex() {
   const { projectId } = useParams({ strict: false });
   const { cursor, direction } = useSearch({ from: '/authenticated-layout/projects/$projectId/tasks' }) as any;
@@ -33,6 +28,7 @@ export default function ProjectTasksIndex() {
     },
     placeholderData: (prev) => prev,
     enabled: !!projectId,
+    staleTime: 1000 * 60 * 3,
   });
 
   const allTasks = tasksResult?.tasks ?? [];
@@ -41,6 +37,7 @@ export default function ProjectTasksIndex() {
     mutationFn: () =>
       taskApi.createTask({ projectId: projectId!, title: newTitle.trim(), description: newDesc.trim() || undefined }),
     onSuccess: (task) => {
+      queryClient.setQueryData(['task', task.id], task);
       queryClient.invalidateQueries({ queryKey: ['tasks', projectId] });
       setNewTitle('');
       setNewDesc('');

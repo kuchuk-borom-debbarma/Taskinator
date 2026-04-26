@@ -18,11 +18,11 @@ export const ProjectLayout: React.FC = () => {
   return (
     <div className="flex flex-col h-full">
       {/* Secondary Sub-nav */}
-      <div className="flex items-center px-6 py-2 border-b border-white/5 bg-white/5 backdrop-blur-md">
+      <div className="flex items-center px-6 py-3 border-b border-border-notion bg-white/70 backdrop-blur-md">
         <div className="flex items-center gap-3">
           <button
             onClick={toggleSidebar}
-            className="flex items-center justify-center w-9 h-9 rounded-xl border border-white/10 bg-white/[0.04] text-slate-400 hover:text-white hover:border-white/20 hover:bg-white/[0.08] transition-all active:scale-95"
+            className="flex items-center justify-center w-9 h-9 rounded-xl border border-border-notion bg-bg-secondary text-text-dim hover:text-text-notion hover:border-slate-300 hover:bg-white transition-all active:scale-95"
             title={isSidebarCollapsed ? 'Open sidebar' : 'Close sidebar'}
             aria-label={isSidebarCollapsed ? 'Open sidebar' : 'Close sidebar'}
           >
@@ -42,8 +42,8 @@ export const ProjectLayout: React.FC = () => {
                   params={{ projectId }}
                   className={`flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium transition-all ${
                     reallyActive 
-                      ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' 
-                      : 'text-slate-400 hover:text-slate-100 hover:bg-white/5'
+                      ? 'bg-focus-blue-soft text-focus-blue border border-focus-blue/20 shadow-sm' 
+                      : 'text-text-dim hover:text-text-notion hover:bg-bg-secondary'
                   }`}
                 >
                   <item.icon size={16} />

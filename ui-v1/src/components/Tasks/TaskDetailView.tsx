@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import type { QueryClient } from '@tanstack/react-query';
 import { useApi } from '../../hooks/useApi';
+import type { ProjectTask } from '../../api/types';
 import { TaskLinkColumn } from './TaskLinkColumn';
 import { ChevronLeft, Calendar, Layers, Users, User, Clock, CheckCircle2, Copy, Circle, Edit3, Check, X, PanelLeft, Network } from 'lucide-react';
 import { Link } from '@tanstack/react-router';
@@ -12,6 +14,7 @@ interface TaskDetailViewProps {
 }
 
 const STATUS_OPTIONS = ['TODO', 'IN_PROGRESS', 'DONE'] as const;
+const detailDateFormatter = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 
 const getStatusInfo = (s: string) => {
   const statuses: Record<string, { label: string; icon: React.ReactNode }> = {
@@ -20,6 +23,22 @@ const getStatusInfo = (s: string) => {
     'DONE':        { label: 'Done',        icon: <CheckCircle2 size={13} className="text-done" /> },
   };
   return statuses[s] || { label: s, icon: null };
+};
+
+const getCachedTask = (queryClient: QueryClient, taskId: string) => {
+  const directMatch = queryClient.getQueryData<ProjectTask>(['task', taskId]);
+  if (directMatch) return directMatch;
+
+  const taskPages = queryClient.getQueriesData<{ tasks: ProjectTask[] }>({
+    queryKey: ['tasks'],
+  });
+
+  for (const [, page] of taskPages) {
+    const task = page?.tasks?.find((entry) => entry.id === taskId);
+    if (task) return task;
+  }
+
+  return undefined;
 };
 
 export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose }) => {
@@ -34,6 +53,8 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
   const { data: task, isLoading } = useQuery({
     queryKey: ['task', taskId],
     queryFn: () => taskApi.getTask(taskId),
+    initialData: () => getCachedTask(qc, taskId),
+    staleTime: 1000 * 60 * 10,
   });
 
   const updateMut = useMutation({
@@ -41,7 +62,22 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
       if (!task) throw new Error('Task not loaded');
       return taskApi.updateTask(taskId, { projectId: task.project?.id || '', version: task.version, ...u });
     },
-    onSuccess: (d) => { qc.setQueryData(['task', taskId], d); qc.invalidateQueries({ queryKey: ['tasks'] }); setEditingStatus(false); setEditingTitle(false); },
+    onSuccess: (d) => {
+      qc.setQueryData(['task', taskId], d);
+      qc.setQueriesData<{ tasks: ProjectTask[] }>(
+        { queryKey: ['tasks'] },
+        (existing) => {
+          if (!existing) return existing;
+          return {
+            ...existing,
+            tasks: existing.tasks.map((entry) => (entry.id === d.id ? { ...entry, ...d } : entry)),
+          };
+        }
+      );
+      qc.invalidateQueries({ queryKey: ['task-links', taskId] });
+      setEditingStatus(false);
+      setEditingTitle(false);
+    },
   });
 
   if (isLoading || !task) return <div className="p-20 text-text-dim text-center animate-pulse h-screen flex items-center justify-center bg-bg-notion">Loading...</div>;
@@ -92,8 +128,8 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
           </div>
           <PB icon={<Users size={14} />} label="Team" value={task.team?.name || 'Unassigned'} dim={!task.team} />
           <PB icon={<User size={14} />} label="Assignee" value={task.assignedMember?.username || 'Unassigned'} dim={!task.assignedMember} />
-          <PB icon={<Calendar size={14} />} label="Created" value={new Date(task.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })} />
-          <PB icon={<Clock size={14} />} label="Updated" value={new Date(task.updatedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })} />
+          <PB icon={<Calendar size={14} />} label="Created" value={detailDateFormatter.format(new Date(task.createdAt))} />
+          <PB icon={<Clock size={14} />} label="Updated" value={detailDateFormatter.format(new Date(task.updatedAt))} />
           {task.createdBy && <PB icon={<User size={14} />} label="Created By" value={task.createdBy.username} />}
         </section>
 

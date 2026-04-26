@@ -30,10 +30,10 @@ export const rootRoute = createRootRouteWithContext<MyRouterContext>()({
 const AuthenticatedLayout = () => {
   const { isSidebarCollapsed } = useLayout();
   return (
-    <div className="flex h-screen overflow-hidden bg-bg-notion">
+    <div className="flex h-screen overflow-hidden bg-bg-notion text-text-notion">
       <Sidebar />
       <main className={`flex-1 h-screen overflow-y-auto p-3 transition-all duration-300 ${isSidebarCollapsed ? 'pl-3' : 'pl-0'}`}>
-        <div className="glass-panel-dark rounded-[32px] min-h-full overflow-hidden text-slate-100 flex flex-col">
+        <div className="glass-panel rounded-[32px] min-h-full overflow-hidden flex flex-col">
           <Outlet />
         </div>
       </main>
