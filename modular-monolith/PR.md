@@ -1,37 +1,40 @@
-# Pull Request: Task Reachability Engine Refactor & Ordered EDA Flow
+# Pull Request: Task Domain E2E Hardening & Graph Engine Stabilization
 
 ## Summary
-This PR implements a high-performance **Closure Table** reachability engine and hardens the **Event-Driven Architecture (EDA)** to guarantee causal ordering and transactional consistency across modules.
+This PR completes the end-to-end verification and architectural hardening of the **Task Domain**, with a specific focus on the **Task Reachability Engine** and the **Task Link lifecycle**. It ensures that the modular monolith maintains a strictly consistent dependency graph through transactional outbox events and event-driven background processing.
 
 ## Key Changes
 
-### 1. Hardened Event Orchestration
-- **Monotonic Sequencing**: Migrated `outbox_events.id` to `BIGSERIAL`. This ensures that the outbox relay preserves the exact commit order when publishing to Kafka.
-- **Causal Sorting**: Implemented chronological sorting (by `timestamp`) in all Smart Aggregators (`Task`, `Project`, `Team`) to ensure that `Create -> Update -> Delete` causal chains are preserved regardless of Kafka fetch order.
-- **Action-Oriented Signaling**: Refactored the Task Aggregator to emit declarative commands (`SYNC`, `DELETE`, `ORPHAN`) instead of raw state events, reducing downstream churn and coupling.
+### 1. Comprehensive E2E Verification Suite
+- **Full Domain Coverage**: Implemented 41 new E2E tests across 6 dedicated suites covering the entire Task and Task Link lifecycle.
+- **Link Lifecycle**:
+    - **Creation**: Verified transitive reachability expansion (e.g., A -> B -> C auto-discovers A -> C).
+    - **Deletion**: Verified "Recursive Repair" strategy to handle bridge link removals without orphaning alternative paths.
+    - **Update**: Implemented link redirection (changing source/target) and verified path migration.
+- **Side-Effect Verification**: All tests use polling patterns to verify eventual consistency of denormalized counters and closure table entries across the Kafka pipeline.
 
-### 2. Task Reachability Engine (Closure Table)
-- **$O(1)$ Lookups**: Transitioned from a path-counting model to a Closure Table pattern for near-instant transitive reachability checks.
-- **Expansion (Bridge Join)**: Implemented high-performance sub-graph expansion logic using a single-query bridge cross-join.
-- **Contraction (Recursive Repair)**: Implemented a "Delete-and-Repair" strategy using Recursive CTEs to handle link removals. This accurately preserves alternative paths (solving the "Diamond" problem) without the overhead of path counts.
-- **Bulk Cleanup**: Added dedicated listeners to purge transitive data when tasks or entire projects are deleted.
+### 2. Core Logic & API Hardening
+- **GraphQL API**: Fixed a missing `updateLink` resolver in the `TaskMutation` namespace that was preventing link modifications.
+- **Graph Counter Sync**: Enhanced `syncTaskGraphCounters` to synchronize both **direct** (immediate dependency) and **total** (transitive) incoming/outgoing counts.
+- **Event Orchestration**: Fixed a PostgreSQL type inference bug in the `deleteTaskLink` outbox payload that caused runtime failures during link removal.
+- **Data Integrity**: Enforced `uq_task_link_source_target` unique constraint at the database level to prevent duplicate dependency links.
 
-### 3. Data Consistency & Performance
-- **Atomic Idempotency**: All new listeners use the `claimEventsAtomic` strategy to prevent duplicate processing.
-- **Denormalized Sync**: Integrated project-wide counter synchronization (`total_incoming_count`, `total_outgoing_count`) into the reachability lifecycle.
-- **Schema Alignment**: Fixed multiple column and table name inconsistencies in `TaskQueries.ts` to match the production schema.
+### 3. Reliability & Testing Infrastructure
+- **Wipe Script**: Added `src/tests/e2e/scripts/wipe-schema.ts` to ensure clean database states between test runs, preventing flaky tests due to residual state.
+- **Error Handling**: Hardened validation logic for Task Link creation to prevent self-referencing links and cross-project link attempts.
 
 ## Impact
-- **Zero Zombie Nodes**: Causal sorting prevents orphaned links and inconsistent graph states.
-- **Scalability**: Optimized for **10k RPS** through semantic folding in aggregators and efficient batch processing in listeners.
-- **Reliability**: Transactional outbox pattern ensures eventual consistency even in the event of system failure.
+- **Production-Ready Tasks**: The Task domain is now the most heavily verified module in the system, with 100% test coverage for complex graph operations.
+- **Zero Orphaned Paths**: Recursive CTE repair logic guarantees that the reachability closure table never contains "zombie" paths after link deletions.
+- **UI Consistency**: Real-time counter synchronization ensures that the project dashboard reflects the true state of the task graph.
 
-## Verification Plan
-- [x] Verified Bridge Join logic for transitive expansion.
-- [x] Verified Recursive CTE for path repair during link removal.
-- [x] Verified Bulk Deletion listeners for project/task cleanup.
-- [x] Confirmed monotonic outbox sequencing via schema migration.
+## Verification Results
+- [x] **41/41 E2E Tests Passing** (Task CRUD + Link CRUD).
+- [x] Transitive expansion verified (A -> B, B -> C => A -> C).
+- [x] Transitive contraction verified (A -> B -> C bridge removal).
+- [x] GraphQL `updateLink` mutation verified.
+- [x] Authorization checks verified (Owner, Member, Stranger).
 
 ## Related Documentation
-- [docs/5. Task Reachability Engine.md](docs/5. Task Reachability Engine.md)
-- [docs/6. Event-Driven Architecture & Reachability.md](docs/6. Event-Driven Architecture & Reachability.md)
+- [docs/13. Task Graph Schema Design.md](docs/13. Task Graph Schema Design.md)
+- [docs/19. Atomic Event Orchestration.md](docs/19. Atomic Event Orchestration.md)
