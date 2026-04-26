@@ -467,7 +467,9 @@ function buildComplexLinks(
     const noiseAttempts = Math.floor(tasks.length * 3.5);
     for (let i = 0; i < noiseAttempts; i++) {
         const sourceIndex = randomInt(0, tasks.length - 2);
-        const jump = randomInt(2, Math.min(18, tasks.length - sourceIndex - 1));
+        const maxJump = Math.min(18, tasks.length - sourceIndex - 1);
+        if (maxJump < 1) continue;
+        const jump = randomInt(1, maxJump);
         const targetIndex = sourceIndex + jump;
         addLink(
             sortedTasks[sourceIndex]!.id,
