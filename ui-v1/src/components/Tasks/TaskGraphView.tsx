@@ -3,7 +3,7 @@ import { Link, useParams, useSearch } from '@tanstack/react-router';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { ArrowLeft, Loader2, Network } from 'lucide-react';
 import { useApi } from '../../hooks/useApi';
-import type { GraphEdge, GraphNode, TaskNeighbourhood } from '../../api/types';
+import type { GraphEdge, GraphNode, ProjectTask, TaskNeighbourhood } from '../../api/types';
 import { EmptyState, PriorityBadge, StatusBadge, SurfaceCardStrong } from '../shared/workspace';
 import { TaskMap } from '../Graph/TaskMap';
 
@@ -32,8 +32,8 @@ export const TaskGraphView: React.FC = () => {
 
     const nodeMap = new Map<string, GraphNode>();
     const edgeMap = new Map<string, GraphEdge>();
-    const forward = new Map<string, string[]>();
-    const backward = new Map<string, string[]>();
+    const incomingDepths = new Map<string, number>();
+    const outgoingDepths = new Map<string, number>();
 
     for (const page of pages) {
       for (const link of page.links) {
@@ -44,33 +44,42 @@ export const TaskGraphView: React.FC = () => {
           label: link.label,
         });
 
-        const sourceNode = nodeMap.get(link.source.id);
         nodeMap.set(link.source.id, {
-          task: { ...link.source, description: sourceNode?.task.description ?? '', version: sourceNode?.task.version ?? 1, createdAt: sourceNode?.task.createdAt ?? '', updatedAt: sourceNode?.task.updatedAt ?? '' } as any,
-          direction: sourceNode?.direction ?? 'incoming',
-          depth: sourceNode?.depth ?? Number.POSITIVE_INFINITY,
+          task: toGraphTask(link.source, nodeMap.get(link.source.id)?.task),
+          direction: 'incoming',
+          depth: incomingDepths.get(link.source.id) ?? 1,
         });
 
-        const targetNode = nodeMap.get(link.target.id);
         nodeMap.set(link.target.id, {
-          task: { ...link.target, description: targetNode?.task.description ?? '', version: targetNode?.task.version ?? 1, createdAt: targetNode?.task.createdAt ?? '', updatedAt: targetNode?.task.updatedAt ?? '' } as any,
-          direction: targetNode?.direction ?? 'outgoing',
-          depth: targetNode?.depth ?? Number.POSITIVE_INFINITY,
+          task: toGraphTask(link.target, nodeMap.get(link.target.id)?.task),
+          direction: 'outgoing',
+          depth: outgoingDepths.get(link.target.id) ?? 1,
         });
-
-        forward.set(link.source.id, [...(forward.get(link.source.id) ?? []), link.target.id]);
-        backward.set(link.target.id, [...(backward.get(link.target.id) ?? []), link.source.id]);
       }
     }
 
-    const incomingDepths = bfs(backward, focusedTask.id);
-    const outgoingDepths = bfs(forward, focusedTask.id);
+    const incomingAdjacency = new Map<string, string[]>();
+    const outgoingAdjacency = new Map<string, string[]>();
+
+    for (const edge of edgeMap.values()) {
+      incomingAdjacency.set(
+        edge.targetTaskId,
+        dedupe([...(incomingAdjacency.get(edge.targetTaskId) ?? []), edge.sourceTaskId])
+      );
+      outgoingAdjacency.set(
+        edge.sourceTaskId,
+        dedupe([...(outgoingAdjacency.get(edge.sourceTaskId) ?? []), edge.targetTaskId])
+      );
+    }
+
+    const traversedIncoming = bfs(incomingAdjacency, focusedTask.id);
+    const traversedOutgoing = bfs(outgoingAdjacency, focusedTask.id);
 
     const nodes = Array.from(nodeMap.values())
       .filter((node) => node.task.id !== focusedTask.id)
       .map((node) => {
-        const incomingDepth = incomingDepths.get(node.task.id);
-        const outgoingDepth = outgoingDepths.get(node.task.id);
+        const incomingDepth = traversedIncoming.get(node.task.id);
+        const outgoingDepth = traversedOutgoing.get(node.task.id);
         const direction = getNodeDirection(incomingDepth, outgoingDepth);
         const depth = Math.min(incomingDepth ?? Number.POSITIVE_INFINITY, outgoingDepth ?? Number.POSITIVE_INFINITY);
 
@@ -96,7 +105,7 @@ export const TaskGraphView: React.FC = () => {
       hasNextPage: !!hasNextPage,
       endCursor: pages[pages.length - 1]?.endCursor || undefined,
     };
-  }, [data]);
+  }, [data, hasNextPage]);
 
   if (isLoading) {
     return (
@@ -207,4 +216,28 @@ function getNodeDirection(incomingDepth?: number, outgoingDepth?: number): Graph
   if (incomingDepth !== undefined) return 'incoming';
   if (outgoingDepth !== undefined) return 'outgoing';
   return 'both';
+}
+
+function toGraphTask(task: Partial<ProjectTask> & { id: string; title: string; status: ProjectTask['status']; priority: number }, existing?: ProjectTask): ProjectTask {
+  return {
+    id: task.id,
+    title: task.title,
+    description: task.description ?? existing?.description ?? '',
+    status: task.status,
+    priority: task.priority,
+    dueDate: task.dueDate ?? existing?.dueDate,
+    project: task.project ?? existing?.project,
+    team: task.team ?? existing?.team,
+    assignedMember: task.assignedMember ?? existing?.assignedMember,
+    createdBy: task.createdBy ?? existing?.createdBy,
+    updatedBy: task.updatedBy ?? existing?.updatedBy,
+    version: task.version ?? existing?.version ?? 1,
+    lastEventId: task.lastEventId ?? existing?.lastEventId,
+    createdAt: task.createdAt ?? existing?.createdAt ?? '',
+    updatedAt: task.updatedAt ?? existing?.updatedAt ?? '',
+  };
+}
+
+function dedupe(values: string[]) {
+  return Array.from(new Set(values));
 }
