@@ -74,3 +74,40 @@ export interface TeamMember {
   createdAt: string;
   version: number;
 }
+
+export interface GraphNode {
+  task: ProjectTask;
+  direction: NeighbourDirection;
+  depth?: number;
+}
+
+export interface GraphEdge {
+  id: string;
+  sourceTaskId: string;
+  targetTaskId: string;
+  label: string;
+}
+
+export interface TaskStoryNode {
+  taskId: string;
+  title: string;
+  label: string;
+}
+
+export interface TaskStory {
+  id: string;
+  depth: number;
+  direction: 'incoming' | 'outgoing';
+  path: TaskStoryNode[];
+  finalTask: ProjectTask;
+}
+
+export interface TaskNeighbourhood {
+  focusedTask: ProjectTask;
+  nodes: GraphNode[];
+  edges: GraphEdge[];
+  incomingStories: TaskStory[];
+  outgoingStories: TaskStory[];
+  hasNextPage: boolean;
+  endCursor?: string;
+}

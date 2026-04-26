@@ -141,6 +141,8 @@ const projectMembersRoute = createRoute({
   component: lazyRouteComponent(() => import('./ProjectMembersView.lazy.tsx')),
 });
 
+import { TaskGraphView } from './components/Tasks/TaskGraphView';
+
 const projectGraphRoute = createRoute({
   getParentRoute: () => projectLayoutRoute,
   path: 'graph',
@@ -153,7 +155,7 @@ const projectGraphRoute = createRoute({
       outDir: (search.outDir as 'forward' | 'backward') || undefined,
     };
   },
-  component: lazyRouteComponent(() => import('./ProjectGraphView.lazy.tsx')),
+  component: TaskGraphView,
 });
 
 type LinkSearch = {
