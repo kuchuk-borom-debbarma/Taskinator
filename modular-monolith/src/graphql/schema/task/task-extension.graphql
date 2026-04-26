@@ -45,6 +45,28 @@ extend type Project {
         """
         before: String
     ): TaskConnection!
+
+    """
+    Paginated list of all task links within this project.
+    """
+    projectLinks(
+        """
+        Forward pagination — return the first N links.
+        """
+        first: Int
+        """
+        Forward pagination — return links after this cursor.
+        """
+        after: String
+        """
+        Backward pagination — return the last N links.
+        """
+        last: Int
+        """
+        Backward pagination — return links before this cursor.
+        """
+        before: String
+    ): TaskLinkConnection!
 }
 
 input CreateTaskInput {

@@ -248,6 +248,33 @@ export const taskResolvers = {
                 },
             };
         },
+        projectLinks: async (
+            parent: Project,
+            args: PaginationParams,
+            context: GraphQLContext,
+        ) => {
+            if (!context.userId) throw new UnauthorizedError();
+
+            const { links, nextCursor, prevCursor } =
+                await taskService.getProjectLinks(
+                    context.userId,
+                    parent.id,
+                    args,
+                );
+
+            return {
+                edges: links.map((l: any) => ({
+                    node: l,
+                    cursor: encodeCursor(l.createdAt.toISOString(), l.id),
+                })),
+                pageInfo: {
+                    hasNextPage: !!nextCursor,
+                    hasPreviousPage: !!prevCursor,
+                    startCursor: prevCursor,
+                    endCursor: nextCursor,
+                },
+            };
+        },
     },
 
     Query: {

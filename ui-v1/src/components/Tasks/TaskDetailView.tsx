@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useApi } from '../../hooks/useApi';
 import { TaskLinkColumn } from './TaskLinkColumn';
-import { ChevronLeft, Calendar, Layers, Users, User, Clock, CheckCircle2, Copy, Circle, Edit3, Check, X, PanelLeft } from 'lucide-react';
+import { ChevronLeft, Calendar, Layers, Users, User, Clock, CheckCircle2, Copy, Circle, Edit3, Check, X, PanelLeft, Network } from 'lucide-react';
+import { Link } from '@tanstack/react-router';
 import { useLayout } from '../../context/LayoutContext';
 
 interface TaskDetailViewProps {
@@ -102,7 +103,18 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
             {task.description ? <p className="text-[17px] leading-relaxed text-text-notion/90 whitespace-pre-wrap max-w-2xl">{task.description}</p> : <p className="text-[15px] text-text-dim italic opacity-40">No description provided.</p>}
           </section>
           <section className="flex flex-col gap-10">
-            <div className="text-[11px] font-bold text-text-dim uppercase tracking-[0.2em] opacity-40">Dependencies</div>
+            <div className="flex items-center justify-between">
+              <div className="text-[11px] font-bold text-text-dim uppercase tracking-[0.2em] opacity-40">Dependencies</div>
+              <Link 
+                to="/projects/$projectId/graph" 
+                params={{ projectId: task.project?.id || '' }}
+                search={{ taskId }}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-bg-secondary border border-border-notion text-[11px] font-black uppercase tracking-widest text-text-dim hover:text-focus-blue hover:border-focus-blue/30 transition-all active:scale-95 shadow-sm"
+              >
+                <Network size={13} />
+                View Dependency Graph
+              </Link>
+            </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 bg-white border border-border-notion rounded-3xl p-8 shadow-sm">
               <TaskLinkColumn taskId={taskId} direction="incoming" title="Incoming Dependencies" />
               <TaskLinkColumn taskId={taskId} direction="outgoing" title="Outgoing Impacts" />

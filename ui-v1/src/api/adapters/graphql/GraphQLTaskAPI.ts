@@ -30,11 +30,13 @@ const TASK_LINK_FIELDS = `
   updatedAt
   source {
     id title status priority
+    project { id }
     team { id name }
     assignedMember { id username }
   }
   target {
     id title status priority
+    project { id }
     team { id name }
     assignedMember { id username }
   }

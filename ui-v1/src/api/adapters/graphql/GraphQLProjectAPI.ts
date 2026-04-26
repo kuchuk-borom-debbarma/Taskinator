@@ -219,4 +219,36 @@ export class GraphQLProjectAPI implements ProjectAPI {
       endCursor: data.project.projectMembers.pageInfo.endCursor ?? null,
     };
   }
+
+  async getProjectLinks(projectId: string, first?: number, after?: string): Promise<{ links: any[], hasNextPage: boolean, endCursor: string | null }> {
+    const data = await this.query<any>(gql`
+      query GetProjectLinks($projectId: ID!, $first: Int, $after: String) {
+        project(id: $projectId) {
+          projectLinks(first: $first, after: $after) {
+            edges {
+              node {
+                id
+                label
+                source { id title status }
+                target { id title status }
+                createdAt
+              }
+            }
+            pageInfo {
+              hasNextPage
+              endCursor
+            }
+          }
+        }
+      }
+    `, { projectId, first, after });
+
+    if (!data.project?.projectLinks) return { links: [], hasNextPage: false, endCursor: null };
+
+    return {
+      links: data.project.projectLinks.edges.map((e: any) => e.node),
+      hasNextPage: data.project.projectLinks.pageInfo.hasNextPage,
+      endCursor: data.project.projectLinks.pageInfo.endCursor ?? null,
+    };
+  }
 }
