@@ -73,6 +73,10 @@ export class ProjectEvents_BatchAggregator {
 
             for (const event of chronologicallyOrderedEvents) {
                 const { projectId, userId } = event.data;
+                logger.debug(
+                    `[Project Coordinator] Folding event ${event.type} for project ${projectId}, user ${userId}`,
+                );
+
                 const current = projectStates.get(projectId) || {
                     projectId,
                     userId,

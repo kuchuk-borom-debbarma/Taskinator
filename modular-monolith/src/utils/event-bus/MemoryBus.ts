@@ -22,10 +22,7 @@ export class MemoryBus implements Bus {
         const events = items.map((i) => createEvent(type, i.key, i.data, i.id));
         // Emit with a small async delay to simulate Kafka's async delivery
         for (const e of events) {
-            setTimeout(
-                () => this.emitter.emit(`${topic}:${e.type}`, e.data),
-                10,
-            );
+            setTimeout(() => this.emitter.emit(`${topic}:${e.type}`, e), 10);
         }
     }
 
@@ -33,10 +30,26 @@ export class MemoryBus implements Bus {
         topic: string,
         _groupId: string,
         handlers: Record<string, (data: any) => Promise<void>>,
-        _options?: { batch?: boolean },
+        options?: { batch?: boolean },
     ) {
         for (const [eventType, handler] of Object.entries(handlers)) {
-            this.emitter.on(`${topic}:${eventType}`, handler);
+            let processingQueue: Promise<void> = Promise.resolve();
+            this.emitter.on(`${topic}:${eventType}`, (e) => {
+                processingQueue = processingQueue.then(async () => {
+                    try {
+                        if (options?.batch) {
+                            await handler([e]);
+                        } else {
+                            await handler(e.data);
+                        }
+                    } catch (err) {
+                        console.error(
+                            `MemoryBus: Handler error for ${eventType}`,
+                            err,
+                        );
+                    }
+                });
+            });
         }
     }
 }

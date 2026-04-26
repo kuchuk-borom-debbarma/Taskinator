@@ -60,7 +60,13 @@ export const getTasksPage = async (
             priority,
             created_at AS "createdAt",
             created_at::text as "epochPrecision",
-            updated_at AS "updatedAt"
+            updated_at AS "updatedAt",
+            direct_incoming_count AS "directIncomingCount",
+            direct_outgoing_count AS "directOutgoingCount",
+            total_incoming_count AS "totalIncomingCount",
+            total_outgoing_count AS "totalOutgoingCount",
+            incoming_label_counts AS "incomingLabelCounts",
+            outgoing_label_counts AS "outgoingLabelCounts"
         FROM project_task
         WHERE EXISTS (SELECT 1 FROM auth_check)
           AND (
@@ -130,11 +136,17 @@ export const getTasksByIds = async (ids: string[]): Promise<Task[]> => {
             description,
             status,
             version,
-            fk_created_by AS "createdBy",
-            fk_updated_by AS "updatedBy",
+            created_by AS "createdBy",
+            updated_by AS "updatedBy",
             priority,
             created_at AS "createdAt",
-            updated_at AS "updatedAt"
+            updated_at AS "updatedAt",
+            direct_incoming_count AS "directIncomingCount",
+            direct_outgoing_count AS "directOutgoingCount",
+            total_incoming_count AS "totalIncomingCount",
+            total_outgoing_count AS "totalOutgoingCount",
+            incoming_label_counts AS "incomingLabelCounts",
+            outgoing_label_counts AS "outgoingLabelCounts"
         FROM project_task
         WHERE id = ANY(${ids}::uuid[])
     `.execute(db);
@@ -158,11 +170,17 @@ export const getTasksByActorIdAndIds = async (
             description,
             status,
             version,
-            fk_created_by AS "createdBy",
-            fk_updated_by AS "updatedBy",
+            created_by AS "createdBy",
+            updated_by AS "updatedBy",
             priority,
             created_at AS "createdAt",
-            updated_at AS "updatedAt"
+            updated_at AS "updatedAt",
+            direct_incoming_count AS "directIncomingCount",
+            direct_outgoing_count AS "directOutgoingCount",
+            total_incoming_count AS "totalIncomingCount",
+            total_outgoing_count AS "totalOutgoingCount",
+            incoming_label_counts AS "incomingLabelCounts",
+            outgoing_label_counts AS "outgoingLabelCounts"
         FROM project_task
         WHERE id = ANY(${ids}::uuid[])
           AND EXISTS (
@@ -211,10 +229,10 @@ export const getTaskLinksPage = async (
         SELECT 
             id, 
             fk_project_id AS "projectId", 
-            fk_source_task_id AS "sourceTaskId", 
-            fk_target_task_id AS "targetTaskId", 
+            source_task_id AS "sourceTaskId", 
+            target_task_id AS "targetTaskId", 
             label, 
-            fk_created_by AS "createdBy", 
+            created_by AS "createdBy", 
             created_at AS "createdAt",
             created_at::text as "epochPrecision"
         FROM task_link
@@ -303,13 +321,13 @@ export const getProjectTaskLinksPage = async (
         SELECT 
             id, 
             fk_project_id AS "projectId", 
-            fk_source_task_id AS "sourceTaskId", 
-            fk_target_task_id AS "targetTaskId", 
+            source_task_id AS "sourceTaskId", 
+            target_task_id AS "targetTaskId", 
             label, 
-            fk_created_by AS "createdBy", 
+            created_by AS "createdBy", 
             created_at AS "createdAt",
             created_at::text as "epochPrecision"
-        FROM project_task_link
+        FROM task_link
         WHERE EXISTS (SELECT 1 FROM auth_check)
           AND fk_project_id = ${projectId}::uuid
           AND (
@@ -442,19 +460,27 @@ export const insertTask = async (param: {
                 updated_by AS "updatedBy",
                 priority, 
                 created_at AS "createdAt", 
-                updated_at AS "updatedAt"
+                updated_at AS "updatedAt",
+                direct_incoming_count AS "directIncomingCount",
+                direct_outgoing_count AS "directOutgoingCount",
+                total_incoming_count AS "totalIncomingCount",
+                total_outgoing_count AS "totalOutgoingCount",
+                incoming_label_counts AS "incomingLabelCounts",
+                outgoing_label_counts AS "outgoingLabelCounts"
         ),
         inserted_outbox AS (
             INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
             SELECT 
                 'task-events',
-                id::text,
+                "projectId"::text,
                 jsonb_build_object(
                     'type', 'task.created',
                     'taskId', id,
                     'projectId', "projectId",
+                    'teamId', "teamId",
+                    'memberId', "memberId",
                     'title', title,
-                    'actorId', ${param.actorId}
+                    'actorId', ${param.actorId}::text
                 )
             FROM inserted_task
         )
@@ -509,11 +535,10 @@ export const updateTask = async (param: {
     const setClause = sql.join(updates, sql`, `);
 
     const result = await sql<Task>`
-        WITH current_state AS (
-            SELECT id, fk_project_id, fk_team_id, fk_member_id, title, status, version
-            FROM project_task
-            WHERE id = ${param.taskId}::uuid AND fk_project_id = ${param.projectId}::uuid
-            FOR UPDATE
+        WITH old_state AS (
+            SELECT fk_team_id, fk_member_id, title, status 
+            FROM project_task 
+            WHERE id = ${param.taskId}::uuid
         ),
         authorized AS (
             -- Actor must be project owner or member
@@ -561,21 +586,28 @@ export const updateTask = async (param: {
                 updated_by AS "updatedBy",
                 priority, 
                 created_at AS "createdAt", 
-                updated_at AS "updatedAt"
+                updated_at AS "updatedAt",
+                direct_incoming_count AS "directIncomingCount",
+                direct_outgoing_count AS "directOutgoingCount",
+                total_incoming_count AS "totalIncomingCount",
+                total_outgoing_count AS "totalOutgoingCount",
+                incoming_label_counts AS "incomingLabelCounts",
+                outgoing_label_counts AS "outgoingLabelCounts"
         ),
         inserted_outbox AS (
             INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
             SELECT 
-                'task.updated',
-                u.id::text,
+                'task-events',
+                u."projectId"::text,
                 jsonb_build_object(
+                    'type', 'task.updated',
                     'taskId', u.id,
                     'projectId', u."projectId",
                     'old', jsonb_build_object(
-                        'teamId', c.fk_team_id,
-                        'memberId', c.fk_member_id,
-                        'title', c.title,
-                        'status', c.status
+                        'teamId', o.fk_team_id,
+                        'memberId', o.fk_member_id,
+                        'title', o.title,
+                        'status', o.status
                     ),
                     'new', jsonb_build_object(
                         'teamId', u."teamId",
@@ -583,10 +615,9 @@ export const updateTask = async (param: {
                         'title', u.title,
                         'status', u.status
                     ),
-                    'actorId', ${param.actorId}
+                    'actorId', ${param.actorId}::text
                 )
-            FROM updated_task u
-            CROSS JOIN current_state c
+            FROM updated_task u, old_state o
         )
         SELECT * FROM updated_task
     `.execute(db);
@@ -643,19 +674,19 @@ export const deleteTask = async (param: {
             WHERE id = ${param.taskId}::uuid
               AND fk_project_id = ${param.projectId}::uuid
               AND EXISTS (SELECT 1 FROM authorized)
-            RETURNING id, fk_project_id AS "projectId", fk_team_id AS "teamId"
+            RETURNING id, fk_project_id, fk_team_id
         ),
         inserted_outbox AS (
             INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
             SELECT 
                 'task-events',
-                id::text,
+                fk_project_id::text,
                 jsonb_build_object(
                     'type', 'task.deleted',
                     'taskId', id,
-                    'projectId', projectId,
-                    'teamId', "teamId",
-                    'actorId', ${param.actorId}
+                    'projectId', fk_project_id,
+                    'teamId', fk_team_id,
+                    'actorId', ${param.actorId}::text
                 )
             FROM deleted_task
         )
@@ -695,35 +726,43 @@ export const insertTaskLink = async (param: {
         ),
         inserted_link AS (
             INSERT INTO task_link (fk_project_id, source_task_id, target_task_id, label, created_by)
-            SELECT ${param.projectId}::uuid, ${param.sourceTaskId}::uuid, ${param.targetTaskId}::uuid, ${param.label}, ${param.actorId}
+            SELECT ${param.projectId}::uuid, ${param.sourceTaskId}::uuid, ${param.targetTaskId}::uuid, ${param.label}, ${param.actorId}::text
             WHERE EXISTS (SELECT 1 FROM authorized)
               AND EXISTS (SELECT 1 FROM validation)
             RETURNING 
                 id, 
-                fk_project_id AS "projectId", 
-                source_task_id AS "sourceTaskId", 
-                target_task_id AS "targetTaskId", 
+                fk_project_id, 
+                source_task_id, 
+                target_task_id, 
                 label, 
-                created_by AS "createdBy", 
-                created_at AS "createdAt"
+                created_by, 
+                created_at
         ),
         inserted_outbox AS (
             INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
             SELECT 
                 ${KAFKA_TOPICS.TASK},
-                id::text,
+                fk_project_id::text,
                 jsonb_build_object(
-                    'type', ${KAFKA_EVENTS.TASK_LINK.CREATED},
+                    'type', ${KAFKA_EVENTS.TASK_LINK.CREATED}::text,
                     'linkId', id,
-                    'projectId', projectId,
-                    'sourceTaskId', sourceTaskId,
-                    'targetTaskId', targetTaskId,
+                    'projectId', fk_project_id,
+                    'sourceTaskId', source_task_id,
+                    'targetTaskId', target_task_id,
                     'label', label,
-                    'actorId', ${param.actorId}
+                    'actorId', ${param.actorId}::text
                 )
             FROM inserted_link
         )
-        SELECT * FROM inserted_link
+        SELECT 
+            id, 
+            fk_project_id AS "projectId", 
+            source_task_id AS "sourceTaskId", 
+            target_task_id AS "targetTaskId", 
+            label, 
+            created_by AS "createdBy", 
+            created_at AS "createdAt"
+        FROM inserted_link
     `.execute(db);
 
     const link = result.rows[0];
@@ -756,22 +795,22 @@ export const deleteTaskLink = async (param: {
               AND EXISTS (SELECT 1 FROM authorized)
             RETURNING 
                 id, 
-                fk_project_id AS "projectId",
-                source_task_id AS "sourceTaskId",
-                target_task_id AS "targetTaskId"
+                fk_project_id,
+                source_task_id,
+                target_task_id
         ),
         inserted_outbox AS (
             INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
             SELECT 
                 ${KAFKA_TOPICS.TASK},
-                id::text,
+                fk_project_id::text,
                 jsonb_build_object(
-                    'type', ${KAFKA_EVENTS.TASK_LINK.DELETED},
+                    'type', ${KAFKA_EVENTS.TASK_LINK.DELETED}::text,
                     'linkId', id,
-                    'projectId', projectId,
-                    'sourceTaskId', sourceTaskId,
-                    'targetTaskId', targetTaskId,
-                    'actorId', ${param.actorId}
+                    'projectId', fk_project_id,
+                    'sourceTaskId', source_task_id,
+                    'targetTaskId', target_task_id,
+                    'actorId', ${param.actorId}::text
                 )
             FROM deleted_link
         )
@@ -827,32 +866,40 @@ export const updateTaskLink = async (param: {
               AND EXISTS (SELECT 1 FROM validation)
             RETURNING 
                 id, 
-                fk_project_id AS "projectId", 
-                source_task_id AS "sourceTaskId", 
-                target_task_id AS "targetTaskId", 
+                fk_project_id, 
+                source_task_id, 
+                target_task_id, 
                 label, 
-                created_by AS "createdBy", 
-                created_at AS "createdAt"
+                created_by, 
+                created_at
         ),
         inserted_outbox AS (
             INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
             SELECT 
                 ${KAFKA_TOPICS.TASK},
-                id::text,
+                fk_project_id::text,
                 jsonb_build_object(
-                    'type', ${KAFKA_EVENTS.TASK_LINK.UPDATED},
+                    'type', ${KAFKA_EVENTS.TASK_LINK.UPDATED}::text,
                     'linkId', id,
-                    'projectId', projectId,
+                    'projectId', fk_project_id,
                     'oldSourceTaskId', (SELECT source_task_id FROM current_link),
                     'oldTargetTaskId', (SELECT target_task_id FROM current_link),
-                    'newSourceTaskId', sourceTaskId,
-                    'newTargetTaskId', targetTaskId,
+                    'newSourceTaskId', source_task_id,
+                    'newTargetTaskId', target_task_id,
                     'label', label,
-                    'actorId', ${param.actorId}
+                    'actorId', ${param.actorId}::text
                 )
             FROM updated_link
         )
-        SELECT * FROM updated_link
+        SELECT 
+            id, 
+            fk_project_id AS "projectId", 
+            source_task_id AS "sourceTaskId", 
+            target_task_id AS "targetTaskId", 
+            label, 
+            created_by AS "createdBy", 
+            created_at AS "createdAt"
+        FROM updated_link
     `.execute(db);
 
     const link = result.rows[0];
@@ -885,7 +932,7 @@ export const deleteProjectTaskLinksByProjectIds = async (
     if (projectIds.length === 0) return { deletedCount: 0 };
 
     const result = await sql<{ id: string }>`
-        DELETE FROM project_task_link
+        DELETE FROM task_link
         WHERE fk_project_id = ANY(${projectIds}::uuid[])
         RETURNING id
     `.execute(db);
@@ -1296,6 +1343,8 @@ export const expandTaskReachability = async (
                 UNION ALL 
                 SELECT ${targetId}::uuid, 0
             ) des
+        WHERE EXISTS (SELECT 1 FROM project_task WHERE id = ${sourceId}::uuid)
+          AND EXISTS (SELECT 1 FROM project_task WHERE id = ${targetId}::uuid)
         ON CONFLICT (fk_project_id, ancestor_task_id, descendant_task_id) 
         DO UPDATE SET depth = LEAST(task_reachability.depth, EXCLUDED.depth)
     `.execute(trx);
@@ -1311,6 +1360,14 @@ export const syncTaskGraphCounters = async (
     await sql`
         UPDATE project_task 
         SET 
+            direct_incoming_count = (
+                SELECT COUNT(*) FROM task_link 
+                WHERE target_task_id = project_task.id AND fk_project_id = ${projectId}::uuid
+            ),
+            direct_outgoing_count = (
+                SELECT COUNT(*) FROM task_link 
+                WHERE source_task_id = project_task.id AND fk_project_id = ${projectId}::uuid
+            ),
             total_incoming_count = (
                 SELECT COUNT(*) FROM task_reachability 
                 WHERE descendant_task_id = project_task.id AND fk_project_id = ${projectId}::uuid

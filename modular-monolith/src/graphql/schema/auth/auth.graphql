@@ -17,6 +17,11 @@ type User {
     username: String!
 
     """
+    The user's email address.
+    """
+    email: String!
+
+    """
     The number of projects the user is a member of.
     """
     projectsCount: Int!
@@ -33,4 +38,11 @@ type UserConnection {
 type UserEdge {
     node: User!
     cursor: String!
+}
+
+"""
+Payload for the signIn mutation.
+"""
+type SignInPayload {
+    token: String
 }

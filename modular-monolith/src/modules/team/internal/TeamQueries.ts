@@ -22,7 +22,7 @@ export const insertTeam = async (param: {
             INSERT INTO project_team (name, fk_project_id, fk_user_id)
             SELECT ${param.name}, ${param.projectId}::uuid, ${param.actorId}
             WHERE EXISTS (SELECT 1 FROM authorized)
-            RETURNING id, name, fk_project_id AS "projectId", fk_user_id AS "createdBy", version, created_at AS "createdAt", updated_at AS "updatedAt"
+            RETURNING id, name, fk_project_id AS "projectId", fk_user_id AS "createdBy", version, created_at AS "createdAt", updated_at AS "updatedAt", members_count AS "membersCount", tasks_count AS "tasksCount"
         ),
         inserted_outbox AS (
             INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
@@ -30,7 +30,7 @@ export const insertTeam = async (param: {
                 'team-events',
                 "projectId"::text,
                 jsonb_build_object(
-                    'type', 'team.created',
+                    'type', 'team.created'::text,
                     'teamId', id,
                     'projectId', "projectId",
                     'name', name,
@@ -91,7 +91,9 @@ export const getTeams = async (
             t.version, 
             t.created_at AS "createdAt", 
             t.created_at::text as "epochPrecision",
-            t.updated_at AS "updatedAt"
+            t.updated_at AS "updatedAt",
+            t.members_count AS "membersCount",
+            t.tasks_count AS "tasksCount"
         FROM project_team t
         WHERE EXISTS (SELECT 1 FROM auth_check)
           AND (
@@ -338,7 +340,9 @@ export const getTeamsByIds = async (teamIds: string[]): Promise<Team[]> => {
             fk_user_id AS "createdBy", 
             version, 
             created_at AS "createdAt", 
-            updated_at AS "updatedAt"
+            updated_at AS "updatedAt",
+            members_count AS "membersCount",
+            tasks_count AS "tasksCount"
         FROM project_team
         WHERE id = ANY(${teamIds}::uuid[])
     `.execute(db);
@@ -360,7 +364,9 @@ export const getTeamsByActorIdAndIds = async (
             fk_user_id AS "createdBy", 
             version, 
             created_at AS "createdAt", 
-            updated_at AS "updatedAt"
+            updated_at AS "updatedAt",
+            members_count AS "membersCount",
+            tasks_count AS "tasksCount"
         FROM project_team
         WHERE id = ANY(${teamIds}::uuid[])
           AND EXISTS (
@@ -384,6 +390,8 @@ export const deleteTeams = async (param: {
     const result = await sql<{ deletedCount: string }>`
         WITH authorized AS (
             SELECT 1 FROM project WHERE id = ${param.projectId}::uuid AND fk_user_id = ${param.actorId}::text
+            UNION ALL
+            SELECT 1 FROM project_member WHERE fk_project_id = ${param.projectId}::uuid AND fk_user_id = ${param.actorId}::text
             LIMIT 1
         ),
         deleted_teams AS (
@@ -399,7 +407,7 @@ export const deleteTeams = async (param: {
                 'team-events',
                 id::text,
                 jsonb_build_object(
-                    'type', 'team.deleted',
+                    'type', 'team.deleted'::text,
                     'teamId', id,
                     'projectId', "projectId",
                     'name', name
@@ -429,6 +437,9 @@ export const insertTeamMembers = async (param: {
             SELECT 1 FROM project_member WHERE fk_project_id = ${param.projectId}::uuid AND fk_user_id = ${param.actorId}::text
             LIMIT 1
         ),
+        valid_team AS (
+            SELECT 1 FROM project_team WHERE id = ${param.teamId}::uuid AND fk_project_id = ${param.projectId}::uuid
+        ),
         valid_users AS (
             SELECT fk_user_id 
             FROM project_member 
@@ -440,6 +451,7 @@ export const insertTeamMembers = async (param: {
             SELECT ${param.teamId}::uuid, ${param.projectId}::uuid, vu.fk_user_id
             FROM valid_users vu
             WHERE EXISTS (SELECT 1 FROM authorized)
+              AND EXISTS (SELECT 1 FROM valid_team)
             ON CONFLICT DO NOTHING
             RETURNING fk_user_id
         ),
@@ -449,7 +461,7 @@ export const insertTeamMembers = async (param: {
                 'team-events',
                 ${param.teamId}::text,
                 jsonb_build_object(
-                    'type', 'team.members_added',
+                    'type', 'team.members_added'::text,
                     'teamId', ${param.teamId}::uuid,
                     'projectId', ${param.projectId}::uuid,
                     'addedUserIds', array_agg(fk_user_id)
@@ -500,7 +512,7 @@ export const deleteTeamMembers = async (param: {
                 'team-events',
                 ${param.teamId}::text,
                 jsonb_build_object(
-                    'type', 'team.members_removed',
+                    'type', 'team.members_removed'::text,
                     'teamId', ${param.teamId}::uuid,
                     'projectId', ${param.projectId}::uuid,
                     'removedUserIds', array_agg(fk_user_id)
@@ -540,7 +552,8 @@ export const updateTeam = async (param: {
               AND version = ${param.version}
               AND EXISTS (SELECT 1 FROM authorized)
             RETURNING id, name, fk_project_id AS "projectId", fk_user_id AS "createdBy", 
-                      version, created_at AS "createdAt", updated_at AS "updatedAt"
+                      version, created_at AS "createdAt", updated_at AS "updatedAt",
+                      members_count AS "membersCount", tasks_count AS "tasksCount"
         ),
         inserted_outbox AS (
             INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
@@ -548,12 +561,12 @@ export const updateTeam = async (param: {
                 'team-events',
                 id::text,
                 jsonb_build_object(
-                    'type', 'team.updated',
+                    'type', 'team.updated'::text,
                     'teamId', id,
                     'projectId', "projectId",
                     'name', name,
                     'version', version,
-                    'actorId', ${param.actorId}
+                    'actorId', ${param.actorId}::text
                 )
             FROM updated
         )

@@ -22,7 +22,10 @@ export async function insertProject(param: {
                 version, 
                 created_at AS "createdAt", 
                 created_at::text AS "epochPrecision",
-                updated_at AS "updatedAt"
+                updated_at AS "updatedAt",
+                members_count AS "membersCount",
+                tasks_count AS "tasksCount",
+                teams_count AS "teamsCount"
         ),
         inserted_outbox AS (
             INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
@@ -30,7 +33,7 @@ export async function insertProject(param: {
                 ${KAFKA_TOPICS.PROJECT},
                 id::text,
                 jsonb_build_object(
-                    'type', ${KAFKA_EVENTS.PROJECT.CREATED},
+                    'type', ${KAFKA_EVENTS.PROJECT.CREATED}::text,
                     'projectId', id,
                     'userId', "userId",
                     'name', name
@@ -69,7 +72,10 @@ export async function updateProject(param: {
                 version, 
                 created_at AS "createdAt", 
                 created_at::text AS "epochPrecision",
-                updated_at AS "updatedAt"
+                updated_at AS "updatedAt",
+                members_count AS "membersCount",
+                tasks_count AS "tasksCount",
+                teams_count AS "teamsCount"
         ),
         inserted_outbox AS (
             INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
@@ -77,9 +83,9 @@ export async function updateProject(param: {
                 ${KAFKA_TOPICS.PROJECT},
                 id::text,
                 jsonb_build_object(
-                    'type', ${KAFKA_EVENTS.PROJECT.UPDATED},
+                    'type', ${KAFKA_EVENTS.PROJECT.UPDATED}::text,
                     'projectId', id,
-                    'actorId', ${param.actorId},
+                    'actorId', ${param.actorId}::text,
                     'name', name
                 )
             FROM updated_project
@@ -110,7 +116,7 @@ export async function deleteProjects(param: {
                 ${KAFKA_TOPICS.PROJECT},
                 id::text,
                 jsonb_build_object(
-                    'type', ${KAFKA_EVENTS.PROJECT.DELETED},
+                    'type', ${KAFKA_EVENTS.PROJECT.DELETED}::text,
                     'projectId', id,
                     'userId', "userId",
                     'name', name
@@ -161,12 +167,12 @@ export async function insertProjectMembers(param: {
                 ${KAFKA_TOPICS.PROJECT},
                 "projectId"::text,
                 jsonb_build_object(
-                    'type', ${KAFKA_EVENTS.PROJECT.MEMBERS_ADDED},
+                    'type', ${KAFKA_EVENTS.PROJECT.MEMBERS_ADDED}::text,
                     'projectId', "projectId",
                     'addedUserIds', (SELECT json_agg("userId") FROM inserted_members),
-                    'actorId', ${param.actorId}
+                    'actorId', ${param.actorId}::text
                 )
-            WHERE EXISTS (SELECT 1 FROM inserted_members)
+            FROM (SELECT DISTINCT "projectId" FROM inserted_members) AS sub
         )
         SELECT 1 FROM authorized
     `.execute(db);
@@ -208,12 +214,12 @@ export async function deleteProjectMembers(param: {
                 ${KAFKA_TOPICS.PROJECT},
                 "projectId"::text,
                 jsonb_build_object(
-                    'type', ${KAFKA_EVENTS.PROJECT.MEMBERS_REMOVED},
+                    'type', ${KAFKA_EVENTS.PROJECT.MEMBERS_REMOVED}::text,
                     'projectId', "projectId",
                     'removedUserIds', (SELECT json_agg("userId") FROM deleted_members),
-                    'actorId', ${param.actorId}
+                    'actorId', ${param.actorId}::text
                 )
-            WHERE EXISTS (SELECT 1 FROM deleted_members)
+            FROM (SELECT DISTINCT "projectId" FROM deleted_members) AS sub
         )
         SELECT 1 FROM authorized
     `.execute(db);
@@ -226,12 +232,13 @@ export const getProjects = async (
     params: PaginationParams = {},
 ): Promise<{
     projects: Project[];
+    totalCount: number;
     nextCursor: string | null;
     prevCursor: string | null;
 }> => {
-    const limit = Math.min(params.first || params.last || 5, 50);
-    const { after, before } = params;
-    const isBackward = !!before;
+    const limit = Math.min(params.first || params.last || 10, 50);
+    const { first, last, after, before } = params;
+    const isBackward = !!last || !!before;
     const cursor = before || after;
 
     let cursorEpoch: string | null = null;
@@ -242,6 +249,16 @@ export const getProjects = async (
         cursorEpoch = decoded.timeValue;
         cursorId = decoded.id;
     }
+
+    const countResult = await sql<{ count: string }>`
+        SELECT count(*)::text as count
+        FROM (
+            SELECT p.id FROM project p WHERE p.fk_user_id = ${userId}::text
+            UNION
+            SELECT pm.fk_project_id FROM project_member pm WHERE pm.fk_user_id = ${userId}::text
+        ) as sub
+    `.execute(db);
+    const totalCount = parseInt(countResult.rows[0].count, 10);
 
     const result = await sql<
         Project & { isOwner: boolean; epochPrecision: string }
@@ -266,7 +283,10 @@ export const getProjects = async (
             created_at AS "createdAt",
             created_at::text as "epochPrecision",
             updated_at AS "updatedAt",
-            is_owner AS "isOwner"
+            is_owner AS "isOwner",
+            members_count AS "membersCount",
+            tasks_count AS "tasksCount",
+            teams_count AS "teamsCount"
         FROM combined_projects
         WHERE (
             ${cursorEpoch}::text IS NULL 
@@ -286,6 +306,7 @@ export const getProjects = async (
     if (hasMore) {
         rows = rows.slice(0, limit);
     }
+    // Relay: if last is used, we order ASC in SQL, then reverse to get DESC final list
     if (isBackward) {
         rows.reverse();
     }
@@ -295,21 +316,27 @@ export const getProjects = async (
     let prevCursor: string | null = null;
 
     if (projects.length > 0) {
-        const first = projects[0]!;
-        const last = projects[projects.length - 1]!;
-        const firstEpoch = (first as any).epochPrecision;
-        const lastEpoch = (last as any).epochPrecision;
+        const firstRow = projects[0]!;
+        const lastRow = projects[projects.length - 1]!;
 
-        if (isBackward) {
-            nextCursor = encodeCursor(lastEpoch, last.id);
-            prevCursor = hasMore ? encodeCursor(firstEpoch, first.id) : null;
+        if (last || before) {
+            // Backward pagination
+            nextCursor = encodeCursor(lastRow.epochPrecision, lastRow.id);
+            prevCursor = hasMore
+                ? encodeCursor(firstRow.epochPrecision, firstRow.id)
+                : null;
         } else {
-            nextCursor = hasMore ? encodeCursor(lastEpoch, last.id) : null;
-            prevCursor = after ? encodeCursor(firstEpoch, first.id) : null;
+            // Forward pagination
+            nextCursor = hasMore
+                ? encodeCursor(lastRow.epochPrecision, lastRow.id)
+                : null;
+            prevCursor = after
+                ? encodeCursor(firstRow.epochPrecision, firstRow.id)
+                : null;
         }
     }
 
-    return { projects, nextCursor, prevCursor };
+    return { projects, totalCount, nextCursor, prevCursor };
 };
 
 export const getProjectMembers = async (
@@ -322,8 +349,8 @@ export const getProjectMembers = async (
     prevCursor: string | null;
 }> => {
     const limit = Math.min(params.first || params.last || 15, 50);
-    const { after, before } = params;
-    const isBackward = !!before;
+    const { first, last, after, before } = params;
+    const isBackward = !!last || !!before;
     const cursor = before || after;
 
     let cursorEpoch: string | null = null;
@@ -380,17 +407,21 @@ export const getProjectMembers = async (
     let prevCursor: string | null = null;
 
     if (members.length > 0) {
-        const first = members[0]!;
-        const last = members[members.length - 1]!;
-        const firstEpoch = (first as any).epochPrecision;
-        const lastEpoch = (last as any).epochPrecision;
+        const firstRow = members[0]!;
+        const lastRow = members[members.length - 1]!;
 
-        if (isBackward) {
-            nextCursor = encodeCursor(lastEpoch, last.id);
-            prevCursor = hasMore ? encodeCursor(firstEpoch, first.id) : null;
+        if (last || before) {
+            nextCursor = encodeCursor(lastRow.epochPrecision, lastRow.id);
+            prevCursor = hasMore
+                ? encodeCursor(firstRow.epochPrecision, firstRow.id)
+                : null;
         } else {
-            nextCursor = hasMore ? encodeCursor(lastEpoch, last.id) : null;
-            prevCursor = after ? encodeCursor(firstEpoch, first.id) : null;
+            nextCursor = hasMore
+                ? encodeCursor(lastRow.epochPrecision, lastRow.id)
+                : null;
+            prevCursor = after
+                ? encodeCursor(firstRow.epochPrecision, firstRow.id)
+                : null;
         }
     }
 
@@ -460,7 +491,10 @@ export const getProjectsByIds = async (
             version,
             created_at AS "createdAt",
             created_at::text AS "epochPrecision",
-            updated_at AS "updatedAt"
+            updated_at AS "updatedAt",
+            members_count AS "membersCount",
+            tasks_count AS "tasksCount",
+            teams_count AS "teamsCount"
         FROM project
         WHERE id = ANY(${projectIds}::uuid[])
     `.execute(db);
@@ -483,7 +517,10 @@ export const getProjectsByActorIdAndProjectIds = async (
             version,
             created_at AS "createdAt",
             created_at::text AS "epochPrecision",
-            updated_at AS "updatedAt"
+            updated_at AS "updatedAt",
+            members_count AS "membersCount",
+            tasks_count AS "tasksCount",
+            teams_count AS "teamsCount"
         FROM project
         WHERE id = ANY(${projectIds}::uuid[])
           AND (

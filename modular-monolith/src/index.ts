@@ -1,63 +1,23 @@
-import { yoga } from './graphql';
-import { startConsumers } from './kafka/registry.ts';
-import { authService } from './modules/auth/index.ts';
-import { externalNotificationService } from './modules/external-notification/index.ts';
-import { internalNotificationService } from './modules/internal-notification/index.ts';
-import { projectService } from './modules/project';
-import { teamService } from './modules/team';
-import { startRedisBridge } from './redis/RealtimeRedisBridge';
-import eventBus from './utils/EventBus';
-import { startOutboxRelay } from './utils/event-bus/OutboxRelay';
+import { bootstrap } from './app';
+import { logger } from './logger';
 
 /**
- * Main Application Boot Sequence
- *
- * Order is critical:
- * 1. Global Event Bus (Connect producer + auto-create Kafka topics)
- * 2. Domain Services & Consumer Groups (Join Kafka and initialize internal state)
- * 3. GraphQL Endpoint (Only start accepting traffic once ready)
- * 4. Background Relay (Once everything is up, start the outbox poller)
+ * Production Entry Point
  */
-async function bootstrap() {
+async function start() {
     try {
-        console.log('[Boot] Initializing Taskinator Modular Monolith...');
+        const fetch = await bootstrap();
 
-        // Phase 1: Infrastructure
-        await eventBus.init();
-        console.log('[Boot] Phase 1: Infrastructure connected (Kafka)');
-
-        // Phase 2: Domain Logic & Consumers
-        await Promise.all([
-            projectService.init(),
-            teamService.init(),
-            authService.init(),
-            externalNotificationService.init(),
-            internalNotificationService.init(),
-            startConsumers(),
-            startRedisBridge(),
-        ]);
-        console.log('[Boot] Phase 2: Domain modules and listeners ready');
-
-        // Phase 3: Public API (GraphQL)
         const server = Bun.serve({
-            fetch: (req) => yoga(req),
-            port: 3000,
+            fetch,
+            port: Number(process.env.PORT) || 3000,
         });
-        console.log(
-            `[Boot] Phase 3: GraphQL API layer available at ${server.url}`,
-        );
 
-        // Phase 4: Background Processing
-        startOutboxRelay();
-        console.log('[Boot] Phase 4: Outbox Relay started');
-
-        console.log(
-            '[Boot] >>> Taskinator is fully READY to handle 10k RPS <<<',
-        );
+        logger.info(`[Server] GraphQL API available at ${server.url}`);
     } catch (err) {
-        console.error('[Boot] CRITICAL: Post-initialization failure', err);
+        logger.error('[Server] Fatal boot error', err);
         process.exit(1);
     }
 }
 
-bootstrap();
+start();

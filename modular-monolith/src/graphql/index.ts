@@ -1,5 +1,6 @@
 import { createYoga } from 'graphql-yoga';
 import jwt from 'jsonwebtoken';
+import { logger } from '../logger';
 import { createContext, type GraphQLContext } from './context';
 import { schema } from './schema';
 
@@ -26,17 +27,12 @@ export const yoga = createYoga<GraphQLContext>({
             try {
                 const decoded = jwt.verify(token, JWT_SECRET) as any;
                 userId = decoded.id;
-                console.log(
-                    `[GraphQL] Context initialized for user: ${userId}`,
-                );
+                logger.debug(`Context initialized for user: ${userId}`);
             } catch (err) {
-                console.warn(
-                    '[GraphQL] JWT verification failed:',
-                    (err as Error).message,
-                );
+                logger.warn('JWT verification failed:', (err as Error).message);
             }
         } else {
-            console.log('[GraphQL] Context initialized for anonymous user');
+            logger.debug('Context initialized for anonymous user');
         }
 
         return createContext(userId);
@@ -44,14 +40,21 @@ export const yoga = createYoga<GraphQLContext>({
     plugins: [
         {
             onExecute({ args }: any) {
+                const start = Date.now();
                 const operationName = args.operationName ?? 'Anonymous';
-                console.log(`[GQL] Executing: ${operationName}`);
+                logger.info(`GraphQL Execution Started: ${operationName}`);
+
                 return {
                     onNext({ result }: any) {
+                        const duration = Date.now() - start;
                         if (result.errors) {
-                            console.error(
-                                `[GQL] Execution Errors in ${operationName}:`,
-                                JSON.stringify(result.errors, null, 2),
+                            logger.error(
+                                `GraphQL Execution Errors in ${operationName} (${duration}ms):`,
+                                result.errors,
+                            );
+                        } else {
+                            logger.info(
+                                `GraphQL Execution Completed: ${operationName} (${duration}ms)`,
                             );
                         }
                     },

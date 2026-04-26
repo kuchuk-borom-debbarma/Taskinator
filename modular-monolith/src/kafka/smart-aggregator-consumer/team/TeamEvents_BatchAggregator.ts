@@ -31,6 +31,7 @@ export class TeamEvents_BatchAggregator {
                     this.handleTeamBatch.bind(this),
                 [KAFKA_EVENTS.TEAM.MEMBERS_REMOVED]:
                     this.handleTeamBatch.bind(this),
+                [KAFKA_EVENTS.TEAM.UPDATED]: this.handleTeamBatch.bind(this),
             },
             { batch: true },
         );
@@ -105,6 +106,9 @@ export class TeamEvents_BatchAggregator {
                         current.removedUserIds.push(...removed);
                         break;
                     }
+                    case KAFKA_EVENTS.TEAM.UPDATED:
+                        // No-op for counts, but could trigger other side effects in future
+                        break;
                 }
 
                 teamStates.set(teamId, current);

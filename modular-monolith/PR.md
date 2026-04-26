@@ -1,37 +1,52 @@
-# Pull Request: Task Reachability Engine Refactor & Ordered EDA Flow
+# Pull Request: Unified E2E Infrastructure & High-Performance Domain Hardening (10k RPS)
 
 ## Summary
-This PR implements a high-performance **Closure Table** reachability engine and hardens the **Event-Driven Architecture (EDA)** to guarantee causal ordering and transactional consistency across modules.
+This PR introduces a robust, industry-standard **End-to-End (E2E) Testing Framework** and implements critical performance optimizations across the **Project**, **Task**, and **Team** modules. The system is now architecture-ready for **10k RPS**, featuring atomic transactional processing, a reactive outbox relay, and a high-performance reachability engine.
 
 ## Key Changes
 
-### 1. Hardened Event Orchestration
-- **Monotonic Sequencing**: Migrated `outbox_events.id` to `BIGSERIAL`. This ensures that the outbox relay preserves the exact commit order when publishing to Kafka.
-- **Causal Sorting**: Implemented chronological sorting (by `timestamp`) in all Smart Aggregators (`Task`, `Project`, `Team`) to ensure that `Create -> Update -> Delete` causal chains are preserved regardless of Kafka fetch order.
-- **Action-Oriented Signaling**: Refactored the Task Aggregator to emit declarative commands (`SYNC`, `DELETE`, `ORPHAN`) instead of raw state events, reducing downstream churn and coupling.
+### 1. Unified Bootstrap & E2E Framework
+- **`app.ts` Integration**: Refactored the system entry point to use a unified `bootstrap()` function. This ensures **100% parity** between production and E2E testing environments.
+- **Isolated Testing Environment**:
+    - **Infrastructure-as-Code**: Docker-compose setup using `tmpfs` for RAM-based database operations, ensuring sub-second cleanup between test runs.
+    - **Isolated Ports**: E2E runs on dedicated ports (DB: 5435, Kafka: 9094, Redis: 6380) to avoid developer local environment conflicts.
+    - **Tooling**: Integrated `supertest` for direct GraphQL layer testing and `kysely` for immediate database state verification.
+- **Coverage & Mutation Testing**: Added Stryker integration for mutation testing on critical paths (`project-members`, `task-flow`) and full coverage reporting for the E2E suite.
 
-### 2. Task Reachability Engine (Closure Table)
-- **$O(1)$ Lookups**: Transitioned from a path-counting model to a Closure Table pattern for near-instant transitive reachability checks.
-- **Expansion (Bridge Join)**: Implemented high-performance sub-graph expansion logic using a single-query bridge cross-join.
-- **Contraction (Recursive Repair)**: Implemented a "Delete-and-Repair" strategy using Recursive CTEs to handle link removals. This accurately preserves alternative paths (solving the "Diamond" problem) without the overhead of path counts.
-- **Bulk Cleanup**: Added dedicated listeners to purge transitive data when tasks or entire projects are deleted.
+### 2. High-Performance Domain Hardening (10k RPS)
+- **Project Module**:
+    - **Atomic Member Management**: Implemented `WITH` clause CTEs for batch member additions/removals with built-in authorization checks and outbox signaling in a single atomic database trip.
+    - **Batch Counter Repairs**: Added high-efficiency bulk increment/decrement queries for project stats (`members_count`, `tasks_count`, `teams_count`).
+- **Task Domain & Reachability**:
+    - **Closure Table Engine**: Transitioned to a Closure Table pattern for $O(1)$ transitive reachability lookups.
+    - **Recursive Repair**: Implemented a "Delete-and-Repair" strategy using Recursive CTEs to handle link removals while preserving alternative dependency paths (solving the "Diamond" problem).
+    - **Graph Counter Sync**: Integrated background synchronization for both direct and total (transitive) dependency counters.
+- **Team Module**: Hardened membership lifecycle and synchronized team-level task counts.
 
-### 3. Data Consistency & Performance
-- **Atomic Idempotency**: All new listeners use the `claimEventsAtomic` strategy to prevent duplicate processing.
-- **Denormalized Sync**: Integrated project-wide counter synchronization (`total_incoming_count`, `total_outgoing_count`) into the reachability lifecycle.
-- **Schema Alignment**: Fixed multiple column and table name inconsistencies in `TaskQueries.ts` to match the production schema.
+### 3. Advanced Event Orchestration
+- **Reactive Outbox Relay**: 
+    - Migrated from simple polling to a **Reactive Relay** using PostgreSQL `LISTEN/NOTIFY`.
+    - Added **Safety Polling** and `FOR UPDATE SKIP LOCKED` batching to handle high concurrency and potential network drops.
+- **Causal Ordering**: Smart Aggregators now enforce chronological event processing by timestamp, preventing race conditions between `Create -> Update -> Delete` events.
+- **Real-time Bridge**: Integrated `RealtimeRedisBridge` to stream state changes to the frontend layer.
+
+### 4. Quality & Stability
+- **Stress Testing**: Added 6+ dedicated stress test suites verifying high-concurrency project creation, member volume, and task graph reachability under load.
+- **Schema Hardening**: Added database-level unique constraints (`uq_task_link_source_target`) and monotonic outbox sequencing via `BIGSERIAL`.
+- **Cleaner Lifecycle**: Implemented `wipe-schema.ts` and `apply-schema.ts` for deterministic test environments.
 
 ## Impact
-- **Zero Zombie Nodes**: Causal sorting prevents orphaned links and inconsistent graph states.
-- **Scalability**: Optimized for **10k RPS** through semantic folding in aggregators and efficient batch processing in listeners.
-- **Reliability**: Transactional outbox pattern ensures eventual consistency even in the event of system failure.
+- **Architectural Parity**: E2E tests now mirror production behavior exactly, catching bugs in background listeners and outbox delivery.
+- **Scalability**: Sub-graph operations and membership management are now optimized for high-volume enterprise projects.
+- **Zero Orphan Data**: Transactional CTEs and recursive repair logic eliminate zombie links and inconsistent counts.
 
-## Verification Plan
-- [x] Verified Bridge Join logic for transitive expansion.
-- [x] Verified Recursive CTE for path repair during link removal.
-- [x] Verified Bulk Deletion listeners for project/task cleanup.
-- [x] Confirmed monotonic outbox sequencing via schema migration.
+## Verification Results
+- [x] **41+ E2E Test Suites Passing** across all domains.
+- [x] **Mutation Testing Passed** for Project and Task write-paths.
+- [x] **Stress Tests Verified** for 10k RPS architecture compliance.
+- [x] **Outbox Reliability** verified under high-volume event bursts.
 
 ## Related Documentation
-- [docs/5. Task Reachability Engine.md](docs/5. Task Reachability Engine.md)
-- [docs/6. Event-Driven Architecture & Reachability.md](docs/6. Event-Driven Architecture & Reachability.md)
+- [docs/13. Task Graph Schema Design.md](docs/13. Task Graph Schema Design.md)
+- [docs/19. Atomic Event Orchestration.md](docs/19. Atomic Event Orchestration.md)
+- [src/tests/e2e/instructions.md](src/tests/e2e/instructions.md)

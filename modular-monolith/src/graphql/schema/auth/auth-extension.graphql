@@ -14,3 +14,10 @@ extend type Query {
     """
     users(ids: [ID!]!): [User!]!
 }
+
+extend type Mutation {
+    """
+    Signs in a user and returns a JWT token.
+    """
+    signIn(email: String!, password_raw: String!): SignInPayload!
+}

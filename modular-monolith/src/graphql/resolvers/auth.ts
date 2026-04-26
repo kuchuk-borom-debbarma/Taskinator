@@ -1,4 +1,5 @@
-import type { User } from '../../modules/auth';
+import { logger } from '../../logger';
+import { authService, type User } from '../../modules/auth';
 import type { GraphQLContext } from '../context.ts';
 import { NotFoundError } from '../errors.ts';
 
@@ -9,15 +10,28 @@ export const authResolvers = {
             if (parent.username) return parent.username;
             const user = await context.loaders.user.byId.load(parent.id);
             if (!user) {
+                logger.warn(
+                    `User.username resolver: User ${parent.id} not found`,
+                );
                 throw new NotFoundError(`User with ID ${parent.id} not found`);
             }
             return user.username;
+        },
+        email: async (parent: User, _args: any, context: GraphQLContext) => {
+            if (parent.email) return parent.email;
+            const user = await context.loaders.user.byId.load(parent.id);
+            if (!user) {
+                logger.warn(`User.email resolver: User ${parent.id} not found`);
+                throw new NotFoundError(`User with ID ${parent.id} not found`);
+            }
+            return user.email;
         },
         projectsCount: (parent: User) => parent.projectsCount || 0,
     },
 
     Query: {
         me: (_parent: any, _args: any, context: GraphQLContext) => {
+            logger.debug('Query.me called', { userId: context.userId });
             if (!context.userId) return null;
             return context.loaders.user.byId.load(context.userId);
         },
@@ -26,6 +40,7 @@ export const authResolvers = {
             { id }: { id: string },
             context: GraphQLContext,
         ) => {
+            logger.debug(`Query.user called for id: ${id}`);
             return context.loaders.user.byId.load(id);
         },
         users: async (
@@ -33,8 +48,29 @@ export const authResolvers = {
             { ids }: { ids: string[] },
             context: GraphQLContext,
         ) => {
+            logger.debug(`Query.users called for ${ids.length} ids`);
             const results = await context.loaders.user.byId.loadMany(ids);
             return results.filter((res) => res && !(res instanceof Error));
+        },
+    },
+
+    Mutation: {
+        signIn: async (
+            _parent: any,
+            { email, password_raw }: { email: string; password_raw: string },
+            context: GraphQLContext,
+        ) => {
+            logger.info(`Mutation.signIn started for email: ${email}`);
+            const result = await authService.signIn({
+                email,
+                password_raw,
+            });
+            if (!result) {
+                logger.warn(`Mutation.signIn failed for email: ${email}`);
+                throw new Error('Invalid email or password');
+            }
+            logger.info(`Mutation.signIn successful for email: ${email}`);
+            return result;
         },
     },
 };

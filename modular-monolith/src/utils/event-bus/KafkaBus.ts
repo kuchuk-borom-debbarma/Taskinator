@@ -1,5 +1,6 @@
 import { context, propagation, trace } from '@opentelemetry/api';
 import { type Consumer, Kafka, Partitioners, type Producer } from 'kafkajs';
+import { logger } from '../../logger';
 import { KAFKA_TOPICS } from './constants.ts';
 import { createEvent } from './idempotency.ts';
 import type { Bus, DomainEvent } from './types.ts';
@@ -7,7 +8,7 @@ import type { Bus, DomainEvent } from './types.ts';
 export class KafkaBus implements Bus {
     private kafka = new Kafka({
         clientId: 'taskinator-v2',
-        brokers: ['localhost:9092'],
+        brokers: [process.env.KAFKA_BROKERS || 'localhost:9092'],
     });
     private producer: Producer;
     private consumers: Consumer[] = [];
@@ -25,9 +26,10 @@ export class KafkaBus implements Bus {
         if (this.isInitialized) return;
         this.isInitialized = true;
 
+        logger.info('Kafka: Connecting producer...');
         await this.producer.connect();
+        logger.info('Kafka: Producer connected');
 
-        // Admin: Auto-create topics so that consumers don't crash on fresh environments
         const admin = this.kafka.admin();
         await admin.connect();
         const existingTopics = await admin.listTopics();
@@ -37,6 +39,7 @@ export class KafkaBus implements Bus {
         );
 
         if (topicsToCreate.length > 0) {
+            logger.info(`Kafka: Creating topics: ${topicsToCreate.join(', ')}`);
             await admin.createTopics({
                 waitForLeaders: true,
                 topics: topicsToCreate.map((topic) => ({ topic })),
@@ -46,8 +49,10 @@ export class KafkaBus implements Bus {
     }
 
     async destroy() {
+        logger.info('Kafka: Disconnecting producer and consumers...');
         await this.producer.disconnect();
         for (const c of this.consumers) await c.disconnect();
+        logger.info('Kafka: Disconnected');
     }
 
     async publish(
@@ -58,6 +63,9 @@ export class KafkaBus implements Bus {
             | Array<{ id?: string; key: string | null; data: any }>,
     ) {
         const items = Array.isArray(payload) ? payload : [payload];
+        logger.debug(
+            `Kafka: Publishing ${items.length} events to topic "${topic}" (Type: ${type})`,
+        );
         const events = items.map((i) => createEvent(type, i.key, i.data, i.id));
         await this.emit(events, topic);
     }
@@ -68,6 +76,7 @@ export class KafkaBus implements Bus {
         handlers: Record<string, (data: any) => Promise<void>>,
         options?: { batch?: boolean },
     ) {
+        logger.info(`Kafka: Subscribing to "${topic}" (Group: ${groupId})`);
         await this.createConsumer(topic, groupId, handlers, options);
     }
 
@@ -102,42 +111,51 @@ export class KafkaBus implements Bus {
             }) => {
                 if (batch.messages.length === 0) return;
 
-                // Extract trace context from the first message in the batch
+                logger.debug(
+                    `Kafka Consumer [${groupId}]: Received batch of ${batch.messages.length} from "${topic}"`,
+                );
+
                 const firstMessageHeaders = batch.messages[0]?.headers || {};
                 const parentContext = propagation.extract(
                     context.active(),
                     firstMessageHeaders as any,
                 );
 
-                // Run the entire batch processing within the stitched trace context
                 await context.with(parentContext, async () => {
-                    // Create an explicit span to represent the Consumer taking action
                     const tracer = trace.getTracer('kafkajs-consumer');
                     await tracer.startActiveSpan(
                         `process batch ${topic}`,
                         {},
                         async (span) => {
                             try {
-                                // 1. Parsing & Filtering
                                 const allEvents: DomainEvent[] = batch.messages
                                     .map((m) =>
                                         JSON.parse(m.value?.toString() || '{}'),
                                     )
                                     .filter((e) => handlers[e.type]);
 
-                                // 2. Execute Handlers (Idempotency is now the responsibility of the handler)
-                                await this.executeHandlers(
-                                    allEvents,
-                                    handlers,
-                                    options,
-                                    isRunning,
-                                    isStale,
-                                );
+                                if (allEvents.length > 0) {
+                                    logger.info(
+                                        `Kafka Consumer [${groupId}]: Processing ${allEvents.length} relevant events from "${topic}"`,
+                                    );
+                                    await this.executeHandlers(
+                                        allEvents,
+                                        handlers,
+                                        options,
+                                        isRunning,
+                                        isStale,
+                                    );
+                                }
 
-                                // 3. Mark the Kafka batch as consumed to advance the offset
                                 for (const m of batch.messages)
                                     resolveOffset(m.offset);
                                 await heartbeat();
+                            } catch (err) {
+                                logger.error(
+                                    `Kafka Consumer [${groupId}]: Batch processing failed`,
+                                    err,
+                                );
+                                throw err;
                             } finally {
                                 span.end();
                             }
@@ -157,14 +175,8 @@ export class KafkaBus implements Bus {
         isRunning: () => boolean,
         isStale: () => boolean,
     ) {
-        // Pre-filter: drop any events if the consumer was
-        // revoked mid-batch (rebalance / shutdown).
         const live = events.filter(() => isRunning() && !isStale());
 
-        // Group events by type so that:
-        //   - Events of DIFFERENT types run concurrently (Promise.all)
-        //   - Events of the SAME type run in arrival order (serial)
-        //     to preserve per-type consistency.
         const byType = new Map<string, DomainEvent[]>();
         for (const e of live) {
             const bucket = byType.get(e.type) ?? [];
@@ -177,11 +189,12 @@ export class KafkaBus implements Bus {
                 const handler = handlers[type];
                 if (!handler) return;
 
+                logger.debug(
+                    `Kafka: Executing handler for type "${type}" (${events.length} events)`,
+                );
                 if (options?.batch) {
-                    // Pass the entire array of events to the batch handler
                     await handler(events);
                 } else {
-                    // Maintain standard serial execution for non-batch handlers
                     for (const e of events) {
                         await handler(e.data);
                     }

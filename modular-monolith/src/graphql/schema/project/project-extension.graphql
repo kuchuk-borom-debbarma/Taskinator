@@ -2,7 +2,12 @@ extend type User {
     """
     All projects the user is a member of.
     """
-    projects: ProjectConnection!
+    projects(
+        first: Int
+        after: String
+        last: Int
+        before: String
+    ): ProjectConnection!
 }
 
 extend type Query {

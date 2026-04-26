@@ -9,7 +9,10 @@ CREATE TABLE project (
     fk_user_id TEXT NOT NULL,
     version INTEGER NOT NULL DEFAULT 1,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    members_count INTEGER NOT NULL DEFAULT 0,
+    tasks_count INTEGER NOT NULL DEFAULT 0,
+    teams_count INTEGER NOT NULL DEFAULT 0
 );
 
 -- Project Member Table
@@ -31,7 +34,9 @@ CREATE TABLE project_team (
     fk_user_id TEXT NOT NULL, -- Creator
     version INTEGER NOT NULL DEFAULT 1,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    members_count INTEGER NOT NULL DEFAULT 0,
+    tasks_count INTEGER NOT NULL DEFAULT 0
 );
 
 -- Project Team Member Table
@@ -66,6 +71,7 @@ CREATE TABLE project_task (
     total_outgoing_count INTEGER NOT NULL DEFAULT 0,
     incoming_label_counts JSONB NOT NULL DEFAULT '{}',
     outgoing_label_counts JSONB NOT NULL DEFAULT '{}',
+    priority INTEGER NOT NULL DEFAULT 0,
     CONSTRAINT fk_task_project_id CHECK (fk_project_id IS NOT NULL)
 );
 
@@ -79,7 +85,8 @@ CREATE TABLE task_link (
     created_by TEXT NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT chk_task_link_not_self CHECK (source_task_id <> target_task_id),
-    CONSTRAINT chk_task_link_label_valid CHECK (length(trim(label)) BETWEEN 1 AND 50)
+    CONSTRAINT chk_task_link_label_valid CHECK (length(trim(label)) BETWEEN 1 AND 50),
+    CONSTRAINT uq_task_link_source_target UNIQUE (source_task_id, target_task_id)
 );
 
 -- Task Reachability (Transitive Index) Table
@@ -122,7 +129,8 @@ CREATE TABLE users (
     username TEXT NOT NULL,
     password_hash TEXT NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    projects_count INTEGER NOT NULL DEFAULT 0
 );
 
 -- Pending Users Table
@@ -166,5 +174,17 @@ CREATE TABLE outbox_events (
     status TEXT NOT NULL DEFAULT 'PENDING',
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Trigger for Outbox Relay (LISTEN/NOTIFY)
+CREATE OR REPLACE FUNCTION notify_outbox_event() RETURNS TRIGGER AS $$
+BEGIN
+  PERFORM pg_notify('outbox_event_notification', NEW.id::text);
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trg_outbox_event_inserted
+AFTER INSERT ON outbox_events
+FOR EACH ROW EXECUTE FUNCTION notify_outbox_event();
 
 

@@ -1022,7 +1022,7 @@ async function seed() {
             await sql
                 .raw(`
                 INSERT INTO task_reachability
-                    (fk_project_id, ancestor_task_id, descendant_task_id, min_depth, path_count)
+                    (fk_project_id, ancestor_task_id, descendant_task_id, depth)
                 WITH RECURSIVE paths(anc, trg, depth) AS (
                     SELECT source_task_id, target_task_id, 1
                     FROM task_link
@@ -1073,7 +1073,7 @@ async function seed() {
         console.log(`\n🥧 Generating Starter Project reachability...`);
         await sql
             .raw(`
-            INSERT INTO task_reachability (fk_project_id, ancestor_task_id, descendant_task_id, min_depth, path_count)
+            INSERT INTO task_reachability (fk_project_id, ancestor_task_id, descendant_task_id, depth)
             WITH RECURSIVE paths(anc, trg, depth) AS (
               SELECT source_task_id, target_task_id, 1
               FROM task_link WHERE fk_project_id = '${starterProjectId}'::uuid

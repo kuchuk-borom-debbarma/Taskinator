@@ -127,6 +127,10 @@ export class AuthServiceImpl implements AuthService {
         nextCursor: string | null;
         prevCursor: string | null;
     }> {
+        logger.debug('AuthService.searchUsers called', {
+            search: params.search,
+            limit: params.first || params.last,
+        });
         const search = params.search?.trim() ?? '';
         const { after, before } = params;
         const isBackward = !!before;
@@ -134,7 +138,7 @@ export class AuthServiceImpl implements AuthService {
         const limit = Math.min(params.first || params.last || 10, 50);
 
         const rows = await sql<User>`
-            SELECT id, username, email
+            SELECT id, username, email, projects_count AS "projectsCount"
             FROM users
             WHERE
                 (
@@ -182,13 +186,15 @@ export class AuthServiceImpl implements AuthService {
             }
         }
 
+        logger.debug(`AuthService.searchUsers returned ${users.length} users`);
         return { users, nextCursor, prevCursor };
     }
 
     async getUsersByIds(ids: string[]): Promise<User[]> {
+        logger.debug(`AuthService.getUsersByIds called for ${ids.length} ids`);
         if (ids.length === 0) return [];
         const rows = await sql<User>`
-            SELECT id, username, email
+            SELECT id, username, email, projects_count AS "projectsCount"
             FROM users
             WHERE id::text = ANY(${ids}::text[])
         `.execute(db);

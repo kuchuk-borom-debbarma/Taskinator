@@ -48,6 +48,9 @@ export class ProjectAggregated_ChangeUserProjectCount {
             const consolidates = new Map<string, number>();
             for (const event of unprocessed) {
                 const { userId, delta } = event.data;
+                logger.debug(
+                    `[Auth Listener] Aggregating count for user ${userId}: delta ${delta}`,
+                );
                 consolidates.set(
                     userId,
                     (consolidates.get(userId) || 0) + delta,
