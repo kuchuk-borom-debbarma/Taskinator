@@ -1385,21 +1385,26 @@ export const unassignProjectTaskMembersBatch = async (
 ): Promise<{ affectedCount: number }> => {
     if (deltas.length === 0) return { affectedCount: 0 };
 
-    const projectIds = deltas.map((d) => d.projectId);
-    const userIdsList = deltas.map((d) => d.userIds);
+    // NOTE: We loop per delta rather than using unnest(::text[][]) because Kysely
+    // cannot serialize a nested JS string[][] into a PostgreSQL text[][] parameter,
+    // causing error 42809 "requires array on right side".
+    let totalAffected = 0;
 
-    const result = await sql`
-        UPDATE project_task
-        SET fk_member_id = NULL,
-            updated_at = NOW()
-        FROM (
-            SELECT unnest(${projectIds}::uuid[]) as pid, unnest(${userIdsList}::text[][]) as uids
-        ) AS V
-        WHERE project_task.fk_project_id = V.pid
-          AND project_task.fk_member_id = ANY(V.uids)
-    `.execute(trx || db);
+    for (const { projectId, userIds } of deltas) {
+        if (userIds.length === 0) continue;
 
-    return { affectedCount: Number((result as any).numUpdatedRows ?? 0) };
+        const result = await sql`
+            UPDATE project_task
+            SET fk_member_id = NULL,
+                updated_at = NOW()
+            WHERE fk_project_id = ${projectId}::uuid
+              AND fk_member_id = ANY(${userIds}::text[])
+        `.execute(trx || db);
+
+        totalAffected += Number((result as any).numUpdatedRows ?? 0);
+    }
+
+    return { affectedCount: totalAffected };
 };
 
 /**
@@ -1467,6 +1472,10 @@ export async function deleteProjectTaskLinksChunk(
  * Returns the count of deleted rows and the distinct project IDs
  * that were touched — the latter is used to scope the repair CTE
  * only on the final chunk (when affectedCount < BULK_DELETE_CHUNK_SIZE).
+ *
+ * Uses ctid (PostgreSQL physical row address) for the subquery because
+ * task_reachability has a composite PK and no surrogate id column.
+ * ctid is stable within a single statement execution.
  */
 export async function deleteProjectTaskReachabilityChunk(
     projectIds: string[],
@@ -1477,8 +1486,8 @@ export async function deleteProjectTaskReachabilityChunk(
 
     const result = await sql<{ fk_project_id: string }>`
         DELETE FROM task_reachability
-        WHERE id IN (
-            SELECT id FROM task_reachability
+        WHERE ctid IN (
+            SELECT ctid FROM task_reachability
             WHERE fk_project_id = ANY(${projectIds}::uuid[])
             LIMIT ${BULK_DELETE_CHUNK_SIZE}
         )
@@ -1710,6 +1719,9 @@ export const contractTaskReachability = async (
  * - affectedCount: rows deleted this chunk
  * - affectedProjectIds: distinct projects touched (used to scope repair)
  *
+ * Uses ctid for the subquery because task_reachability has a composite PK
+ * and no surrogate id column.
+ *
  * IMPORTANT: The caller must run the repair CTE only after the FINAL chunk
  * (i.e., when affectedCount < BULK_DELETE_CHUNK_SIZE). Running it on every
  * chunk would be N expensive CTEs for no gain — the purge is not complete yet.
@@ -1723,8 +1735,8 @@ export const deleteTaskReachabilityChunk = async (
 
     const result = await sql<{ fk_project_id: string }>`
         DELETE FROM task_reachability
-        WHERE id IN (
-            SELECT id FROM task_reachability
+        WHERE ctid IN (
+            SELECT ctid FROM task_reachability
             WHERE ancestor_task_id = ANY(${taskIds}::uuid[])
                OR descendant_task_id = ANY(${taskIds}::uuid[])
             LIMIT ${BULK_DELETE_CHUNK_SIZE}

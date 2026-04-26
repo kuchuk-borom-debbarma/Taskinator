@@ -666,32 +666,29 @@ export const removeProjectTeamMembersBatch = async (
     if (deltas.length === 0)
         return { affectedProjectCount: 0, affectedTeamCount: 0 };
 
-    const projectIds = deltas.map((d) => d.projectId);
-    const userIdsList = deltas.map((d) => d.userIds);
-
-    // 1. Purge members and identify affected teams using RETURNING
-    const affectedTeams = await sql<{ teamId: string }>`
-        DELETE FROM project_team_member
-        USING (
-            SELECT unnest(${projectIds}::uuid[]) as pid, unnest(${userIdsList}::text[][]) as uids
-        ) AS V
-        WHERE project_team_member.fk_project_id = V.pid
-          AND project_team_member.fk_user_id = ANY(V.uids)
-        RETURNING project_team_member.fk_team_id AS "teamId"
-    `.execute(trx || db);
-
-    if (affectedTeams.rows.length === 0) {
-        return { affectedProjectCount: deltas.length, affectedTeamCount: 0 };
-    }
-
-    // 2. Aggregate deltas for Counter Repair
+    // NOTE: We loop per delta rather than using unnest(::text[][]) because Kysely
+    // cannot serialize a nested JS string[][] into a PostgreSQL text[][] parameter,
+    // causing error 42809 "requires array on right side".
     const teamDeltas = new Map<string, number>();
-    for (const row of affectedTeams.rows) {
-        teamDeltas.set(row.teamId, (teamDeltas.get(row.teamId) || 0) - 1);
+
+    for (const { projectId, userIds } of deltas) {
+        if (userIds.length === 0) continue;
+
+        const affectedTeams = await sql<{ teamId: string }>`
+            DELETE FROM project_team_member
+            WHERE fk_project_id = ${projectId}::uuid
+              AND fk_user_id = ANY(${userIds}::text[])
+            RETURNING fk_team_id AS "teamId"
+        `.execute(trx || db);
+
+        for (const row of affectedTeams.rows) {
+            teamDeltas.set(row.teamId, (teamDeltas.get(row.teamId) || 0) - 1);
+        }
     }
 
-    // 3. Perform atomic counter update within the SAME transaction
-    await incrementTeamMemberCountsBulk(trx || db, teamDeltas);
+    if (teamDeltas.size > 0) {
+        await incrementTeamMemberCountsBulk(trx || db, teamDeltas);
+    }
 
     return {
         affectedProjectCount: deltas.length,

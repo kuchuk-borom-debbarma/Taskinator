@@ -667,6 +667,11 @@ export async function incrementProjectMemberCountsBulk(
 /**
  * Batch removes members from projects across multiple project IDs.
  * Returns the list of project IDs where deletions actually occurred for counter repair.
+ *
+ * NOTE: We loop per delta rather than using a 2D unnest(::text[][]) pattern
+ * because Kysely cannot correctly serialize a nested JS string[][] into a
+ * PostgreSQL text[][] parameter, causing a "42809: requires array on right side" error.
+ * One DELETE per project is still very fast at typical batch sizes.
  */
 export const purgeProjectMembersBatch = async (
     deltas: { projectId: string; userIds: string[] }[],
@@ -674,22 +679,21 @@ export const purgeProjectMembersBatch = async (
 ): Promise<{ affectedProjectMemberCounts: Map<string, number> }> => {
     if (deltas.length === 0) return { affectedProjectMemberCounts: new Map() };
 
-    const projectIds = deltas.map((d) => d.projectId);
-    const userIdsList = deltas.map((d) => d.userIds);
-
-    const result = await sql<{ projectId: string }>`
-        DELETE FROM project_member
-        USING (
-            SELECT unnest(${projectIds}::uuid[]) as pid, unnest(${userIdsList}::text[][]) as uids
-        ) AS V
-        WHERE project_member.fk_project_id = V.pid
-          AND project_member.fk_user_id = ANY(V.uids)
-        RETURNING project_member.fk_project_id AS "projectId"
-    `.execute(trx || db);
-
     const counts = new Map<string, number>();
-    for (const row of result.rows) {
-        counts.set(row.projectId, (counts.get(row.projectId) || 0) + 1);
+
+    for (const { projectId, userIds } of deltas) {
+        if (userIds.length === 0) continue;
+
+        const result = await sql<{ projectId: string }>`
+            DELETE FROM project_member
+            WHERE fk_project_id = ${projectId}::uuid
+              AND fk_user_id = ANY(${userIds}::text[])
+            RETURNING fk_project_id AS "projectId"
+        `.execute(trx || db);
+
+        for (const row of result.rows) {
+            counts.set(row.projectId, (counts.get(row.projectId) || 0) + 1);
+        }
     }
 
     return { affectedProjectMemberCounts: counts };
