@@ -38,7 +38,7 @@ const ControlButton: React.FC<{ onClick: () => void, active?: boolean, title: st
   <button
     onClick={onClick}
     className={`pointer-events-auto p-3 border rounded-xl shadow-lg transition-all active:scale-95 flex items-center justify-center
-      ${active ? 'bg-[#3b82f6] border-[#3b82f6] text-white' : 'bg-[#111827]/80 border-white/10 text-white/60 hover:border-white/30 hover:text-white'}
+      ${active ? 'bg-focus-blue border-focus-blue text-white' : 'bg-white/88 border-border-notion text-text-dim hover:border-slate-300 hover:text-text-notion'}
     `}
     title={title}
   >
@@ -64,15 +64,15 @@ const RelationshipTooltip: React.FC<{ edgeId: string, mapData: { nodes: MapNode[
 
   return (
     <div
-      className="fixed z-[100] pointer-events-none flex flex-col gap-1 px-4 py-3 bg-[#111827] border border-white/10 rounded-xl shadow-2xl"
+      className="fixed z-[100] pointer-events-none flex flex-col gap-1 px-4 py-3 bg-white/96 border border-border-notion rounded-xl shadow-xl"
       style={{ left: pos.x + 20, top: pos.y - 40 }}
     >
       <div className="flex items-center gap-2">
-        <span className="text-[11px] font-bold text-white truncate max-w-[120px]">{s.task.title}</span>
+        <span className="text-[11px] font-bold text-text-notion truncate max-w-[120px]">{s.task.title}</span>
         <div className="px-2 py-0.5 rounded text-[8px] font-bold uppercase tracking-wider text-white" style={{ backgroundColor: getLinkLabelColor(edge.label) }}>
           {edge.label}
         </div>
-        <span className="text-[11px] font-bold text-white truncate max-w-[120px]">{t.task.title}</span>
+        <span className="text-[11px] font-bold text-text-notion truncate max-w-[120px]">{t.task.title}</span>
       </div>
     </div>
   );
@@ -139,7 +139,11 @@ export const TaskMap: React.FC<TaskMapProps> = ({ projectId, taskId, neighbourho
 
   return (
     <div 
-      className="relative w-full h-full bg-[#0B0F1A] overflow-hidden cursor-crosshair select-none"
+      className="relative w-full h-full overflow-hidden cursor-crosshair select-none"
+      style={{
+        background:
+          'radial-gradient(circle at top left, rgba(96, 165, 250, 0.12), transparent 24%), linear-gradient(180deg, #f8fbff 0%, #eef4fb 100%)'
+      }}
       onWheel={handleWheel}
     >
       {/* Interaction Mode Overlay */}
@@ -153,7 +157,7 @@ export const TaskMap: React.FC<TaskMapProps> = ({ projectId, taskId, neighbourho
         <ControlButton onClick={() => setKeyboardEnabled(!keyboardEnabled)} active={keyboardEnabled} title="Keyboard Navigation: Arrow keys to pan">
           <Keyboard size={18} />
         </ControlButton>
-        <div className="w-px h-6 bg-white/10 mx-1" />
+        <div className="w-px h-6 bg-border-notion mx-1" />
         <ControlButton onClick={() => setTransform({ x: 0, y: 0, scale: 0.8 })} title="Re-center View">
           <Target size={18} />
         </ControlButton>
@@ -197,9 +201,9 @@ export const TaskMap: React.FC<TaskMapProps> = ({ projectId, taskId, neighbourho
                 <path
                   d={pathD}
                   fill="none"
-                  stroke={isHighlight ? color : '#334155'}
+                  stroke={color}
                   strokeWidth={isHighlight ? 3 : 1.5}
-                  strokeOpacity={isDimmed ? 0.05 : isHighlight ? 1 : 0.4}
+                  strokeOpacity={isDimmed ? 0.12 : isHighlight ? 0.95 : 0.38}
                   className="transition-all duration-300"
                 />
               </React.Fragment>
@@ -220,19 +224,19 @@ export const TaskMap: React.FC<TaskMapProps> = ({ projectId, taskId, neighbourho
               className={`absolute transition-all transform -translate-x-1/2 -translate-y-1/2 ${isActuallyDimmed ? 'opacity-20 grayscale' : 'opacity-100'}`}
               style={{ left: node.x, top: node.y }}
             >
-              <div className={`p-5 rounded-3xl border transition-all duration-500 bg-[#111827]/90 backdrop-blur-xl shadow-2xl
-                ${isFocus ? 'w-72 border-[#3b82f6] ring-8 ring-[#3b82f6]/10' : 'w-60 border-white/10 hover:border-white/30'}
+              <div className={`p-5 rounded-3xl border transition-all duration-500 bg-white/92 backdrop-blur-xl shadow-[0_20px_50px_rgba(15,23,42,0.08)]
+                ${isFocus ? 'w-72 border-focus-blue ring-8 ring-focus-blue/10' : 'w-60 border-border-notion hover:border-slate-300'}
               `}>
                 <Link
                   to="/projects/$projectId/tasks/$taskId"
                   params={{ projectId, taskId: node.task.id }}
                 >
                   <div className="flex items-center justify-between mb-3">
-                    <div className="px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-[0.2em] text-white" style={{ backgroundColor: color }}>
+                    <div className="px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-[0.2em] text-white shadow-sm" style={{ backgroundColor: color }}>
                       {node.task.status}
                     </div>
                   </div>
-                  <p className={`leading-tight font-black text-white ${isFocus ? 'text-[16px]' : 'text-[14px]'}`}>
+                  <p className={`leading-tight font-black text-text-notion ${isFocus ? 'text-[16px]' : 'text-[14px]'}`}>
                     {node.task.title}
                   </p>
                 </Link>
@@ -250,7 +254,7 @@ export const TaskMap: React.FC<TaskMapProps> = ({ projectId, taskId, neighbourho
           <button
             onClick={() => fetchNextPage()}
             disabled={isFetchingNextPage}
-            className="p-4 rounded-full bg-[#3b82f6] text-white shadow-[0_0_30px_rgba(59,130,246,0.5)] hover:scale-110 active:scale-95 transition-all group disabled:opacity-50 disabled:scale-100"
+            className="p-4 rounded-full bg-focus-blue text-white shadow-[0_12px_30px_rgba(59,130,246,0.3)] hover:scale-110 active:scale-95 transition-all group disabled:opacity-50 disabled:scale-100"
             title="Discover Next Layer"
           >
             {isFetchingNextPage ? (

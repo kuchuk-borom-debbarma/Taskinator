@@ -151,14 +151,14 @@ export const TaskGraphView: React.FC = () => {
 
   if (isGraphLoading) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center gap-6 bg-[#0B0F1A]">
+      <div className="flex-1 flex flex-col items-center justify-center gap-6 bg-bg-notion">
         <div className="relative">
-          <Loader2 className="w-12 h-12 animate-spin text-[#3b82f6] opacity-20" />
+          <Loader2 className="w-12 h-12 animate-spin text-focus-blue opacity-25" />
           <Zap className="absolute inset-0 m-auto w-6 h-6 text-[#3b82f6] animate-pulse" />
         </div>
         <div className="flex flex-col items-center gap-2">
-          <span className="text-[12px] font-black text-white uppercase tracking-[0.5em]">Initialising Nexus Bridge</span>
-          <div className="w-32 h-1 bg-white/5 rounded-full overflow-hidden">
+          <span className="text-[12px] font-black text-text-notion uppercase tracking-[0.5em]">Initialising Nexus Bridge</span>
+          <div className="w-32 h-1 bg-slate-200 rounded-full overflow-hidden">
             <div className="h-full bg-[#3b82f6] animate-progress" style={{ width: '60%' }} />
           </div>
         </div>
@@ -169,13 +169,13 @@ export const TaskGraphView: React.FC = () => {
   if (!neighbourhood || !graphPages?.pages[0]?.task) return null;
 
   return (
-    <div className="flex-1 w-full h-screen relative bg-[#0B0F1A] overflow-hidden">
+    <div className="flex-1 w-full h-screen relative bg-bg-notion overflow-hidden">
       {/* Floating Back Button */}
       <div className="absolute top-8 left-8 z-50">
         <Link 
           to="/projects/$projectId/tasks" 
           params={{ projectId }}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-[#111827]/80 border border-white/10 text-white/60 hover:text-white hover:border-white/30 transition-all backdrop-blur-xl group shadow-2xl"
+          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-white/88 border border-border-notion text-text-dim hover:text-text-notion hover:border-slate-300 transition-all backdrop-blur-xl group shadow-sm"
         >
           <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
           <span className="text-[11px] font-bold uppercase tracking-widest">Back to Workspace</span>
