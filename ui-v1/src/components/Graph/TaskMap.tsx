@@ -223,10 +223,9 @@ export const TaskMap: React.FC<TaskMapProps> = ({ projectId, taskId, neighbourho
               <div className={`p-5 rounded-3xl border transition-all duration-500 bg-[#111827]/90 backdrop-blur-xl shadow-2xl
                 ${isFocus ? 'w-72 border-[#3b82f6] ring-8 ring-[#3b82f6]/10' : 'w-60 border-white/10 hover:border-white/30'}
               `}>
-                <Link 
-                  to="/graph/$projectId" 
-                  params={{ projectId }} 
-                  search={{ taskId: node.task.id }}
+                <Link
+                  to="/projects/$projectId/tasks/$taskId"
+                  params={{ projectId, taskId: node.task.id }}
                 >
                   <div className="flex items-center justify-between mb-3">
                     <div className="px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-[0.2em] text-white" style={{ backgroundColor: color }}>
