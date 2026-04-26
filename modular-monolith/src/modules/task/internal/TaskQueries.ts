@@ -472,7 +472,7 @@ export const insertTask = async (param: {
             INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
             SELECT 
                 'task-events',
-                id::text,
+                "projectId"::text,
                 jsonb_build_object(
                     'type', 'task.created',
                     'taskId', id,
@@ -598,7 +598,7 @@ export const updateTask = async (param: {
             INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
             SELECT 
                 'task-events',
-                u.id::text,
+                u."projectId"::text,
                 jsonb_build_object(
                     'type', 'task.updated',
                     'taskId', u.id,
@@ -680,7 +680,7 @@ export const deleteTask = async (param: {
             INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
             SELECT 
                 'task-events',
-                id::text,
+                fk_project_id::text,
                 jsonb_build_object(
                     'type', 'task.deleted',
                     'taskId', id,
@@ -742,7 +742,7 @@ export const insertTaskLink = async (param: {
             INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
             SELECT 
                 ${KAFKA_TOPICS.TASK},
-                id::text,
+                fk_project_id::text,
                 jsonb_build_object(
                     'type', ${KAFKA_EVENTS.TASK_LINK.CREATED}::text,
                     'linkId', id,
@@ -803,7 +803,7 @@ export const deleteTaskLink = async (param: {
             INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
             SELECT 
                 ${KAFKA_TOPICS.TASK},
-                id::text,
+                fk_project_id::text,
                 jsonb_build_object(
                     'type', ${KAFKA_EVENTS.TASK_LINK.DELETED}::text,
                     'linkId', id,
@@ -877,7 +877,7 @@ export const updateTaskLink = async (param: {
             INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
             SELECT 
                 ${KAFKA_TOPICS.TASK},
-                id::text,
+                fk_project_id::text,
                 jsonb_build_object(
                     'type', ${KAFKA_EVENTS.TASK_LINK.UPDATED}::text,
                     'linkId', id,

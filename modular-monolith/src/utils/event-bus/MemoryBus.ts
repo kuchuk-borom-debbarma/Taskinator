@@ -33,20 +33,22 @@ export class MemoryBus implements Bus {
         options?: { batch?: boolean },
     ) {
         for (const [eventType, handler] of Object.entries(handlers)) {
-            this.emitter.on(`${topic}:${eventType}`, async (e) => {
-                try {
-                    if (options?.batch) {
-                        // In MemoryBus, we just pass the single event as a batch of 1
-                        await handler([e]);
-                    } else {
-                        await handler(e.data);
+            let processingQueue: Promise<void> = Promise.resolve();
+            this.emitter.on(`${topic}:${eventType}`, (e) => {
+                processingQueue = processingQueue.then(async () => {
+                    try {
+                        if (options?.batch) {
+                            await handler([e]);
+                        } else {
+                            await handler(e.data);
+                        }
+                    } catch (err) {
+                        console.error(
+                            `MemoryBus: Handler error for ${eventType}`,
+                            err,
+                        );
                     }
-                } catch (err) {
-                    console.error(
-                        `MemoryBus: Handler error for ${eventType}`,
-                        err,
-                    );
-                }
+                });
             });
         }
     }
