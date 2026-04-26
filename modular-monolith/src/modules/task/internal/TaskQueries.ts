@@ -198,13 +198,24 @@ export const getTaskLinksPage = async (
     userId: string,
     projectId: string,
     taskId: string,
-    direction: 'incoming' | 'outgoing',
+    direction: 'incoming' | 'outgoing' | 'both',
+    depthLimit: number | undefined,
     params: PaginationParams,
 ): Promise<{
     links: TaskLink[];
     nextCursor: string | null;
     prevCursor: string | null;
 }> => {
+    if (direction === 'both') {
+        return getTaskNeighbourLinksPage(
+            userId,
+            projectId,
+            taskId,
+            depthLimit,
+            params,
+        );
+    }
+
     const limit = Math.min(params.first || params.last || 10, 50);
     const { after, before } = params;
     const isBackward = !!before;
@@ -282,6 +293,205 @@ export const getTaskLinksPage = async (
         } else {
             nextCursor = hasMore ? encodeCursor(lastEpoch, last.id) : null;
             prevCursor = after ? encodeCursor(firstEpoch, first.id) : null;
+        }
+    }
+
+    return { links, nextCursor, prevCursor };
+};
+
+const getTaskNeighbourLinksPage = async (
+    userId: string,
+    projectId: string,
+    taskId: string,
+    depthLimit: number | undefined,
+    params: PaginationParams,
+): Promise<{
+    links: TaskLink[];
+    nextCursor: string | null;
+    prevCursor: string | null;
+}> => {
+    const limit = Math.min(params.first || params.last || 25, 100);
+    const { after, before } = params;
+    const isBackward = !!before;
+    const cursor = before || after;
+
+    let cursorDepth: number | null = null;
+    let cursorEpoch: string | null = null;
+    let cursorId: string | null = null;
+
+    if (cursor) {
+        const decoded = decodeCursor(cursor);
+        const [depthValue, epochValue] = decoded.timeValue.split('~');
+        cursorDepth = Number.parseInt(depthValue || '', 10);
+        cursorEpoch = epochValue || null;
+        cursorId = decoded.id || null;
+
+        if (Number.isNaN(cursorDepth)) {
+            cursorDepth = null;
+        }
+    }
+
+    const result = await sql<
+        TaskLink & { epochPrecision: string; graphDepth: number }
+    >`
+        WITH auth_check AS (
+            SELECT 1 FROM project WHERE id = ${projectId}::uuid AND fk_user_id = ${userId}::text
+            UNION ALL
+            SELECT 1 FROM project_member WHERE fk_project_id = ${projectId}::uuid AND fk_user_id = ${userId}::text
+            LIMIT 1
+        ),
+        incoming_nodes AS (
+            SELECT
+                ancestor_task_id AS task_id,
+                depth
+            FROM task_reachability
+            WHERE fk_project_id = ${projectId}::uuid
+              AND descendant_task_id = ${taskId}::uuid
+              AND (
+                ${depthLimit ?? null}::int IS NULL
+                OR depth <= ${depthLimit ?? null}::int
+              )
+        ),
+        outgoing_nodes AS (
+            SELECT
+                descendant_task_id AS task_id,
+                depth
+            FROM task_reachability
+            WHERE fk_project_id = ${projectId}::uuid
+              AND ancestor_task_id = ${taskId}::uuid
+              AND (
+                ${depthLimit ?? null}::int IS NULL
+                OR depth <= ${depthLimit ?? null}::int
+              )
+        ),
+        node_depths AS (
+            SELECT
+                task_id,
+                MIN(incoming_depth) AS incoming_depth,
+                MIN(outgoing_depth) AS outgoing_depth,
+                MIN(node_depth) AS node_depth
+            FROM (
+                SELECT
+                    ${taskId}::uuid AS task_id,
+                    NULL::int AS incoming_depth,
+                    NULL::int AS outgoing_depth,
+                    0 AS node_depth
+                UNION ALL
+                SELECT
+                    task_id,
+                    depth AS incoming_depth,
+                    NULL::int AS outgoing_depth,
+                    depth AS node_depth
+                FROM incoming_nodes
+                UNION ALL
+                SELECT
+                    task_id,
+                    NULL::int AS incoming_depth,
+                    depth AS outgoing_depth,
+                    depth AS node_depth
+                FROM outgoing_nodes
+            ) AS seeded_nodes
+            GROUP BY task_id
+        ),
+        candidate_links AS (
+            SELECT
+                tl.id,
+                tl.fk_project_id AS "projectId",
+                tl.source_task_id AS "sourceTaskId",
+                tl.target_task_id AS "targetTaskId",
+                tl.label,
+                tl.created_by AS "createdBy",
+                tl.created_at AS "createdAt",
+                tl.created_at::text AS "epochPrecision",
+                GREATEST(
+                    COALESCE(source_nodes.node_depth, 0),
+                    COALESCE(target_nodes.node_depth, 0)
+                ) AS "graphDepth"
+            FROM task_link tl
+            JOIN node_depths source_nodes
+                ON source_nodes.task_id = tl.source_task_id
+            JOIN node_depths target_nodes
+                ON target_nodes.task_id = tl.target_task_id
+            WHERE EXISTS (SELECT 1 FROM auth_check)
+              AND tl.fk_project_id = ${projectId}::uuid
+              AND GREATEST(
+                    COALESCE(source_nodes.node_depth, 0),
+                    COALESCE(target_nodes.node_depth, 0)
+                  ) > 0
+        )
+        SELECT *
+        FROM candidate_links
+        WHERE (
+            ${cursorDepth}::int IS NULL
+            OR (
+                CASE
+                    WHEN ${isBackward} THEN (
+                        "graphDepth" < ${cursorDepth}::int
+                        OR (
+                            "graphDepth" = ${cursorDepth}::int
+                            AND (
+                                "createdAt" > ${cursorEpoch}::timestamptz
+                                OR (
+                                    "createdAt" = ${cursorEpoch}::timestamptz
+                                    AND id > ${cursorId}::uuid
+                                )
+                            )
+                        )
+                    )
+                    ELSE (
+                        "graphDepth" > ${cursorDepth}::int
+                        OR (
+                            "graphDepth" = ${cursorDepth}::int
+                            AND (
+                                "createdAt" < ${cursorEpoch}::timestamptz
+                                OR (
+                                    "createdAt" = ${cursorEpoch}::timestamptz
+                                    AND id < ${cursorId}::uuid
+                                )
+                            )
+                        )
+                    )
+                END
+            )
+        )
+        ORDER BY
+            "graphDepth" ${sql.raw(isBackward ? 'DESC' : 'ASC')},
+            "createdAt" ${sql.raw(isBackward ? 'ASC' : 'DESC')},
+            id ${sql.raw(isBackward ? 'ASC' : 'DESC')}
+        LIMIT ${limit + 1}
+    `.execute(db);
+
+    let rows = result.rows;
+    const hasMore = rows.length > limit;
+    if (hasMore) {
+        rows = rows.slice(0, limit);
+    }
+    if (isBackward) {
+        rows.reverse();
+    }
+
+    const links = rows;
+    let nextCursor: string | null = null;
+    let prevCursor: string | null = null;
+
+    if (links.length > 0) {
+        const first = links[0]!;
+        const last = links[links.length - 1]!;
+        const firstCursor = encodeCursor(
+            `${first.graphDepth}~${(first as any).epochPrecision}`,
+            first.id,
+        );
+        const lastCursor = encodeCursor(
+            `${last.graphDepth}~${(last as any).epochPrecision}`,
+            last.id,
+        );
+
+        if (isBackward) {
+            nextCursor = lastCursor;
+            prevCursor = hasMore ? firstCursor : null;
+        } else {
+            nextCursor = hasMore ? lastCursor : null;
+            prevCursor = after ? firstCursor : null;
         }
     }
 

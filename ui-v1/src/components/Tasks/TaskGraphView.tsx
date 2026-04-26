@@ -2,9 +2,23 @@ import React, { useMemo } from 'react';
 import { useParams, useSearch, Link } from '@tanstack/react-router';
 import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
 import { useApi } from '../../hooks/useApi';
-import { Loader2, Network, ArrowLeft, Info, Sparkles, Zap } from 'lucide-react';
+import { Loader2, ArrowLeft, Zap } from 'lucide-react';
 import { TaskMap } from '../Graph/TaskMap';
 import type { TaskNeighbourhood, GraphNode, GraphEdge } from '../../api/types';
+
+const getNodeDirection = (
+  incomingDepth: number | undefined,
+  outgoingDepth: number | undefined
+): GraphNode['direction'] => {
+  if (incomingDepth !== undefined && outgoingDepth !== undefined) {
+    if (incomingDepth < outgoingDepth) return 'incoming';
+    if (outgoingDepth < incomingDepth) return 'outgoing';
+    return 'both';
+  }
+
+  if (incomingDepth !== undefined) return 'incoming';
+  return 'outgoing';
+};
 
 export const TaskGraphView: React.FC = () => {
   const { projectId } = useParams({ from: '/fullscreen-layout/graph/$projectId' });
@@ -25,66 +39,120 @@ export const TaskGraphView: React.FC = () => {
     hasNextPage,
     isFetchingNextPage
   } = useInfiniteQuery({
-    queryKey: ['task-neighbours-lattice-infinite', focusedTaskId],
-    queryFn: ({ pageParam }) => taskApi.getTaskNeighbourLinks(focusedTaskId!, 'both', 1, pageParam),
-    initialPageParam: undefined as string | undefined,
-    getNextPageParam: (lastPage) => lastPage.hasNextPage ? lastPage.endCursor : undefined,
+    queryKey: ['task-neighbours-by-cursor', focusedTaskId],
+    queryFn: ({ pageParam }) => {
+      const cursorParam = pageParam as { cursor?: string; direction?: 'forward' | 'backward' } | undefined;
+      const isBackward = cursorParam?.direction === 'backward';
+
+      return taskApi.getTaskNeighbourLinks(
+        focusedTaskId!,
+        'both',
+        undefined,
+        isBackward ? undefined : 50,
+        isBackward ? undefined : cursorParam?.cursor,
+        isBackward ? 50 : undefined,
+        isBackward ? cursorParam?.cursor : undefined
+      );
+    },
+    initialPageParam: undefined as { cursor?: string; direction?: 'forward' | 'backward' } | undefined,
+    getNextPageParam: (lastPage) =>
+      lastPage.hasNextPage ? { direction: 'forward' as const, cursor: lastPage.endCursor! } : undefined,
+    getPreviousPageParam: (firstPage) =>
+      firstPage.hasPreviousPage ? { direction: 'backward' as const, cursor: firstPage.startCursor! } : undefined,
     enabled: !!focusedTaskId,
   });
 
   const neighbourhood = useMemo<TaskNeighbourhood | null>(() => {
     if (!focusedTask || !neighbourPages) return null;
 
-    const nodes: GraphNode[] = [];
-    const edges: any[] = [];
-    const seenIds = new Set([focusedTask.id]);
+    const taskMap = new Map<string, typeof focusedTask>([[focusedTask.id, focusedTask]]);
+    const nodeMap = new Map<string, GraphNode>();
+    const edgeMap = new Map<string, GraphEdge & { source: string; target: string }>();
+    const outgoingAdj = new Map<string, Set<string>>();
+    const incomingAdj = new Map<string, Set<string>>();
 
-    neighbourPages.pages.forEach(page => {
-      page.links.forEach(link => {
-        // Source and target IDs
-        const sId = link.source.id;
-        const tId = link.target.id;
+    const pushAdjacency = (map: Map<string, Set<string>>, from: string, to: string) => {
+      const existing = map.get(from);
+      if (existing) {
+        existing.add(to);
+        return;
+      }
+      map.set(from, new Set([to]));
+    };
 
-        // Process source node
-        if (!seenIds.has(sId)) {
-          nodes.push({
-            task: link.source,
-            direction: sId === focusedTaskId ? 'focused' : (tId === focusedTaskId ? 'incoming' : 'outgoing'),
-            depth: 1
-          });
-          seenIds.add(sId);
-        }
+    neighbourPages.pages.forEach((page) => {
+      page.links.forEach((link) => {
+        taskMap.set(link.source.id, link.source);
+        taskMap.set(link.target.id, link.target);
 
-        // Process target node
-        if (!seenIds.has(tId)) {
-          nodes.push({
-            task: link.target,
-            direction: tId === focusedTaskId ? 'focused' : (sId === focusedTaskId ? 'outgoing' : 'incoming'),
-            depth: 1
-          });
-          seenIds.add(tId);
-        }
-
-        // Always push the edge
-        edges.push({
+        edgeMap.set(link.id, {
           id: link.id,
-          source: sId,
-          target: tId,
-          label: link.label
+          source: link.source.id,
+          target: link.target.id,
+          sourceTaskId: link.source.id,
+          targetTaskId: link.target.id,
+          label: link.label,
         });
+
+        pushAdjacency(outgoingAdj, link.source.id, link.target.id);
+        pushAdjacency(incomingAdj, link.target.id, link.source.id);
+      });
+    });
+
+    const bfs = (adjacency: Map<string, Set<string>>) => {
+      const depths = new Map<string, number>();
+      const queue: string[] = [focusedTask.id];
+      depths.set(focusedTask.id, 0);
+
+      while (queue.length > 0) {
+        const current = queue.shift()!;
+        const currentDepth = depths.get(current)!;
+        const nextNodes = adjacency.get(current);
+        if (!nextNodes) continue;
+
+        nextNodes.forEach((nextNodeId) => {
+          if (depths.has(nextNodeId)) return;
+          depths.set(nextNodeId, currentDepth + 1);
+          queue.push(nextNodeId);
+        });
+      }
+
+      return depths;
+    };
+
+    const outgoingDepths = bfs(outgoingAdj);
+    const incomingDepths = bfs(incomingAdj);
+
+    taskMap.forEach((task, taskId) => {
+      if (taskId === focusedTask.id) return;
+
+      const incomingDepth = incomingDepths.get(taskId);
+      const outgoingDepth = outgoingDepths.get(taskId);
+      if (incomingDepth === undefined && outgoingDepth === undefined) return;
+
+      const availableDepths = [incomingDepth, outgoingDepth].filter((value): value is number => value !== undefined);
+      const depth = Math.min(...availableDepths);
+
+      nodeMap.set(taskId, {
+        task,
+        direction: getNodeDirection(incomingDepth, outgoingDepth),
+        depth,
       });
     });
 
     return {
       focusedTask,
-      nodes,
-      edges,
+      nodes: Array.from(nodeMap.values()).sort((a, b) => {
+        if ((a.depth || 0) !== (b.depth || 0)) return (a.depth || 0) - (b.depth || 0);
+        return new Date(b.task.createdAt).getTime() - new Date(a.task.createdAt).getTime();
+      }),
+      edges: Array.from(edgeMap.values()),
       incomingStories: [],
       outgoingStories: [],
       hasNextPage: !!hasNextPage,
-      endCursor: undefined // Not needed for memo
+      endCursor: neighbourPages.pages[neighbourPages.pages.length - 1]?.endCursor || undefined
     };
-  }, [focusedTask, neighbourPages, focusedTaskId, hasNextPage]);
+  }, [focusedTask, neighbourPages, hasNextPage]);
 
   if (isTaskLoading || isNeighboursLoading) {
     return (

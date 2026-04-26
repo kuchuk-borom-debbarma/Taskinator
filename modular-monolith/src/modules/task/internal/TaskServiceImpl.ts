@@ -57,13 +57,14 @@ export class TaskServiceImpl implements TaskService {
         pagination: PaginationParams,
     ): Promise<LinkConnection> {
         logger.debug(
-            `TaskService.getTaskLinks called for task: ${params.taskId}, direction: ${params.direction}`,
+            `TaskService.getTaskLinks called for task: ${params.taskId}, direction: ${params.direction}, depthLimit: ${params.depthLimit ?? 'none'}`,
         );
         return await getTaskLinksPage(
             params.userId,
             params.projectId,
             params.taskId,
             params.direction,
+            params.depthLimit,
             pagination,
         );
     }

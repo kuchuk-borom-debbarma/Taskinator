@@ -91,6 +91,47 @@ export class GraphQLTaskAPI implements TaskAPI {
     return result.data as T;
   }
 
+  private async getTaskNeighbourLinksPage(
+    taskId: string,
+    direction: NeighbourDirection,
+    depthLimit: number = 1,
+    first?: number,
+    after?: string,
+    last?: number,
+    before?: string
+  ): Promise<{ links: TaskLink[], hasNextPage: boolean, hasPreviousPage: boolean, endCursor: string | null, startCursor: string | null }> {
+    const data = await this.query<any>(gql`
+      query GetTaskNeighbourLinks($taskId: ID!, $direction: NeighbourDirection, $depthLimit: Int, $first: Int, $after: String, $last: Int, $before: String) {
+        task(id: $taskId) {
+          neighbourLinks(direction: $direction, depthLimit: $depthLimit, first: $first, after: $after, last: $last, before: $before) {
+            edges {
+              node {
+                ${TASK_LINK_FIELDS}
+              }
+            }
+            pageInfo {
+              hasNextPage
+              hasPreviousPage
+              startCursor
+              endCursor
+            }
+          }
+        }
+      }
+    `, { taskId, direction, depthLimit, first, after, last, before });
+
+    const conn = data.task?.neighbourLinks;
+    if (!conn) return { links: [], hasNextPage: false, hasPreviousPage: false, endCursor: null, startCursor: null };
+
+    return {
+      links: conn.edges.map((e: any) => e.node),
+      hasNextPage: conn.pageInfo.hasNextPage || false,
+      hasPreviousPage: conn.pageInfo.hasPreviousPage || false,
+      endCursor: conn.pageInfo.endCursor || null,
+      startCursor: conn.pageInfo.startCursor || null,
+    };
+  }
+
   async getTasks(
     projectId: string,
     params: {
@@ -216,35 +257,14 @@ export class GraphQLTaskAPI implements TaskAPI {
     last?: number,
     before?: string
   ): Promise<{ links: TaskLink[], hasNextPage: boolean, hasPreviousPage: boolean, endCursor: string | null, startCursor: string | null }> {
-    const data = await this.query<any>(gql`
-      query GetTaskNeighbourLinks($taskId: ID!, $direction: NeighbourDirection, $depthLimit: Int, $first: Int, $after: String, $last: Int, $before: String) {
-        task(id: $taskId) {
-          neighbourLinks(direction: $direction, depthLimit: $depthLimit, first: $first, after: $after, last: $last, before: $before) {
-            edges {
-              node {
-                ${TASK_LINK_FIELDS}
-              }
-            }
-            pageInfo {
-              hasNextPage
-              hasPreviousPage
-              startCursor
-              endCursor
-            }
-          }
-        }
-      }
-    `, { taskId, direction, depthLimit, first, after, last, before });
-
-    const conn = data.task?.neighbourLinks;
-    if (!conn) return { links: [], hasNextPage: false, hasPreviousPage: false, endCursor: null, startCursor: null };
-
-    return {
-      links: conn.edges.map((e: any) => e.node),
-      hasNextPage: conn.pageInfo.hasNextPage || false,
-      hasPreviousPage: conn.pageInfo.hasPreviousPage || false,
-      endCursor: conn.pageInfo.endCursor || null,
-      startCursor: conn.pageInfo.startCursor || null,
-    };
+    return this.getTaskNeighbourLinksPage(
+      taskId,
+      direction,
+      depthLimit,
+      first,
+      after,
+      last,
+      before
+    );
   }
 }

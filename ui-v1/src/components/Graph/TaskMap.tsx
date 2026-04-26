@@ -1,25 +1,14 @@
-import React, { useMemo, useState, useRef, useEffect } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { Link } from '@tanstack/react-router';
 import {
   PlusCircle,
   Loader2,
   Target,
-  MousePointer2,
-  ChevronUp,
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-  Circle,
   Keyboard,
   MousePointer,
   Maximize,
-  Sparkles,
-  Zap,
-  ArrowRightLeft,
-  X
 } from 'lucide-react';
 import type { ProjectTask, TaskNeighbourhood } from '../../api/types';
-import { motion, AnimatePresence } from 'framer-motion';
 
 const getLinkLabelColor = (label: string = '') => {
   let hash = 0;
@@ -96,8 +85,6 @@ export const TaskMap: React.FC<TaskMapProps> = ({ projectId, taskId, neighbourho
   const [inputMode, setInputMode] = useState<'mouse' | 'trackpad'>('mouse');
   const [keyboardEnabled, setKeyboardEnabled] = useState(true);
   const [mapData, setMapData] = useState<{ nodes: MapNode[], allEdges: any[] }>({ nodes: [], allEdges: [] });
-  const [draggedNodeId, setDraggedNodeId] = useState<string | null>(null);
-  const [isDragLocked, setIsDragLocked] = useState(false);
 
   useEffect(() => {
     const worker = new Worker(new URL('./layoutWorker.ts', import.meta.url), { type: 'module' });

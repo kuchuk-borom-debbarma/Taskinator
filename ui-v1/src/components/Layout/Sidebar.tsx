@@ -4,11 +4,9 @@ import { useApi } from '../../hooks/useApi';
 import { Link, useLocation, useNavigate } from '@tanstack/react-router';
 import {
   LayoutDashboard,
-  Settings,
   LogOut,
   User,
   Plus,
-  Search,
   Hash,
   Loader2,
   ChevronLeft,

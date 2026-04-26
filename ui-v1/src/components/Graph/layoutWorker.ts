@@ -1,4 +1,4 @@
-import type { ProjectTask, TaskLink } from '../../api/types';
+import type { ProjectTask } from '../../api/types';
 
 export interface MapNode {
   task: ProjectTask;

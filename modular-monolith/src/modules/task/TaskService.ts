@@ -59,7 +59,8 @@ export interface GetTaskLinksParam {
     userId: string;
     projectId: string;
     taskId: string;
-    direction: 'incoming' | 'outgoing';
+    direction: 'incoming' | 'outgoing' | 'both';
+    depthLimit?: number;
 }
 
 export interface TaskService extends BaseService {
