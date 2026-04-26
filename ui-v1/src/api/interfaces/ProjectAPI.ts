@@ -1,4 +1,4 @@
-import type { Project, ProjectMember } from '../types';
+import type { Project, ProjectMember, ProjectTask, Team } from '../types';
 
 export interface ProjectAPI {
   getProjects(first?: number, after?: string): Promise<{ projects: Project[], hasNextPage: boolean, endCursor: string | null, totalCount?: number }>;
@@ -10,4 +10,10 @@ export interface ProjectAPI {
   removeProjectMembers(projectId: string, memberIds: string[]): Promise<{ success: boolean }>;
   getProjectMembers(projectId: string, first?: number, after?: string): Promise<{ members: ProjectMember[], hasNextPage: boolean, endCursor: string | null }>;
   getProjectLinks(projectId: string, first?: number, after?: string): Promise<{ links: any[], hasNextPage: boolean, endCursor: string | null }>;
+  getProjectDashboardData(projectId: string): Promise<{
+    project: Project | null,
+    teams: Team[],
+    tasks: ProjectTask[],
+    members: ProjectMember[],
+  }>;
 }

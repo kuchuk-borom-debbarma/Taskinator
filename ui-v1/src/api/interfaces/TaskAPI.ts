@@ -34,4 +34,22 @@ export interface TaskAPI {
     last?: number,
     before?: string
   ): Promise<{ links: TaskLink[], hasNextPage: boolean, hasPreviousPage: boolean, endCursor: string | null, startCursor: string | null }>;
+
+  getTaskGraphPage(
+    taskId: string,
+    params?: {
+      first?: number,
+      after?: string,
+      last?: number,
+      before?: string,
+      depthLimit?: number,
+    }
+  ): Promise<{
+    task: ProjectTask | null,
+    links: TaskLink[],
+    hasNextPage: boolean,
+    hasPreviousPage: boolean,
+    endCursor: string | null,
+    startCursor: string | null,
+  }>;
 }

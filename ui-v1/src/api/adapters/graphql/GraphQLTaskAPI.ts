@@ -187,6 +187,58 @@ export class GraphQLTaskAPI implements TaskAPI {
     return data.task || null;
   }
 
+  async getTaskGraphPage(
+    taskId: string,
+    params: {
+      first?: number,
+      after?: string,
+      last?: number,
+      before?: string,
+      depthLimit?: number,
+    } = {}
+  ): Promise<{
+    task: ProjectTask | null,
+    links: TaskLink[],
+    hasNextPage: boolean,
+    hasPreviousPage: boolean,
+    endCursor: string | null,
+    startCursor: string | null,
+  }> {
+    const { first, after, last, before, depthLimit } = params;
+    const data = await this.query<any>(gql`
+      query GetTaskGraphPage($taskId: ID!, $direction: NeighbourDirection, $depthLimit: Int, $first: Int, $after: String, $last: Int, $before: String) {
+        task(id: $taskId) {
+          ${TASK_FIELDS}
+          neighbourLinks(direction: $direction, depthLimit: $depthLimit, first: $first, after: $after, last: $last, before: $before) {
+            edges {
+              node {
+                ${TASK_LINK_FIELDS}
+              }
+            }
+            pageInfo {
+              hasNextPage
+              hasPreviousPage
+              startCursor
+              endCursor
+            }
+          }
+        }
+      }
+    `, { taskId, direction: 'both', depthLimit, first, after, last, before });
+
+    const task = data.task || null;
+    const conn = data.task?.neighbourLinks;
+
+    return {
+      task,
+      links: conn?.edges.map((e: any) => e.node) || [],
+      hasNextPage: conn?.pageInfo.hasNextPage || false,
+      hasPreviousPage: conn?.pageInfo.hasPreviousPage || false,
+      endCursor: conn?.pageInfo.endCursor || null,
+      startCursor: conn?.pageInfo.startCursor || null,
+    };
+  }
+
   async createTask(input: { projectId: string; title: string; description?: string; status?: string; teamId?: string; memberId?: string }): Promise<ProjectTask> {
     const data = await this.query<any>(gql`
       mutation CreateTask($input: CreateTaskInput!) {

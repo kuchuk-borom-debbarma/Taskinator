@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { useParams, useSearch, Link } from '@tanstack/react-router';
-import { useQuery, useInfiniteQuery } from '@tanstack/react-query';
+import { useInfiniteQuery } from '@tanstack/react-query';
 import { useApi } from '../../hooks/useApi';
 import { Loader2, ArrowLeft, Zap } from 'lucide-react';
 import { TaskMap } from '../Graph/TaskMap';
@@ -26,32 +26,26 @@ export const TaskGraphView: React.FC = () => {
   const focusedTaskId = search.taskId;
   const { taskApi } = useApi();
 
-  const { data: focusedTask, isLoading: isTaskLoading } = useQuery({
-    queryKey: ['task', focusedTaskId],
-    queryFn: () => taskApi.getTask(focusedTaskId!),
-    enabled: !!focusedTaskId,
-  });
-
   const { 
-    data: neighbourPages, 
-    isLoading: isNeighboursLoading,
+    data: graphPages, 
+    isLoading: isGraphLoading,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage
   } = useInfiniteQuery({
-    queryKey: ['task-neighbours-by-cursor', focusedTaskId],
+    queryKey: ['task-graph-by-cursor', focusedTaskId],
     queryFn: ({ pageParam }) => {
       const cursorParam = pageParam as { cursor?: string; direction?: 'forward' | 'backward' } | undefined;
       const isBackward = cursorParam?.direction === 'backward';
 
-      return taskApi.getTaskNeighbourLinks(
+      return taskApi.getTaskGraphPage(
         focusedTaskId!,
-        'both',
-        undefined,
-        isBackward ? undefined : 50,
-        isBackward ? undefined : cursorParam?.cursor,
-        isBackward ? 50 : undefined,
-        isBackward ? cursorParam?.cursor : undefined
+        {
+          first: isBackward ? undefined : 50,
+          after: isBackward ? undefined : cursorParam?.cursor,
+          last: isBackward ? 50 : undefined,
+          before: isBackward ? cursorParam?.cursor : undefined,
+        }
       );
     },
     initialPageParam: undefined as { cursor?: string; direction?: 'forward' | 'backward' } | undefined,
@@ -63,7 +57,8 @@ export const TaskGraphView: React.FC = () => {
   });
 
   const neighbourhood = useMemo<TaskNeighbourhood | null>(() => {
-    if (!focusedTask || !neighbourPages) return null;
+    const focusedTask = graphPages?.pages[0]?.task || null;
+    if (!focusedTask || !graphPages) return null;
 
     const taskMap = new Map<string, typeof focusedTask>([[focusedTask.id, focusedTask]]);
     const nodeMap = new Map<string, GraphNode>();
@@ -80,7 +75,7 @@ export const TaskGraphView: React.FC = () => {
       map.set(from, new Set([to]));
     };
 
-    neighbourPages.pages.forEach((page) => {
+    graphPages.pages.forEach((page) => {
       page.links.forEach((link) => {
         taskMap.set(link.source.id, link.source);
         taskMap.set(link.target.id, link.target);
@@ -150,11 +145,11 @@ export const TaskGraphView: React.FC = () => {
       incomingStories: [],
       outgoingStories: [],
       hasNextPage: !!hasNextPage,
-      endCursor: neighbourPages.pages[neighbourPages.pages.length - 1]?.endCursor || undefined
+      endCursor: graphPages.pages[graphPages.pages.length - 1]?.endCursor || undefined
     };
-  }, [focusedTask, neighbourPages, hasNextPage]);
+  }, [graphPages, hasNextPage]);
 
-  if (isTaskLoading || isNeighboursLoading) {
+  if (isGraphLoading) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center gap-6 bg-[#0B0F1A]">
         <div className="relative">
@@ -171,7 +166,7 @@ export const TaskGraphView: React.FC = () => {
     );
   }
 
-  if (!neighbourhood || !focusedTask) return null;
+  if (!neighbourhood || !graphPages?.pages[0]?.task) return null;
 
   return (
     <div className="flex-1 w-full h-screen relative bg-[#0B0F1A] overflow-hidden">

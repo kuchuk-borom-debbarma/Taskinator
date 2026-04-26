@@ -10,33 +10,15 @@ import {
 
 export default function ProjectDashboardView() {
   const { projectId } = useParams({ strict: false }) as any;
-  const { projectApi, teamApi, taskApi } = useApi();
+  const { projectApi } = useApi();
 
-  const { data: project, isLoading: isProjectLoading } = useQuery({
-    queryKey: ['project-dashboard', projectId],
-    queryFn: () => projectApi.getProject(projectId),
-  });
-
-  // Fetch teams for this project
-  const { data: teamsData } = useQuery({
-    queryKey: ['project-dashboard-teams', projectId],
-    queryFn: () => teamApi.getTeams(projectId, 5),
-    enabled: !!projectId,
-  });
-
-  // Fetch assigned tasks for this project (my tasks)
-  const { data: tasksData } = useQuery({
-    queryKey: ['project-dashboard-tasks', projectId],
-    queryFn: () => taskApi.getTasks(projectId, { first: 10 }),
-    enabled: !!projectId,
-  });
-
-  // Fetch members for this project
-  const { data: membersData } = useQuery({
+  const { data: dashboardData, isLoading: isProjectLoading } = useQuery({
     queryKey: ['project-dashboard-members', projectId],
-    queryFn: () => projectApi.getProjectMembers(projectId, 5),
+    queryFn: () => projectApi.getProjectDashboardData(projectId),
     enabled: !!projectId,
   });
+
+  const project = dashboardData?.project;
 
   if (isProjectLoading || !project) {
     return (
@@ -49,9 +31,8 @@ export default function ProjectDashboardView() {
     );
   }
 
-  const teams = teamsData?.teams || [];
-  const tasks = tasksData?.tasks || [];
-  const memberCount = membersData?.members.length || 0;
+  const teams = dashboardData?.teams || [];
+  const tasks = dashboardData?.tasks || [];
 
   return (
     <div className="p-8 max-w-7xl mx-auto animate-in fade-in slide-in-from-bottom-2 duration-500">

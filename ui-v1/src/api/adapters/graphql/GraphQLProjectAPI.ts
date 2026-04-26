@@ -1,5 +1,5 @@
 import type { ProjectAPI } from '../../interfaces/ProjectAPI';
-import type { Project, ProjectMember } from '../../types';
+import type { Project, ProjectMember, ProjectTask, Team } from '../../types';
 import { AuthenticationError } from '../../errors';
 
 const GRAPHQL_URL = 'http://localhost:3000/graphql';
@@ -118,6 +118,85 @@ export class GraphQLProjectAPI implements ProjectAPI {
     return {
       ...data.project,
       description: data.project.description ?? undefined,
+    };
+  }
+
+  async getProjectDashboardData(projectId: string): Promise<{
+    project: Project | null,
+    teams: Team[],
+    tasks: ProjectTask[],
+    members: ProjectMember[],
+  }> {
+    const data = await this.query<any>(gql`
+      query GetProjectDashboardData($projectId: ID!, $teamsFirst: Int, $tasksFirst: Int, $membersFirst: Int) {
+        project(id: $projectId) {
+          id
+          name
+          description
+          createdAt
+          updatedAt
+          version
+          projectMembersCount
+          tasksCount
+          teamsCount
+          creator { id username }
+          projectTeams(first: $teamsFirst) {
+            edges {
+              node {
+                id
+                name
+                createdAt
+                updatedAt
+                version
+              }
+            }
+          }
+          projectTasks(first: $tasksFirst) {
+            edges {
+              node {
+                id
+                title
+                description
+                status
+                priority
+                dueDate
+                version
+                createdAt
+                updatedAt
+                project { id name }
+                team { id name }
+                assignedMember { id username }
+                createdBy { id username }
+                updatedBy { id username }
+              }
+            }
+          }
+          projectMembers(first: $membersFirst) {
+            edges {
+              node {
+                id
+                user { id username }
+                createdAt
+                version
+              }
+            }
+          }
+        }
+      }
+    `, { projectId, teamsFirst: 5, tasksFirst: 10, membersFirst: 5 });
+
+    if (!data.project) {
+      return { project: null, teams: [], tasks: [], members: [] };
+    }
+
+    return {
+      project: {
+        ...data.project,
+        description: data.project.description ?? undefined,
+      },
+      teams: data.project.projectTeams?.edges.map((e: any) => e.node) || [],
+      tasks: data.project.projectTasks?.edges.map((e: any) => e.node) || [],
+      members: data.project.projectMembers?.edges.map((e: any) => e.node) || [],
     };
   }
 
