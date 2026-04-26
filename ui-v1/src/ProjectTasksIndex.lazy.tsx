@@ -12,7 +12,7 @@ type CursorParam =
 
 export default function ProjectTasksIndex() {
   const { projectId } = useParams({ strict: false });
-  const { cursor, direction } = useSearch({ from: '/authenticated-layout/projects/$projectId/' }) as any;
+  const { cursor, direction } = useSearch({ from: '/authenticated-layout/projects/$projectId/tasks' }) as any;
   const { taskApi } = useApi();
   const queryClient = useQueryClient();
   const navigate = useNavigate();

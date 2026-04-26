@@ -14,7 +14,6 @@ const TASK_FIELDS = `
   priority
   dueDate
   version
-  lastEventId
   createdAt
   updatedAt
   project { id name }
