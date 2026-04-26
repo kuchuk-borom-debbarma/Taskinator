@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { Link, useNavigate } from '@tanstack/react-router';
-import { ArrowRight, FolderPlus, FolderSearch, Loader2, Rocket, Users } from 'lucide-react';
+import { ArrowRight, FolderPlus, FolderSearch, Loader2, Rocket } from 'lucide-react';
 import { useApi } from '../../hooks/useApi';
 import { useAuth } from '../../context/AuthContext';
 import { CreateProjectModal } from '../Layout/Sidebar';
-import { EmptyState, PageHeader, StatCard, SurfaceCard, SurfaceCardStrong, formatDate } from '../shared/workspace';
+import { EmptyState, PageHeader, StatCard, SurfaceCardStrong, formatDate } from '../shared/workspace';
 
 export function ProjectDashboard() {
   const navigate = useNavigate();
@@ -68,7 +68,7 @@ export function ProjectDashboard() {
         <StatCard label="Teams" value={totalTeams} hint="Operating groups currently attached to these projects." accent="ink" />
       </div>
 
-      <div className="mt-8 grid gap-6 xl:grid-cols-[1.45fr_0.85fr]">
+      <div className="mt-8">
         <SurfaceCardStrong className="p-5 md:p-6">
           <div className="mb-6 flex items-center justify-between gap-4">
             <div>
@@ -144,51 +144,6 @@ export function ProjectDashboard() {
             </button>
           ) : null}
         </SurfaceCardStrong>
-
-        <div className="space-y-6">
-          <SurfaceCard className="p-5">
-            <p className="eyebrow mb-2">How this changed</p>
-            <h3 className="text-xl font-semibold tracking-[-0.03em] text-app-ink">A better front door</h3>
-            <p className="mt-3 text-sm leading-7 text-app-muted">
-              The workspace now starts with quick selection, useful volume signals, and clear next actions instead of a dense, scattered dashboard.
-            </p>
-          </SurfaceCard>
-
-          <SurfaceCard className="p-5">
-            <p className="eyebrow mb-2">Fast path</p>
-            <h3 className="text-xl font-semibold tracking-[-0.03em] text-app-ink">Jump back into execution</h3>
-            <div className="mt-4 space-y-3">
-              {projects.slice(0, 3).map((project) => (
-                <button
-                  key={project.id}
-                  onClick={() => navigate({ to: '/projects/$projectId', params: { projectId: project.id } })}
-                  className="flex w-full items-center justify-between rounded-2xl border border-app-line bg-white/70 px-4 py-3 text-left transition hover:border-app-ink/20"
-                >
-                  <div>
-                    <p className="text-sm font-semibold text-app-ink">{project.name}</p>
-                    <p className="text-xs text-app-muted">{project.tasksCount} tasks across {project.teamsCount} teams</p>
-                  </div>
-                  <ArrowRight size={16} className="text-app-muted" />
-                </button>
-              ))}
-              {projects.length === 0 ? (
-                <p className="text-sm leading-6 text-app-muted">As soon as a project exists, this panel becomes your shortcut back into active work.</p>
-              ) : null}
-            </div>
-          </SurfaceCard>
-
-          <SurfaceCard className="p-5">
-            <div className="flex items-center gap-3">
-              <div className="rounded-full bg-app-accent-2-soft p-3 text-app-accent-2">
-                <Users size={18} />
-              </div>
-              <div>
-                <h3 className="text-lg font-semibold text-app-ink">Team context stays visible</h3>
-                <p className="text-sm text-app-muted">Projects, teams, members, and task flow now read as one connected system.</p>
-              </div>
-            </div>
-          </SurfaceCard>
-        </div>
       </div>
 
       {showCreate ? <CreateProjectModal onClose={() => setShowCreate(false)} /> : null}

@@ -303,9 +303,9 @@ export const TaskMap: React.FC<TaskMapProps> = ({
                   <p className={`font-black leading-tight text-app-ink ${isFocus ? 'text-[16px]' : 'text-[14px]'}`}>
                     {node.task.title}
                   </p>
-                  {!isFocus ? (
+                  {!isFocus && node.task.team?.name ? (
                     <p className="mt-2 text-[11px] font-medium text-app-muted">
-                      {node.task.team?.name || 'No team assigned'}
+                      {node.task.team.name}
                     </p>
                   ) : null}
                 </Link>
@@ -328,12 +328,7 @@ export const TaskMap: React.FC<TaskMapProps> = ({
             {isFetchingNextPage ? (
               <Loader2 size={24} className="animate-spin" />
             ) : (
-              <div className="flex items-center gap-2 px-1">
-                <PlusCircle size={24} />
-                <span className="max-w-0 overflow-hidden whitespace-nowrap text-[11px] font-black uppercase tracking-widest transition-all duration-500 group-hover:max-w-[120px]">
-                  Expand Nexus
-                </span>
-              </div>
+              <PlusCircle size={24} />
             )}
           </button>
         </div>

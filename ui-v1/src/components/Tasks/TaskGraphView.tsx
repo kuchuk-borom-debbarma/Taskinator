@@ -131,24 +131,20 @@ export const TaskGraphView: React.FC = () => {
 
   return (
     <div className="page-frame">
-      <SurfaceCardStrong className="hero-gradient p-6 md:p-8">
-        <div className="mb-5 flex flex-wrap gap-3">
-          <Link
-            to="/projects/$projectId/tasks"
-            params={{ projectId }}
-            className="inline-flex items-center gap-2 rounded-full border border-app-line bg-white/80 px-4 py-2 text-sm font-semibold text-app-ink transition hover:border-app-ink/20"
-          >
-            <ArrowLeft size={15} />
-            Back to tasks
-          </Link>
-        </div>
-        <p className="eyebrow mb-3">Flow map</p>
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div className="max-w-3xl">
-            <h1 className="text-4xl font-semibold tracking-[-0.05em] text-app-ink">{neighbourhood.focusedTask.title}</h1>
-            <p className="mt-3 text-base leading-7 text-app-muted">
-              The interactive task map is back, now styled to match the new workspace. Pan, zoom, and inspect the dependency web around the focused task.
-            </p>
+      <SurfaceCardStrong className="p-5 md:p-6">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <Link
+              to="/projects/$projectId/tasks"
+              params={{ projectId }}
+              className="inline-flex items-center gap-2 rounded-full border border-app-line bg-white/80 px-4 py-2 text-sm font-semibold text-app-ink transition hover:border-app-ink/20"
+            >
+              <ArrowLeft size={15} />
+              Back
+            </Link>
+            <h1 className="text-2xl font-semibold tracking-[-0.04em] text-app-ink md:text-3xl">
+              {neighbourhood.focusedTask.title}
+            </h1>
           </div>
           <div className="flex flex-wrap gap-2">
             <StatusBadge status={neighbourhood.focusedTask.status} />
@@ -157,18 +153,13 @@ export const TaskGraphView: React.FC = () => {
         </div>
       </SurfaceCardStrong>
 
-      <SurfaceCardStrong className="mt-8 overflow-hidden p-0">
-        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-app-line px-5 py-4">
-          <div>
-            <p className="eyebrow mb-1">Interactive canvas</p>
-            <p className="text-sm text-app-muted">Full graph view. Hover edge inspect label. Hover node isolate nearby links.</p>
-          </div>
-          <div className="flex flex-wrap gap-3 text-sm text-app-muted">
-            <div className="rounded-full bg-app-ink/4 px-4 py-2">
-              {neighbourhood.nodes.length} connected tasks
-            </div>
-            <div className="rounded-full bg-app-ink/4 px-4 py-2">
-              {neighbourhood.edges.length} relationships
+      <SurfaceCardStrong className="mt-6 overflow-hidden p-0">
+        <div className="border-b border-app-line px-5 py-3">
+          <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-app-muted">
+            <span>Task graph</span>
+            <div className="flex flex-wrap gap-3">
+              <span>{neighbourhood.nodes.length} nodes</span>
+              <span>{neighbourhood.edges.length} links</span>
             </div>
           </div>
         </div>
