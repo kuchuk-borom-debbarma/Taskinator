@@ -6,25 +6,38 @@ import {
     KAFKA_TOPICS,
 } from '../../../../utils/event-bus/constants.ts';
 import { claimEventsAtomic } from '../../../../utils/event-bus/idempotency.ts';
+import { appendEventsToOutbox } from '../../../../utils/event-bus/OutboxQueries.ts';
 import type { DomainEvent } from '../../../../utils/event-bus/types.ts';
-import { deleteProjectTasksBatch } from '../TaskQueries.ts';
+import {
+    BULK_DELETE_CHUNK_SIZE,
+    deleteProjectTasksChunk,
+} from '../TaskQueries.ts';
 
 /**
- * Execution Listener: Delete Project Task
- * Bulk decommissions task entities for specified projects.
- * [Action]: DELETE_PROJECT_TASK
+ * Execution Listener: Delete Project Task (Chunked)
+ *
+ * Processes project task deletion in bounded chunks to prevent long-lived
+ * database locks. Each transaction deletes at most BULK_DELETE_CHUNK_SIZE rows.
+ * If rows remain, a continuation signal (DELETE_PROJECT_TASK_CHUNK) is written
+ * to the outbox atomically before commit, creating a self-signaling loop.
+ *
+ * [Action]: DELETE_PROJECT_TASK | DELETE_PROJECT_TASK_CHUNK
  */
 export class ProjectAggregated_DeleteProjectTask {
     async init() {
         logger.info(
-            '[ProjectAggregated -> Task] Initializing Listener: Delete Project Task (Decommissioning)',
+            '[ProjectAggregated -> Task] Initializing Listener: Delete Project Task (Chunked)',
         );
 
         await eventBus.subscribe(
             KAFKA_TOPICS.PROJECT_AGGREGATED,
             'task-decommissioning-group',
             {
+                // Initial trigger from the Project aggregator
                 [KAFKA_EVENTS.PROJECT_AGGREGATED.DELETE_PROJECT_TASK]:
+                    this.handleDeleteProjectTask.bind(this),
+                // Self-signaling continuation when a chunk finishes but rows remain
+                [KAFKA_EVENTS.PROJECT_AGGREGATED.DELETE_PROJECT_TASK_CHUNK]:
                     this.handleDeleteProjectTask.bind(this),
             },
             { batch: true },
@@ -46,23 +59,37 @@ export class ProjectAggregated_DeleteProjectTask {
 
             if (unprocessed.length === 0) return;
 
-            // [2] Collect all unique project IDs from the batch
+            // [2] Collect unique project IDs from the batch
             const projectIds = Array.from(
                 new Set(unprocessed.flatMap((e) => e.data.projectIds)),
             );
 
-            logger.info(
-                `[ProjectAggregated -> Task] Decommissioning tasks for ${projectIds.length} projects (from ${unprocessed.length} events)`,
-            );
-
-            const { affectedCount } = await deleteProjectTasksBatch(
+            // [3] Delete one bounded chunk
+            const { affectedCount } = await deleteProjectTasksChunk(
                 projectIds,
                 trx,
             );
 
             logger.info(
-                `[ProjectAggregated -> Task] Successfully purged ${affectedCount} task entities`,
+                `[ProjectAggregated -> Task] Deleted chunk of ${affectedCount} tasks for ${projectIds.length} projects`,
             );
+
+            // [4] If the chunk was full, more rows may remain — self-signal to continue
+            if (affectedCount === BULK_DELETE_CHUNK_SIZE) {
+                logger.info(
+                    '[ProjectAggregated -> Task] Chunk full — emitting continuation signal',
+                );
+                await appendEventsToOutbox(trx, [
+                    {
+                        kafka_topic: KAFKA_TOPICS.PROJECT_AGGREGATED,
+                        payload: {
+                            type: KAFKA_EVENTS.PROJECT_AGGREGATED
+                                .DELETE_PROJECT_TASK_CHUNK,
+                            projectIds,
+                        },
+                    },
+                ]);
+            }
         });
     }
 }

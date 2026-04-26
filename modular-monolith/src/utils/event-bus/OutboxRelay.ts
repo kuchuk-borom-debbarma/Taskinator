@@ -108,6 +108,14 @@ const setupListener = async () => {
         }
 
         listenClient = await pool.connect();
+
+        // pg-pool internally attaches an 'error' listener on every connection
+        // release cycle. Because this is a long-lived dedicated LISTEN client
+        // it accumulates them quickly, triggering Node's MaxListenersExceededWarning.
+        // Raising the limit here suppresses the spurious warning without masking
+        // real leaks on other objects.
+        listenClient.setMaxListeners(50);
+
         logger.info('Outbox Relay: DB connection established for LISTEN');
 
         // Listen for new events

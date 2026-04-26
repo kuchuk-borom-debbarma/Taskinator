@@ -44,9 +44,18 @@ export const KAFKA_EVENTS = {
         DELETE_PROJECT_TEAM_MEMBER:
             'project.aggregated.delete_project_team_member',
         DELETE_PROJECT_TASK: 'project.aggregated.delete_project_task',
+        // Self-signaling continuation: emitted when a chunk finishes but rows remain.
+        DELETE_PROJECT_TASK_CHUNK:
+            'project.aggregated.delete_project_task_chunk',
         DELETE_PROJECT_TASK_LINK: 'project.aggregated.delete_project_task_link',
+        // Self-signaling continuation: emitted when a chunk finishes but rows remain.
+        DELETE_PROJECT_TASK_LINK_CHUNK:
+            'project.aggregated.delete_project_task_link_chunk',
         DELETE_PROJECT_TASK_REACHABILITY:
             'project.aggregated.delete_project_task_reachability',
+        // Self-signaling continuation: emitted when a chunk finishes but rows remain.
+        DELETE_PROJECT_TASK_REACHABILITY_CHUNK:
+            'project.aggregated.delete_project_task_reachability_chunk',
     },
     TEAM_AGGREGATED: {
         SYNC_PROJECT_TEAM_COUNT: 'team.aggregated.sync_project_team_count',
@@ -71,6 +80,9 @@ export const KAFKA_EVENTS = {
         SYNC_TEAM_TASK_COUNT: 'task.aggregated.sync_team_task_count',
         DELETE_TASK_LINKS: 'task.aggregated.delete_task_links',
         DELETE_TASK_REACHABILITY: 'task.aggregated.delete_task_reachability',
+        // Self-signaling continuation: emitted when a chunk finishes but rows remain.
+        DELETE_TASK_REACHABILITY_CHUNK:
+            'task.aggregated.delete_task_reachability_chunk',
         SYNC_TASK_REACHABILITY: 'task.aggregated.sync_task_reachability',
         // Deprecated
         COUNTS_CHANGED: 'task.aggregated.counts_changed',

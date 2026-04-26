@@ -1406,36 +1406,89 @@ export const unassignProjectTaskMembersBatch = async (
  * Bulk decommissions tasks for specified projects.
  * [Action]: DELETE_PROJECT_TASK
  */
-export async function deleteProjectTasksBatch(
+/**
+ * Maximum rows to touch in a single deletion transaction.
+ * Keeps lock windows short. Tune via this constant only.
+ */
+export const BULK_DELETE_CHUNK_SIZE = 2_000;
+
+/**
+ * Chunked deletion of project tasks.
+ * Deletes at most BULK_DELETE_CHUNK_SIZE rows per call.
+ * Returns the number of rows actually deleted so the caller
+ * can decide whether to emit a continuation signal.
+ * Replaces the old unbounded deleteProjectTasksBatch.
+ */
+export async function deleteProjectTasksChunk(
     projectIds: string[],
     trx?: Transaction<Database>,
 ): Promise<{ affectedCount: number }> {
     if (projectIds.length === 0) return { affectedCount: 0 };
 
-    const result = await (trx || db)
-        .deleteFrom('project_task')
-        .where('fk_project_id', 'in', projectIds)
-        .executeTakeFirst();
+    const result = await sql<{ id: string }>`
+        DELETE FROM project_task
+        WHERE id IN (
+            SELECT id FROM project_task
+            WHERE fk_project_id = ANY(${projectIds}::uuid[])
+            LIMIT ${BULK_DELETE_CHUNK_SIZE}
+        )
+        RETURNING id
+    `.execute(trx || db);
 
-    return { affectedCount: Number(result.numDeletedRows) };
+    return { affectedCount: result.rows.length };
 }
 
 /**
- * Bulk decommissions task links for specified projects.
- * [Action]: DELETE_PROJECT_TASK_LINK
+ * Chunked deletion of project task links.
+ * Deletes at most BULK_DELETE_CHUNK_SIZE rows per call.
+ * Replaces the old unbounded deleteProjectTaskLinksBatch.
  */
-export async function deleteProjectTaskLinksBatch(
+export async function deleteProjectTaskLinksChunk(
     projectIds: string[],
     trx?: Transaction<Database>,
 ): Promise<{ affectedCount: number }> {
     if (projectIds.length === 0) return { affectedCount: 0 };
 
-    const result = await (trx || db)
-        .deleteFrom('task_link')
-        .where('fk_project_id', 'in', projectIds)
-        .executeTakeFirst();
+    const result = await sql<{ id: string }>`
+        DELETE FROM task_link
+        WHERE id IN (
+            SELECT id FROM task_link
+            WHERE fk_project_id = ANY(${projectIds}::uuid[])
+            LIMIT ${BULK_DELETE_CHUNK_SIZE}
+        )
+        RETURNING id
+    `.execute(trx || db);
 
-    return { affectedCount: Number(result.numDeletedRows) };
+    return { affectedCount: result.rows.length };
+}
+
+/**
+ * Chunked deletion of project-scoped task reachability rows.
+ * Returns the count of deleted rows and the distinct project IDs
+ * that were touched — the latter is used to scope the repair CTE
+ * only on the final chunk (when affectedCount < BULK_DELETE_CHUNK_SIZE).
+ */
+export async function deleteProjectTaskReachabilityChunk(
+    projectIds: string[],
+    trx?: Transaction<Database>,
+): Promise<{ affectedCount: number; touchedProjectIds: string[] }> {
+    if (projectIds.length === 0)
+        return { affectedCount: 0, touchedProjectIds: [] };
+
+    const result = await sql<{ fk_project_id: string }>`
+        DELETE FROM task_reachability
+        WHERE id IN (
+            SELECT id FROM task_reachability
+            WHERE fk_project_id = ANY(${projectIds}::uuid[])
+            LIMIT ${BULK_DELETE_CHUNK_SIZE}
+        )
+        RETURNING fk_project_id
+    `.execute(trx || db);
+
+    const touchedProjectIds = [
+        ...new Set(result.rows.map((r) => r.fk_project_id)),
+    ];
+    return { affectedCount: result.rows.length, touchedProjectIds };
 }
 
 /**
@@ -1650,30 +1703,52 @@ export const contractTaskReachability = async (
  * Bulk Reachability Deletion: Handles the removal of multiple tasks
  * and repairs the graph transitive closure.
  */
-export const deleteTaskReachabilityBulk = async (
+/**
+ * Chunked purge of reachability rows for specific deleted tasks.
+ *
+ * Deletes at most BULK_DELETE_CHUNK_SIZE rows per call and returns:
+ * - affectedCount: rows deleted this chunk
+ * - affectedProjectIds: distinct projects touched (used to scope repair)
+ *
+ * IMPORTANT: The caller must run the repair CTE only after the FINAL chunk
+ * (i.e., when affectedCount < BULK_DELETE_CHUNK_SIZE). Running it on every
+ * chunk would be N expensive CTEs for no gain — the purge is not complete yet.
+ */
+export const deleteTaskReachabilityChunk = async (
     trx: Transaction<Database>,
     taskIds: string[],
-): Promise<void> => {
-    // 1. Identify affected projects before purging
-    const projects = await sql<{ fk_project_id: string }>`
-        SELECT DISTINCT fk_project_id 
-        FROM task_reachability 
-        WHERE ancestor_task_id = ANY(${taskIds}::uuid[]) 
-           OR descendant_task_id = ANY(${taskIds}::uuid[])
-    `.execute(trx);
+): Promise<{ affectedCount: number; affectedProjectIds: string[] }> => {
+    if (taskIds.length === 0)
+        return { affectedCount: 0, affectedProjectIds: [] };
 
-    if (projects.rows.length === 0) return;
-
-    const projectIds = projects.rows.map((p) => p.fk_project_id);
-
-    // 2. Purge all reachability records for the deleted tasks
-    await sql`
+    const result = await sql<{ fk_project_id: string }>`
         DELETE FROM task_reachability
-        WHERE ancestor_task_id = ANY(${taskIds}::uuid[])
-           OR descendant_task_id = ANY(${taskIds}::uuid[])
+        WHERE id IN (
+            SELECT id FROM task_reachability
+            WHERE ancestor_task_id = ANY(${taskIds}::uuid[])
+               OR descendant_task_id = ANY(${taskIds}::uuid[])
+            LIMIT ${BULK_DELETE_CHUNK_SIZE}
+        )
+        RETURNING fk_project_id
     `.execute(trx);
 
-    // 3. For each affected project, perform a scoped repair
+    const affectedProjectIds = [
+        ...new Set(result.rows.map((r) => r.fk_project_id)),
+    ];
+    return { affectedCount: result.rows.length, affectedProjectIds };
+};
+
+/**
+ * Full transitive closure repair for a set of projects.
+ *
+ * Called only once — after the FINAL deletion chunk — to rebuild all
+ * reachability paths that may have been broken by the removed tasks.
+ * Scoped to `projectIds` so it does not lock unrelated projects.
+ */
+export const repairTaskReachabilityForProjects = async (
+    trx: Transaction<Database>,
+    projectIds: string[],
+): Promise<void> => {
     for (const projectId of projectIds) {
         await sql`
             WITH RECURSIVE repair AS (
@@ -1684,9 +1759,9 @@ export const deleteTaskReachabilityBulk = async (
                     1 as depth
                 FROM task_link
                 WHERE fk_project_id = ${projectId}::uuid
-                
+
                 UNION
-                
+
                 SELECT 
                     tl.fk_project_id,
                     r.anc_id,
@@ -1701,11 +1776,10 @@ export const deleteTaskReachabilityBulk = async (
             SELECT fk_project_id, anc_id, des_id, MIN(depth)
             FROM repair
             GROUP BY fk_project_id, anc_id, des_id
-            ON CONFLICT (fk_project_id, ancestor_task_id, descendant_task_id) 
+            ON CONFLICT (fk_project_id, ancestor_task_id, descendant_task_id)
             DO UPDATE SET depth = EXCLUDED.depth
         `.execute(trx);
 
-        // Sync counters for this project
         await syncTaskGraphCounters(trx, projectId);
     }
 };
