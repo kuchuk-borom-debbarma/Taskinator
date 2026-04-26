@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, useMemo } from 'react';
+import React, { createContext, useContext, useEffect, useState, useMemo, useCallback } from 'react';
 
 interface AuthUser {
   id: string;
@@ -69,16 +69,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, [token]);
 
-  const login = (newToken: string) => {
+  const login = useCallback((newToken: string) => {
     localStorage.setItem('taskinator_token', newToken);
     setToken(newToken);
-  };
+  }, []);
 
-  const logout = () => {
+  const logout = useCallback(() => {
     localStorage.removeItem('taskinator_token');
     setToken(null);
     setUser(null);
-  };
+  }, []);
 
   const value = useMemo(() => ({
     token,
@@ -87,7 +87,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     isLoading,
     login,
     logout,
-  }), [token, user, isLoading]);
+  }), [token, user, isLoading, login, logout]);
 
   return (
     <AuthContext.Provider value={value}>

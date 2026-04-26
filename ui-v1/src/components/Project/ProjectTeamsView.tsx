@@ -1,178 +1,241 @@
-import { useParams, useNavigate, useSearch, Link } from '@tanstack/react-router';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { Link, useNavigate, useParams, useSearch } from '@tanstack/react-router';
+import { ArrowRight, Layers3, Loader2, Plus, Users } from 'lucide-react';
 import { useApi } from '../../hooks/useApi';
 import type { Team } from '../../api/types';
-import { Users, Plus, Loader2, Layers } from 'lucide-react';
-import { useState } from 'react';
+import { AppModal, EmptyState, PageHeader, SurfaceCard, SurfaceCardStrong, TextField, formatDate } from '../shared/workspace';
+
+type TeamSearch = {
+  cursor?: string;
+  direction?: 'forward' | 'backward';
+};
+
+const getCachedTeams = (queryClient: ReturnType<typeof useQueryClient>) => {
+  const teamPages = queryClient.getQueriesData<{ teams: Team[] }>({ queryKey: ['project-teams'] });
+  for (const [, page] of teamPages) {
+    if (page?.teams?.length) return page.teams;
+  }
+  return undefined;
+};
 
 export default function ProjectTeamsView() {
   const { projectId } = useParams({ from: '/authenticated-layout/projects/$projectId/teams' });
-  const { cursor, direction } = useSearch({ from: '/authenticated-layout/projects/$projectId/teams' }) as any;
-  const navigate = useNavigate();
+  const { cursor, direction } = useSearch({ from: '/authenticated-layout/projects/$projectId/teams' }) as TeamSearch;
   const { teamApi } = useApi();
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [showCreate, setShowCreate] = useState(false);
-  const [newTeamName, setNewTeamName] = useState('');
-  const [pageSize] = useState(20);
+  const [name, setName] = useState('');
 
-  const { data: teamsResult, isLoading, isPlaceholderData } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ['project-teams', projectId, cursor, direction],
     queryFn: () => {
       if (direction === 'backward') {
-        return teamApi.getTeams(projectId, { last: pageSize, before: cursor });
+        return teamApi.getTeams(projectId, { last: 12, before: cursor });
       }
-      return teamApi.getTeams(projectId, {
-        first: pageSize,
-        after: direction === 'forward' ? cursor : undefined,
-      });
+      return teamApi.getTeams(projectId, { first: 12, after: direction === 'forward' ? cursor : undefined });
     },
-    placeholderData: (prev) => prev,
     enabled: !!projectId,
+    initialData: () => {
+      if (cursor || direction) return undefined;
+      const teams = getCachedTeams(queryClient);
+      return teams
+        ? { teams, hasNextPage: false, hasPreviousPage: false, endCursor: null, startCursor: null }
+        : undefined;
+    },
+    staleTime: 1000 * 60 * 3,
   });
 
-  const createMutation = useMutation({
-    mutationFn: () => teamApi.createTeam(projectId, newTeamName.trim()),
+  const createTeam = useMutation({
+    mutationFn: () => teamApi.createTeam(projectId, name.trim()),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['project-teams'] });
-      setNewTeamName('');
+      queryClient.invalidateQueries({ queryKey: ['project-teams', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['project-dashboard', projectId] });
+      setName('');
       setShowCreate(false);
     },
   });
 
-  const teams = teamsResult?.teams || [];
+  const teams = data?.teams ?? [];
 
   return (
-    <div className="p-8 max-w-7xl mx-auto animate-in fade-in slide-in-from-bottom-2 duration-500">
-      <div className="flex items-center justify-between mb-10">
-        <div>
-          <h1 className="text-3xl font-black tracking-tight text-white mb-2">Teams</h1>
-          <p className="text-slate-400 text-sm">Team clusters within this project.</p>
-        </div>
-        <button 
-          onClick={() => setShowCreate(true)}
-          className="flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-blue-500 text-white font-bold text-sm hover:bg-blue-600 transition-all active:scale-95 shadow-lg shadow-blue-500/20"
-        >
-          <Plus size={18} />
-          New Team
-        </button>
-      </div>
+    <div className="page-frame">
+      <SurfaceCardStrong className="hero-gradient p-6 md:p-8">
+        <PageHeader
+          eyebrow="Teams"
+          title="Delivery groups"
+          description="Each team now gets a cleaner summary path so you can understand who owns what without leaving the project context."
+          actions={
+            <button
+              onClick={() => setShowCreate(true)}
+              className="inline-flex items-center gap-2 rounded-full bg-app-accent px-5 py-3 text-sm font-semibold text-white transition hover:bg-app-accent/90"
+            >
+              <Plus size={16} />
+              New team
+            </button>
+          }
+        />
+      </SurfaceCardStrong>
 
-      {isLoading ? (
-        <div className="flex flex-col items-center justify-center py-20 text-slate-500 gap-4">
-          <Loader2 className="animate-spin" size={32} />
-          <span className="text-sm font-medium">Loading teams...</span>
-        </div>
-      ) : (
-        <div className="flex flex-col gap-8">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {teams.map((team) => (
-              <TeamCard key={team.id} team={team} projectId={projectId} />
-            ))}
-
-            {teams.length === 0 && (
-              <div className="col-span-full py-20 bg-white/[0.02] border border-dashed border-white/10 rounded-[32px] flex flex-col items-center justify-center text-slate-500 italic">
-                <Layers size={48} className="opacity-10 mb-4" />
-                <p>No teams in this project.</p>
-              </div>
-            )}
+      <div className="mt-8 grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+        <SurfaceCardStrong className="p-5 md:p-6">
+          <div className="mb-6 flex items-center justify-between gap-4">
+            <div>
+              <p className="eyebrow mb-2">Team roster</p>
+              <h2 className="text-2xl font-semibold tracking-[-0.04em] text-app-ink">Current groups</h2>
+            </div>
+            <div className="rounded-full bg-app-ink/5 px-3 py-1.5 text-xs font-semibold text-app-muted">
+              {teams.length} loaded
+            </div>
           </div>
 
-          {/* Pagination Controls */}
-          {(teamsResult?.hasNextPage || teamsResult?.hasPreviousPage) && (
-            <div className="flex items-center justify-center gap-4 mt-4">
-              <button
-                disabled={!teamsResult?.hasPreviousPage || isPlaceholderData}
-                onClick={() => navigate({ search: (prev: any) => ({ ...prev, cursor: teamsResult?.startCursor || undefined, direction: 'backward' as const }) })}
-                className="px-6 py-2 rounded-xl bg-white/[0.03] border border-white/5 text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-white hover:bg-white/5 disabled:opacity-20 transition-all active:scale-95"
-              >
-                ← Previous
-              </button>
-              <div className="w-px h-4 bg-white/10" />
-              <button
-                disabled={!teamsResult?.hasNextPage || isPlaceholderData}
-                onClick={() => navigate({ search: (prev: any) => ({ ...prev, cursor: teamsResult?.endCursor || undefined, direction: 'forward' as const }) })}
-                className="px-6 py-2 rounded-xl bg-white/[0.03] border border-white/5 text-[11px] font-black uppercase tracking-widest text-slate-400 hover:text-white hover:bg-white/5 disabled:opacity-20 transition-all active:scale-95"
-              >
-                Next →
-              </button>
+          {isLoading ? (
+            <div className="flex min-h-[18rem] items-center justify-center">
+              <Loader2 size={28} className="animate-spin text-app-accent" />
+            </div>
+          ) : teams.length === 0 ? (
+            <EmptyState
+              icon={Users}
+              title="No teams yet"
+              description="Create a team to organize responsibilities and team membership inside this project."
+              action={
+                <button
+                  onClick={() => setShowCreate(true)}
+                  className="rounded-full bg-app-accent px-5 py-3 text-sm font-semibold text-white transition hover:bg-app-accent/90"
+                >
+                  Create team
+                </button>
+              }
+            />
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2">
+              {teams.map((team) => (
+                <Link
+                  key={team.id}
+                  to="/projects/$projectId/teams/$teamId"
+                  params={{ projectId, teamId: team.id }}
+                  className="rounded-[28px] border border-app-line bg-white/75 p-5 transition hover:border-app-accent/30"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <div className="mb-3 inline-flex rounded-full bg-app-accent-2-soft px-3 py-1 text-xs font-semibold text-app-accent-2">
+                        Team
+                      </div>
+                      <h3 className="text-xl font-semibold text-app-ink">{team.name}</h3>
+                      <p className="mt-2 text-sm text-app-muted">Created {formatDate(team.createdAt)}</p>
+                    </div>
+                    <ArrowRight size={16} className="text-app-muted" />
+                  </div>
+                </Link>
+              ))}
             </div>
           )}
-        </div>
-      )}
 
-      {/* Create Team Modal */}
-      {showCreate && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowCreate(false)} />
-          <div className="relative z-10 w-full max-w-md bg-[#09090b] border border-white/10 rounded-2xl shadow-2xl p-6">
-            <h3 className="text-white font-bold text-[15px] tracking-tight mb-6">Create Team</h3>
-            <form onSubmit={(e) => { e.preventDefault(); if (newTeamName.trim()) createMutation.mutate(); }} className="flex flex-col gap-4">
-              <input
-                autoFocus
-                type="text"
-                value={newTeamName}
-                onChange={e => setNewTeamName(e.target.value)}
-                placeholder="Team name..."
-                className="w-full px-4 py-3 bg-white/[0.03] border border-white/5 rounded-xl text-[14px] text-white font-medium focus:outline-none focus:border-focus-blue/40 placeholder:text-white/10 transition-all"
-                required
-              />
-              {createMutation.isError && (
-                <p className="text-red-400 text-[11px] font-bold">{(createMutation.error as Error).message}</p>
-              )}
-              <div className="flex gap-3">
-                <button type="button" onClick={() => setShowCreate(false)} className="flex-1 py-3 border border-white/10 rounded-xl text-white/40 hover:text-white font-bold text-[13px] transition-all hover:bg-white/5">
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={createMutation.isPending || !newTeamName.trim()}
-                  className="flex-1 py-3 bg-focus-blue text-white rounded-xl font-bold text-[13px] hover:bg-focus-blue/90 transition-all disabled:opacity-50"
-                >
-                  {createMutation.isPending ? 'Creating...' : 'Create Team'}
-                </button>
-              </div>
-            </form>
+          <div className="mt-6 flex flex-wrap gap-3">
+            <PagingButton
+              disabled={!data?.hasPreviousPage}
+              onClick={() =>
+                navigate({
+                  to: '/projects/$projectId/teams',
+                  params: { projectId },
+                  search: {
+                    cursor: data?.startCursor ?? undefined,
+                    direction: 'backward',
+                  },
+                })
+              }
+            >
+              Previous page
+            </PagingButton>
+            <PagingButton
+              disabled={!data?.hasNextPage}
+              onClick={() =>
+                navigate({
+                  to: '/projects/$projectId/teams',
+                  params: { projectId },
+                  search: {
+                    cursor: data?.endCursor ?? undefined,
+                    direction: 'forward',
+                  },
+                })
+              }
+            >
+              Next page
+            </PagingButton>
           </div>
-        </div>
-      )}
+        </SurfaceCardStrong>
+
+        <SurfaceCard className="p-5">
+          <div className="flex items-center gap-3">
+            <div className="rounded-full bg-app-accent-soft p-3 text-app-accent">
+              <Layers3 size={18} />
+            </div>
+            <div>
+              <p className="eyebrow">Why this view matters</p>
+              <h3 className="text-xl font-semibold text-app-ink">Better ownership visibility</h3>
+            </div>
+          </div>
+          <p className="mt-4 text-sm leading-7 text-app-muted">
+            Team cards now give a short, direct path into who belongs to a group and when it was created, instead of burying that detail in scattered controls.
+          </p>
+        </SurfaceCard>
+      </div>
+
+      <AppModal
+        open={showCreate}
+        title="Create a team"
+        description="Keep team names simple and recognizable so the task flow reads clearly."
+        onClose={() => setShowCreate(false)}
+      >
+        <form
+          className="space-y-4"
+          onSubmit={(event) => {
+            event.preventDefault();
+            if (!name.trim()) return;
+            createTeam.mutate();
+          }}
+        >
+          <TextField label="Team name" value={name} onChange={setName} placeholder="Platform squad" required />
+          <div className="flex flex-wrap gap-3 pt-2">
+            <button
+              type="button"
+              onClick={() => setShowCreate(false)}
+              className="rounded-full border border-app-line bg-white/80 px-5 py-3 text-sm font-semibold text-app-ink transition hover:border-app-ink/20"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={createTeam.isPending || !name.trim()}
+              className="inline-flex items-center gap-2 rounded-full bg-app-accent px-5 py-3 text-sm font-semibold text-white transition hover:bg-app-accent/90 disabled:opacity-60"
+            >
+              {createTeam.isPending ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
+              Create team
+            </button>
+          </div>
+        </form>
+      </AppModal>
     </div>
   );
 }
 
-function TeamCard({ team, projectId }: { team: Team, projectId: string }) {
+function PagingButton({
+  disabled,
+  onClick,
+  children,
+}: {
+  disabled?: boolean;
+  onClick: () => void;
+  children: string;
+}) {
   return (
-    <div className="glass-panel p-6 border border-white/5 bg-white/[0.02] rounded-[32px] hover:border-white/10 transition-all group relative overflow-hidden">
-      <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-        <Users size={64} />
-      </div>
-      
-      <Link 
-        to="/projects/$projectId/teams/$teamId" 
-        params={{ projectId: projectId, teamId: team.id }}
-        className="flex flex-col gap-6 h-full relative z-10 group/card"
-      >
-        <div className="flex items-start justify-between">
-          <div className="flex flex-col">
-            <h3 className="text-lg font-black text-white group-hover/card:text-blue-400 transition-colors uppercase tracking-tight">
-              {team.name}
-            </h3>
-            {team.createdBy && (
-              <span className="text-[10px] font-bold text-slate-500 tracking-widest uppercase">
-                by {team.createdBy.username}
-              </span>
-            )}
-          </div>
-        </div>
-
-        <div className="flex items-center gap-4 mt-auto">
-          {team.createdAt && (
-            <div className="text-[10px] text-slate-600 font-medium">
-              Created {new Date(team.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
-            </div>
-          )}
-          <div className="text-[10px] font-black text-slate-700 uppercase">v{team.version}</div>
-        </div>
-      </Link>
-    </div>
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className="rounded-full border border-app-line bg-white/80 px-5 py-3 text-sm font-semibold text-app-ink transition hover:border-app-ink/20 disabled:cursor-not-allowed disabled:opacity-40"
+    >
+      {children}
+    </button>
   );
 }

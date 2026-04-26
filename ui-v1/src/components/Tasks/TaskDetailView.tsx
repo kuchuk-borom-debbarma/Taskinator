@@ -1,170 +1,276 @@
-import React, { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
+import { Link } from '@tanstack/react-router';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { QueryClient } from '@tanstack/react-query';
+import { ArrowLeft, Loader2, Network, PencilLine, Save, X } from 'lucide-react';
 import { useApi } from '../../hooks/useApi';
 import type { ProjectTask } from '../../api/types';
-import { TaskLinkColumn } from './TaskLinkColumn';
-import { ChevronLeft, Calendar, Layers, Users, User, Clock, CheckCircle2, Copy, Circle, Edit3, Check, X, PanelLeft, Network } from 'lucide-react';
-import { Link } from '@tanstack/react-router';
-import { useLayout } from '../../context/LayoutContext';
+import {
+  EmptyState,
+  LoadingPane,
+  PriorityBadge,
+  StatusBadge,
+  SurfaceCard,
+  SurfaceCardStrong,
+  TextAreaField,
+  TextField,
+  formatDate,
+} from '../shared/workspace';
 
 interface TaskDetailViewProps {
   taskId: string;
   onClose: () => void;
 }
 
-const STATUS_OPTIONS = ['TODO', 'IN_PROGRESS', 'DONE'] as const;
-const detailDateFormatter = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
-
-const getStatusInfo = (s: string) => {
-  const statuses: Record<string, { label: string; icon: React.ReactNode }> = {
-    'TODO':        { label: 'To Do',       icon: <Circle size={13} className="text-todo" /> },
-    'IN_PROGRESS': { label: 'In Progress', icon: <Clock size={13} className="text-focus-blue" /> },
-    'DONE':        { label: 'Done',        icon: <CheckCircle2 size={13} className="text-done" /> },
-  };
-  return statuses[s] || { label: s, icon: null };
-};
-
 const getCachedTask = (queryClient: QueryClient, taskId: string) => {
-  const directMatch = queryClient.getQueryData<ProjectTask>(['task', taskId]);
-  if (directMatch) return directMatch;
+  const direct = queryClient.getQueryData<ProjectTask>(['task', taskId]);
+  if (direct) return direct;
 
-  const taskPages = queryClient.getQueriesData<{ tasks: ProjectTask[] }>({
-    queryKey: ['tasks'],
-  });
-
+  const taskPages = queryClient.getQueriesData<{ tasks: ProjectTask[] }>({ queryKey: ['tasks'] });
   for (const [, page] of taskPages) {
-    const task = page?.tasks?.find((entry) => entry.id === taskId);
-    if (task) return task;
+    const match = page?.tasks?.find((task) => task.id === taskId);
+    if (match) return match;
   }
-
   return undefined;
 };
 
 export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose }) => {
   const { taskApi } = useApi();
-  const qc = useQueryClient();
-  const { isSidebarCollapsed, toggleSidebar } = useLayout();
-  const [copied, setCopied] = useState(false);
-  const [editingStatus, setEditingStatus] = useState(false);
-  const [editingTitle, setEditingTitle] = useState(false);
+  const queryClient = useQueryClient();
+  const [isEditing, setIsEditing] = useState(false);
   const [titleDraft, setTitleDraft] = useState('');
+  const [descriptionDraft, setDescriptionDraft] = useState('');
 
   const { data: task, isLoading } = useQuery({
     queryKey: ['task', taskId],
     queryFn: () => taskApi.getTask(taskId),
-    initialData: () => getCachedTask(qc, taskId),
+    initialData: () => getCachedTask(queryClient, taskId),
     staleTime: 1000 * 60 * 10,
   });
 
-  const updateMut = useMutation({
-    mutationFn: (u: { status?: string; title?: string }) => {
+  const { data: incomingData } = useQuery({
+    queryKey: ['task-links', taskId, 'incoming'],
+    queryFn: () => taskApi.getTaskNeighbourLinks(taskId, 'incoming', 1, 8),
+    enabled: !!task,
+    staleTime: 1000 * 60 * 3,
+  });
+
+  const { data: outgoingData } = useQuery({
+    queryKey: ['task-links', taskId, 'outgoing'],
+    queryFn: () => taskApi.getTaskNeighbourLinks(taskId, 'outgoing', 1, 8),
+    enabled: !!task,
+    staleTime: 1000 * 60 * 3,
+  });
+
+  const updateTask = useMutation({
+    mutationFn: () => {
       if (!task) throw new Error('Task not loaded');
-      return taskApi.updateTask(taskId, { projectId: task.project?.id || '', version: task.version, ...u });
+      return taskApi.updateTask(taskId, {
+        projectId: task.project?.id || '',
+        version: task.version,
+        title: titleDraft.trim(),
+        description: descriptionDraft.trim() || undefined,
+      });
     },
-    onSuccess: (d) => {
-      qc.setQueryData(['task', taskId], d);
-      qc.setQueriesData<{ tasks: ProjectTask[] }>(
-        { queryKey: ['tasks'] },
-        (existing) => {
-          if (!existing) return existing;
-          return {
-            ...existing,
-            tasks: existing.tasks.map((entry) => (entry.id === d.id ? { ...entry, ...d } : entry)),
-          };
-        }
-      );
-      qc.invalidateQueries({ queryKey: ['task-links', taskId] });
-      setEditingStatus(false);
-      setEditingTitle(false);
+    onSuccess: (updated) => {
+      queryClient.setQueryData(['task', taskId], updated);
+      queryClient.invalidateQueries({ queryKey: ['tasks', updated.project?.id] });
+      queryClient.invalidateQueries({ queryKey: ['project-dashboard', updated.project?.id] });
+      setIsEditing(false);
     },
   });
 
-  if (isLoading || !task) return <div className="p-20 text-text-dim text-center animate-pulse h-screen flex items-center justify-center bg-bg-notion">Loading...</div>;
+  if (isLoading) {
+    return (
+      <div className="page-frame">
+        <LoadingPane title="Loading task details" message="Pulling the latest task and dependency context." />
+      </div>
+    );
+  }
 
-  const si = getStatusInfo(task.status);
+  if (!task) {
+    return (
+      <div className="page-frame">
+        <EmptyState icon={Network} title="Task not found" description="We could not load this task right now." />
+      </div>
+    );
+  }
+
+  const incoming = incomingData?.links ?? [];
+  const outgoing = outgoingData?.links ?? [];
 
   return (
-    <div className="w-full min-h-screen bg-bg-notion flex flex-col items-center overflow-x-hidden">
-      <div className="w-full max-w-4xl px-8 py-12 flex flex-col gap-12">
-        <nav className="flex items-center gap-2">
-          {isSidebarCollapsed && <button onClick={toggleSidebar} className="p-1.5 mr-2 rounded-lg bg-bg-secondary border border-border-notion text-text-dim hover:text-text-notion transition-all active:scale-95"><PanelLeft size={16} /></button>}
-          <button onClick={onClose} className="flex items-center gap-1.5 text-text-dim text-[13px] font-semibold py-1 px-2 rounded-md -ml-2 hover:bg-bg-secondary hover:text-text-notion transition-colors"><ChevronLeft size={16} />Back</button>
-          <div className="w-px h-3 bg-border-notion mx-1" /><span className="text-[13px] font-medium text-text-dim opacity-60">Task Detail</span>
-        </nav>
+    <div className="page-frame">
+      <SurfaceCardStrong className="hero-gradient p-6 md:p-8">
+        <div className="mb-5 flex flex-wrap gap-3">
+          <button
+            onClick={onClose}
+            className="inline-flex items-center gap-2 rounded-full border border-app-line bg-white/80 px-4 py-2 text-sm font-semibold text-app-ink transition hover:border-app-ink/20"
+          >
+            <ArrowLeft size={15} />
+            Back to tasks
+          </button>
+          <Link
+            to="/graph/$projectId"
+            params={{ projectId: task.project?.id || '' }}
+            search={{ taskId }}
+            className="inline-flex items-center gap-2 rounded-full bg-app-ink px-4 py-2 text-sm font-semibold text-white transition hover:bg-app-ink/92"
+          >
+            <Network size={15} />
+            Open flow map
+          </Link>
+        </div>
 
-        <header className="flex flex-col gap-4">
-          <div className="flex items-center gap-2">
-            <div className="px-2 py-0.5 rounded border border-border-notion text-[9px] font-bold uppercase tracking-tighter text-text-dim w-fit opacity-50">{task.id}</div>
-            <button onClick={() => { navigator.clipboard.writeText(task.id); setCopied(true); setTimeout(() => setCopied(false), 2000); }} className={`p-1 rounded hover:bg-bg-secondary transition-all ${copied ? 'text-done' : 'text-text-dim opacity-30 hover:opacity-100'}`}>{copied ? <CheckCircle2 size={12} /> : <Copy size={12} />}</button>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="max-w-3xl">
+            <p className="eyebrow mb-3">Task detail</p>
+            <h1 className="text-4xl font-semibold tracking-[-0.05em] text-app-ink">{task.title}</h1>
+            <p className="mt-3 text-base leading-7 text-app-muted">
+              Full task context now lives in one view: identity, ownership, description, and dependency signal.
+            </p>
           </div>
-          {editingTitle ? (
-            <div className="flex items-start gap-3">
-              <textarea autoFocus className="flex-1 text-[38px] font-bold tracking-tight text-text-notion leading-tight bg-bg-secondary border border-focus-blue/40 rounded-xl px-4 py-3 resize-none focus:outline-none" value={titleDraft} onChange={e => setTitleDraft(e.target.value)} rows={2} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (titleDraft.trim() && titleDraft !== task.title) updateMut.mutate({ title: titleDraft.trim() }); else setEditingTitle(false); } if (e.key === 'Escape') setEditingTitle(false); }} />
-              <div className="flex flex-col gap-1.5 mt-2">
-                <button onClick={() => { if (titleDraft.trim() && titleDraft !== task.title) updateMut.mutate({ title: titleDraft.trim() }); else setEditingTitle(false); }} className="p-2 rounded-lg bg-focus-blue text-white"><Check size={14} /></button>
-                <button onClick={() => setEditingTitle(false)} className="p-2 rounded-lg bg-bg-secondary border border-border-notion text-text-dim"><X size={14} /></button>
+          <div className="flex flex-wrap gap-2">
+            <StatusBadge status={task.status} />
+            <PriorityBadge priority={task.priority} />
+          </div>
+        </div>
+      </SurfaceCardStrong>
+
+      <div className="mt-8 grid gap-6 xl:grid-cols-[0.78fr_1.22fr]">
+        <SurfaceCard className="p-5">
+          <div className="mb-4 flex items-center justify-between">
+            <div>
+              <p className="eyebrow mb-2">Meta</p>
+              <h2 className="text-2xl font-semibold tracking-[-0.04em] text-app-ink">Task facts</h2>
+            </div>
+            <button
+              onClick={() => {
+                setTitleDraft(task.title);
+                setDescriptionDraft(task.description);
+                setIsEditing(true);
+              }}
+              className="inline-flex items-center gap-2 rounded-full border border-app-line bg-white/80 px-4 py-2 text-sm font-semibold text-app-ink transition hover:border-app-ink/20"
+            >
+              <PencilLine size={15} />
+              Edit
+            </button>
+          </div>
+          <MetaItem label="Project" value={task.project?.name || 'No project'} />
+          <MetaItem label="Team" value={task.team?.name || 'No team assigned'} />
+          <MetaItem label="Assignee" value={task.assignedMember?.username || 'No assignee'} />
+          <MetaItem label="Created" value={formatDate(task.createdAt)} />
+          <MetaItem label="Updated" value={formatDate(task.updatedAt)} />
+        </SurfaceCard>
+
+        <div className="space-y-6">
+          <SurfaceCardStrong className="p-5 md:p-6">
+            <div className="mb-4 flex items-center justify-between gap-4">
+              <div>
+                <p className="eyebrow mb-2">Description</p>
+                <h2 className="text-2xl font-semibold tracking-[-0.04em] text-app-ink">What this task is about</h2>
               </div>
             </div>
-          ) : (
-            <div className="group relative flex items-start gap-3">
-              <h1 className="text-[42px] font-bold tracking-tight text-text-notion leading-tight flex-1">{task.title}</h1>
-              <button onClick={() => { setTitleDraft(task.title); setEditingTitle(true); }} className="mt-3 p-2 rounded-lg opacity-0 group-hover:opacity-100 hover:bg-bg-secondary text-text-dim transition-all"><Edit3 size={15} /></button>
-            </div>
-          )}
-        </header>
+            <p className="text-sm leading-7 text-app-muted whitespace-pre-wrap">
+              {task.description || 'No description has been added yet.'}
+            </p>
+          </SurfaceCardStrong>
 
-        <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-y-6 gap-x-12 p-8 border border-border-notion rounded-2xl bg-white shadow-sm">
-          <div className="flex flex-col gap-2">
-            <div className="flex items-center gap-2 text-text-dim opacity-50"><Layers size={14} /><span className="text-[11px] font-bold uppercase tracking-wider">Status</span></div>
-            {editingStatus ? (
-              <div className="flex flex-col gap-1.5">
-                {STATUS_OPTIONS.map(s => { const info = getStatusInfo(s); return (<button key={s} onClick={() => updateMut.mutate({ status: s })} disabled={updateMut.isPending} className={`flex items-center gap-2 px-3 py-2 rounded-lg text-[13px] font-semibold border transition-all ${task.status === s ? 'border-focus-blue bg-focus-blue/5 text-focus-blue' : 'border-border-notion hover:border-text-dim text-text-notion'}`}>{info.icon}{info.label}</button>); })}
-                <button onClick={() => setEditingStatus(false)} className="text-[11px] text-text-dim mt-1">Cancel</button>
-              </div>
-            ) : (
-              <button onClick={() => setEditingStatus(true)} className="flex items-center gap-2 text-[15px] font-semibold text-text-notion hover:text-focus-blue transition-colors group">{si.icon}<span>{si.label}</span><Edit3 size={11} className="opacity-0 group-hover:opacity-40 ml-1" /></button>
-            )}
+          <div className="grid gap-6 lg:grid-cols-2">
+            <DependencyCard
+              title="Blocked by"
+              description="Tasks that need to land before this one can move cleanly."
+              tasks={incoming.map((link) => link.source)}
+            />
+            <DependencyCard
+              title="Unblocks"
+              description="Tasks that this work enables or affects downstream."
+              tasks={outgoing.map((link) => link.target)}
+            />
           </div>
-          <PB icon={<Users size={14} />} label="Team" value={task.team?.name || 'Unassigned'} dim={!task.team} />
-          <PB icon={<User size={14} />} label="Assignee" value={task.assignedMember?.username || 'Unassigned'} dim={!task.assignedMember} />
-          <PB icon={<Calendar size={14} />} label="Created" value={detailDateFormatter.format(new Date(task.createdAt))} />
-          <PB icon={<Clock size={14} />} label="Updated" value={detailDateFormatter.format(new Date(task.updatedAt))} />
-          {task.createdBy && <PB icon={<User size={14} />} label="Created By" value={task.createdBy.username} />}
-        </section>
-
-        <div className="flex flex-col gap-16">
-          <section className="flex flex-col gap-6">
-            <div className="text-[11px] font-bold text-text-dim uppercase tracking-[0.2em] opacity-40">Description</div>
-            {task.description ? <p className="text-[17px] leading-relaxed text-text-notion/90 whitespace-pre-wrap max-w-2xl">{task.description}</p> : <p className="text-[15px] text-text-dim italic opacity-40">No description provided.</p>}
-          </section>
-          <section className="flex flex-col gap-10">
-            <div className="flex items-center justify-between">
-              <div className="text-[11px] font-bold text-text-dim uppercase tracking-[0.2em] opacity-40">Dependencies</div>
-              <Link 
-                to="/graph/$projectId" 
-                params={{ projectId: task.project?.id || '' }}
-                search={{ taskId }}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-bg-secondary border border-border-notion text-[11px] font-black uppercase tracking-widest text-text-dim hover:text-focus-blue hover:border-focus-blue/30 transition-all active:scale-95 shadow-sm"
-              >
-                <Network size={13} />
-                View Dependency Graph
-              </Link>
-            </div>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 bg-white border border-border-notion rounded-3xl p-8 shadow-sm">
-              <TaskLinkColumn taskId={taskId} direction="incoming" title="Incoming Dependencies" />
-              <TaskLinkColumn taskId={taskId} direction="outgoing" title="Outgoing Impacts" />
-            </div>
-          </section>
         </div>
       </div>
+
+      {isEditing ? (
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-[#111827]/30 p-4 backdrop-blur-sm md:items-center">
+          <button className="absolute inset-0 cursor-default" aria-label="Close editor" onClick={() => setIsEditing(false)} />
+          <div className="surface-card-strong relative z-10 w-full max-w-xl rounded-[28px] p-6">
+            <div className="mb-5 flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-semibold tracking-[-0.04em] text-app-ink">Edit task</h2>
+                <p className="mt-2 text-sm leading-6 text-app-muted">Keep the task crisp. Title states the outcome; description adds context.</p>
+              </div>
+              <button
+                onClick={() => setIsEditing(false)}
+                className="rounded-full border border-app-line p-2 text-app-muted transition hover:border-app-ink/20 hover:text-app-ink"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <TextField label="Title" value={titleDraft} onChange={setTitleDraft} />
+              <TextAreaField label="Description" value={descriptionDraft} onChange={setDescriptionDraft} rows={6} />
+              <div className="flex flex-wrap gap-3 pt-2">
+                <button
+                  onClick={() => setIsEditing(false)}
+                  className="rounded-full border border-app-line bg-white/80 px-5 py-3 text-sm font-semibold text-app-ink transition hover:border-app-ink/20"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={() => updateTask.mutate()}
+                  disabled={updateTask.isPending || !titleDraft.trim()}
+                  className="inline-flex items-center gap-2 rounded-full bg-app-accent px-5 py-3 text-sm font-semibold text-white transition hover:bg-app-accent/90 disabled:opacity-60"
+                >
+                  {updateTask.isPending ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                  Save changes
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 };
 
-const PB: React.FC<{ icon: React.ReactNode; label: string; value: React.ReactNode; dim?: boolean }> = ({ icon, label, value, dim }) => (
-  <div className="flex flex-col gap-2">
-    <div className="flex items-center gap-2 text-text-dim opacity-50">{icon}<span className="text-[11px] font-bold uppercase tracking-wider">{label}</span></div>
-    <div className={`text-[15px] font-semibold ${dim ? 'text-text-dim font-medium opacity-40' : 'text-text-notion'}`}>{value}</div>
-  </div>
-);
+function MetaItem({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl bg-app-ink/4 px-4 py-4">
+      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-app-muted">{label}</p>
+      <p className="mt-2 text-sm font-medium text-app-ink">{value}</p>
+    </div>
+  );
+}
+
+function DependencyCard({
+  title,
+  description,
+  tasks,
+}: {
+  title: string;
+  description: string;
+  tasks: ProjectTask[];
+}) {
+  return (
+    <SurfaceCard className="p-5">
+      <p className="eyebrow mb-2">{title}</p>
+      <p className="mb-4 text-sm leading-6 text-app-muted">{description}</p>
+      <div className="space-y-3">
+        {tasks.length === 0 ? (
+          <p className="text-sm leading-6 text-app-muted">No linked tasks in this direction yet.</p>
+        ) : (
+          tasks.map((task) => (
+            <div key={task.id} className="rounded-[22px] border border-app-line bg-white/75 px-4 py-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <p className="text-sm font-semibold text-app-ink">{task.title}</p>
+                <StatusBadge status={task.status} />
+              </div>
+              <p className="mt-2 text-xs text-app-muted">{task.team?.name || 'No team assigned'}</p>
+            </div>
+          ))
+        )}
+      </div>
+    </SurfaceCard>
+  );
+}

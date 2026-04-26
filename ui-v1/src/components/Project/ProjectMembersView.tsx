@@ -1,95 +1,87 @@
-import { useParams } from '@tanstack/react-router';
 import { useInfiniteQuery } from '@tanstack/react-query';
+import { useParams } from '@tanstack/react-router';
+import { Loader2, ShieldCheck, Users } from 'lucide-react';
 import { useApi } from '../../hooks/useApi';
 import type { ProjectMember } from '../../api/types';
-import { Users, Loader2, ShieldCheck } from 'lucide-react';
+import { EmptyState, PageHeader, SurfaceCardStrong, formatDate } from '../shared/workspace';
 
 export default function ProjectMembersView() {
   const { projectId } = useParams({ from: '/authenticated-layout/projects/$projectId/members' });
   const { projectApi } = useApi();
 
-  const {
-    data: membersData,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-    isLoading
-  } = useInfiniteQuery({
+  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useInfiniteQuery({
     queryKey: ['project-members', projectId],
     queryFn: ({ pageParam }) => projectApi.getProjectMembers(projectId, 15, pageParam),
     initialPageParam: undefined as string | undefined,
-    getNextPageParam: (lastPage) => lastPage.hasNextPage ? lastPage.endCursor : undefined,
+    getNextPageParam: (lastPage) => (lastPage.hasNextPage ? lastPage.endCursor ?? undefined : undefined),
+    staleTime: 1000 * 60 * 3,
   });
 
-  const members = membersData?.pages.flatMap(p => p.members) || [];
+  const members = data?.pages.flatMap((page) => page.members) ?? [];
 
   return (
-    <div className="p-8 max-w-7xl mx-auto animate-in fade-in slide-in-from-bottom-2 duration-500">
-      <div className="flex items-center justify-between mb-10">
-        <div>
-          <h1 className="text-3xl font-black tracking-tight text-text-notion mb-2">Project Members</h1>
-          <p className="text-text-dim text-sm">Members with access to this project.</p>
-        </div>
+    <div className="page-frame">
+      <SurfaceCardStrong className="hero-gradient p-6 md:p-8">
+        <PageHeader
+          eyebrow="Members"
+          title="Project access"
+          description="A simple people view so you can confirm who is in the room before you reason about workload and team ownership."
+        />
+      </SurfaceCardStrong>
+
+      <div className="mt-8">
+        {isLoading ? (
+          <div className="flex min-h-[18rem] items-center justify-center">
+            <Loader2 size={28} className="animate-spin text-app-accent" />
+          </div>
+        ) : members.length === 0 ? (
+          <EmptyState
+            icon={Users}
+            title="No members found"
+            description="Once members are attached to the project, they will appear here with a cleaner access overview."
+          />
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {members.map((member) => (
+              <MemberCard key={member.id} member={member} />
+            ))}
+          </div>
+        )}
+
+        {hasNextPage ? (
+          <button
+            onClick={() => fetchNextPage()}
+            disabled={isFetchingNextPage}
+            className="mt-6 inline-flex items-center gap-2 rounded-full border border-app-line bg-white/80 px-5 py-3 text-sm font-semibold text-app-ink transition hover:border-app-ink/20 disabled:opacity-60"
+          >
+            {isFetchingNextPage ? <Loader2 size={16} className="animate-spin" /> : null}
+            Load more members
+          </button>
+        ) : null}
       </div>
-
-      {isLoading ? (
-        <div className="flex flex-col items-center justify-center py-20 text-text-dim gap-4">
-          <Loader2 className="animate-spin" size={32} />
-          <span className="text-sm font-medium">Loading members...</span>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {members.map((member) => (
-            <MemberCard key={member.id} member={member} />
-          ))}
-
-          {hasNextPage && (
-            <button 
-              onClick={() => fetchNextPage()} 
-              disabled={isFetchingNextPage}
-              className="col-span-full py-4 text-[11px] font-black uppercase tracking-widest text-focus-blue hover:text-text-notion transition-all bg-white/70 rounded-2xl border border-dashed border-border-notion hover:bg-white active:scale-[0.99]"
-            >
-              {isFetchingNextPage ? 'Loading more...' : 'Load More Members'}
-            </button>
-          )}
-
-          {members.length === 0 && (
-            <div className="col-span-full py-20 bg-white/60 border border-dashed border-border-notion rounded-[32px] flex flex-col items-center justify-center text-text-dim italic">
-              <Users size={48} className="opacity-30 mb-4" />
-              <p>No members found in this project.</p>
-            </div>
-          )}
-        </div>
-      )}
     </div>
   );
 }
 
 function MemberCard({ member }: { member: ProjectMember }) {
-  const user = member.user;
-  const username = user?.username || 'Unknown';
+  const username = member.user?.username || 'Unknown member';
   const initial = username.slice(0, 1).toUpperCase();
-  
+
   return (
-    <div className="glass-panel p-6 border border-border-notion bg-white/82 rounded-[32px] hover:border-focus-blue/20 transition-all group shadow-sm">
-      <div className="flex items-start gap-4 mb-6">
-        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-100 to-indigo-100 border border-blue-200/70 flex items-center justify-center text-focus-blue font-black text-lg group-hover:scale-110 transition-transform">
+    <div className="surface-card rounded-[28px] p-5">
+      <div className="flex items-center gap-4">
+        <div className="flex h-14 w-14 items-center justify-center rounded-full bg-app-accent-soft text-lg font-semibold text-app-accent">
           {initial}
         </div>
-        <div className="flex flex-col">
-          <h3 className="text-base font-black text-text-notion group-hover:text-focus-blue transition-colors">
-            {username}
-          </h3>
-          <div className="flex items-center gap-1.5 text-[10px] font-bold text-text-dim uppercase tracking-tighter">
-            <ShieldCheck size={12} className="text-emerald-500" />
-            Active Member
+        <div>
+          <h3 className="text-lg font-semibold text-app-ink">{username}</h3>
+          <div className="mt-1 inline-flex items-center gap-2 rounded-full bg-app-accent-2-soft px-3 py-1 text-xs font-semibold text-app-accent-2">
+            <ShieldCheck size={14} />
+            Active project member
           </div>
         </div>
       </div>
-
-      <div className="text-[10px] text-text-dim font-medium">
-        Joined {new Date(member.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
-      </div>
+      <p className="mt-5 text-sm text-app-muted">Joined {formatDate(member.createdAt)}</p>
     </div>
   );
 }
