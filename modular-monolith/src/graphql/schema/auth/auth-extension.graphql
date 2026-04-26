@@ -20,4 +20,9 @@ extend type Mutation {
     Signs in a user and returns a JWT token.
     """
     signIn(email: String!, password_raw: String!): SignInPayload!
+
+    """
+    Starts the sign up process for a new user.
+    """
+    signUp(email: String!, username: String!, password_raw: String!): Boolean!
 }

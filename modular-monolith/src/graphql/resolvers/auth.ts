@@ -72,5 +72,17 @@ export const authResolvers = {
             logger.info(`Mutation.signIn successful for email: ${email}`);
             return result;
         },
+        signUp: async (
+            _parent: any,
+            {
+                email,
+                username,
+                password_raw,
+            }: { email: string; username: string; password_raw: string },
+        ) => {
+            logger.info(`Mutation.signUp started for email: ${email}`);
+            await authService.startSignUp({ email, username, password_raw });
+            return true;
+        },
     },
 };

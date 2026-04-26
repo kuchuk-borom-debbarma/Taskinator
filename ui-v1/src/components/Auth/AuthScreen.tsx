@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
-import { Sparkles, AlertCircle, Loader2, ArrowRight, Command, Mail, ShieldCheck, Check } from 'lucide-react';
+import { Sparkles, AlertCircle, Loader2, ArrowRight, Mail, ShieldCheck, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const API_BASE = 'http://localhost:3000/auth';
+const GRAPHQL_URL = 'http://localhost:3000/graphql';
 
 export const AuthScreen: React.FC = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -25,25 +25,31 @@ export const AuthScreen: React.FC = () => {
 
     try {
       if (isLogin) {
-        const response = await fetch(`${API_BASE}/signin`, {
+        const response = await fetch(GRAPHQL_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, password }),
+          body: JSON.stringify({ 
+            query: `mutation SignIn($email: String!, $password: String!) { signIn(email: $email, password_raw: $password) { token } }`,
+            variables: { email, password }
+          }),
         });
 
         const data = await response.json();
-        if (!response.ok) throw new Error(data.error || 'Login failed');
+        if (data.errors) throw new Error(data.errors[0].message || 'Login failed');
         
-        login(data.token);
+        login(data.data.signIn.token);
       } else {
-        const response = await fetch(`${API_BASE}/signup`, {
+        const response = await fetch(GRAPHQL_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email, username, password }),
+          body: JSON.stringify({ 
+            query: `mutation SignUp($email: String!, $username: String!, $password: String!) { signUp(email: $email, username: $username, password_raw: $password) }`,
+            variables: { email, username, password }
+          }),
         });
 
         const data = await response.json();
-        if (!response.ok) throw new Error(data.error || 'Signup failed');
+        if (data.errors) throw new Error(data.errors[0].message || 'Signup failed');
         
         setMessage('Account created! You can now sign in.');
         setIsLogin(true);
@@ -104,13 +110,6 @@ export const AuthScreen: React.FC = () => {
           </motion.div>
         </div>
 
-        <div className="absolute bottom-12 left-12 flex items-center gap-4 text-white/10">
-          <div className="flex items-center gap-2">
-            <Command size={14} />
-            <span className="text-[10px] font-black uppercase tracking-[0.4em]">Node_Core_Lattice</span>
-          </div>
-          <div className="w-1.5 h-1.5 bg-green-500/50 rounded-full animate-pulse" />
-        </div>
       </div>
 
       {/* Auth Form Pane */}
@@ -131,10 +130,10 @@ export const AuthScreen: React.FC = () => {
 
           <div className="mb-12">
             <h1 className="text-4xl font-black tracking-tighter mb-3">
-              {isLogin ? 'Sign In' : 'Join the Network'}
+              {isLogin ? 'Sign In' : 'Sign Up'}
             </h1>
             <p className="text-white/30 text-[15px] font-medium tracking-tight">
-              {isLogin ? 'Access your high-performance workspace.' : 'Initialize your professional orchestration profile.'}
+              {isLogin ? 'Sign in to your account.' : 'Create a new account.'}
             </p>
           </div>
 
@@ -148,11 +147,11 @@ export const AuthScreen: React.FC = () => {
                   className="overflow-hidden"
                 >
                   <AuthInput 
-                    label="Alias / Username" 
+                    label="Username" 
                     type="text" 
                     value={username} 
                     onChange={setUsername}
-                    placeholder="e.g. jdoe_admin"
+                    placeholder="e.g. jdoe"
                     required
                   />
                 </motion.div>
@@ -160,18 +159,18 @@ export const AuthScreen: React.FC = () => {
             </AnimatePresence>
 
             <AuthInput 
-              label="Professional Email" 
+              label="Email" 
               type="email" 
               value={email} 
               onChange={setEmail}
-              placeholder="admin@enterprise.io"
+              placeholder="name@example.com"
               icon={<Mail size={16} />}
               required
             />
 
             <div>
               <div className="flex justify-between items-center mb-2.5">
-                <label className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] pl-1">Secret Key</label>
+                <label className="text-[10px] font-black text-white/30 uppercase tracking-[0.2em] pl-1">Password</label>
               </div>
               <AuthInput 
                 type="password" 
@@ -190,7 +189,7 @@ export const AuthScreen: React.FC = () => {
                 >
                   {rememberMe && <Check size={12} strokeWidth={4} className="text-white" />}
                 </div>
-                <span className="text-xs font-bold text-white/30 group-hover:text-white/50 transition-colors uppercase tracking-wider">Keep session alive</span>
+                <span className="text-xs font-bold text-white/30 group-hover:text-white/50 transition-colors uppercase tracking-wider">Remember me</span>
               </label>
             </div>
 
@@ -226,25 +225,13 @@ export const AuthScreen: React.FC = () => {
                 <Loader2 size={20} className="animate-spin" />
               ) : (
                 <>
-                  <span>{isLogin ? 'Establish Link' : 'Initialize Profile'}</span>
+                  <span>{isLogin ? 'Sign In' : 'Sign Up'}</span>
                   <ArrowRight size={20} strokeWidth={2.5} />
                 </>
               )}
             </button>
           </form>
 
-          <div className="mt-14">
-            <div className="flex items-center gap-6 mb-10">
-              <div className="h-px bg-white/5 flex-1" />
-              <span className="text-[10px] font-black text-white/10 uppercase tracking-[0.4em]">Enterprise SSO</span>
-              <div className="h-px bg-white/5 flex-1" />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <SocialButton icon={<Command size={18} />} label="SAML 2.0" />
-              <SocialButton icon={<Mail size={18} />} label="OAuth" />
-            </div>
-          </div>
 
           <div className="mt-14 text-center">
             <button
@@ -255,8 +242,8 @@ export const AuthScreen: React.FC = () => {
               }}
               className="text-white/30 hover:text-white transition-all text-xs font-bold uppercase tracking-widest"
             >
-              {isLogin ? "New user? " : "Already established? "}
-              <span className="text-focus-blue ml-1 underline decoration-focus-blue/30 underline-offset-4">{isLogin ? 'Join Workspace' : 'Sign In'}</span>
+              {isLogin ? "Don't have an account? " : "Already have an account? "}
+              <span className="text-focus-blue ml-1 underline decoration-focus-blue/30 underline-offset-4">{isLogin ? 'Sign Up' : 'Sign In'}</span>
             </button>
           </div>
         </motion.div>
@@ -303,15 +290,3 @@ const FeatureItem: React.FC<{ text: string }> = ({ text }) => (
   </div>
 );
 
-const SocialButton: React.FC<{ icon: React.ReactNode, label: string }> = ({ icon, label }) => (
-  <button
-    type="button"
-    disabled
-    title="Coming soon"
-    className="flex items-center justify-center gap-3 py-4 px-6 bg-white/[0.015] border border-white/5 rounded-2xl font-black text-[11px] uppercase tracking-widest text-white/15 cursor-not-allowed relative"
-  >
-    {icon}
-    <span>{label}</span>
-    <span className="absolute top-1.5 right-2 text-[8px] font-black uppercase tracking-widest text-white/20">soon</span>
-  </button>
-);

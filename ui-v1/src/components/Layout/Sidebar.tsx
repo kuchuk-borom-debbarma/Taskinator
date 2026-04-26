@@ -182,7 +182,7 @@ export const Sidebar: React.FC = () => {
               </div>
               <div className="flex flex-col">
                 <span className="text-sm font-bold text-white tracking-tight leading-none mb-0.5">Taskinator Workspace</span>
-                <span className="text-[10px] font-medium text-white/35 uppercase tracking-[0.28em] leading-none">Pro Edition</span>
+                <span className="text-[10px] font-medium text-white/35 uppercase tracking-[0.28em] leading-none">Management Console</span>
               </div>
             </div>
             <button 
@@ -190,26 +190,6 @@ export const Sidebar: React.FC = () => {
               className="p-1.5 rounded-lg text-white/20 hover:text-white hover:bg-white/5 transition-all"
             >
               <PanelLeftClose size={16} />
-            </button>
-          </div>
-
-          {/* Global Actions */}
-          <div className="px-3 pt-4 space-y-1">
-            <button
-              onClick={() => {
-                const input = document.querySelector('input[type="search"]') as HTMLInputElement;
-                if (input) input.focus();
-              }}
-              className="w-full flex items-center justify-between px-3.5 py-2.5 text-white/55 hover:text-white/80 hover:bg-white/[0.05] rounded-xl transition-all text-xs font-medium group border border-transparent hover:border-white/8"
-            >
-              <div className="flex items-center gap-2.5">
-                <Search size={14} />
-                <span>Search</span>
-              </div>
-              <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                <span className="px-1 py-0.5 bg-white/5 border border-white/10 rounded text-[9px] font-bold">⌘</span>
-                <span className="px-1 py-0.5 bg-white/5 border border-white/10 rounded text-[9px] font-bold">K</span>
-              </div>
             </button>
           </div>
 
@@ -306,7 +286,7 @@ export const Sidebar: React.FC = () => {
                 <div className="w-6 h-6 rounded-md bg-red-400/0 group-hover:bg-red-500/10 flex items-center justify-center transition-all">
                   <LogOut size={14} className="group-hover:-translate-x-0.5 transition-transform" />
                 </div>
-                <span className="uppercase tracking-widest">Terminate Session</span>
+                <span className="uppercase tracking-widest">Log Out</span>
               </button>
             </div>
           </div>
