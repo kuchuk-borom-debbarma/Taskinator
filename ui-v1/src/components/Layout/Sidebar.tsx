@@ -276,18 +276,14 @@ export const Sidebar: React.FC = () => {
                     Workspace Member
                   </p>
                 </div>
-                <Settings size={14} className="text-white/10 group-hover:text-white/40 cursor-pointer transition-colors" />
+                <button 
+                  onClick={() => logout()}
+                  className="p-2 rounded-lg text-white/10 hover:text-red-400 hover:bg-red-500/10 transition-all group/logout"
+                  title="Log Out"
+                >
+                  <LogOut size={16} className="group-hover/logout:-translate-x-0.5 transition-transform" />
+                </button>
               </div>
-
-              <button
-                onClick={() => logout()}
-                className="w-full mt-1 px-3 py-2.5 flex items-center gap-2.5 text-[11px] font-bold text-red-500/60 hover:text-red-400 hover:bg-red-500/5 rounded-lg transition-all duration-300 group"
-              >
-                <div className="w-6 h-6 rounded-md bg-red-400/0 group-hover:bg-red-500/10 flex items-center justify-center transition-all">
-                  <LogOut size={14} className="group-hover:-translate-x-0.5 transition-transform" />
-                </div>
-                <span className="uppercase tracking-widest">Log Out</span>
-              </button>
             </div>
           </div>
         </div>

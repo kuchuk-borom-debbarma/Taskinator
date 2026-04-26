@@ -67,9 +67,9 @@ export default function ProjectDashboardView() {
 
       {/* Quick Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-        <QuickStat label="Teams" value={teams.length} icon={Layers} color="blue" />
-        <QuickStat label="Tasks" value={tasks.length} icon={Kanban} color="purple" />
-        <QuickStat label="Members" value={memberCount} icon={Users} color="emerald" />
+        <QuickStat label="Teams" value={project.teamsCount} icon={Layers} color="blue" />
+        <QuickStat label="Tasks" value={project.tasksCount} icon={Kanban} color="purple" />
+        <QuickStat label="Members" value={project.projectMembersCount} icon={Users} color="emerald" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

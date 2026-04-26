@@ -67,6 +67,9 @@ export class GraphQLProjectAPI implements ProjectAPI {
                 createdAt
                 updatedAt
                 version
+                projectMembersCount
+                tasksCount
+                teamsCount
                 creator { id username }
               }
             }
@@ -103,6 +106,9 @@ export class GraphQLProjectAPI implements ProjectAPI {
           createdAt
           updatedAt
           version
+          projectMembersCount
+          tasksCount
+          teamsCount
           creator { id username }
         }
       }

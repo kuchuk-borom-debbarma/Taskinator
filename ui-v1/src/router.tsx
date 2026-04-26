@@ -1,8 +1,8 @@
-import { 
-  createRootRouteWithContext, 
-  createRoute, 
-  createRouter, 
-  Outlet, 
+import {
+  createRootRouteWithContext,
+  createRoute,
+  createRouter,
+  Outlet,
   lazyRouteComponent,
   redirect
 } from '@tanstack/react-router';
@@ -180,10 +180,10 @@ export const routeTree = rootRoute.addChildren([
   ]),
 ]);
 
-export const router = createRouter({ 
+export const router = createRouter({
   routeTree,
   context: {
-    auth: undefined! 
+    auth: undefined!
   },
   defaultNotFoundComponent: NotFoundComponent,
   defaultErrorComponent: GlobalErrorComponent,

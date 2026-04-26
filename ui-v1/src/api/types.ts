@@ -13,7 +13,9 @@ export interface Project {
   createdAt: string;
   updatedAt?: string;
   version: number;
-  lastEventId?: string;
+  projectMembersCount: number;
+  tasksCount: number;
+  teamsCount: number;
 }
 
 export interface ProjectMember {
