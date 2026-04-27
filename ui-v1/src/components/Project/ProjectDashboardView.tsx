@@ -67,6 +67,19 @@ export default function ProjectDashboardView() {
 
   return (
     <div className="page-frame">
+      <div className="mb-8">
+        <h1 className="text-3xl font-semibold tracking-[-0.04em] text-app-ink">{project.name}</h1>
+        {project.description ? (
+          <p className="mt-3 max-w-3xl text-lg leading-relaxed text-app-muted">
+            {project.description}
+          </p>
+        ) : (
+          <p className="mt-3 max-w-3xl text-lg leading-relaxed text-app-muted">
+            This project does not have a written brief yet, but the execution view below still gives the team a clear operating picture.
+          </p>
+        )}
+      </div>
+
       <div className="grid gap-4 md:grid-cols-2">
         <StatCard label="Tasks" value={project.tasksCount} hint="Total tasks in this project." />
         <StatCard label="Teams" value={project.teamsCount} hint="Groups attached to this project." />
@@ -125,14 +138,19 @@ export default function ProjectDashboardView() {
 
         <div className="grid gap-6 lg:grid-cols-2">
           <SurfaceCard className="p-5">
-            <div className="mb-4 flex items-center gap-3">
-              <div className="rounded-full bg-app-accent-soft p-3 text-app-accent">
-                <Users size={18} />
+            <div className="mb-4 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="rounded-full bg-app-accent-soft p-3 text-app-accent">
+                  <Users size={18} />
+                </div>
+                <div>
+                  <p className="eyebrow">Teams</p>
+                  <h3 className="text-xl font-semibold text-app-ink">Teams</h3>
+                </div>
               </div>
-              <div>
-                <p className="eyebrow">Teams</p>
-                <h3 className="text-xl font-semibold text-app-ink">Teams</h3>
-              </div>
+              <Link to="/projects/$projectId/teams" params={{ projectId: resolvedProjectId! }} className="text-sm font-semibold text-app-accent">
+                View all
+              </Link>
             </div>
             <div className="space-y-3">
               {teams.slice(0, 4).map((team) => (
@@ -154,14 +172,19 @@ export default function ProjectDashboardView() {
           </SurfaceCard>
 
           <SurfaceCard className="p-5">
-            <div className="mb-4 flex items-center gap-3">
-              <div className="rounded-full bg-app-accent-2-soft p-3 text-app-accent-2">
-                <Users size={18} />
+            <div className="mb-4 flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="rounded-full bg-app-accent-2-soft p-3 text-app-accent-2">
+                  <Users size={18} />
+                </div>
+                <div>
+                  <p className="eyebrow">Members</p>
+                  <h3 className="text-xl font-semibold text-app-ink">Members</h3>
+                </div>
               </div>
-              <div>
-                <p className="eyebrow">Members</p>
-                <h3 className="text-xl font-semibold text-app-ink">Members</h3>
-              </div>
+              <Link to="/projects/$projectId/members" params={{ projectId: resolvedProjectId! }} className="text-sm font-semibold text-app-accent">
+                View all
+              </Link>
             </div>
             <div className="space-y-3">
               {members.slice(0, 5).map((member) => (
