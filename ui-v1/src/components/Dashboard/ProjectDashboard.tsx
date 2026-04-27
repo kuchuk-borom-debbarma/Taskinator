@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate } from '@tanstack/react-router';
-import { ArrowRight, FolderPlus, FolderSearch, Loader2, Rocket } from 'lucide-react';
+import { ArrowLeft, ArrowRight, FolderPlus, FolderSearch, Loader2 } from 'lucide-react';
+import { PagingButton } from '../shared/PagingButton';
 import { useApi } from '../../hooks/useApi';
 import { useAuth } from '../../context/AuthContext';
 import { AppModal, EmptyState, PageHeader, StatCard, SurfaceCardStrong, TextAreaField, TextField, formatDate } from '../shared/workspace';
@@ -83,24 +84,39 @@ export function ProjectDashboard() {
   const { projectApi } = useApi();
   const [showCreate, setShowCreate] = useState(false);
 
-  const {
-    data,
-    fetchNextPage,
-    hasNextPage,
-    isFetchingNextPage,
-    isLoading,
-  } = useInfiniteQuery({
-    queryKey: ['workspace-projects-list'],
-    queryFn: ({ pageParam }) => projectApi.getProjects(9, pageParam),
-    initialPageParam: undefined as string | undefined,
-    getNextPageParam: (lastPage) => (lastPage.hasNextPage ? lastPage.endCursor ?? undefined : undefined),
+  const [cursor, setCursor] = useState<string | undefined>(undefined);
+  const [direction, setDirection] = useState<'forward' | 'backward' | undefined>(undefined);
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['workspace-projects-list', cursor, direction],
+    queryFn: () => projectApi.getProjects(
+      direction === 'backward'
+        ? { last: 9, before: cursor }
+        : { first: 9, after: cursor }
+    ),
     staleTime: 1000 * 60 * 3,
+    placeholderData: (prev) => prev,
   });
 
-  const projects = data?.pages.flatMap((page) => page.projects) ?? [];
-  const totalProjects = data?.pages[0]?.totalCount ?? projects.length;
+  const projects = data?.projects ?? [];
+  const pageInfo = data?.pageInfo;
+  const totalProjects = data?.totalCount ?? projects.length;
   const totalTasks = projects.reduce((sum, project) => sum + project.tasksCount, 0);
   const totalTeams = projects.reduce((sum, project) => sum + project.teamsCount, 0);
+
+  const handleNext = () => {
+    if (pageInfo?.hasNextPage) {
+      setCursor(pageInfo.endCursor ?? undefined);
+      setDirection('forward');
+    }
+  };
+
+  const handlePrev = () => {
+    if (pageInfo?.hasPreviousPage) {
+      setCursor(pageInfo.startCursor ?? undefined);
+      setDirection('backward');
+    }
+  };
 
   return (
     <div className="page-frame">
@@ -203,16 +219,16 @@ export function ProjectDashboard() {
             </div>
           )}
 
-          {hasNextPage ? (
-            <button
-              onClick={() => fetchNextPage()}
-              disabled={isFetchingNextPage}
-              className="mt-6 inline-flex items-center gap-2 rounded-full border border-app-line bg-white/80 px-5 py-3 text-sm font-semibold text-app-ink transition hover:border-app-ink/20 disabled:opacity-60"
-            >
-              {isFetchingNextPage ? <Loader2 size={16} className="animate-spin" /> : <Rocket size={16} />}
-              Load more projects
-            </button>
-          ) : null}
+          <div className="mt-6 flex items-center justify-between gap-4 border-t border-app-line pt-6">
+            <PagingButton disabled={!pageInfo?.hasPreviousPage} onClick={handlePrev}>
+              <ArrowLeft size={14} />
+              Prev
+            </PagingButton>
+            <PagingButton disabled={!pageInfo?.hasNextPage} onClick={handleNext}>
+              Next
+              <ArrowRight size={14} />
+            </PagingButton>
+          </div>
         </SurfaceCardStrong>
       </div>
 
@@ -220,6 +236,7 @@ export function ProjectDashboard() {
     </div>
   );
 }
+
 
 function Metric({ label, value }: { label: string; value: number }) {
   return (

@@ -1,5 +1,5 @@
 import type { ProjectAPI } from '../../interfaces/ProjectAPI';
-import type { Project, ProjectMember, ProjectTask, Team } from '../../types';
+import type { PageInfo, PaginationArgs, Project, ProjectMember, ProjectTask, Team } from '../../types';
 import { AuthenticationError } from '../../errors';
 
 const GRAPHQL_URL = 'http://localhost:3000/graphql';
@@ -54,11 +54,11 @@ export class GraphQLProjectAPI implements ProjectAPI {
     return result.data as T;
   }
 
-  async getProjects(first?: number, after?: string): Promise<{ projects: Project[], hasNextPage: boolean, endCursor: string | null, totalCount?: number }> {
+  async getProjects(pagination?: PaginationArgs): Promise<{ projects: Project[], pageInfo: PageInfo, totalCount?: number }> {
     const data = await this.query<any>(gql`
-      query GetMyProjects($first: Int, $after: String) {
+      query GetMyProjects($first: Int, $after: String, $last: Int, $before: String) {
         me {
-          projects(first: $first, after: $after) {
+          projects(first: $first, after: $after, last: $last, before: $before) {
             edges {
               node {
                 id
@@ -75,23 +75,29 @@ export class GraphQLProjectAPI implements ProjectAPI {
             }
             pageInfo {
               hasNextPage
+              hasPreviousPage
+              startCursor
               endCursor
             }
             totalCount
           }
         }
       }
-    `, { first, after });
+    `, { ...pagination });
 
-    if (!data.me?.projects) return { projects: [], hasNextPage: false, endCursor: null };
+    if (!data.me?.projects) return { projects: [], pageInfo: { hasNextPage: false, hasPreviousPage: false, startCursor: null, endCursor: null } };
 
     return {
       projects: data.me.projects.edges.map((e: any) => ({
         ...e.node,
         description: e.node.description ?? undefined,
       })),
-      hasNextPage: data.me.projects.pageInfo.hasNextPage,
-      endCursor: data.me.projects.pageInfo.endCursor || null,
+      pageInfo: {
+        hasNextPage: data.me.projects.pageInfo.hasNextPage,
+        hasPreviousPage: data.me.projects.pageInfo.hasPreviousPage,
+        startCursor: data.me.projects.pageInfo.startCursor || null,
+        endCursor: data.me.projects.pageInfo.endCursor || null,
+      },
       totalCount: data.me.projects.totalCount,
     };
   }
@@ -268,11 +274,11 @@ export class GraphQLProjectAPI implements ProjectAPI {
     return data.removeProjectMembers;
   }
 
-  async getProjectMembers(projectId: string, first?: number, after?: string): Promise<{ members: ProjectMember[], hasNextPage: boolean, endCursor: string | null }> {
+  async getProjectMembers(projectId: string, pagination?: PaginationArgs): Promise<{ members: ProjectMember[], pageInfo: PageInfo }> {
     const data = await this.query<any>(gql`
-      query GetProjectMembers($projectId: ID!, $first: Int, $after: String) {
+      query GetProjectMembers($projectId: ID!, $first: Int, $after: String, $last: Int, $before: String) {
         project(id: $projectId) {
-          projectMembers(first: $first, after: $after) {
+          projectMembers(first: $first, after: $after, last: $last, before: $before) {
             edges {
               node {
                 id
@@ -283,27 +289,33 @@ export class GraphQLProjectAPI implements ProjectAPI {
             }
             pageInfo {
               hasNextPage
+              hasPreviousPage
+              startCursor
               endCursor
             }
           }
         }
       }
-    `, { projectId, first, after });
+    `, { projectId, ...pagination });
 
-    if (!data.project?.projectMembers) return { members: [], hasNextPage: false, endCursor: null };
+    if (!data.project?.projectMembers) return { members: [], pageInfo: { hasNextPage: false, hasPreviousPage: false, startCursor: null, endCursor: null } };
 
     return {
       members: data.project.projectMembers.edges.map((e: any) => e.node),
-      hasNextPage: data.project.projectMembers.pageInfo.hasNextPage,
-      endCursor: data.project.projectMembers.pageInfo.endCursor ?? null,
+      pageInfo: {
+        hasNextPage: data.project.projectMembers.pageInfo.hasNextPage,
+        hasPreviousPage: data.project.projectMembers.pageInfo.hasPreviousPage,
+        startCursor: data.project.projectMembers.pageInfo.startCursor ?? null,
+        endCursor: data.project.projectMembers.pageInfo.endCursor ?? null,
+      }
     };
   }
 
-  async getProjectLinks(projectId: string, first?: number, after?: string): Promise<{ links: any[], hasNextPage: boolean, endCursor: string | null }> {
+  async getProjectLinks(projectId: string, pagination?: PaginationArgs): Promise<{ links: any[], pageInfo: PageInfo }> {
     const data = await this.query<any>(gql`
-      query GetProjectLinks($projectId: ID!, $first: Int, $after: String) {
+      query GetProjectLinks($projectId: ID!, $first: Int, $after: String, $last: Int, $before: String) {
         project(id: $projectId) {
-          projectLinks(first: $first, after: $after) {
+          projectLinks(first: $first, after: $after, last: $last, before: $before) {
             edges {
               node {
                 id
@@ -315,19 +327,25 @@ export class GraphQLProjectAPI implements ProjectAPI {
             }
             pageInfo {
               hasNextPage
+              hasPreviousPage
+              startCursor
               endCursor
             }
           }
         }
       }
-    `, { projectId, first, after });
+    `, { projectId, ...pagination });
 
-    if (!data.project?.projectLinks) return { links: [], hasNextPage: false, endCursor: null };
+    if (!data.project?.projectLinks) return { links: [], pageInfo: { hasNextPage: false, hasPreviousPage: false, startCursor: null, endCursor: null } };
 
     return {
       links: data.project.projectLinks.edges.map((e: any) => e.node),
-      hasNextPage: data.project.projectLinks.pageInfo.hasNextPage,
-      endCursor: data.project.projectLinks.pageInfo.endCursor ?? null,
+      pageInfo: {
+        hasNextPage: data.project.projectLinks.pageInfo.hasNextPage,
+        hasPreviousPage: data.project.projectLinks.pageInfo.hasPreviousPage,
+        startCursor: data.project.projectLinks.pageInfo.startCursor ?? null,
+        endCursor: data.project.projectLinks.pageInfo.endCursor ?? null,
+      }
     };
   }
 }

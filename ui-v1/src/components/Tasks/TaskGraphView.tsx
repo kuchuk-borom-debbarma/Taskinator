@@ -1,6 +1,6 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { Link, useParams, useSearch } from '@tanstack/react-router';
-import { useInfiniteQuery } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft, Loader2, Network } from 'lucide-react';
 import { useApi } from '../../hooks/useApi';
 import type { GraphEdge, GraphNode, ProjectTask, TaskNeighbourhood } from '../../api/types';
@@ -13,21 +13,25 @@ export const TaskGraphView: React.FC = () => {
   const focusedTaskId = search.taskId;
   const { taskApi } = useApi();
 
-  const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
-    queryKey: ['task-graph-page', focusedTaskId],
-    queryFn: ({ pageParam }) => {
-      const cursor = pageParam as string | undefined;
-      return taskApi.getTaskGraphPage(focusedTaskId!, { first: 12, after: cursor });
+  const [cursor, setCursor] = useState<string | undefined>(undefined);
+  const [direction, setDirection] = useState<'forward' | 'backward' | undefined>(undefined);
+
+  const { data, isLoading, isFetching } = useQuery({
+    queryKey: ['task-graph-page', focusedTaskId, cursor, direction],
+    queryFn: () => {
+      return taskApi.getTaskGraphPage(focusedTaskId!, 
+        direction === 'backward'
+          ? { last: 12, before: cursor }
+          : { first: 12, after: cursor }
+      );
     },
     enabled: !!focusedTaskId,
-    initialPageParam: undefined as string | undefined,
-    getNextPageParam: (lastPage) => (lastPage.hasNextPage ? lastPage.endCursor ?? undefined : undefined),
     staleTime: 1000 * 60 * 3,
+    placeholderData: (prev) => prev,
   });
 
   const neighbourhood = useMemo<TaskNeighbourhood | null>(() => {
-    const pages = data?.pages ?? [];
-    const focusedTask = pages[0]?.task ?? null;
+    const focusedTask = data?.task ?? null;
     if (!focusedTask) return null;
 
     const nodeMap = new Map<string, GraphNode>();
@@ -35,27 +39,25 @@ export const TaskGraphView: React.FC = () => {
     const incomingDepths = new Map<string, number>();
     const outgoingDepths = new Map<string, number>();
 
-    for (const page of pages) {
-      for (const link of page.links) {
-        edgeMap.set(link.id, {
-          id: link.id,
-          sourceTaskId: link.source.id,
-          targetTaskId: link.target.id,
-          label: link.label,
-        });
+    for (const link of data?.links ?? []) {
+      edgeMap.set(link.id, {
+        id: link.id,
+        sourceTaskId: link.source.id,
+        targetTaskId: link.target.id,
+        label: link.label,
+      });
 
-        nodeMap.set(link.source.id, {
-          task: toGraphTask(link.source, nodeMap.get(link.source.id)?.task),
-          direction: 'incoming',
-          depth: incomingDepths.get(link.source.id) ?? 1,
-        });
+      nodeMap.set(link.source.id, {
+        task: toGraphTask(link.source, nodeMap.get(link.source.id)?.task),
+        direction: 'incoming',
+        depth: incomingDepths.get(link.source.id) ?? 1,
+      });
 
-        nodeMap.set(link.target.id, {
-          task: toGraphTask(link.target, nodeMap.get(link.target.id)?.task),
-          direction: 'outgoing',
-          depth: outgoingDepths.get(link.target.id) ?? 1,
-        });
-      }
+      nodeMap.set(link.target.id, {
+        task: toGraphTask(link.target, nodeMap.get(link.target.id)?.task),
+        direction: 'outgoing',
+        depth: outgoingDepths.get(link.target.id) ?? 1,
+      });
     }
 
     const incomingAdjacency = new Map<string, string[]>();
@@ -80,12 +82,12 @@ export const TaskGraphView: React.FC = () => {
       .map((node) => {
         const incomingDepth = traversedIncoming.get(node.task.id);
         const outgoingDepth = traversedOutgoing.get(node.task.id);
-        const direction = getNodeDirection(incomingDepth, outgoingDepth);
+        const dir = getNodeDirection(incomingDepth, outgoingDepth);
         const depth = Math.min(incomingDepth ?? Number.POSITIVE_INFINITY, outgoingDepth ?? Number.POSITIVE_INFINITY);
 
         return {
           ...node,
-          direction,
+          direction: dir,
           depth: Number.isFinite(depth) ? depth : 1,
         };
       })
@@ -102,10 +104,26 @@ export const TaskGraphView: React.FC = () => {
       edges: Array.from(edgeMap.values()),
       incomingStories: [],
       outgoingStories: [],
-      hasNextPage: !!hasNextPage,
-      endCursor: pages[pages.length - 1]?.endCursor || undefined,
+      hasNextPage: !!data?.pageInfo?.hasNextPage,
+      endCursor: data?.pageInfo?.endCursor || undefined,
     };
-  }, [data, hasNextPage]);
+  }, [data]);
+
+  const pageInfo = data?.pageInfo;
+
+  const handleNext = () => {
+    if (pageInfo?.hasNextPage) {
+      setCursor(pageInfo.endCursor ?? undefined);
+      setDirection('forward');
+    }
+  };
+
+  const handlePrev = () => {
+    if (pageInfo?.hasPreviousPage) {
+      setCursor(pageInfo.startCursor ?? undefined);
+      setDirection('backward');
+    }
+  };
 
   if (isLoading) {
     return (
@@ -168,8 +186,11 @@ export const TaskGraphView: React.FC = () => {
             projectId={projectId}
             taskId={focusedTaskId || neighbourhood.focusedTask.id}
             neighbourhood={neighbourhood}
-            fetchNextPage={hasNextPage ? fetchNextPage : undefined}
-            isFetchingNextPage={isFetchingNextPage}
+            handleNext={handleNext}
+            handlePrev={handlePrev}
+            hasNextPage={pageInfo?.hasNextPage}
+            hasPreviousPage={pageInfo?.hasPreviousPage}
+            isFetching={isFetching}
           />
         </div>
       </SurfaceCardStrong>

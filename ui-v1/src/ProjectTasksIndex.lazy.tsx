@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useParams, useSearch } from '@tanstack/react-router';
-import { ArrowRight, Filter, FolderKanban, Loader2, Plus, Search } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Filter, FolderKanban, Loader2, Plus, Search } from 'lucide-react';
 import { useApi } from './hooks/useApi';
 import type { ProjectTask } from './api/types';
 import {
@@ -15,6 +15,7 @@ import {
   TextField,
   formatDate,
 } from './components/shared/workspace';
+import { PagingButton } from './components/shared/PagingButton';
 
 type TaskSearch = {
   cursor?: string;
@@ -170,36 +171,38 @@ export default function ProjectTasksIndex() {
             </div>
           )}
 
-          <div className="mt-6 flex flex-wrap gap-3">
+          <div className="mt-6 flex items-center justify-between gap-4 border-t border-app-line pt-6">
             <PagingButton
-              disabled={!data?.hasPreviousPage}
+              disabled={!data?.pageInfo.hasPreviousPage}
               onClick={() =>
                 navigate({
                   to: '/projects/$projectId/tasks',
                   params: { projectId: projectId! },
                   search: {
-                    cursor: data?.startCursor ?? undefined,
+                    cursor: data?.pageInfo.startCursor ?? undefined,
                     direction: 'backward',
                   },
                 })
               }
             >
-              Previous page
+              <ArrowLeft size={14} />
+              Prev
             </PagingButton>
             <PagingButton
-              disabled={!data?.hasNextPage}
+              disabled={!data?.pageInfo.hasNextPage}
               onClick={() =>
                 navigate({
                   to: '/projects/$projectId/tasks',
                   params: { projectId: projectId! },
                   search: {
-                    cursor: data?.endCursor ?? undefined,
+                    cursor: data?.pageInfo.endCursor ?? undefined,
                     direction: 'forward',
                   },
                 })
               }
             >
-              Next page
+              Next
+              <ArrowRight size={14} />
             </PagingButton>
           </div>
         </SurfaceCardStrong>
@@ -286,22 +289,4 @@ function MiniInsight({ label, value, description }: { label: string; value: stri
   );
 }
 
-function PagingButton({
-  disabled,
-  onClick,
-  children,
-}: {
-  disabled?: boolean;
-  onClick: () => void;
-  children: string;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      className="rounded-full border border-app-line bg-white/80 px-5 py-3 text-sm font-semibold text-app-ink transition hover:border-app-ink/20 disabled:cursor-not-allowed disabled:opacity-40"
-    >
-      {children}
-    </button>
-  );
-}
+

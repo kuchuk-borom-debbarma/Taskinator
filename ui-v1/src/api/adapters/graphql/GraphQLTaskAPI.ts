@@ -1,5 +1,5 @@
 import type { TaskAPI } from '../../interfaces/TaskAPI';
-import type { ProjectTask, TaskLink, NeighbourDirection } from '../../types';
+import type { PageInfo, PaginationArgs, ProjectTask, TaskLink, NeighbourDirection } from '../../types';
 import { AuthenticationError } from '../../errors';
 
 const GRAPHQL_URL = 'http://localhost:3000/graphql';
@@ -95,11 +95,9 @@ export class GraphQLTaskAPI implements TaskAPI {
     taskId: string,
     direction: NeighbourDirection,
     depthLimit: number = 1,
-    first?: number,
-    after?: string,
-    last?: number,
-    before?: string
-  ): Promise<{ links: TaskLink[], hasNextPage: boolean, hasPreviousPage: boolean, endCursor: string | null, startCursor: string | null }> {
+    pagination?: PaginationArgs
+  ): Promise<{ links: TaskLink[], pageInfo: PageInfo }> {
+    const { first, after, last, before } = pagination || {};
     const data = await this.query<any>(gql`
       query GetTaskNeighbourLinks($taskId: ID!, $direction: NeighbourDirection, $depthLimit: Int, $first: Int, $after: String, $last: Int, $before: String) {
         task(id: $taskId) {
@@ -121,28 +119,26 @@ export class GraphQLTaskAPI implements TaskAPI {
     `, { taskId, direction, depthLimit, first, after, last, before });
 
     const conn = data.task?.neighbourLinks;
-    if (!conn) return { links: [], hasNextPage: false, hasPreviousPage: false, endCursor: null, startCursor: null };
+    if (!conn) return { links: [], pageInfo: { hasNextPage: false, hasPreviousPage: false, endCursor: null, startCursor: null } };
 
     return {
       links: conn.edges.map((e: any) => e.node),
-      hasNextPage: conn.pageInfo.hasNextPage || false,
-      hasPreviousPage: conn.pageInfo.hasPreviousPage || false,
-      endCursor: conn.pageInfo.endCursor || null,
-      startCursor: conn.pageInfo.startCursor || null,
+      pageInfo: {
+        hasNextPage: conn.pageInfo.hasNextPage || false,
+        hasPreviousPage: conn.pageInfo.hasPreviousPage || false,
+        endCursor: conn.pageInfo.endCursor || null,
+        startCursor: conn.pageInfo.startCursor || null,
+      }
     };
   }
 
   async getTasks(
     projectId: string,
-    params: {
+    params: PaginationArgs & {
       teamId?: string,
       memberId?: string,
-      first?: number,
-      after?: string,
-      last?: number,
-      before?: string
     } = {}
-  ): Promise<{ tasks: ProjectTask[], hasNextPage: boolean, hasPreviousPage: boolean, endCursor: string | null, startCursor: string | null }> {
+  ): Promise<{ tasks: ProjectTask[], pageInfo: PageInfo }> {
     const { teamId, memberId, first, after, last, before } = params;
     const data = await this.query<any>(gql`
       query GetProjectTasks($projectId: ID!, $teamId: ID, $memberId: ID, $first: Int, $after: String, $last: Int, $before: String) {
@@ -165,14 +161,16 @@ export class GraphQLTaskAPI implements TaskAPI {
     `, { projectId, teamId, memberId, first, after, last, before });
 
     const conn = data.project?.projectTasks;
-    if (!conn) return { tasks: [], hasNextPage: false, hasPreviousPage: false, endCursor: null, startCursor: null };
+    if (!conn) return { tasks: [], pageInfo: { hasNextPage: false, hasPreviousPage: false, endCursor: null, startCursor: null } };
 
     return {
       tasks: conn.edges.map((e: any) => e.node),
-      hasNextPage: conn.pageInfo.hasNextPage || false,
-      hasPreviousPage: conn.pageInfo.hasPreviousPage || false,
-      endCursor: conn.pageInfo.endCursor || null,
-      startCursor: conn.pageInfo.startCursor || null,
+      pageInfo: {
+        hasNextPage: conn.pageInfo.hasNextPage || false,
+        hasPreviousPage: conn.pageInfo.hasPreviousPage || false,
+        endCursor: conn.pageInfo.endCursor || null,
+        startCursor: conn.pageInfo.startCursor || null,
+      }
     };
   }
 
@@ -189,20 +187,13 @@ export class GraphQLTaskAPI implements TaskAPI {
 
   async getTaskGraphPage(
     taskId: string,
-    params: {
-      first?: number,
-      after?: string,
-      last?: number,
-      before?: string,
+    params: PaginationArgs & {
       depthLimit?: number,
     } = {}
   ): Promise<{
     task: ProjectTask | null,
     links: TaskLink[],
-    hasNextPage: boolean,
-    hasPreviousPage: boolean,
-    endCursor: string | null,
-    startCursor: string | null,
+    pageInfo: PageInfo,
   }> {
     const { first, after, last, before, depthLimit } = params;
     const data = await this.query<any>(gql`
@@ -232,10 +223,12 @@ export class GraphQLTaskAPI implements TaskAPI {
     return {
       task,
       links: conn?.edges.map((e: any) => e.node) || [],
-      hasNextPage: conn?.pageInfo.hasNextPage || false,
-      hasPreviousPage: conn?.pageInfo.hasPreviousPage || false,
-      endCursor: conn?.pageInfo.endCursor || null,
-      startCursor: conn?.pageInfo.startCursor || null,
+      pageInfo: {
+        hasNextPage: conn?.pageInfo.hasNextPage || false,
+        hasPreviousPage: conn?.pageInfo.hasPreviousPage || false,
+        endCursor: conn?.pageInfo.endCursor || null,
+        startCursor: conn?.pageInfo.startCursor || null,
+      }
     };
   }
 
@@ -304,19 +297,13 @@ export class GraphQLTaskAPI implements TaskAPI {
     taskId: string,
     direction: NeighbourDirection = 'both',
     depthLimit: number = 1,
-    first?: number,
-    after?: string,
-    last?: number,
-    before?: string
-  ): Promise<{ links: TaskLink[], hasNextPage: boolean, hasPreviousPage: boolean, endCursor: string | null, startCursor: string | null }> {
+    pagination?: PaginationArgs
+  ): Promise<{ links: TaskLink[], pageInfo: PageInfo }> {
     return this.getTaskNeighbourLinksPage(
       taskId,
       direction,
       depthLimit,
-      first,
-      after,
-      last,
-      before
+      pagination
     );
   }
 }

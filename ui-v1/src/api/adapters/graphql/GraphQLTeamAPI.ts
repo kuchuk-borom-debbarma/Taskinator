@@ -1,5 +1,5 @@
 import type { TeamAPI } from '../../interfaces/TeamAPI';
-import type { Team, TeamMember } from '../../types';
+import type { PageInfo, PaginationArgs, Team, TeamMember } from '../../types';
 import { AuthenticationError } from '../../errors';
 
 const GRAPHQL_URL = 'http://localhost:3000/graphql';
@@ -56,9 +56,9 @@ export class GraphQLTeamAPI implements TeamAPI {
 
   async getTeams(
     projectId: string, 
-    params: { first?: number, after?: string, last?: number, before?: string } = {}
-  ): Promise<{ teams: Team[], hasNextPage: boolean, hasPreviousPage: boolean, endCursor: string | null, startCursor: string | null }> {
-    const { first, after, last, before } = params;
+    pagination?: PaginationArgs
+  ): Promise<{ teams: Team[], pageInfo: PageInfo }> {
+    const { first, after, last, before } = pagination || {};
     const data = await this.query<any>(gql`
       query GetProjectTeams($projectId: ID!, $first: Int, $after: String, $last: Int, $before: String) {
         project(id: $projectId) {
@@ -85,14 +85,16 @@ export class GraphQLTeamAPI implements TeamAPI {
     `, { projectId, first, after, last, before });
  
     const conn = data.project?.teams;
-    if (!conn) return { teams: [], hasNextPage: false, hasPreviousPage: false, endCursor: null, startCursor: null };
+    if (!conn) return { teams: [], pageInfo: { hasNextPage: false, hasPreviousPage: false, endCursor: null, startCursor: null } };
  
     return {
       teams: conn.edges.map((e: any) => e.node),
-      hasNextPage: conn.pageInfo.hasNextPage || false,
-      hasPreviousPage: conn.pageInfo.hasPreviousPage || false,
-      endCursor: conn.pageInfo.endCursor || null,
-      startCursor: conn.pageInfo.startCursor || null,
+      pageInfo: {
+        hasNextPage: conn.pageInfo.hasNextPage || false,
+        hasPreviousPage: conn.pageInfo.hasPreviousPage || false,
+        endCursor: conn.pageInfo.endCursor || null,
+        startCursor: conn.pageInfo.startCursor || null,
+      }
     };
   }
 
@@ -116,9 +118,9 @@ export class GraphQLTeamAPI implements TeamAPI {
   async getTeamMembers(
     projectId: string, 
     teamId: string, 
-    params: { first?: number, after?: string, last?: number, before?: string } = {}
-  ): Promise<{ members: TeamMember[], hasNextPage: boolean, hasPreviousPage: boolean, endCursor: string | null, startCursor: string | null }> {
-    const { first, after, last, before } = params;
+    pagination?: PaginationArgs
+  ): Promise<{ members: TeamMember[], pageInfo: PageInfo }> {
+    const { first, after, last, before } = pagination || {};
     const data = await this.query<any>(gql`
       query GetTeamMembers($projectId: ID!, $teamId: ID!, $first: Int, $after: String, $last: Int, $before: String) {
         teamMembers(projectId: $projectId, teamId: $teamId, first: $first, after: $after, last: $last, before: $before) {
@@ -142,10 +144,12 @@ export class GraphQLTeamAPI implements TeamAPI {
 
     return {
       members: data.teamMembers.edges.map((e: any) => e.node),
-      hasNextPage: data.teamMembers.pageInfo.hasNextPage || false,
-      hasPreviousPage: data.teamMembers.pageInfo.hasPreviousPage || false,
-      endCursor: data.teamMembers.pageInfo.endCursor || null,
-      startCursor: data.teamMembers.pageInfo.startCursor || null,
+      pageInfo: {
+        hasNextPage: data.teamMembers.pageInfo.hasNextPage || false,
+        hasPreviousPage: data.teamMembers.pageInfo.hasPreviousPage || false,
+        endCursor: data.teamMembers.pageInfo.endCursor || null,
+        startCursor: data.teamMembers.pageInfo.startCursor || null,
+      }
     };
   }
 

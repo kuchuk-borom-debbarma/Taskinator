@@ -1,12 +1,13 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { Link } from '@tanstack/react-router';
 import {
-  PlusCircle,
   Loader2,
   Target,
   Keyboard,
   MousePointer,
   Maximize,
+  ArrowLeft,
+  ArrowRight,
 } from 'lucide-react';
 import type { GraphEdge, GraphNode, ProjectTask, TaskNeighbourhood } from '../../api/types';
 
@@ -30,8 +31,11 @@ interface TaskMapProps {
   projectId: string;
   taskId: string;
   neighbourhood: TaskNeighbourhood;
-  fetchNextPage?: () => void;
-  isFetchingNextPage?: boolean;
+  handleNext?: () => void;
+  handlePrev?: () => void;
+  hasNextPage?: boolean;
+  hasPreviousPage?: boolean;
+  isFetching?: boolean;
 }
 
 const ControlButton: React.FC<{ onClick: () => void; active?: boolean; title: string; children: React.ReactNode }> = ({
@@ -94,8 +98,11 @@ export const TaskMap: React.FC<TaskMapProps> = ({
   projectId,
   taskId,
   neighbourhood,
-  fetchNextPage,
-  isFetchingNextPage,
+  handleNext,
+  handlePrev,
+  hasNextPage,
+  hasPreviousPage,
+  isFetching,
 }) => {
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
   const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null);
@@ -317,22 +324,28 @@ export const TaskMap: React.FC<TaskMapProps> = ({
 
       {hoveredEdgeId ? <RelationshipTooltip edgeId={hoveredEdgeId} mapData={mapData} /> : null}
 
-      {neighbourhood.hasNextPage && fetchNextPage ? (
-        <div className="absolute bottom-8 right-8 z-50">
+      <div className="absolute bottom-8 right-8 z-50 flex gap-4">
+        {hasPreviousPage && handlePrev ? (
           <button
-            onClick={() => fetchNextPage()}
-            disabled={isFetchingNextPage}
-            className="group rounded-full bg-app-accent p-4 text-white shadow-[0_14px_36px_rgba(255,106,61,0.35)] transition-all hover:scale-110 active:scale-95 disabled:scale-100 disabled:opacity-50"
-            title="Discover Next Layer"
+            onClick={handlePrev}
+            disabled={isFetching}
+            className="group rounded-full bg-white border border-app-line p-4 text-app-ink shadow-[0_14px_36px_rgba(24,33,47,0.1)] transition-all hover:scale-110 active:scale-95 disabled:scale-100 disabled:opacity-50"
+            title="Previous Page"
           >
-            {isFetchingNextPage ? (
-              <Loader2 size={24} className="animate-spin" />
-            ) : (
-              <PlusCircle size={24} />
-            )}
+            {isFetching ? <Loader2 size={24} className="animate-spin" /> : <ArrowLeft size={24} />}
           </button>
-        </div>
-      ) : null}
+        ) : null}
+        {hasNextPage && handleNext ? (
+          <button
+            onClick={handleNext}
+            disabled={isFetching}
+            className="group rounded-full bg-app-accent p-4 text-white shadow-[0_14px_36px_rgba(255,106,61,0.35)] transition-all hover:scale-110 active:scale-95 disabled:scale-100 disabled:opacity-50"
+            title="Next Page"
+          >
+            {isFetching ? <Loader2 size={24} className="animate-spin" /> : <ArrowRight size={24} />}
+          </button>
+        ) : null}
+      </div>
     </div>
   );
 };

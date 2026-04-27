@@ -1,23 +1,47 @@
-import { useInfiniteQuery } from '@tanstack/react-query';
+import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { useParams } from '@tanstack/react-router';
-import { Loader2, ShieldCheck, Users } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Loader2, ShieldCheck, Users } from 'lucide-react';
 import { useApi } from '../../hooks/useApi';
 import type { ProjectMember } from '../../api/types';
 import { EmptyState, formatDate } from '../shared/workspace';
+import { PagingButton } from '../shared/PagingButton';
 
 export default function ProjectMembersView() {
   const { projectId } = useParams({ from: '/authenticated-layout/projects/$projectId/members' });
   const { projectApi } = useApi();
 
-  const { data, fetchNextPage, hasNextPage, isFetchingNextPage, isLoading } = useInfiniteQuery({
-    queryKey: ['project-members', projectId],
-    queryFn: ({ pageParam }) => projectApi.getProjectMembers(projectId, 15, pageParam),
-    initialPageParam: undefined as string | undefined,
-    getNextPageParam: (lastPage) => (lastPage.hasNextPage ? lastPage.endCursor ?? undefined : undefined),
+  const [cursor, setCursor] = useState<string | undefined>(undefined);
+  const [direction, setDirection] = useState<'forward' | 'backward' | undefined>(undefined);
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['project-members', projectId, cursor, direction],
+    queryFn: () => projectApi.getProjectMembers(
+      projectId,
+      direction === 'backward'
+        ? { last: 15, before: cursor }
+        : { first: 15, after: cursor }
+    ),
     staleTime: 1000 * 60 * 3,
+    placeholderData: (prev) => prev,
   });
 
-  const members = data?.pages.flatMap((page) => page.members) ?? [];
+  const members = data?.members ?? [];
+  const pageInfo = data?.pageInfo;
+
+  const handleNext = () => {
+    if (pageInfo?.hasNextPage) {
+      setCursor(pageInfo.endCursor ?? undefined);
+      setDirection('forward');
+    }
+  };
+
+  const handlePrev = () => {
+    if (pageInfo?.hasPreviousPage) {
+      setCursor(pageInfo.startCursor ?? undefined);
+      setDirection('backward');
+    }
+  };
 
   return (
     <div className="page-frame">
@@ -41,16 +65,16 @@ export default function ProjectMembersView() {
           </div>
         )}
 
-        {hasNextPage ? (
-          <button
-            onClick={() => fetchNextPage()}
-            disabled={isFetchingNextPage}
-            className="mt-6 inline-flex items-center gap-2 rounded-full border border-app-line bg-white/80 px-5 py-3 text-sm font-semibold text-app-ink transition hover:border-app-ink/20 disabled:opacity-60"
-          >
-            {isFetchingNextPage ? <Loader2 size={16} className="animate-spin" /> : null}
-            Load more members
-          </button>
-        ) : null}
+        <div className="mt-6 flex items-center justify-between gap-4 border-t border-app-line pt-6">
+          <PagingButton disabled={!pageInfo?.hasPreviousPage} onClick={handlePrev}>
+            <ArrowLeft size={14} />
+            Prev
+          </PagingButton>
+          <PagingButton disabled={!pageInfo?.hasNextPage} onClick={handleNext}>
+            Next
+            <ArrowRight size={14} />
+          </PagingButton>
+        </div>
       </div>
     </div>
   );

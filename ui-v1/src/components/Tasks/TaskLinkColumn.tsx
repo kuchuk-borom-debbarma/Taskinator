@@ -33,10 +33,7 @@ export const TaskLinkColumn: React.FC<TaskLinkColumnProps> = ({ taskId, directio
         taskId,
         direction,
         1,
-        isBackward ? undefined : 2,
-        isBackward ? undefined : cursor,
-        isBackward ? 2 : undefined,
-        isBackward ? cursor : undefined
+        isBackward ? { last: 2, before: cursor } : { first: 2, after: cursor }
       );
     },
     placeholderData: (prev) => prev,
@@ -81,34 +78,34 @@ export const TaskLinkColumn: React.FC<TaskLinkColumnProps> = ({ taskId, directio
         <div className="flex items-center gap-1.5 scale-90 origin-right">
           <button
             onClick={() => {
-              if (firstPage?.hasPreviousPage) {
+              if (firstPage?.pageInfo?.hasPreviousPage) {
                 (navigate as any)({
                   search: (prev: any) => ({
                     ...prev,
-                    [isIncoming ? 'inCursor' : 'outCursor']: firstPage.startCursor!,
+                    [isIncoming ? 'inCursor' : 'outCursor']: firstPage.pageInfo.startCursor!,
                     [isIncoming ? 'inDir' : 'outDir']: 'backward' as const
                   }),
                 });
               }
             }}
-            disabled={!firstPage?.hasPreviousPage || isFetching}
+            disabled={!firstPage?.pageInfo?.hasPreviousPage || isFetching}
             className="p-1.5 rounded-lg bg-bg-secondary border border-border-notion text-text-notion disabled:opacity-20 hover:bg-bg-notion transition-all active:scale-95 flex items-center justify-center shadow-sm"
           >
             <ChevronLeft size={14} />
           </button>
           <button
             onClick={() => {
-              if (lastPage?.hasNextPage) {
+              if (lastPage?.pageInfo?.hasNextPage) {
                 (navigate as any)({
                   search: (prev: any) => ({
                     ...prev,
-                    [isIncoming ? 'inCursor' : 'outCursor']: lastPage.endCursor!,
+                    [isIncoming ? 'inCursor' : 'outCursor']: lastPage.pageInfo.endCursor!,
                     [isIncoming ? 'inDir' : 'outDir']: 'forward' as const
                   }),
                 });
               }
             }}
-            disabled={!lastPage?.hasNextPage || isFetching}
+            disabled={!lastPage?.pageInfo?.hasNextPage || isFetching}
             className="p-1.5 rounded-lg bg-bg-secondary border border-border-notion text-text-notion disabled:opacity-20 hover:bg-bg-notion transition-all active:scale-95 flex items-center justify-center shadow-sm"
           >
             {isFetching ? (

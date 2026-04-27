@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { QueryClient } from '@tanstack/react-query';
-import { ArrowLeft, Loader2, Network, PencilLine, Save, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Loader2, Network, PencilLine, Save, X } from 'lucide-react';
 import { useApi } from '../../hooks/useApi';
 import type { ProjectTask, TaskLink } from '../../api/types';
 import {
@@ -16,6 +16,7 @@ import {
   TextField,
   formatDate,
 } from '../shared/workspace';
+import { PagingButton } from '../shared/PagingButton';
 
 interface TaskDetailViewProps {
   taskId: string;
@@ -56,9 +57,9 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
     queryKey: ['task-links', taskId, 'incoming', incomingCursor, incomingDir],
     queryFn: () => {
       if (incomingDir === 'backward') {
-        return taskApi.getTaskNeighbourLinks(taskId, 'incoming', 1, undefined, undefined, 8, incomingCursor);
+        return taskApi.getTaskNeighbourLinks(taskId, 'incoming', 1, { last: 8, before: incomingCursor });
       }
-      return taskApi.getTaskNeighbourLinks(taskId, 'incoming', 1, 8, incomingDir === 'forward' ? incomingCursor : undefined);
+      return taskApi.getTaskNeighbourLinks(taskId, 'incoming', 1, { first: 8, after: incomingDir === 'forward' ? incomingCursor : undefined });
     },
     enabled: !!task,
     staleTime: 1000 * 60 * 3,
@@ -68,9 +69,9 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
     queryKey: ['task-links', taskId, 'outgoing', outgoingCursor, outgoingDir],
     queryFn: () => {
       if (outgoingDir === 'backward') {
-        return taskApi.getTaskNeighbourLinks(taskId, 'outgoing', 1, undefined, undefined, 8, outgoingCursor);
+        return taskApi.getTaskNeighbourLinks(taskId, 'outgoing', 1, { last: 8, before: outgoingCursor });
       }
-      return taskApi.getTaskNeighbourLinks(taskId, 'outgoing', 1, 8, outgoingDir === 'forward' ? outgoingCursor : undefined);
+      return taskApi.getTaskNeighbourLinks(taskId, 'outgoing', 1, { first: 8, after: outgoingDir === 'forward' ? outgoingCursor : undefined });
     },
     enabled: !!task,
     staleTime: 1000 * 60 * 3,
@@ -204,15 +205,15 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
                 links={incoming}
                 direction="incoming"
                 pageData={{
-                  hasNextPage: incomingData?.hasNextPage ?? false,
-                  hasPreviousPage: incomingData?.hasPreviousPage ?? false,
+                  hasNextPage: incomingData?.pageInfo?.hasNextPage ?? false,
+                  hasPreviousPage: incomingData?.pageInfo?.hasPreviousPage ?? false,
                 }}
                 onNext={() => {
-                  setIncomingCursor(incomingData?.endCursor ?? undefined);
+                  setIncomingCursor(incomingData?.pageInfo?.endCursor ?? undefined);
                   setIncomingDir('forward');
                 }}
                 onPrev={() => {
-                  setIncomingCursor(incomingData?.startCursor ?? undefined);
+                  setIncomingCursor(incomingData?.pageInfo?.startCursor ?? undefined);
                   setIncomingDir('backward');
                 }}
               />
@@ -221,15 +222,15 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
                 links={outgoing}
                 direction="outgoing"
                 pageData={{
-                  hasNextPage: outgoingData?.hasNextPage ?? false,
-                  hasPreviousPage: outgoingData?.hasPreviousPage ?? false,
+                  hasNextPage: outgoingData?.pageInfo?.hasNextPage ?? false,
+                  hasPreviousPage: outgoingData?.pageInfo?.hasPreviousPage ?? false,
                 }}
                 onNext={() => {
-                  setOutgoingCursor(outgoingData?.endCursor ?? undefined);
+                  setOutgoingCursor(outgoingData?.pageInfo?.endCursor ?? undefined);
                   setOutgoingDir('forward');
                 }}
                 onPrev={() => {
-                  setOutgoingCursor(outgoingData?.startCursor ?? undefined);
+                  setOutgoingCursor(outgoingData?.pageInfo?.startCursor ?? undefined);
                   setOutgoingDir('backward');
                 }}
               />
@@ -339,34 +340,17 @@ function DependencyCard({
           ))
         )}
       </div>
-      <div className="mt-6 flex flex-wrap gap-2">
+      <div className="mt-6 flex items-center justify-between gap-4 border-t border-app-line pt-6">
         <PagingButton disabled={!pageData.hasPreviousPage} onClick={onPrev}>
+          <ArrowLeft size={14} />
           Prev
         </PagingButton>
         <PagingButton disabled={!pageData.hasNextPage} onClick={onNext}>
           Next
+          <ArrowRight size={14} />
         </PagingButton>
       </div>
     </SurfaceCard>
   );
 }
 
-function PagingButton({
-  disabled,
-  onClick,
-  children,
-}: {
-  disabled?: boolean;
-  onClick: () => void;
-  children: string;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      className="rounded-full border border-app-line bg-white/80 px-4 py-2 text-xs font-semibold text-app-ink transition hover:border-app-ink/20 disabled:cursor-not-allowed disabled:opacity-40"
-    >
-      {children}
-    </button>
-  );
-}

@@ -1,17 +1,13 @@
-import type { ProjectTask, TaskLink, NeighbourDirection } from '../types';
+import type { PageInfo, PaginationArgs, ProjectTask, TaskLink, NeighbourDirection } from '../types';
 
 export interface TaskAPI {
   getTasks(
     projectId: string,
-    params?: {
+    params?: PaginationArgs & {
       teamId?: string,
       memberId?: string,
-      first?: number,
-      after?: string,
-      last?: number,
-      before?: string
     }
-  ): Promise<{ tasks: ProjectTask[], hasNextPage: boolean, hasPreviousPage: boolean, endCursor: string | null, startCursor: string | null }>;
+  ): Promise<{ tasks: ProjectTask[], pageInfo: PageInfo }>;
 
   getTask(id: string): Promise<ProjectTask | null>;
 
@@ -29,27 +25,17 @@ export interface TaskAPI {
     taskId: string,
     direction?: NeighbourDirection,
     depthLimit?: number,
-    first?: number,
-    after?: string,
-    last?: number,
-    before?: string
-  ): Promise<{ links: TaskLink[], hasNextPage: boolean, hasPreviousPage: boolean, endCursor: string | null, startCursor: string | null }>;
+    pagination?: PaginationArgs
+  ): Promise<{ links: TaskLink[], pageInfo: PageInfo }>;
 
   getTaskGraphPage(
     taskId: string,
-    params?: {
-      first?: number,
-      after?: string,
-      last?: number,
-      before?: string,
+    params?: PaginationArgs & {
       depthLimit?: number,
     }
   ): Promise<{
     task: ProjectTask | null,
     links: TaskLink[],
-    hasNextPage: boolean,
-    hasPreviousPage: boolean,
-    endCursor: string | null,
-    startCursor: string | null,
+    pageInfo: PageInfo,
   }>;
 }
