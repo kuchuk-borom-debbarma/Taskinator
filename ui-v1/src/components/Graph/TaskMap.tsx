@@ -6,8 +6,7 @@ import {
   Keyboard,
   MousePointer,
   Maximize,
-  ArrowLeft,
-  ArrowRight,
+  PlusCircle,
 } from 'lucide-react';
 import type { GraphEdge, GraphNode, ProjectTask, TaskNeighbourhood } from '../../api/types';
 
@@ -31,11 +30,8 @@ interface TaskMapProps {
   projectId: string;
   taskId: string;
   neighbourhood: TaskNeighbourhood;
-  handleNext?: () => void;
-  handlePrev?: () => void;
-  hasNextPage?: boolean;
-  hasPreviousPage?: boolean;
-  isFetching?: boolean;
+  fetchNextPage?: () => void;
+  isFetchingNextPage?: boolean;
 }
 
 const ControlButton: React.FC<{ onClick: () => void; active?: boolean; title: string; children: React.ReactNode }> = ({
@@ -98,11 +94,8 @@ export const TaskMap: React.FC<TaskMapProps> = ({
   projectId,
   taskId,
   neighbourhood,
-  handleNext,
-  handlePrev,
-  hasNextPage,
-  hasPreviousPage,
-  isFetching,
+  fetchNextPage,
+  isFetchingNextPage,
 }) => {
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
   const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null);
@@ -325,24 +318,14 @@ export const TaskMap: React.FC<TaskMapProps> = ({
       {hoveredEdgeId ? <RelationshipTooltip edgeId={hoveredEdgeId} mapData={mapData} /> : null}
 
       <div className="absolute bottom-8 right-8 z-50 flex gap-4">
-        {hasPreviousPage && handlePrev ? (
+        {fetchNextPage ? (
           <button
-            onClick={handlePrev}
-            disabled={isFetching}
-            className="group rounded-full bg-white border border-app-line p-4 text-app-ink shadow-[0_14px_36px_rgba(24,33,47,0.1)] transition-all hover:scale-110 active:scale-95 disabled:scale-100 disabled:opacity-50"
-            title="Previous Page"
-          >
-            {isFetching ? <Loader2 size={24} className="animate-spin" /> : <ArrowLeft size={24} />}
-          </button>
-        ) : null}
-        {hasNextPage && handleNext ? (
-          <button
-            onClick={handleNext}
-            disabled={isFetching}
+            onClick={fetchNextPage}
+            disabled={isFetchingNextPage}
             className="group rounded-full bg-app-accent p-4 text-white shadow-[0_14px_36px_rgba(255,106,61,0.35)] transition-all hover:scale-110 active:scale-95 disabled:scale-100 disabled:opacity-50"
-            title="Next Page"
+            title="Discover Next Layer"
           >
-            {isFetching ? <Loader2 size={24} className="animate-spin" /> : <ArrowRight size={24} />}
+            {isFetchingNextPage ? <Loader2 size={24} className="animate-spin" /> : <PlusCircle size={24} />}
           </button>
         ) : null}
       </div>
