@@ -245,6 +245,14 @@ export class TaskEvents_BatchAggregator {
             }
 
             // Link Reachability Syncs
+            const projectLinks = new Map<
+                string,
+                Array<{
+                    sourceTaskId: string;
+                    targetTaskId: string;
+                    action: 'ADD' | 'REMOVE';
+                }>
+            >();
             for (const sync of linkDeltas.values()) {
                 if (sync.delta === 0) continue;
 
@@ -256,15 +264,23 @@ export class TaskEvents_BatchAggregator {
                     continue;
                 }
 
+                const links = projectLinks.get(sync.projectId) || [];
+                links.push({
+                    sourceTaskId: sync.sourceId,
+                    targetTaskId: sync.targetId,
+                    action: sync.delta > 0 ? 'ADD' : 'REMOVE',
+                });
+                projectLinks.set(sync.projectId, links);
+            }
+
+            for (const [projectId, links] of projectLinks.entries()) {
                 outboxEntries.push({
                     kafka_topic: KAFKA_TOPICS.TASK_AGGREGATED,
                     payload: {
                         type: KAFKA_EVENTS.TASK_AGGREGATED
                             .SYNC_TASK_REACHABILITY,
-                        projectId: sync.projectId,
-                        sourceTaskId: sync.sourceId,
-                        targetTaskId: sync.targetId,
-                        action: sync.delta > 0 ? 'ADD' : 'REMOVE',
+                        projectId,
+                        links,
                     },
                 });
             }

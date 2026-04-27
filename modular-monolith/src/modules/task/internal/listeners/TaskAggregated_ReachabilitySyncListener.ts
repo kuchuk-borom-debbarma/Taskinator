@@ -32,35 +32,53 @@ export class TaskAggregated_ReachabilitySyncListener {
                 [KAFKA_EVENTS.TASK_AGGREGATED.SYNC_TASK_REACHABILITY]:
                     this.handleSync.bind(this),
             },
+            { batch: true },
         );
     }
 
-    private async handleSync(data: any) {
-        const { projectId, sourceTaskId, targetTaskId, action } = data;
+    private async handleSync(events: any[]) {
+        if (!events.length) return;
 
         logger.info(
-            `[Graph Engine] Processing ${action} signal for ${sourceTaskId} -> ${targetTaskId}`,
+            `[Graph Engine] Processing batched signals: ${events.length} projects`,
         );
 
         await db.transaction().execute(async (trx) => {
-            if (action === 'ADD') {
-                await expandTaskReachability(
-                    trx,
-                    projectId,
-                    sourceTaskId,
-                    targetTaskId,
-                );
-            } else if (action === 'REMOVE') {
-                await contractTaskReachability(
-                    trx,
-                    projectId,
-                    sourceTaskId,
-                    targetTaskId,
-                );
-            }
+            for (const e of events) {
+                const { projectId, links } = e.data;
 
-            // Sync denormalized incoming/outgoing counts for the project UI
-            await syncTaskGraphCounters(trx, projectId);
+                if (!links || !Array.isArray(links)) {
+                    logger.warn(
+                        `[Graph Engine] Received reachability signal without links for project ${projectId}`,
+                    );
+                    continue;
+                }
+
+                logger.info(
+                    `[Graph Engine] Applying ${links.length} reachability updates for project ${projectId}`,
+                );
+
+                for (const link of links) {
+                    if (link.action === 'ADD') {
+                        await expandTaskReachability(
+                            trx,
+                            projectId,
+                            link.sourceTaskId,
+                            link.targetTaskId,
+                        );
+                    } else if (link.action === 'REMOVE') {
+                        await contractTaskReachability(
+                            trx,
+                            projectId,
+                            link.sourceTaskId,
+                            link.targetTaskId,
+                        );
+                    }
+                }
+
+                // Sync denormalized incoming/outgoing counts for the project UI once per signal
+                await syncTaskGraphCounters(trx, projectId);
+            }
         });
     }
 }
