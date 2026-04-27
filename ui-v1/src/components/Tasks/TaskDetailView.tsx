@@ -140,10 +140,6 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
             <p className="eyebrow mb-3">Task detail</p>
             <h1 className="text-4xl font-semibold tracking-[-0.05em] text-app-ink">{task.title}</h1>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <StatusBadge status={task.status} />
-            <PriorityBadge priority={task.priority} />
-          </div>
         </div>
       </SurfaceCardStrong>
 
@@ -165,11 +161,23 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
               Edit
             </button>
           </div>
-          <MetaItem label="Project" value={task.project?.name || 'No project'} />
-          <MetaItem label="Team" value={task.team?.name || 'No team assigned'} />
-          <MetaItem label="Assignee" value={task.assignedMember?.username || 'No assignee'} />
-          <MetaItem label="Created" value={formatDate(task.createdAt)} />
-          <MetaItem label="Updated" value={formatDate(task.updatedAt)} />
+          <div className="space-y-3 mt-6">
+            <div className="grid grid-cols-2 gap-3">
+              <MetaItem label="Status">
+                <StatusBadge status={task.status} />
+              </MetaItem>
+              <MetaItem label="Priority">
+                <PriorityBadge priority={task.priority} />
+              </MetaItem>
+            </div>
+            <MetaItem label="Assignee" value={task.assignedMember?.username || 'Unassigned'} />
+            <MetaItem label="Team" value={task.team?.name || 'No team assigned'} />
+            <MetaItem label="Project" value={task.project?.name || 'No project'} />
+            <div className="grid grid-cols-2 gap-3">
+              <MetaItem label="Created" value={formatDate(task.createdAt)} />
+              <MetaItem label="Updated" value={formatDate(task.updatedAt)} />
+            </div>
+          </div>
         </SurfaceCard>
 
         <div className="space-y-6">
@@ -274,11 +282,11 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
   );
 };
 
-function MetaItem({ label, value }: { label: string; value: string }) {
+function MetaItem({ label, value, children }: { label: string; value?: string; children?: React.ReactNode }) {
   return (
     <div className="rounded-2xl bg-app-ink/4 px-4 py-4">
       <p className="text-xs font-semibold uppercase tracking-[0.18em] text-app-muted">{label}</p>
-      <p className="mt-2 text-sm font-medium text-app-ink">{value}</p>
+      <div className="mt-2 text-sm font-medium text-app-ink flex items-center">{value || children}</div>
     </div>
   );
 }
