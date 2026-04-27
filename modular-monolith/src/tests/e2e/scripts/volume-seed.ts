@@ -779,7 +779,7 @@ async function seed() {
 
     // ── 6. CREATE TASKS ─────────────────────────────────────────
     console.log(
-        `📋 Creating ${CFG.TASKS_PER_PROJECT_MIN}–${CFG.TASKS_PER_PROJECT_MAX} tasks per project (${totalProjects} projects)…`,
+        `📋 Creating ${CFG.TASKS_PER_PROJECT_MIN}–${CFG.TASKS_PER_PROJECT_MAX} tasks per project (${projects.length} projects)…`,
     );
     const taskCreateTasks: (() => Promise<void>)[] = [];
     for (const proj of projects) {
