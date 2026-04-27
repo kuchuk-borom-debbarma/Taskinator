@@ -30,11 +30,11 @@ const CFG = {
     PROJECTS_PER_OWNER_MIN: 2, // Y_min (random projects per owner)
     PROJECTS_PER_OWNER_MAX: 60, // Y_max
     MEMBERS_PER_PROJECT_MIN: 40, // Z_min  (random members per project)
-    MEMBERS_PER_PROJECT_MAX: 320, // Z_max
+    MEMBERS_PER_PROJECT_MAX: 100, // Z_max
     TEAMS_PER_PROJECT_MIN: 4, // N_min  (random teams per project)
-    TEAMS_PER_PROJECT_MAX: 400, // N_max
+    TEAMS_PER_PROJECT_MAX: 100, // N_max
     TEAM_MEMBERS_MIN: 5, // B
-    TEAM_MEMBERS_MAX: 300, // C
+    TEAM_MEMBERS_MAX: 100, // C
     TASKS_PER_PROJECT_MIN: 100, // D_min  (random tasks per project)
     TASKS_PER_PROJECT_MAX: 850, // D_max
     LINK_DEPTH_MIN: 3, // E
