@@ -8,7 +8,7 @@
  *  VARIABLES  (all defaults are "huge" for volume/read testing)
  *
  *  X  TOTAL_USERS           — users to create
- *  Y  PROJECTS_PER_OWNER    — projects each "owner" user creates
+ *  Y  PROJECTS_PER_OWNER    — projects each "owner" user creates (random range)
  *  Z  MEMBERS_PER_PROJECT   — random project members per project
  *  N  TEAMS_PER_PROJECT     — teams per project
  *  B  TEAM_MEMBERS_MIN      — min members per team  (sampled from project members)
@@ -25,20 +25,21 @@
 // ============================================================
 const CFG = {
     GQL_URL: process.env.GQL_URL || 'http://localhost:3000/graphql',
-    OWNER_COUNT: 10, // how many "owner" accounts to create
+    OWNER_COUNT: 100, // how many "owner" accounts to create
     TOTAL_USERS: 500, // X — total users (includes owners)
-    PROJECTS_PER_OWNER: 3, // Y
+    PROJECTS_PER_OWNER_MIN: 2, // Y_min (random projects per owner)
+    PROJECTS_PER_OWNER_MAX: 60, // Y_max
     MEMBERS_PER_PROJECT_MIN: 40, // Z_min  (random members per project)
-    MEMBERS_PER_PROJECT_MAX: 120, // Z_max
+    MEMBERS_PER_PROJECT_MAX: 320, // Z_max
     TEAMS_PER_PROJECT_MIN: 4, // N_min  (random teams per project)
-    TEAMS_PER_PROJECT_MAX: 12, // N_max
+    TEAMS_PER_PROJECT_MAX: 400, // N_max
     TEAM_MEMBERS_MIN: 5, // B
-    TEAM_MEMBERS_MAX: 20, // C
+    TEAM_MEMBERS_MAX: 300, // C
     TASKS_PER_PROJECT_MIN: 100, // D_min  (random tasks per project)
-    TASKS_PER_PROJECT_MAX: 350, // D_max
+    TASKS_PER_PROJECT_MAX: 850, // D_max
     LINK_DEPTH_MIN: 3, // E
-    LINK_DEPTH_MAX: 8, // F
-    LINKED_TASK_PCT: 60, // G  (percent of tasks in link graphs)
+    LINK_DEPTH_MAX: 12, // F
+    LINKED_TASK_PCT: 70, // G  (percent of tasks in link graphs)
     CONCURRENCY: 20, // parallel GQL calls
     PASSWORD: '123',
 } as const;
@@ -642,9 +643,8 @@ async function seed() {
     console.log(`   ✓ ${allUserIds.length} users ready  (${elapsed(t0)})\n`);
 
     // ── 2. CREATE PROJECTS ──────────────────────────────────────
-    const totalProjects = CFG.OWNER_COUNT * CFG.PROJECTS_PER_OWNER;
     console.log(
-        `🏢 Creating ${totalProjects} projects (${CFG.PROJECTS_PER_OWNER} per owner)…`,
+        `🏢 Creating ${CFG.PROJECTS_PER_OWNER_MIN}–${CFG.PROJECTS_PER_OWNER_MAX} projects per owner (${CFG.OWNER_COUNT} owners)…`,
     );
 
     type ProjectCtx = {
@@ -662,7 +662,11 @@ async function seed() {
     const projectTasks: (() => Promise<void>)[] = [];
     for (let oi = 0; oi < CFG.OWNER_COUNT; oi++) {
         const owner = users[oi]!;
-        for (let pi = 0; pi < CFG.PROJECTS_PER_OWNER; pi++) {
+        const numProjects = randomInt(
+            CFG.PROJECTS_PER_OWNER_MIN,
+            CFG.PROJECTS_PER_OWNER_MAX,
+        );
+        for (let pi = 0; pi < numProjects; pi++) {
             projectTasks.push(async () => {
                 const name = generateProjectName();
                 const d = await gql<{ createProject: { id: string } }>(
