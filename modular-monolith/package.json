@@ -74,6 +74,8 @@
         "test:e2e:down": "docker compose -f src/tests/e2e/docker-compose.yml down -v",
         "start": "bun --preload ./src/instrumentation.ts src/index.ts",
         "dev": "bun --watch --preload ./src/instrumentation.ts src/index.ts",
-        "generate-schema": "bun run src/graphql/generate-schema.ts"
+        "generate-schema": "bun run src/graphql/generate-schema.ts",
+        "seed:volume": "bun run src/tests/e2e/scripts/volume-seed.ts",
+        "seed:volume:small": "GQL_URL=http://localhost:3000/graphql bun run src/tests/e2e/scripts/volume-seed.ts"
     }
 }

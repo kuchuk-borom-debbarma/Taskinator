@@ -34,6 +34,7 @@ export const pool = new Pool({
     password: process.env.DB_PASSWORD || 'password',
     port: Number(process.env.DB_PORT) || 5434,
     max: 10,
+    idleTimeoutMillis: 30000,
 });
 
 pool.on('connect', () =>
