@@ -37,7 +37,7 @@ const CFG = {
     LINK_DEPTH_MAX: 8, // F
     LINKED_TASK_PCT: 60, // G  (percent of tasks in link graphs)
     CONCURRENCY: 20, // parallel GQL calls
-    PASSWORD: 'Seed@12345',
+    PASSWORD: '123',
 } as const;
 
 // ============================================================
@@ -556,12 +556,25 @@ async function seed() {
         token?: string;
     }[] = [];
 
+    // Deterministic email sequence: 0→a@a.a, 1→b@a.a, …, 25→z@a.a, 26→aa@a.a
+    const toSeq = (n: number): string => {
+        let r = '';
+        let cur = n;
+        while (cur >= 0) {
+            r = String.fromCharCode(97 + (cur % 26)) + r;
+            cur = Math.floor(cur / 26) - 1;
+        }
+        return r;
+    };
+
     for (let i = 0; i < CFG.TOTAL_USERS; i++) {
+        const seq = toSeq(i);
         const first = pick(FIRST);
         const last = pick(LAST);
-        const email = generateEmail(first, last, i);
-        const username = generateUsername(first, last, i);
-        users.push({ email, username });
+        users.push({
+            email: `${seq}@a.a`,
+            username: `${first.toLowerCase()}.${last.toLowerCase()}${i}`,
+        });
     }
 
     // Sign up in parallel batches
