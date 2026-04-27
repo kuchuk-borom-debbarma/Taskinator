@@ -17,7 +17,7 @@ export const TaskGraphView: React.FC = () => {
     queryKey: ['task-graph-page', focusedTaskId],
     queryFn: ({ pageParam }) => {
       const cursor = pageParam as string | undefined;
-      return taskApi.getTaskGraphPage(focusedTaskId!, { first: 12, after: cursor });
+      return taskApi.getTaskGraphPage(focusedTaskId!, { first: 10, after: cursor });
     },
     enabled: !!focusedTaskId,
     initialPageParam: undefined as string | undefined,
