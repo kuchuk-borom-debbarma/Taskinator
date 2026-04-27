@@ -28,11 +28,14 @@ const CFG = {
     OWNER_COUNT: 10, // how many "owner" accounts to create
     TOTAL_USERS: 500, // X — total users (includes owners)
     PROJECTS_PER_OWNER: 3, // Y
-    MEMBERS_PER_PROJECT: 80, // Z  (random sample from all users)
-    TEAMS_PER_PROJECT: 8, // N
+    MEMBERS_PER_PROJECT_MIN: 40, // Z_min  (random members per project)
+    MEMBERS_PER_PROJECT_MAX: 120, // Z_max
+    TEAMS_PER_PROJECT_MIN: 4, // N_min  (random teams per project)
+    TEAMS_PER_PROJECT_MAX: 12, // N_max
     TEAM_MEMBERS_MIN: 5, // B
     TEAM_MEMBERS_MAX: 20, // C
-    TASKS_PER_PROJECT: 200, // D
+    TASKS_PER_PROJECT_MIN: 100, // D_min  (random tasks per project)
+    TASKS_PER_PROJECT_MAX: 350, // D_max
     LINK_DEPTH_MIN: 3, // E
     LINK_DEPTH_MAX: 8, // F
     LINKED_TASK_PCT: 60, // G  (percent of tasks in link graphs)
@@ -684,14 +687,18 @@ async function seed() {
 
     // ── 3. ADD PROJECT MEMBERS ──────────────────────────────────
     console.log(
-        `👥 Adding ~${CFG.MEMBERS_PER_PROJECT} members to each project…`,
+        `👥 Adding ${CFG.MEMBERS_PER_PROJECT_MIN}–${CFG.MEMBERS_PER_PROJECT_MAX} members per project…`,
     );
     await pLimit(
         projects.map((proj) => async () => {
             // Always include owner; sample the rest from the pool
+            const targetCount = randomInt(
+                CFG.MEMBERS_PER_PROJECT_MIN,
+                CFG.MEMBERS_PER_PROJECT_MAX,
+            );
             const others = sampleN(
                 allUserIds.filter((id) => id !== proj.ownerUserId),
-                CFG.MEMBERS_PER_PROJECT - 1,
+                targetCount - 1,
             );
             const memberIds = [proj.ownerUserId, ...others];
             proj.memberIds = memberIds;
@@ -711,11 +718,17 @@ async function seed() {
     console.log(`   ✓ Members added  (${elapsed(t0)})\n`);
 
     // ── 4. CREATE TEAMS ─────────────────────────────────────────
-    console.log(`🛡  Creating ${CFG.TEAMS_PER_PROJECT} teams per project…`);
+    console.log(
+        `🛡  Creating ${CFG.TEAMS_PER_PROJECT_MIN}–${CFG.TEAMS_PER_PROJECT_MAX} teams per project…`,
+    );
     await pLimit(
         projects.map((proj) => async () => {
+            const numTeams = randomInt(
+                CFG.TEAMS_PER_PROJECT_MIN,
+                CFG.TEAMS_PER_PROJECT_MAX,
+            );
             const teamTasks = Array.from(
-                { length: CFG.TEAMS_PER_PROJECT },
+                { length: numTeams },
                 (_, ti) => async () => {
                     const d = await gql<{
                         createTeam: { team: { id: string } };
@@ -762,11 +775,15 @@ async function seed() {
 
     // ── 6. CREATE TASKS ─────────────────────────────────────────
     console.log(
-        `📋 Creating ${CFG.TASKS_PER_PROJECT} tasks per project (${totalProjects} projects)…`,
+        `📋 Creating ${CFG.TASKS_PER_PROJECT_MIN}–${CFG.TASKS_PER_PROJECT_MAX} tasks per project (${totalProjects} projects)…`,
     );
     const taskCreateTasks: (() => Promise<void>)[] = [];
     for (const proj of projects) {
-        for (let i = 0; i < CFG.TASKS_PER_PROJECT; i++) {
+        const numTasks = randomInt(
+            CFG.TASKS_PER_PROJECT_MIN,
+            CFG.TASKS_PER_PROJECT_MAX,
+        );
+        for (let i = 0; i < numTasks; i++) {
             taskCreateTasks.push(async () => {
                 const title = generateTaskTitle();
                 const status = pickWeighted(STATUSES, STATUS_WEIGHTS);
@@ -973,14 +990,20 @@ async function seed() {
     console.log('📊 Summary:');
     console.log(`   Users            : ${allUserIds.length.toLocaleString()}`);
     console.log(`   Projects         : ${projects.length}`);
-    console.log(`   Members/project  : ~${CFG.MEMBERS_PER_PROJECT}`);
-    console.log(`   Teams/project    : ${CFG.TEAMS_PER_PROJECT}`);
+    console.log(
+        `   Members/project  : ${CFG.MEMBERS_PER_PROJECT_MIN}–${CFG.MEMBERS_PER_PROJECT_MAX} (random)`,
+    );
+    console.log(
+        `   Teams/project    : ${CFG.TEAMS_PER_PROJECT_MIN}–${CFG.TEAMS_PER_PROJECT_MAX} (random)`,
+    );
     console.log(
         `   Team members     : ${CFG.TEAM_MEMBERS_MIN}–${CFG.TEAM_MEMBERS_MAX} per team`,
     );
-    console.log(`   Tasks/project    : ${CFG.TASKS_PER_PROJECT}`);
     console.log(
-        `   Total tasks      : ${(projects.length * CFG.TASKS_PER_PROJECT).toLocaleString()}`,
+        `   Tasks/project    : ${CFG.TASKS_PER_PROJECT_MIN}–${CFG.TASKS_PER_PROJECT_MAX} (random)`,
+    );
+    console.log(
+        `   Total tasks      : ${projects.reduce((s, p) => s + p.taskIds.length, 0).toLocaleString()}`,
     );
     console.log(`   Total links      : ${totalLinks.toLocaleString()}`);
     console.log(
