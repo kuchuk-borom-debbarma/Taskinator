@@ -3,7 +3,7 @@ import { useParams } from '@tanstack/react-router';
 import { Loader2, ShieldCheck, Users } from 'lucide-react';
 import { useApi } from '../../hooks/useApi';
 import type { ProjectMember } from '../../api/types';
-import { EmptyState, SurfaceCardStrong, formatDate } from '../shared/workspace';
+import { EmptyState, formatDate } from '../shared/workspace';
 
 export default function ProjectMembersView() {
   const { projectId } = useParams({ from: '/authenticated-layout/projects/$projectId/members' });

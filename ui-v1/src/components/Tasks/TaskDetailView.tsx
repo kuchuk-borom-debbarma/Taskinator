@@ -4,7 +4,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import type { QueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Loader2, Network, PencilLine, Save, X } from 'lucide-react';
 import { useApi } from '../../hooks/useApi';
-import type { ProjectTask } from '../../api/types';
+import type { ProjectTask, TaskLink } from '../../api/types';
 import {
   EmptyState,
   LoadingPane,
@@ -40,6 +40,10 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
   const [isEditing, setIsEditing] = useState(false);
   const [titleDraft, setTitleDraft] = useState('');
   const [descriptionDraft, setDescriptionDraft] = useState('');
+  const [incomingCursor, setIncomingCursor] = useState<string | undefined>();
+  const [incomingDir, setIncomingDir] = useState<'forward' | 'backward'>('forward');
+  const [outgoingCursor, setOutgoingCursor] = useState<string | undefined>();
+  const [outgoingDir, setOutgoingDir] = useState<'forward' | 'backward'>('forward');
 
   const { data: task, isLoading } = useQuery({
     queryKey: ['task', taskId],
@@ -49,15 +53,25 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
   });
 
   const { data: incomingData } = useQuery({
-    queryKey: ['task-links', taskId, 'incoming'],
-    queryFn: () => taskApi.getTaskNeighbourLinks(taskId, 'incoming', 1, 8),
+    queryKey: ['task-links', taskId, 'incoming', incomingCursor, incomingDir],
+    queryFn: () => {
+      if (incomingDir === 'backward') {
+        return taskApi.getTaskNeighbourLinks(taskId, 'incoming', 1, undefined, undefined, 8, incomingCursor);
+      }
+      return taskApi.getTaskNeighbourLinks(taskId, 'incoming', 1, 8, incomingDir === 'forward' ? incomingCursor : undefined);
+    },
     enabled: !!task,
     staleTime: 1000 * 60 * 3,
   });
 
   const { data: outgoingData } = useQuery({
-    queryKey: ['task-links', taskId, 'outgoing'],
-    queryFn: () => taskApi.getTaskNeighbourLinks(taskId, 'outgoing', 1, 8),
+    queryKey: ['task-links', taskId, 'outgoing', outgoingCursor, outgoingDir],
+    queryFn: () => {
+      if (outgoingDir === 'backward') {
+        return taskApi.getTaskNeighbourLinks(taskId, 'outgoing', 1, undefined, undefined, 8, outgoingCursor);
+      }
+      return taskApi.getTaskNeighbourLinks(taskId, 'outgoing', 1, 8, outgoingDir === 'forward' ? outgoingCursor : undefined);
+    },
     enabled: !!task,
     staleTime: 1000 * 60 * 3,
   });
@@ -125,9 +139,6 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
           <div className="max-w-3xl">
             <p className="eyebrow mb-3">Task detail</p>
             <h1 className="text-4xl font-semibold tracking-[-0.05em] text-app-ink">{task.title}</h1>
-            <p className="mt-3 text-base leading-7 text-app-muted">
-              Full task context now lives in one view: identity, ownership, description, and dependency signal.
-            </p>
           </div>
           <div className="flex flex-wrap gap-2">
             <StatusBadge status={task.status} />
@@ -140,8 +151,7 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
         <SurfaceCard className="p-5">
           <div className="mb-4 flex items-center justify-between">
             <div>
-              <p className="eyebrow mb-2">Meta</p>
-              <h2 className="text-2xl font-semibold tracking-[-0.04em] text-app-ink">Task facts</h2>
+              <h2 className="text-2xl font-semibold tracking-[-0.04em] text-app-ink">Properties</h2>
             </div>
             <button
               onClick={() => {
@@ -166,8 +176,7 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
           <SurfaceCardStrong className="p-5 md:p-6">
             <div className="mb-4 flex items-center justify-between gap-4">
               <div>
-                <p className="eyebrow mb-2">Description</p>
-                <h2 className="text-2xl font-semibold tracking-[-0.04em] text-app-ink">What this task is about</h2>
+                <h2 className="text-2xl font-semibold tracking-[-0.04em] text-app-ink">Description</h2>
               </div>
             </div>
             <p className="text-sm leading-7 text-app-muted whitespace-pre-wrap">
@@ -175,18 +184,49 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
             </p>
           </SurfaceCardStrong>
 
-          <div className="grid gap-6 lg:grid-cols-2">
-            <DependencyCard
-              title="Blocked by"
-              description="Tasks that need to land before this one can move cleanly."
-              tasks={incoming.map((link) => link.source)}
-            />
-            <DependencyCard
-              title="Unblocks"
-              description="Tasks that this work enables or affects downstream."
-              tasks={outgoing.map((link) => link.target)}
-            />
-          </div>
+          <SurfaceCardStrong className="p-5 md:p-6">
+            <div className="mb-4 flex items-center justify-between gap-4">
+              <div>
+                <h2 className="text-2xl font-semibold tracking-[-0.04em] text-app-ink">Links</h2>
+              </div>
+            </div>
+            <div className="grid gap-6 lg:grid-cols-2">
+              <DependencyCard
+                title="Incoming"
+                links={incoming}
+                direction="incoming"
+                pageData={{
+                  hasNextPage: incomingData?.hasNextPage ?? false,
+                  hasPreviousPage: incomingData?.hasPreviousPage ?? false,
+                }}
+                onNext={() => {
+                  setIncomingCursor(incomingData?.endCursor ?? undefined);
+                  setIncomingDir('forward');
+                }}
+                onPrev={() => {
+                  setIncomingCursor(incomingData?.startCursor ?? undefined);
+                  setIncomingDir('backward');
+                }}
+              />
+              <DependencyCard
+                title="Outgoing"
+                links={outgoing}
+                direction="outgoing"
+                pageData={{
+                  hasNextPage: outgoingData?.hasNextPage ?? false,
+                  hasPreviousPage: outgoingData?.hasPreviousPage ?? false,
+                }}
+                onNext={() => {
+                  setOutgoingCursor(outgoingData?.endCursor ?? undefined);
+                  setOutgoingDir('forward');
+                }}
+                onPrev={() => {
+                  setOutgoingCursor(outgoingData?.startCursor ?? undefined);
+                  setOutgoingDir('backward');
+                }}
+              />
+            </div>
+          </SurfaceCardStrong>
         </div>
       </div>
 
@@ -245,32 +285,80 @@ function MetaItem({ label, value }: { label: string; value: string }) {
 
 function DependencyCard({
   title,
-  description,
-  tasks,
+  links,
+  direction,
+  pageData,
+  onNext,
+  onPrev,
 }: {
   title: string;
-  description: string;
-  tasks: ProjectTask[];
+  links: TaskLink[];
+  direction: 'incoming' | 'outgoing';
+  pageData: { hasNextPage: boolean; hasPreviousPage: boolean };
+  onNext: () => void;
+  onPrev: () => void;
 }) {
+  const groupedLinks = links.reduce((acc, link) => {
+    const label = link.label || 'Unlabeled';
+    if (!acc[label]) acc[label] = [];
+    acc[label].push(link);
+    return acc;
+  }, {} as Record<string, TaskLink[]>);
+
   return (
-    <SurfaceCard className="p-5">
-      <p className="eyebrow mb-2">{title}</p>
-      <p className="mb-4 text-sm leading-6 text-app-muted">{description}</p>
-      <div className="space-y-3">
-        {tasks.length === 0 ? (
-          <p className="text-sm leading-6 text-app-muted">No linked tasks in this direction yet.</p>
-        ) : (
-          tasks.map((task) => (
-            <div key={task.id} className="rounded-[22px] border border-app-line bg-white/75 px-4 py-4">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <p className="text-sm font-semibold text-app-ink">{task.title}</p>
-                <StatusBadge status={task.status} />
-              </div>
-              <p className="mt-2 text-xs text-app-muted">{task.team?.name || 'No team assigned'}</p>
+    <SurfaceCard className="flex flex-col p-5">
+      <div>
+        <p className="eyebrow mb-4">{title}</p>
+      </div>
+      <div className="flex-1 space-y-6">
+        {links.length === 0 ? null : (
+          Object.entries(groupedLinks).map(([label, groupLinks]) => (
+            <div key={label} className="space-y-3">
+              <p className="text-xs font-semibold uppercase tracking-wider text-app-muted">{label}</p>
+              {groupLinks.map((link) => {
+                const task = direction === 'incoming' ? link.source : link.target;
+                return (
+                  <div key={link.id} className="rounded-[22px] border border-app-line bg-white/75 px-4 py-4">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <p className="text-sm font-semibold text-app-ink">{task.title}</p>
+                      <StatusBadge status={task.status} />
+                    </div>
+                    <p className="mt-2 text-xs text-app-muted">{task.team?.name || 'No team assigned'}</p>
+                  </div>
+                );
+              })}
             </div>
           ))
         )}
       </div>
+      <div className="mt-6 flex flex-wrap gap-2">
+        <PagingButton disabled={!pageData.hasPreviousPage} onClick={onPrev}>
+          Prev
+        </PagingButton>
+        <PagingButton disabled={!pageData.hasNextPage} onClick={onNext}>
+          Next
+        </PagingButton>
+      </div>
     </SurfaceCard>
+  );
+}
+
+function PagingButton({
+  disabled,
+  onClick,
+  children,
+}: {
+  disabled?: boolean;
+  onClick: () => void;
+  children: string;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className="rounded-full border border-app-line bg-white/80 px-4 py-2 text-xs font-semibold text-app-ink transition hover:border-app-ink/20 disabled:cursor-not-allowed disabled:opacity-40"
+    >
+      {children}
+    </button>
   );
 }
