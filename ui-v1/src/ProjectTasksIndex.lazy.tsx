@@ -7,7 +7,6 @@ import type { ProjectTask } from './api/types';
 import {
   AppModal,
   EmptyState,
-  PageHeader,
   PriorityBadge,
   StatCard,
   StatusBadge,
@@ -84,24 +83,7 @@ export default function ProjectTasksIndex() {
 
   return (
     <div className="page-frame">
-      <SurfaceCardStrong className="hero-gradient p-6 md:p-8">
-        <PageHeader
-          eyebrow="Task management"
-          title="Execution board"
-          description="A calmer list experience with useful filtering, direct task entry, and fast drill-down into dependency context."
-          actions={
-            <button
-              onClick={() => setShowCreate(true)}
-              className="inline-flex items-center gap-2 rounded-full bg-app-accent px-5 py-3 text-sm font-semibold text-white transition hover:bg-app-accent/90"
-            >
-              <Plus size={16} />
-              New task
-            </button>
-          }
-        />
-      </SurfaceCardStrong>
-
-      <div className="mt-6 grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-3">
         <StatCard label="All tasks" value={tasks.length} hint="Tasks in the current page window." />
         <StatCard label="In progress" value={inProgressCount} hint="Active execution work right now." accent="teal" />
         <StatCard label="Done" value={doneCount} hint="Completed work in this view." accent="ink" />

@@ -3,7 +3,7 @@ import { useParams } from '@tanstack/react-router';
 import { Loader2, ShieldCheck, Users } from 'lucide-react';
 import { useApi } from '../../hooks/useApi';
 import type { ProjectMember } from '../../api/types';
-import { EmptyState, PageHeader, SurfaceCardStrong, formatDate } from '../shared/workspace';
+import { EmptyState, SurfaceCardStrong, formatDate } from '../shared/workspace';
 
 export default function ProjectMembersView() {
   const { projectId } = useParams({ from: '/authenticated-layout/projects/$projectId/members' });
@@ -21,15 +21,8 @@ export default function ProjectMembersView() {
 
   return (
     <div className="page-frame">
-      <SurfaceCardStrong className="hero-gradient p-6 md:p-8">
-        <PageHeader
-          eyebrow="Members"
-          title="Project access"
-          description="A simple people view so you can confirm who is in the room before you reason about workload and team ownership."
-        />
-      </SurfaceCardStrong>
 
-      <div className="mt-8">
+      <div>
         {isLoading ? (
           <div className="flex min-h-[18rem] items-center justify-center">
             <Loader2 size={28} className="animate-spin text-app-accent" />

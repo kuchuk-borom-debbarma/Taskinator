@@ -1,9 +1,9 @@
 import { Link, useParams } from '@tanstack/react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowRight, BriefcaseBusiness, LayoutGrid, Orbit, Users } from 'lucide-react';
+import { ArrowRight, BriefcaseBusiness, LayoutGrid, Users } from 'lucide-react';
 import { useApi } from '../../hooks/useApi';
 import type { Project } from '../../api/types';
-import { EmptyState, LoadingPane, PageHeader, PriorityBadge, StatCard, StatusBadge, SurfaceCard, SurfaceCardStrong, formatDate } from '../shared/workspace';
+import { EmptyState, LoadingPane, PriorityBadge, StatCard, StatusBadge, SurfaceCard, SurfaceCardStrong, formatDate } from '../shared/workspace';
 
 const getCachedProject = (queryClient: ReturnType<typeof useQueryClient>, projectId: string) => {
   const direct = queryClient.getQueryData<Project>(['project', projectId]);
@@ -69,35 +69,7 @@ export default function ProjectDashboardView() {
 
   return (
     <div className="page-frame">
-      <SurfaceCardStrong className="hero-gradient overflow-hidden p-6 md:p-8">
-        <PageHeader
-          eyebrow="Project overview"
-          title={project.name}
-          description={project.description || 'This project does not have a written brief yet, but the execution view below still gives the team a clear operating picture.'}
-          actions={
-            <>
-              <Link
-                to="/projects/$projectId/tasks"
-                params={{ projectId: resolvedProjectId! }}
-                className="inline-flex items-center gap-2 rounded-full bg-app-ink px-5 py-3 text-sm font-semibold text-white transition hover:bg-app-ink/92"
-              >
-                Open tasks
-                <ArrowRight size={16} />
-              </Link>
-              <Link
-                to="/graph/$projectId"
-                params={{ projectId: resolvedProjectId! }}
-                className="inline-flex items-center gap-2 rounded-full border border-app-line bg-white/80 px-5 py-3 text-sm font-semibold text-app-ink transition hover:border-app-ink/20"
-              >
-                <Orbit size={16} />
-                View flow map
-              </Link>
-            </>
-          }
-        />
-      </SurfaceCardStrong>
-
-      <div className="mt-6 grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-4">
         <StatCard label="Tasks" value={project.tasksCount} hint="Current recorded scope." />
         <StatCard label="Done" value={doneCount} hint="Execution items completed." accent="teal" />
         <StatCard label="In progress" value={inProgressCount} hint="Tasks actively moving." accent="ink" />

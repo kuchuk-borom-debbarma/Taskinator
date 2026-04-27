@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useParams, useSearch } from '@tanstack/react-router';
-import { ArrowRight, Layers3, Loader2, Plus, Users } from 'lucide-react';
+import { ArrowRight, Loader2, Plus, Users } from 'lucide-react';
 import { useApi } from '../../hooks/useApi';
 import type { Team } from '../../api/types';
-import { AppModal, EmptyState, PageHeader, SurfaceCard, SurfaceCardStrong, TextField, formatDate } from '../shared/workspace';
+import { AppModal, EmptyState, SurfaceCardStrong, TextField, formatDate } from '../shared/workspace';
 
 type TeamSearch = {
   cursor?: string;
@@ -61,24 +61,18 @@ export default function ProjectTeamsView() {
 
   return (
     <div className="page-frame">
-      <SurfaceCardStrong className="hero-gradient p-6 md:p-8">
-        <PageHeader
-          eyebrow="Teams"
-          title="Delivery groups"
-          description="Each team now gets a cleaner summary path so you can understand who owns what without leaving the project context."
-          actions={
-            <button
-              onClick={() => setShowCreate(true)}
-              className="inline-flex items-center gap-2 rounded-full bg-app-accent px-5 py-3 text-sm font-semibold text-white transition hover:bg-app-accent/90"
-            >
-              <Plus size={16} />
-              New team
-            </button>
-          }
-        />
-      </SurfaceCardStrong>
+      <div className="mt-0 flex items-center justify-between gap-4 py-2">
+        <div />
+        <button
+          onClick={() => setShowCreate(true)}
+          className="inline-flex items-center gap-2 rounded-full bg-app-accent px-5 py-3 text-sm font-semibold text-white transition hover:bg-app-accent/90"
+        >
+          <Plus size={16} />
+          New team
+        </button>
+      </div>
 
-      <div className="mt-8 grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+      <div className="mt-8">
         <SurfaceCardStrong className="p-5 md:p-6">
           <div className="mb-6 flex items-center justify-between gap-4">
             <div>
@@ -109,7 +103,7 @@ export default function ProjectTeamsView() {
               }
             />
           ) : (
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {teams.map((team) => (
                 <Link
                   key={team.id}
@@ -165,21 +159,6 @@ export default function ProjectTeamsView() {
             </PagingButton>
           </div>
         </SurfaceCardStrong>
-
-        <SurfaceCard className="p-5">
-          <div className="flex items-center gap-3">
-            <div className="rounded-full bg-app-accent-soft p-3 text-app-accent">
-              <Layers3 size={18} />
-            </div>
-            <div>
-              <p className="eyebrow">Why this view matters</p>
-              <h3 className="text-xl font-semibold text-app-ink">Better ownership visibility</h3>
-            </div>
-          </div>
-          <p className="mt-4 text-sm leading-7 text-app-muted">
-            Team cards now give a short, direct path into who belongs to a group and when it was created, instead of burying that detail in scattered controls.
-          </p>
-        </SurfaceCard>
       </div>
 
       <AppModal
