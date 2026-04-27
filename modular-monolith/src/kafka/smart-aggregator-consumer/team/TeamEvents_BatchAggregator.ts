@@ -154,6 +154,8 @@ export class TeamEvents_BatchAggregator {
             const outboxEntries: OutboxEntry[] = [];
 
             for (const [projectId, delta] of projectTeamDeltas.entries()) {
+                // [Signal]: SYNC_PROJECT_TEAM_COUNT
+                // [Purpose]: Syncs the denormalized total team count for a project.
                 outboxEntries.push({
                     kafka_topic: KAFKA_TOPICS.TEAM_AGGREGATED,
                     payload: {
@@ -166,6 +168,8 @@ export class TeamEvents_BatchAggregator {
             }
 
             for (const [teamId, delta] of teamMemberDeltas.entries()) {
+                // [Signal]: SYNC_TEAM_MEMBER_COUNT
+                // [Purpose]: Syncs the denormalized total member count for a specific team.
                 outboxEntries.push({
                     kafka_topic: KAFKA_TOPICS.TEAM_AGGREGATED,
                     payload: {
@@ -178,6 +182,8 @@ export class TeamEvents_BatchAggregator {
             }
 
             for (const [teamId, userIds] of memberRemovals.entries()) {
+                // [Signal]: UNASSIGN_MEMBER_FROM_TEAM_TASKS
+                // [Purpose]: Cleanup: Unassigns specific user(s) from any tasks belonging to this team (e.g., when they leave the team).
                 outboxEntries.push({
                     kafka_topic: KAFKA_TOPICS.TEAM_AGGREGATED,
                     payload: {
@@ -190,6 +196,8 @@ export class TeamEvents_BatchAggregator {
             }
 
             if (deletedTeamIds.length > 0) {
+                // [Signal]: PURGE_TEAM_MEMBERSHIPS
+                // [Purpose]: Bulk Cleanup: Purges all membership records for the deleted teams.
                 outboxEntries.push({
                     kafka_topic: KAFKA_TOPICS.TEAM_AGGREGATED,
                     payload: {
@@ -199,6 +207,8 @@ export class TeamEvents_BatchAggregator {
                     },
                 });
 
+                // [Signal]: ORPHAN_TEAM_TASKS
+                // [Purpose]: Cleanup: Removes the team association (fk_team_id -> NULL) for any tasks that belonged to the deleted teams.
                 outboxEntries.push({
                     kafka_topic: KAFKA_TOPICS.TEAM_AGGREGATED,
                     payload: {

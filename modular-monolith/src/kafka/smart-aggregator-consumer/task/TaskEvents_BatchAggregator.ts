@@ -220,6 +220,8 @@ export class TaskEvents_BatchAggregator {
             // Project Count Syncs
             for (const [projectId, delta] of projectDeltas.entries()) {
                 if (delta === 0) continue;
+                // [Signal]: SYNC_PROJECT_TASK_COUNT
+                // [Purpose]: Syncs the denormalized total task count on the Project entity for high-speed dashboard rendering.
                 outboxEntries.push({
                     kafka_topic: KAFKA_TOPICS.TASK_AGGREGATED,
                     payload: {
@@ -234,6 +236,8 @@ export class TaskEvents_BatchAggregator {
             // Team Count Syncs
             for (const [teamId, delta] of teamDeltas.entries()) {
                 if (delta === 0) continue;
+                // [Signal]: SYNC_TEAM_TASK_COUNT
+                // [Purpose]: Syncs the denormalized total task count on the Team entity.
                 outboxEntries.push({
                     kafka_topic: KAFKA_TOPICS.TASK_AGGREGATED,
                     payload: {
@@ -274,6 +278,8 @@ export class TaskEvents_BatchAggregator {
             }
 
             for (const [projectId, links] of projectLinks.entries()) {
+                // [Signal]: SYNC_TASK_REACHABILITY
+                // [Purpose]: Updates the transitive closure (reachability) table when task-to-task links are added or removed.
                 outboxEntries.push({
                     kafka_topic: KAFKA_TOPICS.TASK_AGGREGATED,
                     payload: {
@@ -289,7 +295,8 @@ export class TaskEvents_BatchAggregator {
             if (deletedTaskIds.size > 0) {
                 const ids = Array.from(deletedTaskIds);
 
-                // Signal Task Module to purge direct links
+                // [Signal]: DELETE_TASK_LINKS
+                // [Purpose]: Cleanup: Purges all direct dependency link records (source/target) involving the deleted tasks.
                 outboxEntries.push({
                     kafka_topic: KAFKA_TOPICS.TASK_AGGREGATED,
                     payload: {
@@ -298,7 +305,8 @@ export class TaskEvents_BatchAggregator {
                     },
                 });
 
-                // Signal Task Module to repair reachability paths
+                // [Signal]: DELETE_TASK_REACHABILITY
+                // [Purpose]: Massive Cleanup: Triggers the chunked, recursive purge and repair of the graph reachability closure table.
                 // This is a separate, heavy operation that must be handled by the listener
                 outboxEntries.push({
                     kafka_topic: KAFKA_TOPICS.TASK_AGGREGATED,
