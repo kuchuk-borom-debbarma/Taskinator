@@ -278,8 +278,8 @@ function TaskRow({ task, projectId }: { task: ProjectTask; projectId: string }) 
 
 function MiniInsight({ label, value, description }: { label: string; value: string | number; description: string }) {
   return (
-    <div className="rounded-2xl bg-app-ink/4 px-4 py-4">
-      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-app-muted">{label}</p>
+    <div className="rounded-2xl bg-app-accent/10 px-4 py-4">
+      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-app-accent">{label}</p>
       <p className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-app-ink">{value}</p>
       <p className="mt-2 text-sm leading-6 text-app-muted">{description}</p>
     </div>

@@ -95,17 +95,17 @@ export default function TeamDetailPage() {
         <SurfaceCard className="p-5">
           <p className="eyebrow mb-2">Team meta</p>
           <div className="space-y-3 text-sm text-app-muted">
-            <div className="rounded-2xl bg-app-ink/4 px-4 py-4">
-              <p className="font-semibold text-app-ink">Created</p>
-              <p className="mt-1">{formatDate(team.createdAt)}</p>
+            <div className="rounded-2xl bg-app-accent/10 px-4 py-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-app-accent">Created</p>
+              <p className="mt-2 text-sm font-semibold text-app-ink">{formatDate(team.createdAt)}</p>
             </div>
-            <div className="rounded-2xl bg-app-ink/4 px-4 py-4">
-              <p className="font-semibold text-app-ink">Updated</p>
-              <p className="mt-1">{formatDate(team.updatedAt || team.createdAt)}</p>
+            <div className="rounded-2xl bg-app-accent/10 px-4 py-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-app-accent">Updated</p>
+              <p className="mt-2 text-sm font-semibold text-app-ink">{formatDate(team.updatedAt || team.createdAt)}</p>
             </div>
-            <div className="rounded-2xl bg-app-ink/4 px-4 py-4">
-              <p className="font-semibold text-app-ink">Version</p>
-              <p className="mt-1">v{team.version ?? 1}</p>
+            <div className="rounded-2xl bg-app-accent/10 px-4 py-4">
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-app-accent">Version</p>
+              <p className="mt-2 text-sm font-semibold text-app-ink">v{team.version ?? 1}</p>
             </div>
           </div>
         </SurfaceCard>

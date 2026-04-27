@@ -90,10 +90,10 @@
   }
 
   .surface-sidebar {
-    background:
-      radial-gradient(circle at top, rgba(255, 106, 61, 0.18), transparent 32%),
-      linear-gradient(180deg, rgba(22, 34, 52, 0.96), rgba(10, 18, 29, 0.96));
-    border-right: 1px solid rgba(255, 255, 255, 0.08);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.4), rgba(249, 244, 237, 0.3));
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-right: 1px solid rgba(24, 33, 47, 0.08);
   }
 
   .hero-gradient {

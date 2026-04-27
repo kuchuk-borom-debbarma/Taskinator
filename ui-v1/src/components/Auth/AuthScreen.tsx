@@ -152,7 +152,7 @@ export const AuthScreen: React.FC = () => {
               </button>
             </form>
 
-            <div className="mt-8 flex items-center justify-between gap-4 rounded-[28px] bg-app-ink/4 px-4 py-4 text-sm text-app-muted">
+            <div className="mt-8 flex items-center justify-between gap-4 rounded-[28px] bg-app-accent/10 px-4 py-4 text-sm text-app-muted">
               <div className="flex items-center gap-2">
                 <ShieldCheck size={16} className="text-app-accent-2" />
                 Session token stored locally after authentication

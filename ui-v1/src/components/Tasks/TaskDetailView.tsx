@@ -284,8 +284,8 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
 
 function MetaItem({ label, value, children }: { label: string; value?: string; children?: React.ReactNode }) {
   return (
-    <div className="rounded-2xl bg-app-ink/4 px-4 py-4">
-      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-app-muted">{label}</p>
+    <div className="rounded-2xl bg-app-accent/10 px-4 py-4">
+      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-app-accent">{label}</p>
       <div className="mt-2 text-sm font-medium text-app-ink flex items-center">{value || children}</div>
     </div>
   );
