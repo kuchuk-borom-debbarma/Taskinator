@@ -8,7 +8,6 @@ import {
   AppModal,
   EmptyState,
   PriorityBadge,
-  StatCard,
   StatusBadge,
   SurfaceCard,
   SurfaceCardStrong,
@@ -78,18 +77,9 @@ export default function ProjectTasksIndex() {
     });
   }, [query, statusFilter, tasks]);
 
-  const doneCount = tasks.filter((task) => task.status === 'DONE').length;
-  const inProgressCount = tasks.filter((task) => task.status === 'IN_PROGRESS').length;
-
   return (
     <div className="page-frame">
-      <div className="grid gap-4 md:grid-cols-3">
-        <StatCard label="All tasks" value={tasks.length} hint="Tasks in the current page window." />
-        <StatCard label="In progress" value={inProgressCount} hint="Active execution work right now." accent="teal" />
-        <StatCard label="Done" value={doneCount} hint="Completed work in this view." accent="ink" />
-      </div>
-
-      <div className="mt-8 grid gap-6 xl:grid-cols-[0.78fr_1.22fr]">
+      <div className="grid gap-6 xl:grid-cols-[0.78fr_1.22fr]">
         <SurfaceCard className="p-5">
           <p className="eyebrow mb-2">Filter tasks</p>
           <h2 className="text-2xl font-semibold tracking-[-0.04em] text-app-ink">Focus the current slice</h2>

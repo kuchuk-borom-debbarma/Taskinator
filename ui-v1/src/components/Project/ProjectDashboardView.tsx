@@ -44,8 +44,6 @@ export default function ProjectDashboardView() {
   const teams = data?.teams ?? [];
   const members = data?.members ?? [];
   const resolvedProjectId = projectId ?? project?.id;
-  const doneCount = tasks.filter((task) => task.status === 'DONE').length;
-  const inProgressCount = tasks.filter((task) => task.status === 'IN_PROGRESS').length;
 
   if (isLoading) {
     return (
@@ -69,10 +67,8 @@ export default function ProjectDashboardView() {
 
   return (
     <div className="page-frame">
-      <div className="grid gap-4 md:grid-cols-4">
-        <StatCard label="Tasks" value={project.tasksCount} hint="Current recorded scope." />
-        <StatCard label="Done" value={doneCount} hint="Execution items completed." accent="teal" />
-        <StatCard label="In progress" value={inProgressCount} hint="Tasks actively moving." accent="ink" />
+      <div className="grid gap-4 md:grid-cols-2">
+        <StatCard label="Tasks" value={project.tasksCount} hint="Total tasks in this project." />
         <StatCard label="Teams" value={project.teamsCount} hint="Groups attached to this project." />
       </div>
 
