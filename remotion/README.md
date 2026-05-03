@@ -16,25 +16,25 @@ Welcome to your Remotion project!
 **Install Dependencies**
 
 ```console
-npm i
+bun install
 ```
 
 **Start Preview**
 
 ```console
-npm run dev
+bun run dev
 ```
 
 **Render video**
 
 ```console
-npx remotion render
+bunx remotion render
 ```
 
 **Upgrade Remotion**
 
 ```console
-npx remotion upgrade
+bunx remotion upgrade
 ```
 
 ## Docs
