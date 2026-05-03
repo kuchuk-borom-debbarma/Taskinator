@@ -28,18 +28,18 @@ const CFG = {
     OWNER_COUNT: 100, // how many "owner" accounts to create
     TOTAL_USERS: 500, // X — total users (includes owners)
     PROJECTS_PER_OWNER_MIN: 2, // Y_min (random projects per owner)
-    PROJECTS_PER_OWNER_MAX: 60, // Y_max
-    MEMBERS_PER_PROJECT_MIN: 40, // Z_min  (random members per project)
-    MEMBERS_PER_PROJECT_MAX: 100, // Z_max
+    PROJECTS_PER_OWNER_MAX: 10, // Y_max
+    MEMBERS_PER_PROJECT_MIN: 10, // Z_min  (random members per project)
+    MEMBERS_PER_PROJECT_MAX: 50, // Z_max
     TEAMS_PER_PROJECT_MIN: 4, // N_min  (random teams per project)
-    TEAMS_PER_PROJECT_MAX: 50, // N_max
+    TEAMS_PER_PROJECT_MAX: 10, // N_max
     TEAM_MEMBERS_MIN: 5, // B
     TEAM_MEMBERS_MAX: 50, // C
-    TASKS_PER_PROJECT_MIN: 50, // D_min  (random tasks per project)
-    TASKS_PER_PROJECT_MAX: 100, // D_max
+    TASKS_PER_PROJECT_MIN: 10, // D_min  (random tasks per project)
+    TASKS_PER_PROJECT_MAX: 40, // D_max
     LINK_DEPTH_MIN: 3, // E
     LINK_DEPTH_MAX: 12, // F
-    LINKED_TASK_PCT: 70, // G  (percent of tasks in link graphs)
+    LINKED_TASK_PCT: 90, // G  (percent of tasks in link graphs)
     CONCURRENCY: 20, // parallel GQL calls
     PASSWORD: '123',
 } as const;
