@@ -123,7 +123,6 @@ const projectCols: Col[] = [
 	{ name: 'id', type: 'UUID', isPk: true },
 	{ name: 'name', type: 'TEXT' },
 	{ name: 'fk_user_id', type: 'TEXT', isFk: true },
-	{ name: 'version', type: 'INTEGER' },
 	{ name: 'members_count', type: 'INTEGER', isDenorm: true },
 	{ name: 'tasks_count', type: 'INTEGER', isDenorm: true },
 	{ name: 'teams_count', type: 'INTEGER', isDenorm: true },
@@ -133,7 +132,6 @@ const teamCols: Col[] = [
 	{ name: 'id', type: 'UUID', isPk: true },
 	{ name: 'name', type: 'TEXT' },
 	{ name: 'fk_project_id', type: 'UUID', isFk: true },
-	{ name: 'version', type: 'INTEGER' },
 	{ name: 'members_count', type: 'INTEGER', isDenorm: true },
 	{ name: 'tasks_count', type: 'INTEGER', isDenorm: true },
 ];
@@ -170,20 +168,20 @@ export const DenormalizationSolution: React.FC = () => {
 					</div>
 
 					{/* Tables */}
-					<div style={{ position: 'absolute', top: 200, left: 50 }}>
+					<div style={{ position: 'absolute', top: 175, left: 50 }}>
 						<Appear at={fps * 1} x={-30} y={0}>
 							<TableCard title="project" cols={projectCols} accentColor={COLORS.accent} />
 						</Appear>
 					</div>
 
-					<div style={{ position: 'absolute', top: 200, left: 310 }}>
+					<div style={{ position: 'absolute', top: 175, left: 310 }}>
 						<Appear at={fps * 1.5} x={-30} y={0}>
 							<TableCard title="project_team" cols={teamCols} accentColor={COLORS.accent2} />
 						</Appear>
 					</div>
 
 					{/* Legend */}
-					<div style={{ position: 'absolute', top: 205, left: 570 }}>
+					<div style={{ position: 'absolute', top: 180, left: 570 }}>
 						<Appear at={fps * 2} x={30} y={0}>
 							<div style={{
 								background: 'rgba(0,230,118,0.08)', border: `1px solid ${COLORS.success}44`,
@@ -202,7 +200,7 @@ export const DenormalizationSolution: React.FC = () => {
 					</div>
 
 					{/* Query comparison */}
-					<div style={{ position: 'absolute', top: 420, left: 50, right: 50 }}>
+					<div style={{ position: 'absolute', top: 450, left: 50, right: 50 }}>
 						<Sequence from={fps * 4}>
 							<Appear at={0} y={30}>
 								<div style={{ display: 'flex', gap: 20, alignItems: 'stretch' }}>
