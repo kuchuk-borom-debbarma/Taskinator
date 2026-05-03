@@ -3,6 +3,7 @@ import { AbsoluteFill, Sequence, useVideoConfig, useCurrentFrame, spring } from 
 import { TableNode } from './components/TableNode';
 import { COLORS, GRADIENTS } from './components/Nodes';
 import { TitleCard } from './components/TitleCard';
+import { QueryProblem } from './QueryProblem';
 
 const projectCols = [
 	{ name: 'id', type: 'UUID', isPk: true },
@@ -93,11 +94,9 @@ const AnimatedTable: React.FC<{
 };
 
 export const SchemaDesign: React.FC = () => {
-	const { fps, width } = useVideoConfig();
+	const { fps } = useVideoConfig();
 	const frame = useCurrentFrame();
 	const segmentFrame = frame - fps * 3;
-
-	const centerX = width / 2;
 
 	return (
 		<AbsoluteFill style={{ background: GRADIENTS.bg }}>
@@ -105,7 +104,7 @@ export const SchemaDesign: React.FC = () => {
 				<TitleCard title="The Data Foundation" />
 			</Sequence>
 
-			<Sequence from={fps * 3}>
+			<Sequence from={fps * 3} durationInFrames={fps * 10}>
 				<AbsoluteFill style={{ padding: '20px' }}>
 					<div style={{
 						flex: 1,
@@ -136,6 +135,10 @@ export const SchemaDesign: React.FC = () => {
 						<AnimatedTable table={{ name: 'task_link', cols: taskLinkCols }} pos={{ x: 950, y: 80 }} showAt={fps * 6.5} />
 					</div>
 				</AbsoluteFill>
+			</Sequence>
+
+			<Sequence from={fps * 13}>
+				<QueryProblem />
 			</Sequence>
 		</AbsoluteFill>
 	);
