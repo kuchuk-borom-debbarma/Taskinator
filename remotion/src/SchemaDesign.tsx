@@ -331,7 +331,7 @@ export const SchemaDesign: React.FC = () => {
 		<AbsoluteFill style={{ background: GRADIENTS.bg }}>
 			{/* 1. Title */}
 			<Sequence from={0} durationInFrames={fps * 3}>
-				<TitleCard title="The Data Foundation" />
+				<TitleCard title="Schema Design" />
 			</Sequence>
 
 			{/* 2. Schema entities scene */}
