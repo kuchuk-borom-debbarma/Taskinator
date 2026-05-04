@@ -18,7 +18,7 @@ export const RemotionRoot: React.FC = () => {
       <Composition
         id="SchemaDesign"
         component={SchemaDesign}
-        durationInFrames={2100}
+        durationInFrames={3360}
         fps={30}
         width={1280}
         height={720}

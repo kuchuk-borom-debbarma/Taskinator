@@ -9,6 +9,9 @@ import { TypographyIntro } from './components/TypographyIntro';
 import { QueryProblem } from './QueryProblem';
 import { DenormalizationSolution } from './DenormalizationSolution';
 import { DenormalizationDrawback } from './DenormalizationDrawback';
+import { TaskLinkProblem } from './TaskLinkProblem';
+import { ClosureTableSolution } from './ClosureTableSolution';
+import { ClosureTableDrawback } from './ClosureTableDrawback';
 
 /* ════════════════════════════════════════════════════════
    DESIGN TOKENS
@@ -350,8 +353,23 @@ export const SchemaDesign: React.FC = () => {
 			</Sequence>
 
 			{/* 5. Drawback (write amplification) */}
-			<Sequence from={fps * 52}>
+			<Sequence from={fps * 52} durationInFrames={fps * 16}>
 				<DenormalizationDrawback />
+			</Sequence>
+
+			{/* 6. Task link — the recursive query problem */}
+			<Sequence from={fps * 68} durationInFrames={fps * 14}>
+				<TaskLinkProblem />
+			</Sequence>
+
+			{/* 7. Closure table — O(1) reads (the solution) */}
+			<Sequence from={fps * 82} durationInFrames={fps * 14}>
+				<ClosureTableSolution />
+			</Sequence>
+
+			{/* 8. Closure table — write amplification (the drawback) */}
+			<Sequence from={fps * 96}>
+				<ClosureTableDrawback />
 			</Sequence>
 		</AbsoluteFill>
 	);
