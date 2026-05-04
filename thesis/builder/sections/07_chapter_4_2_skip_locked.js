@@ -1,4 +1,4 @@
-const { h2, h3, body, emptyLine, imgPlaceholder, figCaption } = require('../utils');
+const { h2, h3, body, emptyLine, insertImage, figCaption } = require('../utils');
 
 module.exports = function getChapter4_2() {
   return [
@@ -7,7 +7,7 @@ module.exports = function getChapter4_2() {
     body("At an operational scale of 10,000 RPS, this polling methodology is catastrophic. Even when the system is relatively idle, aggressive polling introduces severe database CPU load and saturates network bandwidth."),
     body("Taskinator discards polling entirely in favor of reactivity. The Outbox Relay connects via the native pg driver and executes a persistent LISTEN outbox_event_notification command. When the aforementioned wCTE commits, PostgreSQL natively pushes a highly efficient, lightweight notification through the socket, instantly waking the idle relay."),
     emptyLine(),
-    imgPlaceholder("Figure 4.2: Concurrent Outbox Polling: Mitigating the Thundering Herd with SKIP LOCKED"),
+    insertImage("diagram_thundering_herd.png"),
     figCaption("Figure 4.2: Concurrent Outbox Polling: Mitigating the Thundering Herd with SKIP LOCKED"),
     
     h3("4.2.1 The Thundering Herd Problem in Kubernetes Clusters"),

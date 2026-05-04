@@ -1,5 +1,5 @@
 const { Paragraph, TextRun } = require('docx');
-const { h1, h2, h3, body, numberedRuns, run, emptyLine, imgPlaceholder, figCaption, F } = require('../utils');
+const { h1, h2, h3, body, numberedRuns, run, emptyLine, insertImage, figCaption, F } = require('../utils');
 
 module.exports = function getChapter3_1() {
   return [
@@ -12,7 +12,7 @@ module.exports = function getChapter3_1() {
     h2("3.1 Overall System Architecture"),
     body("The overarching system architecture of Taskinator is constructed as a Modular Monolith underpinned by an Event-Driven Architecture (EDA) backbone. This hybrid approach provides the deployment simplicity and operational ease of a monolithic application while simultaneously enforcing the strict domain boundaries, loose coupling, and horizontal scalability characteristic of microservice architectures."),
     emptyLine(),
-    imgPlaceholder("Figure 3.1: Full-Stack Layered Architecture and Data Flow — Taskinator"),
+    insertImage("diagram_system_overview.png"),
     figCaption("Figure 3.1: Full-Stack Layered Architecture and Data Flow — Taskinator"),
     body("The architecture is physically and logically divided into five distinct operational layers:"),
     numberedRuns([run("Layer 1 (Client Presentation): ", true), run("The React 18 Frontend, featuring the highly interactive Task Graph visualization powered by D3.js, and Apollo Client for normalized state management. It connects to the backend via HTTP POST for queries and mutations, and utilizing Server-Sent Events (SSE) for unidirectional real-time data ingestion.")], "n2"),

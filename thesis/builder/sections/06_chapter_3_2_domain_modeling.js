@@ -1,11 +1,11 @@
-const { h2, body, emptyLine, imgPlaceholder, figCaption, bulletRuns, run } = require('../utils');
+const { h2, body, emptyLine, insertImage, figCaption, bulletRuns, run } = require('../utils');
 
 module.exports = function getChapter3_2() {
   return [
     h2("3.2 Domain Modeling and ER Schema"),
     body("Taskinator's domain model is strictly relational, explicitly designed to support massive datasets without resorting to unstructured NoSQL patterns, ensuring rigid data integrity and referential safety."),
     emptyLine(),
-    imgPlaceholder("Figure 3.2: Core Domain Entity-Relationship (ER) Model"),
+    insertImage("diagram_erd_full.png"),
     figCaption("Figure 3.2: Core Domain Entity-Relationship (ER) Model"),
     body("The core entities within the database schema are highly optimized for distinct read/write patterns:"),
     bulletRuns([run("project: ", true), run("Acts as the bounding context for almost all queries. Contains heavily denormalized integer counters (e.g., task_count, completed_task_count) to avoid expensive table scans.")], "b1"),

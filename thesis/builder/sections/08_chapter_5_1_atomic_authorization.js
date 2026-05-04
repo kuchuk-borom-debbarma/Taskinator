@@ -1,4 +1,4 @@
-const { h1, h2, h3, body, emptyLine, imgPlaceholder, figCaption, codeLine, pageBreak } = require('../utils');
+const { h1, h2, h3, body, emptyLine, insertImage, figCaption, codeLine, pageBreak } = require('../utils');
 
 module.exports = function getChapter5_1() {
   return [
@@ -8,7 +8,7 @@ module.exports = function getChapter5_1() {
     h2("5.1 CTE-Based Atomic Authorization"),
     body("To avoid executing multiple sequential roundtrips to an external authorization service or executing separate SELECT permission verification queries before every single mutation, Taskinator bakes the Role-Based Access Control (RBAC) security matrix directly into the underlying SQL mutation utilizing Common Table Expressions (CTEs)."),
     emptyLine(),
-    imgPlaceholder("Figure 5.1: RBAC Authorization Flow"),
+    insertImage("rbac_authorization_flow.png"),
     figCaption("Figure 5.1: RBAC Authorization Flow"),
     
     h3("5.1.1 The Single-Trip Security Paradigm"),

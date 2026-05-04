@@ -1,4 +1,4 @@
-const { h2, h3, body, emptyLine, imgPlaceholder, figCaption, pageBreak } = require('../utils');
+const { h2, h3, body, emptyLine, insertImage, figCaption, pageBreak } = require('../utils');
 
 module.exports = function getChapter4_4() {
   return [
@@ -6,7 +6,7 @@ module.exports = function getChapter4_4() {
     body("In hierarchical systems, deleting a root node that possesses 50,000 descendants via a synchronous SQL ON DELETE CASCADE command is computationally disastrous. A standard RDBMS will acquire an exclusive table lock or massive row locks, traversing the foreign key relationships to verify constraints and delete every single child row within a single, massive transaction. This operation can take several seconds to execute. During this window, the database is severely restricted; concurrent operations from other users are blocked, and transaction queues rapidly hit their maximum capacity, resulting in widespread 503 Service Unavailable errors across the entire application."),
     body("Taskinator completely circumvents this bottleneck by implementing a specialized architectural pattern termed \"Declarative Signalling and Self-Chunking.\", colloquially referred to as \"The Bubbling Effect\"."),
     emptyLine(),
-    imgPlaceholder("Figure 4.4: Chunked Self-Signaling Deletion (\"The Bubbling Effect\")"),
+    insertImage("diagram_chunked_deletion.png"),
     figCaption("Figure 4.4: Chunked Self-Signaling Deletion (\"The Bubbling Effect\")"),
     
     h3("4.4.1 The Declarative Signal"),

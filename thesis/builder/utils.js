@@ -1,9 +1,11 @@
 const {
   Paragraph, TextRun, Table, TableRow, TableCell,
   AlignmentType, HeadingLevel, BorderStyle,
-  WidthType, ShadingType, VerticalAlign, PageBreak,
+  WidthType, ShadingType, VerticalAlign, PageBreak, ImageRun,
   PositionalTab, PositionalTabAlignment, PositionalTabRelativeTo, PositionalTabLeader
 } = require('docx');
+const fs = require('fs');
+const path = require('path');
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 const CONTENT_W = 9026; // A4 with 1" margins in DXA
@@ -138,7 +140,7 @@ function codeLine(text, spaceBefore = 0, spaceAfter = 0) {
   });
 }
 
-// Image placeholder
+// Image placeholder (keep for fallback/backwards compatibility)
 function imgPlaceholder(label) {
   return new Table({
     width: { size: CONTENT_W, type: WidthType.DXA },
@@ -161,6 +163,48 @@ function imgPlaceholder(label) {
         })]
       })]
     })]
+  });
+}
+
+// Insert real image from diagrams folder
+function insertImage(filename) {
+  const imagePath = path.join(__dirname, '../diagrams', filename);
+  
+  if (!fs.existsSync(imagePath)) {
+    console.warn(`Warning: Image not found: ${imagePath}`);
+    return imgPlaceholder(filename);
+  }
+
+  const buf = fs.readFileSync(imagePath);
+  let w = 600;
+  let h = 400;
+  
+  // Read PNG dimensions natively from the header
+  if (buf.toString('hex', 0, 8) === '89504e470d0a1a0a') {
+    w = buf.readUInt32BE(16);
+    h = buf.readUInt32BE(20);
+  }
+
+  // Max width roughly 6.25 inches (CONTENT_W / 1440). Standard is ~600px width.
+  const maxWidth = 600;
+  if (w > maxWidth) {
+    const ratio = maxWidth / w;
+    w = maxWidth;
+    h = Math.round(h * ratio);
+  }
+
+  return new Paragraph({
+    alignment: AlignmentType.CENTER,
+    spacing: { before: 120, after: 120 },
+    children: [
+      new ImageRun({
+        data: fs.readFileSync(imagePath),
+        transformation: {
+          width: w,
+          height: h
+        }
+      })
+    ]
   });
 }
 
@@ -256,6 +300,6 @@ module.exports = {
   CONTENT_W, F, CODE_F,
   body, bodyRuns, run, centered, centeredBold, emptyLine, pageBreak,
   h1, h2, h3, h4, boldLabel, bullet, bulletRuns, numbered, numberedRuns,
-  codeLine, imgPlaceholder, figCaption, tocEntry,
+  codeLine, imgPlaceholder, insertImage, figCaption, tocEntry,
   tblHeader, tblRow, tblCaption, sigBlock
 };

@@ -1,4 +1,4 @@
-const { h1, h2, h3, body, emptyLine, imgPlaceholder, figCaption, codeLine, pageBreak } = require('../utils');
+const { h1, h2, h3, body, emptyLine, insertImage, figCaption, codeLine, pageBreak } = require('../utils');
 
 module.exports = function getChapter4_1() {
   return [
@@ -9,7 +9,7 @@ module.exports = function getChapter4_1() {
     body("A classic, well-documented failure mode in distributed systems occurs when a database transaction successfully commits, but the application Node.js process crashes milliseconds before publishing the resulting domain event to Apache Kafka. This creates a ghost state: the data exists in the database, but downstream systems (analytics, search indexing, real-time UIs) are completely unaware, leaving the system permanently inconsistent."),
     body("To completely eradicate this dual-write problem, Taskinator utilizes the Transactional Outbox Pattern. This guarantees absolute atomic writes: the business entity mutation and the domain event emission are committed to the same exact SQL database simultaneously. If either fails, the entire transaction rolls back."),
     emptyLine(),
-    imgPlaceholder("Figure 4.1: Transactional Outbox Workflow using wCTE"),
+    insertImage("diagram_outbox_pattern.png"),
     figCaption("Figure 4.1: Transactional Outbox Workflow using wCTE"),
     
     h3("4.1.1 Eliminating Multi-Statement Overhead with Data-Modifying CTEs"),

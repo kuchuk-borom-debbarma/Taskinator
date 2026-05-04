@@ -1,4 +1,4 @@
-const { h2, h3, body, emptyLine, imgPlaceholder, figCaption, codeLine, pageBreak } = require('../utils');
+const { h2, h3, body, emptyLine, insertImage, figCaption, codeLine, pageBreak } = require('../utils');
 
 module.exports = function getChapter4_3() {
   return [
@@ -6,7 +6,7 @@ module.exports = function getChapter4_3() {
     body("Pushing millions of events efficiently into the Kafka broker solves the upstream producer bottleneck. However, if the downstream consumers cannot process these events rapidly enough, Kafka will experience massive partition lag. Naive consumer implementations process one Kafka event at a time, executing a separate database transaction for every incoming event. At 10,000 RPS, executing 10,000 sequential UPDATE transactions to modify counters or analytics will instantly exhaust the database connection pool."),
     body("To mitigate this, Taskinator introduces a specialized background worker pattern called the Smart Batch Aggregator."),
     emptyLine(),
-    imgPlaceholder("Figure 4.3: Smart Batch Aggregator Data Flow and Semantic Folding"),
+    insertImage("diagram_aggregator_folding.png"),
     figCaption("Figure 4.3: Smart Batch Aggregator Data Flow and Semantic Folding"),
     
     h3("4.3.1 Kafka Partitioning Strategy"),

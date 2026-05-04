@@ -1,5 +1,5 @@
 const { Paragraph, TextRun, AlignmentType } = require('docx');
-const { emptyLine, centeredBold, centered, imgPlaceholder, pageBreak, F } = require('../utils');
+const { emptyLine, centeredBold, centered, insertImage, pageBreak, F } = require('../utils');
 
 module.exports = function getCover() {
   return [
@@ -22,7 +22,7 @@ module.exports = function getCover() {
     new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 60, after: 60 }, children: [new TextRun({ text: "Guide Name: ", bold: true, size: 22, font: F }), new TextRun({ text: "Dr. Abhijit Biswas", size: 22, font: F })] }),
     new Paragraph({ alignment: AlignmentType.CENTER, spacing: { before: 60, after: 60 }, children: [new TextRun({ text: "Designation: ", bold: true, size: 22, font: F }), new TextRun({ text: "Coordinator CSE & CA", size: 22, font: F })] }),
     emptyLine(), emptyLine(),
-    imgPlaceholder("ICFAI University Tripura Logo"),
+    insertImage("logo.png"),
     emptyLine(),
     centeredBold("The ICFAI University, Tripura", 24),
     centeredBold("DEPARTMENT OF COMPUTER SCIENCE AND ENGINEERING", 22),

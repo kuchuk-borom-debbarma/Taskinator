@@ -1,4 +1,4 @@
-const { h1, h2, h3, body, emptyLine, imgPlaceholder, figCaption } = require('../utils');
+const { h1, h2, h3, body, emptyLine, insertImage, figCaption } = require('../utils');
 
 module.exports = function getChapter7_1() {
   return [
@@ -8,7 +8,7 @@ module.exports = function getChapter7_1() {
     h2("7.1 Containerized Integration Testing via TestContainers"),
     body("Unit testing complex SQL queries against mock objects (such as in-memory SQLite instances or mocked driver responses) is fundamentally flawed. These mocks fail to validate specific PostgreSQL dialect mechanics, trigger cascades, jsonb aggregations, and concurrent locking behaviors (such as the SKIP LOCKED functionality)."),
     emptyLine(),
-    imgPlaceholder("Figure 7.1: Containerized Testing Architecture and Mutation Testing"),
+    insertImage("diagram_test_architecture.png"),
     figCaption("Figure 7.1: Containerized Testing Architecture and Mutation Testing"),
     
     h3("7.1.1 Ephemeral Test Environments"),

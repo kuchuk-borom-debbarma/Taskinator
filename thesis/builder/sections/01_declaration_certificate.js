@@ -1,5 +1,5 @@
 const { Paragraph, TextRun, AlignmentType } = require('docx');
-const { emptyLine, centeredBold, imgPlaceholder, pageBreak, body, sigBlock, F } = require('../utils');
+const { emptyLine, centeredBold, insertImage, pageBreak, body, sigBlock, F } = require('../utils');
 
 module.exports = function getDeclarationAndCertificate() {
   return [
@@ -7,7 +7,7 @@ module.exports = function getDeclarationAndCertificate() {
     // DECLARATION
     // ══════════════════════════════════════════════════════════════
     emptyLine(),
-    imgPlaceholder("ICFAI University Tripura Logo"),
+    insertImage("logo.png"),
     emptyLine(),
     centeredBold("The ICFAI University, Tripura", 22),
     centeredBold("DEPARTMENT OF COMPUTER SCIENCE AND ENGINEERING", 22),
@@ -26,7 +26,7 @@ module.exports = function getDeclarationAndCertificate() {
     // CERTIFICATE
     // ══════════════════════════════════════════════════════════════
     emptyLine(),
-    imgPlaceholder("ICFAI University Tripura Logo"),
+    insertImage("logo.png"),
     emptyLine(),
     centeredBold("The ICFAI University, Tripura", 22),
     centeredBold("DEPARTMENT OF COMPUTER SCIENCE AND ENGINEERING", 22),

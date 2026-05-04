@@ -1,4 +1,4 @@
-const { h2, h3, h4, body, emptyLine, imgPlaceholder, figCaption, codeLine, pageBreak } = require('../utils');
+const { h2, h3, h4, body, emptyLine, insertImage, figCaption, codeLine, pageBreak } = require('../utils');
 
 module.exports = function getChapter3_3() {
   return [
@@ -8,7 +8,7 @@ module.exports = function getChapter3_3() {
     h3("3.3.1 Task Reachability Engine: Custom Closure Tables"),
     body("To support infinite task nesting and complex DAG (Directed Acyclic Graph) dependencies, Taskinator rejects slow recursive WITH RECURSIVE queries in favor of a Custom Closure Table architecture. The task_reachability index stores every possible path from every ancestor to every descendant in the graph, tracking the exact depth (number of hops)."),
     emptyLine(),
-    imgPlaceholder("Figure 3.3: Task Reachability Engine — Closure Table Cross-Join Expansion"),
+    insertImage("diagram_closure_table_math.png"),
     figCaption("Figure 3.3: Task Reachability Engine — Closure Table Cross-Join Expansion"),
     h4("Cross-Join Expansion Mathematics:"),
     body("When a user creates a new dependency linking Task A as a parent of Task B, the engine cannot simply insert a single row. It must query the closure table for all tasks that reach A (the Ancestors) and all tasks reached by B (the Descendants)."),
