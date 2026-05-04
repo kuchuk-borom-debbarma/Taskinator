@@ -2,6 +2,7 @@ import React from 'react';
 import { AbsoluteFill, Sequence, useVideoConfig, useCurrentFrame, spring, interpolate } from 'remotion';
 import { COLORS, GRADIENTS } from './components/Nodes';
 import { TitleCard } from './components/TitleCard';
+import { BlockingSlideA, BlockingSlideB } from './BlockingProblem';
 
 /* ────────────────────────────────────────────────────────
    LAYOUT  — nodes fit in left 840px, step panel right 350px
@@ -322,8 +323,14 @@ export const SyncArchitecture: React.FC = () => {
 			<Sequence from={fps * 26} durationInFrames={fps * 15}>
 				<CreateTaskLink />
 			</Sequence>
-			<Sequence from={fps * 41}>
+			<Sequence from={fps * 41} durationInFrames={fps * 13}>
 				<ReadProject />
+			</Sequence>
+			<Sequence from={fps * 54} durationInFrames={fps * 12}>
+				<BlockingSlideA />
+			</Sequence>
+			<Sequence from={fps * 66}>
+				<BlockingSlideB />
 			</Sequence>
 		</AbsoluteFill>
 	);

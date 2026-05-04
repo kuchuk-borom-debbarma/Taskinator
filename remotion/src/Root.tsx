@@ -27,7 +27,7 @@ export const RemotionRoot: React.FC = () => {
       <Composition
         id="SyncArchitecture"
         component={SyncArchitecture}
-        durationInFrames={1620}
+        durationInFrames={2340}
         fps={30}
         width={1280}
         height={720}
