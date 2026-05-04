@@ -3,6 +3,7 @@ import { AbsoluteFill, Sequence, useVideoConfig, useCurrentFrame, spring, interp
 import { COLORS, GRADIENTS } from './components/Nodes';
 import { TitleCard } from './components/TitleCard';
 import { BlockingSlideA, BlockingSlideB } from './BlockingProblem';
+import { AsyncIntroSlide, AsyncCreateTask, AsyncCreateTaskLink, AsyncReadProject } from './AsyncSolution';
 
 /* ────────────────────────────────────────────────────────
    LAYOUT  — nodes fit in left 840px, step panel right 350px
@@ -329,8 +330,21 @@ export const SyncArchitecture: React.FC = () => {
 			<Sequence from={fps * 54} durationInFrames={fps * 12}>
 				<BlockingSlideA />
 			</Sequence>
-			<Sequence from={fps * 66}>
+			<Sequence from={fps * 66} durationInFrames={fps * 12}>
 				<BlockingSlideB />
+			</Sequence>
+			{/* ── Phase 2: Async Solution ── */}
+			<Sequence from={fps * 78} durationInFrames={fps * 7}>
+				<AsyncIntroSlide />
+			</Sequence>
+			<Sequence from={fps * 85} durationInFrames={fps * 15}>
+				<AsyncCreateTask />
+			</Sequence>
+			<Sequence from={fps * 100} durationInFrames={fps * 15}>
+				<AsyncCreateTaskLink />
+			</Sequence>
+			<Sequence from={fps * 115}>
+				<AsyncReadProject />
 			</Sequence>
 		</AbsoluteFill>
 	);
