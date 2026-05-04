@@ -1,9 +1,11 @@
+import "react";
 import "./index.css";
 import { Composition } from "remotion";
 import { MyComposition } from "./Composition";
 import { FeatureShowcase } from "./FeatureShowcase";
 import { SchemaDesign } from "./SchemaDesign";
 import { SyncArchitecture } from "./SyncArchitecture";
+import { AsyncProblems } from "./AsyncProblems";
 
 export const RemotionRoot: React.FC = () => {
   return (
@@ -28,6 +30,14 @@ export const RemotionRoot: React.FC = () => {
         id="SyncArchitecture"
         component={SyncArchitecture}
         durationInFrames={3750}
+        fps={30}
+        width={1280}
+        height={720}
+      />
+      <Composition
+        id="AsyncProblems"
+        component={AsyncProblems}
+        durationInFrames={1500}
         fps={30}
         width={1280}
         height={720}
