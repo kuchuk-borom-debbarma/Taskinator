@@ -20,13 +20,18 @@ const getChapter3_5 = require('./sections/06_chapter_3_5_data_dictionary_2');
 const getChapter3_6 = require('./sections/06_chapter_3_6_graphql_api_1');
 const getChapter3_7 = require('./sections/06_chapter_3_7_graphql_api_2');
 const getChapter3_8 = require('./sections/06_chapter_3_8_kysely_code_listing');
+const getChapter3_9 = require('./sections/06_chapter_3_9_edge_identity');
 const getChapter4_1 = require('./sections/07_chapter_4_1_wcte_outbox');
 const getChapter4_2 = require('./sections/07_chapter_4_2_skip_locked');
 const getChapter4_3 = require('./sections/07_chapter_4_3_smart_aggregator');
 const getChapter4_4 = require('./sections/07_chapter_4_4_chunked_deletion');
 const getChapter4_5 = require('./sections/07_chapter_4_5_smart_agg_code_listing');
+const getChapter4_6 = require('./sections/07_chapter_4_6_driver_batching');
+const getChapter4_7 = require('./sections/07_chapter_4_7_e2e_trace');
 const getChapter5_1 = require('./sections/08_chapter_5_1_atomic_authorization');
 const getChapter5_2 = require('./sections/08_chapter_5_2_team_inheritance');
+const getChapter5_3 = require('./sections/08_chapter_5_3_team_management');
+const getChapter5_4 = require('./sections/08_chapter_5_4_optimistic_concurrency');
 const getChapter6_1 = require('./sections/09_chapter_6_1_react_d3');
 const getChapter6_2 = require('./sections/09_chapter_6_2_redis_routing');
 const getChapter6_3 = require('./sections/09_chapter_6_3_apollo_cache');
@@ -94,13 +99,18 @@ const doc = new Document({
       ...getChapter3_6(),
       ...getChapter3_7(),
       ...getChapter3_8(),
+      ...getChapter3_9(),
       ...getChapter4_1(),
       ...getChapter4_2(),
       ...getChapter4_3(),
       ...getChapter4_4(),
       ...getChapter4_5(),
+      ...getChapter4_6(),
+      ...getChapter4_7(),
       ...getChapter5_1(),
       ...getChapter5_2(),
+      ...getChapter5_3(),
+      ...getChapter5_4(),
       ...getChapter6_1(),
       ...getChapter6_2(),
       ...getChapter6_3(),
