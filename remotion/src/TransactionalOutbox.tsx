@@ -3,318 +3,229 @@ import { AbsoluteFill, Sequence, useVideoConfig, useCurrentFrame, spring, interp
 import { COLORS, GRADIENTS } from './components/Nodes';
 import { TitleCard } from './components/TitleCard';
 
-const SP = (f: number, d: number, fps: number) => spring({ frame: f - d, fps, config: { damping: 14, stiffness: 110 } });
-const F  = (s: number, fps: number) => fps * s;
-const tx = (s: number) => `translateY(${interpolate(s,[0,1],[-14,0])}px)`;
+const SP = (f: number, d: number, fps: number) => spring({ frame: f - d, fps, config: { damping: 16, stiffness: 80 } });
+const F  = (s: number) => 30 * s; 
+const tx = (s: number) => `translateY(${interpolate(s,[0,1],[-20,0])}px)`;
 
 /* ── Shell ── */
 const Shell: React.FC<{ children: React.ReactNode }> = ({ children }) => (
 	<AbsoluteFill style={{ background: GRADIENTS.bg }}>
-		<AbsoluteFill style={{ padding: 20 }}>
-			<div style={{ flex:1, position:'relative', overflow:'hidden', background:'rgba(30,41,59,0.18)', backdropFilter:'blur(30px)', borderRadius:20, border:'1px solid rgba(255,255,255,0.08)', boxShadow:'0 30px 80px rgba(0,0,0,0.55)' }}>
+		<AbsoluteFill style={{ padding: 30 }}>
+			<div style={{ flex:1, position:'relative', overflow:'hidden', background:'rgba(15,23,42,0.3)', backdropFilter:'blur(50px)', borderRadius:30, border:'1.5px solid rgba(255,255,255,0.08)', boxShadow:'0 50px 120px rgba(0,0,0,0.7)' }}>
 				{children}
 			</div>
 		</AbsoluteFill>
 	</AbsoluteFill>
 );
 
-/* ── Shared node config ── */
-const NP = { client:{l:28,t:220,w:148,cx:102}, server:{l:262,t:220,w:165,cx:344}, db:{l:548,t:220,w:148,cx:622}, broker:{l:262,t:400,w:165,cx:344}, outbox:{l:548,t:400,w:148,cx:622}, listener:{l:730,t:400,w:155,cx:807} };
-const NB = 220 + 76;
-
+/* ── Components ── */
 const SNode: React.FC<{ icon:string; label:string; sub?:string; color:string; top:number; left:number; w:number; delay:number; glow?:boolean }> = ({ icon,label,sub,color,top,left,w,delay,glow }) => {
 	const f = useCurrentFrame(); const { fps } = useVideoConfig();
 	const s = SP(f, delay, fps);
 	return (
-		<div style={{ position:'absolute', top, left, width:w, opacity:s, transform:`scale(${s})`, background:'rgba(15,23,42,0.88)', border:`1.5px solid ${color}55`, borderRadius:14, padding:'11px 12px', textAlign:'center', boxShadow: glow ? `0 0 24px ${color}44` : '0 8px 24px rgba(0,0,0,0.5)' }}>
-			<div style={{ fontSize:20 }}>{icon}</div>
-			<div style={{ fontSize:10, fontWeight:800, color, letterSpacing:'1px', fontFamily:'Inter', marginTop:4 }}>{label}</div>
-			{sub && <div style={{ fontSize:8, color:COLORS.muted, fontFamily:'Inter', marginTop:2 }}>{sub}</div>}
+		<div style={{ position:'absolute', top, left, width:w, opacity:s, transform:`scale(${s}) translateY(${interpolate(s,[0,1],[10,0])}px)`, background:'rgba(15,23,42,0.95)', border:`2px solid ${color}66`, borderRadius:20, padding:'18px 20px', textAlign:'center', boxShadow: glow ? `0 0 40px ${color}22` : '0 15px 40px rgba(0,0,0,0.6)', zIndex:20 }}>
+			<div style={{ fontSize:32 }}>{icon}</div>
+			<div style={{ fontSize:13, fontWeight:900, color, letterSpacing:'2px', textTransform:'uppercase', fontFamily:'Inter', marginTop:8 }}>{label}</div>
+			{sub && <div style={{ fontSize:10, color:COLORS.muted, fontFamily:'Inter', marginTop:4, fontWeight:600, opacity:0.8 }}>{sub}</div>}
 		</div>
 	);
 };
 
-const HA: React.FC<{ x1:number; x2:number; y:number; color:string; label?:string; below?:boolean; delay:number; dashed?:boolean }> = ({ x1,x2,y,color,label,below,delay,dashed }) => {
+const Arrow: React.FC<{ x1:number; y1:number; x2:number; y2:number; color:string; label?:string; delay:number; dashed?:boolean; labelOffset?:number; labelPos?:number }> = ({ x1,y1,x2,y2,color,label,delay,dashed,labelOffset=0,labelPos=0.5 }) => {
 	const f = useCurrentFrame(); const { fps } = useVideoConfig();
-	const p  = spring({ frame:f-delay, fps, config:{damping:16,stiffness:100} });
-	const lp = spring({ frame:f-delay-4, fps, config:{damping:14} });
-	const tip = x1+(x2-x1)*p;
-	const id  = `ha${x1}${y}${delay}`;
+	const p = spring({ frame: f - delay, fps, config: { damping: 20, stiffness: 70 } });
+	const id = `arrow_${x1}_${y1}_${delay}`;
+	const midX = x1 + (x2 - x1) * p;
+	const midY = y1 + (y2 - y1) * p;
+	
+	const lx = x1 + (x2 - x1) * labelPos;
+	const ly = y1 + (y2 - y1) * labelPos;
+	const angle = Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI;
+
 	return (
 		<>
 			<svg style={{ position:'absolute', top:0, left:0, width:'100%', height:'100%', overflow:'visible', pointerEvents:'none', zIndex:10 }}>
-				<defs><marker id={id} markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M 0 0 L 6 3 L 0 6 z" fill={color}/></marker></defs>
-				<line x1={Math.min(x1,x2)} y1={y} x2={Math.max(x1,x2)} y2={y} stroke={color} strokeWidth={1} opacity={0.08} strokeDasharray="4 3"/>
-				<line x1={x1} y1={y} x2={tip} y2={y} stroke={color} strokeWidth={2} strokeLinecap="round" markerEnd={p>.85?`url(#${id})`:undefined} strokeDasharray={dashed?'8 4':undefined} style={{filter:`drop-shadow(0 0 3px ${color}66)`}}/>
+				<defs>
+					<marker id={id} markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+						<path d="M 0 0 L 8 4 L 0 8 z" fill={color}/>
+					</marker>
+				</defs>
+				<line x1={x1} y1={y1} x2={x2} y2={y2} stroke={color} strokeWidth={1} opacity={0.1} strokeDasharray="4 4"/>
+				<line x1={x1} y1={y1} x2={midX} y2={midY} stroke={color} strokeWidth={3} strokeLinecap="round" markerEnd={p > 0.95 ? `url(#${id})` : undefined} strokeDasharray={dashed ? '10 5' : undefined} style={{ filter: `drop-shadow(0 0 5px ${color}66)` }}/>
 			</svg>
-			{label && <div style={{ position:'absolute', left:Math.min(x1,x2)+8, top:below?y+8:y-24, opacity:lp, fontSize:10, fontWeight:700, color, fontFamily:'monospace', background:'rgba(15,23,42,0.9)', border:`1px solid ${color}44`, borderRadius:6, padding:'2px 7px', whiteSpace:'nowrap', zIndex:20 }}>{label}</div>}
+			{label && (
+				<div style={{ 
+					position:'absolute', 
+					left: lx, 
+					top: ly + labelOffset, 
+					opacity: p, 
+					transform: `translate(-50%, -50%) rotate(${angle}deg)`, 
+					transformOrigin: 'center',
+					zIndex:25 
+				}}>
+					<div style={{ transform: `rotate(${-angle}deg)`, background:'rgba(15,23,42,0.95)', border:`1.5px solid ${color}55`, borderRadius:8, padding:'4px 12px', fontSize:11, fontWeight:800, color, fontFamily:'monospace', whiteSpace:'nowrap', boxShadow: '0 4px 15px rgba(0,0,0,0.5)' }}>
+						{label}
+					</div>
+				</div>
+			)}
 		</>
 	);
 };
 
-const VA: React.FC<{ x:number; y1:number; y2:number; color:string; label?:string; delay:number; dashed?:boolean }> = ({ x,y1,y2,color,label,delay,dashed }) => {
-	const f = useCurrentFrame(); const { fps } = useVideoConfig();
-	const p  = spring({ frame:f-delay, fps, config:{damping:16,stiffness:100} });
-	const lp = spring({ frame:f-delay-4, fps, config:{damping:14} });
-	const tip = y1+(y2-y1)*p;
-	const id  = `va${x}${y1}${delay}`;
-	const down = y2 > y1;
-	return (
-		<>
-			<svg style={{ position:'absolute', top:0, left:0, width:'100%', height:'100%', overflow:'visible', pointerEvents:'none', zIndex:10 }}>
-				<defs><marker id={id} markerWidth="6" markerHeight="6" refX="3" refY={down?5:1} orient={down?'90':'270'}><path d="M 0 0 L 6 3 L 0 6 z" fill={color}/></marker></defs>
-				<line x1={x} y1={y1} x2={x} y2={y2} stroke={color} strokeWidth={1} opacity={0.08} strokeDasharray="4 3"/>
-				<line x1={x} y1={y1} x2={x} y2={tip} stroke={color} strokeWidth={2} strokeLinecap="round" markerEnd={p>.85?`url(#${id})`:undefined} strokeDasharray={dashed?'8 4':undefined} style={{filter:`drop-shadow(0 0 3px ${color}66)`}}/>
-			</svg>
-			{label && <div style={{ position:'absolute', left:x+8, top:(y1+y2)/2-10, opacity:lp, fontSize:10, fontWeight:700, color, fontFamily:'monospace', background:'rgba(15,23,42,0.9)', border:`1px solid ${color}44`, borderRadius:6, padding:'2px 7px', whiteSpace:'nowrap', zIndex:20 }}>{label}</div>}
-		</>
-	);
-};
-
-const Chip: React.FC<{ text:string; color:string; top:number; left:number; delay:number }> = ({ text,color,top,left,delay }) => {
+const StatusChip: React.FC<{ text:string; color:string; top:number; left:number; delay:number }> = ({ text,color,top,left,delay }) => {
 	const f = useCurrentFrame(); const { fps } = useVideoConfig();
 	const s = SP(f, delay, fps);
-	return <div style={{ position:'absolute', top, left, opacity:s, transform:`scale(${s})`, background:`${color}18`, border:`2px solid ${color}`, borderRadius:10, padding:'7px 14px', fontSize:11, fontWeight:800, color, fontFamily:'Inter', whiteSpace:'nowrap', zIndex:25, backdropFilter:'blur(8px)', boxShadow:`0 0 20px ${color}44` }}>{text}</div>;
+	return <div style={{ position:'absolute', top, left, opacity:s, transform: `scale(${s}) translateY(${interpolate(s,[0,1],[10,0])}px)`, background:`${color}25`, border:`2px solid ${color}`, borderRadius:12, padding:'10px 20px', fontSize:13, fontWeight:900, color, fontFamily:'Inter', whiteSpace:'nowrap', zIndex:30, backdropFilter:'blur(15px)', boxShadow:`0 10px 40px ${color}44` }}>{text}</div>;
 };
 
 const Ban: React.FC<{ text:string; color:string; delay:number }> = ({ text,color,delay }) => {
 	const f = useCurrentFrame(); const { fps } = useVideoConfig();
 	const s = SP(f, delay, fps);
 	return (
-		<div style={{ position:'absolute', bottom:22, left:32, right:32, opacity:s, transform:`translateY(${interpolate(s,[0,1],[20,0])}px)`, display:'flex', justifyContent:'center', zIndex:30 }}>
-			<div style={{ background:`${color}12`, border:`2px solid ${color}`, borderRadius:12, padding:'10px 28px', fontSize:13, fontWeight:800, color, fontFamily:'Inter', boxShadow:`0 0 28px ${color}44` }}>{text}</div>
+		<div style={{ position:'absolute', bottom:40, left:60, right:60, opacity:s, transform:`translateY(${interpolate(s,[0,1],[20,0])}px)`, display:'flex', justifyContent:'center', zIndex:40 }}>
+			<div style={{ background:`${color}15`, border:`2px solid ${color}`, borderRadius:20, padding:'14px 48px', fontSize:16, fontWeight:900, color, fontFamily:'Inter', boxShadow:`0 0 50px ${color}33`, backdropFilter:'blur(20px)' }}>{text}</div>
 		</div>
 	);
 };
 
 /* ════════════════════════════════════════════════
-   SLIDE 1 — Problem recap: broker crash
+   SLIDE 1 — The Problem
 ════════════════════════════════════════════════ */
-const ProblemRecap: React.FC = () => {
+const ProblemSlide: React.FC = () => {
 	const f = useCurrentFrame(); const { fps } = useVideoConfig();
-	const D = (s: number) => F(s, fps);
+	const D = (s: number) => F(s);
 	const s0 = SP(f, D(0.5), fps);
+	
+	const nodes = {
+		client: { x: 150, y: 360, w: 200 },
+		server: { x: 450, y: 360, w: 220 },
+		db:     { x: 850, y: 220, w: 220 },
+		broker: { x: 850, y: 500, w: 220 }
+	};
+
 	return (
 		<Shell>
-			<div style={{ position:'absolute', top:26, left:32, right:32, opacity:s0, transform:tx(s0) }}>
-				<div style={{ fontSize:10, fontWeight:800, color:COLORS.danger, letterSpacing:2, textTransform:'uppercase', fontFamily:'Inter', marginBottom:6 }}>The Problem — Recap</div>
-				<h2 style={{ fontSize:26, fontWeight:900, color:COLORS.ink, fontFamily:'Inter', margin:'0 0 4px' }}>Message Loss: The Dual-Write Failure</h2>
-				<p style={{ fontSize:12, color:COLORS.muted, fontFamily:'Inter', margin:0 }}>The client hits the API, the task is written to the DB — but the broker publish is a separate step with no atomicity guarantee.</p>
+			<div style={{ position:'absolute', top:40, left:50, right:50, opacity:s0, transform:tx(s0) }}>
+				<div style={{ fontSize:12, fontWeight:900, color:COLORS.danger, letterSpacing:3, textTransform:'uppercase', fontFamily:'Inter', marginBottom:10 }}>Architectural Risk</div>
+				<h2 style={{ fontSize:36, fontWeight:900, color:COLORS.ink, fontFamily:'Inter', margin:'0 0 8px' }}>The Dual-Write Failure</h2>
+				<p style={{ fontSize:16, color:COLORS.muted, fontFamily:'Inter', margin:0, maxWidth:800, lineHeight:1.6 }}>When two separate systems are updated sequentially, any failure in the second step creates a permanent, irrecoverable state of corruption.</p>
 			</div>
 
-			{/* All 4 nodes */}
-			<SNode icon="📱" label="Client" color={COLORS.accent} top={NP.client.t} left={NP.client.l} w={NP.client.w} delay={D(1)} />
-			<SNode icon="⚙️" label="API Server" color={COLORS.success} top={NP.server.t} left={NP.server.l} w={NP.server.w} delay={D(1.5)} />
-			<SNode icon="🗄️" label="PostgreSQL" color={COLORS.accent3} top={NP.db.t} left={NP.db.l} w={NP.db.w} delay={D(2)} />
-			<SNode icon="💥" label="Msg Broker" sub="CRASHED" color={COLORS.danger} top={NP.broker.t} left={NP.broker.l} w={NP.broker.w} delay={D(4.5)} glow />
+			<SNode icon="📱" label="Client" color={COLORS.accent} top={nodes.client.y - 45} left={nodes.client.x - 100} w={nodes.client.w} delay={D(1)} />
+			<SNode icon="⚙️" label="API Server" color={COLORS.success} top={nodes.server.y - 45} left={nodes.server.x - 110} w={nodes.server.w} delay={D(1.5)} />
+			<SNode icon="🗄️" label="PostgreSQL" color={COLORS.accent3} top={nodes.db.y - 45} left={nodes.db.x - 110} w={nodes.db.w} delay={D(2)} />
+			<SNode icon="💥" label="Broker" sub="DISCONNECTED" color={COLORS.danger} top={nodes.broker.y - 45} left={nodes.broker.x - 110} w={nodes.broker.w} delay={D(4.5)} glow />
 
-			{/* Step 1: client → server */}
-			<HA x1={NP.client.cx+NP.client.w/2} x2={NP.server.l} y={236} color={COLORS.accent} label="POST /api/tasks" delay={D(2)} />
-			{/* Step 2: server → db */}
-			<HA x1={NP.server.cx+NP.server.w/2} x2={NP.db.l} y={236} color={COLORS.success} label="INSERT task" delay={D(3)} />
-			{/* Step 3: db ack → server */}
-			<HA x1={NP.db.l} x2={NP.server.cx+NP.server.w/2} y={256} color={COLORS.success} label="commit ✓" delay={D(4)} />
-			{/* Step 4: 201 back to client */}
-			<HA x1={NP.server.l} x2={NP.client.cx+NP.client.w/2} y={256} color={COLORS.accent} label="201 Created" delay={D(4.5)} />
-			{/* Step 5: server tries to publish — crashes */}
-			<VA x={NP.server.cx} y1={NB} y2={NP.broker.t} color={COLORS.danger} label="publish to Kafka..." delay={D(5)} dashed />
+			<Arrow x1={nodes.client.x + 100} y1={nodes.client.y} x2={nodes.server.x - 110} y2={nodes.server.y} color={COLORS.accent} label="POST /create-task" delay={D(2)} />
+			<Arrow x1={nodes.server.x + 110} y1={nodes.server.y - 20} x2={nodes.db.x - 110} y2={nodes.db.y} color={COLORS.success} label="COMMIT task row" delay={D(2.5)} />
+			<Arrow x1={nodes.server.x + 110} y1={nodes.server.y + 20} x2={nodes.broker.x - 110} y2={nodes.broker.y} color={COLORS.danger} label="publish event (FAIL)" delay={D(4.5)} dashed />
 
-			<Chip text="💥 Broker crashed — publish fails" color={COLORS.danger} top={NP.broker.t+82} left={NP.broker.l-10} delay={D(6.5)} />
-			<Chip text="⚠️ Task in DB — event never sent" color={COLORS.danger} top={NP.db.t+82} left={NP.db.l-20} delay={D(7.5)} />
-
-			<Ban text="💀 Task exists in DB but downstream systems never hear about it" color={COLORS.danger} delay={D(8.5)} />
+			<StatusChip text="💀 Permanent Data Loss" color={COLORS.danger} top={nodes.broker.y - 120} left={nodes.broker.x - 100} delay={D(6.5)} />
 		</Shell>
 	);
 };
 
 /* ════════════════════════════════════════════════
-   SLIDE 2 — Introducing outbox_events table
+   SLIDE 2 — The Solution: Atomic Outbox
 ════════════════════════════════════════════════ */
-const OutboxIntroSlide: React.FC = () => {
+const SolutionIntroSlide: React.FC = () => {
 	const f = useCurrentFrame(); const { fps } = useVideoConfig();
-	const D = (s: number) => F(s, fps);
+	const D = (s: number) => F(s);
 	const s0 = SP(f, D(0.5), fps);
-	const cols = [
-		{ name:'id',          type:'UUID',      note:'Primary key', color:COLORS.accent },
-		{ name:'kafka_topic', type:'TEXT',      note:"e.g. 'task-events'", color:COLORS.warning },
-		{ name:'kafka_key',   type:'TEXT',      note:'projectId — sets partition', color:COLORS.warning },
-		{ name:'payload',     type:'JSONB',     note:'Full event body', color:COLORS.warning },
-		{ name:'created_at',  type:'TIMESTAMPTZ', note:'For ordering & TTL', color:COLORS.muted },
-	];
-	const idea = SP(f, D(5), fps);
+
 	return (
 		<Shell>
-			<div style={{ position:'absolute', top:26, left:32, right:32, opacity:s0, transform:tx(s0) }}>
-				<div style={{ fontSize:10, fontWeight:800, color:COLORS.warning, letterSpacing:2, textTransform:'uppercase', fontFamily:'Inter', marginBottom:6 }}>The Fix — Introducing a New Table</div>
-				<h2 style={{ fontSize:26, fontWeight:900, color:COLORS.ink, fontFamily:'Inter', margin:'0 0 4px' }}>Meet <code style={{ color:COLORS.warning }}>outbox_events</code></h2>
-				<p style={{ fontSize:12, color:COLORS.muted, fontFamily:'Inter', margin:0, lineHeight:1.6 }}>Instead of calling Kafka directly, we write the event as a row into a dedicated table — inside the same database transaction as the business write.</p>
+			<div style={{ position:'absolute', top:40, left:50, right:50, opacity:s0, transform:tx(s0) }}>
+				<div style={{ fontSize:12, fontWeight:900, color:COLORS.success, letterSpacing:3, textTransform:'uppercase', fontFamily:'Inter', marginBottom:10 }}>The Solution: Step 1</div>
+				<h2 style={{ fontSize:36, fontWeight:900, color:COLORS.ink, fontFamily:'Inter', margin:'0 0 8px' }}>Transactional Atomicity</h2>
+				<p style={{ fontSize:16, color:COLORS.muted, fontFamily:'Inter', margin:0, maxWidth:800, lineHeight:1.6 }}>We treat the "Intent to Publish" as data. By storing the event in an <strong>Outbox Table</strong>, we leverage the Database's own transaction engine to guarantee consistency.</p>
 			</div>
 
-			{/* Table visual */}
-			<div style={{ position:'absolute', top:128, left:60, width:560 }}>
-				{/* Header */}
-				<div style={{ display:'flex', background:'rgba(255,171,0,0.12)', borderRadius:'10px 10px 0 0', border:`1px solid ${COLORS.warning}44`, padding:'8px 16px', opacity:SP(f, D(1.5), fps) }}>
-					<div style={{ flex:1.2, fontSize:10, fontWeight:800, color:COLORS.warning, fontFamily:'monospace' }}>COLUMN</div>
-					<div style={{ flex:1, fontSize:10, fontWeight:800, color:COLORS.warning, fontFamily:'monospace' }}>TYPE</div>
-					<div style={{ flex:2, fontSize:10, fontWeight:800, color:COLORS.warning, fontFamily:'monospace' }}>NOTE</div>
-				</div>
-				{cols.map((c, i) => (
-					<div key={i} style={{ display:'flex', background: i%2===0 ? 'rgba(15,23,42,0.7)' : 'rgba(15,23,42,0.5)', border:`1px solid rgba(255,255,255,0.05)`, borderTop:'none', padding:'9px 16px', opacity:SP(f, D(2+i*0.5), fps), borderRadius: i===cols.length-1 ? '0 0 10px 10px' : 0 }}>
-						<div style={{ flex:1.2, fontSize:11, fontWeight:700, color:c.color, fontFamily:'monospace' }}>{c.name}</div>
-						<div style={{ flex:1, fontSize:11, color:COLORS.accent2, fontFamily:'monospace' }}>{c.type}</div>
-						<div style={{ flex:2, fontSize:11, color:COLORS.muted, fontFamily:'Inter' }}>{c.note}</div>
-					</div>
-				))}
-			</div>
-
-			{/* Key insight card */}
-			<div style={{ position:'absolute', top:128, left:660, right:22, opacity:idea, transform:tx(idea) }}>
-				<div style={{ background:'rgba(0,229,255,0.07)', border:`1px solid ${COLORS.accent}33`, borderRadius:14, padding:'18px 20px', marginBottom:16 }}>
-					<div style={{ fontSize:12, fontWeight:800, color:COLORS.accent, fontFamily:'Inter', marginBottom:8 }}>💡 Why a table and not direct Kafka?</div>
-					<div style={{ fontSize:11, color:COLORS.muted, fontFamily:'Inter', lineHeight:1.8 }}>
-						PostgreSQL gives us <strong style={{ color:COLORS.ink }}>ACID transactions</strong>.<br/>
-						Kafka does <em>not</em>.<br/><br/>
-						If we write to this table inside the same <code style={{ color:COLORS.warning }}>BEGIN...COMMIT</code> block as the task insert, both rows are guaranteed to either <span style={{ color:COLORS.success }}>both commit</span> or <span style={{ color:COLORS.danger }}>both rollback</span>.
+			<div style={{ position:'absolute', top:220, left:100, right:100, display:'flex', gap:40, opacity:SP(f, D(1.5), fps) }}>
+				{/* Code Panel */}
+				<div style={{ flex:1.5, background:'rgba(10,15,30,0.98)', border:'2px solid rgba(255,255,255,0.1)', borderRadius:24, padding:32, boxShadow:'0 40px 80px rgba(0,0,0,0.5)' }}>
+					<div style={{ fontFamily:'"Fira Code", monospace', fontSize:14, lineHeight:1.8 }}>
+						<div style={{ color:COLORS.accent2 }}>WITH <span style={{ color:COLORS.accent }}>inserted_task</span> AS (</div>
+						<div style={{ color:COLORS.success, paddingLeft:24 }}>INSERT INTO tasks (...) RETURNING id, project_id</div>
+						<div style={{ color:COLORS.accent2 }}>), <span style={{ color:COLORS.warning }}>inserted_outbox</span> AS (</div>
+						<div style={{ color:COLORS.warning, paddingLeft:24 }}>INSERT INTO outbox_events (topic, payload)</div>
+						<div style={{ color:COLORS.warning, paddingLeft:24 }}>SELECT 'task-created', jsonb_build_object('id', id)</div>
+						<div style={{ color:COLORS.warning, paddingLeft:24 }}>FROM inserted_task</div>
+						<div style={{ color:COLORS.accent2 }}>)</div>
+						<div style={{ color:COLORS.accent2 }}>SELECT * FROM inserted_task;</div>
 					</div>
 				</div>
-				<div style={{ background:'rgba(0,230,118,0.07)', border:`1px solid ${COLORS.success}33`, borderRadius:14, padding:'14px 18px' }}>
-					<div style={{ fontSize:11, fontWeight:800, color:COLORS.success, fontFamily:'Inter', marginBottom:6 }}>✅ The contract</div>
-					<div style={{ fontSize:11, color:COLORS.muted, fontFamily:'Inter', lineHeight:1.7 }}>A separate <strong style={{ color:COLORS.ink }}>Relay process</strong> reads rows from this table and publishes them to Kafka — with retries, batching, and SKIP LOCKED concurrency control.</div>
+
+				{/* Rule Panel */}
+				<div style={{ flex:1, display:'flex', flexDirection:'column', gap:24 }}>
+					<div style={{ background:'rgba(0,229,255,0.1)', border:`2px solid ${COLORS.accent}44`, borderRadius:20, padding:24 }}>
+						<div style={{ color:COLORS.accent, fontWeight:900, fontSize:14, marginBottom:8 }}>✅ ONE TRANSACTION</div>
+						<div style={{ color:COLORS.muted, fontSize:13, lineHeight:1.6 }}>Both records share a single COMMIT. Zero risk of partial success.</div>
+					</div>
+					<div style={{ background:'rgba(0,230,118,0.1)', border:`2px solid ${COLORS.success}44`, borderRadius:20, padding:24 }}>
+						<div style={{ color:COLORS.success, fontWeight:900, fontSize:14, marginBottom:8 }}>✅ NO NETWORK CALLS</div>
+						<div style={{ color:COLORS.muted, fontSize:13, lineHeight:1.6 }}>Writing to the outbox is a local DB operation. No latency, no crash risk.</div>
+					</div>
 				</div>
 			</div>
-
-			<Ban text="📋 outbox_events is the bridge between the DB transaction world and the Kafka streaming world" color={COLORS.warning} delay={D(7)} />
 		</Shell>
 	);
 };
 
 /* ════════════════════════════════════════════════
-   SLIDE 2 — wCTE: atomic write
-════════════════════════════════════════════════ */
-const CodeLine: React.FC<{ text:string; color?:string; indent?:number; delay:number; bold?:boolean }> = ({ text,color=COLORS.muted,indent=0,delay,bold }) => {
-	const f = useCurrentFrame(); const { fps } = useVideoConfig();
-	const s = SP(f, delay, fps);
-	return <div style={{ opacity:s, transform:`translateX(${interpolate(s,[0,1],[-8,0])}px)`, fontSize:11, fontFamily:'monospace', color, fontWeight:bold?800:400, paddingLeft:indent*16, lineHeight:1.7, whiteSpace:'nowrap' }}>{text}</div>;
-};
-
-const WCTESlide: React.FC = () => {
-	const f = useCurrentFrame(); const { fps } = useVideoConfig();
-	const D = (s: number) => F(s, fps);
-	const s0 = SP(f, D(0.5), fps);
-	const bracket = SP(f, D(9), fps);
-	const chip1   = SP(f, D(5), fps);
-	const chip2   = SP(f, D(8.5), fps);
-
-	return (
-		<Shell>
-			<div style={{ position:'absolute', top:26, left:32, right:420, opacity:s0, transform:tx(s0) }}>
-				<div style={{ fontSize:10, fontWeight:800, color:COLORS.success, letterSpacing:2, textTransform:'uppercase', fontFamily:'Inter', marginBottom:6 }}>Solution — Step 1</div>
-				<h2 style={{ fontSize:24, fontWeight:900, color:COLORS.ink, fontFamily:'Inter', margin:'0 0 4px' }}>wCTE: The Atomic Write</h2>
-				<p style={{ fontSize:11, color:COLORS.muted, fontFamily:'Inter', margin:0, lineHeight:1.6 }}>Both inserts live inside a single PostgreSQL transaction. They succeed together or fail together — no partial state possible.</p>
-			</div>
-
-			{/* Code panel */}
-			<div style={{ position:'absolute', top:110, left:32, width:570, background:'rgba(8,12,24,0.9)', borderRadius:14, border:'1px solid rgba(255,255,255,0.08)', padding:'16px 20px' }}>
-				<CodeLine text="WITH" color={COLORS.accent2} delay={D(1.5)} />
-				<CodeLine text="-- CTE 1: Insert the task row" color='#555' indent={1} delay={D(2)} />
-				<CodeLine text="inserted_task AS (" color={COLORS.accent} indent={1} delay={D(2.2)} />
-				<CodeLine text="INSERT INTO project_task (fk_project_id, title, status, ...)" color={COLORS.success} indent={2} delay={D(2.5)} />
-				<CodeLine text="SELECT ... WHERE EXISTS (SELECT 1 FROM authorized)" color={COLORS.success} indent={2} delay={D(2.8)} />
-				<CodeLine text="RETURNING id, projectId, title, status" color={COLORS.success} indent={2} delay={D(3.1)} />
-				<CodeLine text=")," color={COLORS.accent} indent={1} delay={D(3.3)} />
-				<CodeLine text="-- CTE 2: Write the event to outbox in SAME transaction" color='#555' indent={1} delay={D(4)} />
-				<CodeLine text="inserted_outbox AS (" color={COLORS.warning} indent={1} delay={D(4.2)} bold />
-				<CodeLine text="INSERT INTO outbox_events (kafka_topic, kafka_key, payload)" color={COLORS.warning} indent={2} delay={D(4.5)} bold />
-				<CodeLine text="SELECT 'task-events', projectId::text," color={COLORS.warning} indent={3} delay={D(4.8)} />
-				<CodeLine text="  jsonb_build_object('type','task.created', 'taskId', id, ...)" color={COLORS.warning} indent={3} delay={D(5.1)} />
-				<CodeLine text="FROM inserted_task" color={COLORS.warning} indent={2} delay={D(5.4)} />
-				<CodeLine text=")" color={COLORS.warning} indent={1} delay={D(5.6)} bold />
-				<CodeLine text="SELECT * FROM inserted_task;" color={COLORS.accent} delay={D(6)} />
-			</div>
-
-			{/* Right panel */}
-			<div style={{ position:'absolute', top:110, right:22, width:360 }}>
-				<div style={{ background:'rgba(0,229,255,0.06)', border:`1px solid ${COLORS.accent}33`, borderRadius:14, padding:'16px 18px', marginBottom:14 }}>
-					<div style={{ fontSize:11, fontWeight:800, color:COLORS.accent, fontFamily:'Inter', marginBottom:8 }}>🔒 Why This Works</div>
-					<div style={{ opacity:chip1, fontSize:11, color:COLORS.muted, fontFamily:'Inter', lineHeight:1.7 }}>
-						The <span style={{ color:COLORS.success }}>task INSERT</span> and <span style={{ color:COLORS.warning }}>outbox INSERT</span> share the same <strong style={{ color:COLORS.ink }}>BEGIN...COMMIT</strong> block.
-						<br/><br/>
-						If the server crashes at any point — both rows are rolled back. The event is never orphaned.
-					</div>
-				</div>
-
-				<div style={{ opacity:chip2, background:'rgba(0,230,118,0.06)', border:`1px solid ${COLORS.success}33`, borderRadius:14, padding:'16px 18px' }}>
-					<div style={{ fontSize:11, fontWeight:800, color:COLORS.success, fontFamily:'Inter', marginBottom:8 }}>✅ Real Code — From the Codebase</div>
-					<div style={{ fontSize:10, color:COLORS.muted, fontFamily:'Inter', lineHeight:1.7 }}>
-						<code style={{ color:COLORS.warning }}>outbox_events</code> table holds:<br/>
-						<code style={{ color:COLORS.accent2, fontSize:9 }}>kafka_topic</code> → <code style={{ color:'#aaa', fontSize:9 }}>'task-events'</code><br/>
-						<code style={{ color:COLORS.accent2, fontSize:9 }}>kafka_key</code> → <code style={{ color:'#aaa', fontSize:9 }}>projectId</code><br/>
-						<code style={{ color:COLORS.accent2, fontSize:9 }}>payload</code> → <code style={{ color:'#aaa', fontSize:9 }}>JSONB event body</code>
-					</div>
-				</div>
-
-				<div style={{ opacity:bracket, marginTop:14, background:`${COLORS.danger}10`, border:`2px dashed ${COLORS.danger}55`, borderRadius:12, padding:'12px 16px', fontSize:11, fontWeight:700, color:COLORS.danger, fontFamily:'Inter' }}>
-					💥 If broker crashes after this commit — the row is <em>already in the outbox</em>. It will be retried.
-				</div>
-			</div>
-
-			<Ban text="⚛️ One transaction. Two inserts. Zero dual-write failures." color={COLORS.success} delay={D(11)} />
-		</Shell>
-	);
-};
-
-/* ════════════════════════════════════════════════
-   SLIDE 3 — Relay: LISTEN/NOTIFY + SKIP LOCKED → Kafka
+   SLIDE 3 — The Relay: Reactive & Scalable
 ════════════════════════════════════════════════ */
 const RelaySlide: React.FC = () => {
 	const f = useCurrentFrame(); const { fps } = useVideoConfig();
-	const D = (s: number) => F(s, fps);
+	const D = (s: number) => F(s);
 	const s0 = SP(f, D(0.5), fps);
 
-	const kafka = { l:920, t:300, w:148, cx:994 };
+	const nodes = {
+		db:     { x: 180, y: 360, w: 220 },
+		podA:   { x: 640, y: 220, w: 240 },
+		podB:   { x: 640, y: 500, w: 240 },
+		kafka:  { x: 1100, y: 360, w: 220 }
+	};
 
 	return (
 		<Shell>
-			<div style={{ position:'absolute', top:26, left:32, right:32, opacity:s0, transform:tx(s0) }}>
-				<div style={{ fontSize:10, fontWeight:800, color:COLORS.accent2, letterSpacing:2, textTransform:'uppercase', fontFamily:'Inter', marginBottom:6 }}>Solution — Step 2</div>
-				<h2 style={{ fontSize:24, fontWeight:900, color:COLORS.ink, fontFamily:'Inter', margin:'0 0 4px' }}>The Outbox Relay: LISTEN/NOTIFY + SKIP LOCKED</h2>
-				<p style={{ fontSize:11, color:COLORS.muted, fontFamily:'Inter', margin:0 }}>A background relay reads from the outbox and publishes to Kafka — reactively and without polling.</p>
+			<div style={{ position:'absolute', top:40, left:50, right:50, opacity:s0, transform:tx(s0) }}>
+				<div style={{ fontSize:12, fontWeight:900, color:COLORS.accent2, letterSpacing:3, textTransform:'uppercase', fontFamily:'Inter', marginBottom:10 }}>The Solution: Step 2</div>
+				<h2 style={{ fontSize:36, fontWeight:900, color:COLORS.ink, fontFamily:'Inter', margin:'0 0 8px' }}>High-Concurrency Relay</h2>
+				<p style={{ fontSize:16, color:COLORS.muted, fontFamily:'Inter', margin:0, maxWidth:800, lineHeight:1.6 }}>A separate fleet of workers monitors the outbox using <strong>LISTEN/NOTIFY</strong>. They use <strong>SKIP LOCKED</strong> to process batches in parallel without duplication.</p>
 			</div>
 
-			{/* Nodes */}
-			<SNode icon="🗄️" label="PostgreSQL" sub="outbox_events" color={COLORS.accent3} top={NP.db.t} left={NP.db.l} w={NP.db.w} delay={D(1)} />
-			<SNode icon="📡" label="Relay Pod A" sub="LISTEN active" color={COLORS.accent} top={390} left={140} w={148} delay={D(1.5)} glow />
-			<SNode icon="📡" label="Relay Pod B" sub="LISTEN active" color={COLORS.accent} top={500} left={140} w={148} delay={D(2)} />
-			<SNode icon="⚡" label="Apache Kafka" sub="task-events" color={COLORS.warning} top={kafka.t} left={kafka.l} w={kafka.w} delay={D(2.5)} glow />
+			<SNode icon="🗄️" label="PostgreSQL" sub="Outbox Buffer" color={COLORS.accent3} top={nodes.db.y - 55} left={nodes.db.x - 110} w={nodes.db.w} delay={D(1)} />
+			<SNode icon="📡" label="Relay Pod A" sub="Worker #1" color={COLORS.accent} top={nodes.podA.y - 55} left={nodes.podA.x - 120} w={nodes.podA.w} delay={D(1.5)} glow />
+			<SNode icon="📡" label="Relay Pod B" sub="Worker #2" color={COLORS.accent} top={nodes.podB.y - 55} left={nodes.podB.x - 120} w={nodes.podB.w} delay={D(2)} />
+			<SNode icon="⚡" label="Kafka" sub="Event Bus" color={COLORS.warning} top={nodes.kafka.y - 55} left={nodes.kafka.x - 110} w={nodes.kafka.w} delay={D(2.5)} glow />
 
-			{/* pg_notify fires */}
-			<Chip text="🔔 pg_notify: 'outbox_event_notification'" color={COLORS.accent3} top={195} left={NP.db.l-30} delay={D(2)} />
+			{/* Phase 1: Notify */}
+			<Arrow x1={nodes.db.x + 110} y1={nodes.db.y - 30} x2={nodes.podA.x - 120} y2={nodes.podA.y} color={COLORS.accent3} label="🔔 NOTIFY" delay={D(3)} labelPos={0.25} />
+			<Arrow x1={nodes.db.x + 110} y1={nodes.db.y + 30} x2={nodes.podB.x - 120} y2={nodes.podB.y} color={COLORS.accent3} label="🔔 NOTIFY" delay={D(3.2)} labelPos={0.25} />
 
-			{/* Both pods wake up */}
-			<HA x1={NP.db.l} x2={214} y={258} color={COLORS.accent3} label="notification" delay={D(3)} />
+			{/* Phase 2: Concurrent Fetch */}
+			<Arrow x1={nodes.podA.x - 120} y1={nodes.podA.y + 30} x2={nodes.db.x + 110} y2={nodes.db.y - 15} color={COLORS.accent} label="SELECT SKIP LOCKED" delay={D(4.5)} labelPos={0.55} labelOffset={-25} />
+			<Arrow x1={nodes.podB.x - 120} y1={nodes.podB.y - 30} x2={nodes.db.x + 110} y2={nodes.db.y + 15} color={COLORS.muted} label="SELECT SKIP LOCKED" delay={D(5.5)} dashed labelPos={0.55} labelOffset={25} />
 
-			{/* Pod A grabs rows (SKIP LOCKED) */}
-			<HA x1={214} x2={NP.db.cx+NP.db.w/2} y={420} color={COLORS.accent} label="SELECT ... FOR UPDATE SKIP LOCKED LIMIT 100" delay={D(4)} />
-			<Chip text="🔒 Pod A locks rows 1–100" color={COLORS.accent} top={370} left={NP.db.l-30} delay={D(5.5)} />
+			{/* Concurrency Detail */}
+			<StatusChip text="📦 Locked: Batch 01" color={COLORS.accent} top={nodes.podA.y - 25} left={nodes.podA.x + 135} delay={D(6)} />
+			<StatusChip text="📦 Locked: Batch 02" color={COLORS.accent2} top={nodes.podB.y - 25} left={nodes.podB.x + 135} delay={D(7)} />
 
-			{/* Pod B tries — skips locked rows */}
-			<HA x1={214} x2={NP.db.cx+NP.db.w/2} y={530} color={COLORS.muted} label="SELECT ... SKIP LOCKED → rows 101–200" delay={D(6)} dashed />
-			<Chip text="⏭️ Pod B skips to rows 101–200" color={COLORS.muted} top={480} left={NP.db.l-30} delay={D(7)} />
+			{/* Phase 3: Publish */}
+			<Arrow x1={nodes.podA.x + 120} y1={nodes.podA.y} x2={nodes.kafka.x - 110} y2={nodes.kafka.y - 10} color={COLORS.warning} label="publish()" delay={D(8.5)} labelPos={0.7} />
+			<Arrow x1={nodes.podB.x + 120} y1={nodes.podB.y} x2={nodes.kafka.x - 110} y2={nodes.kafka.y + 10} color={COLORS.warning} label="publish()" delay={D(9.5)} dashed labelPos={0.7} />
 
-			{/* Pods publish to Kafka */}
-			<HA x1={NP.db.cx+NP.db.w/2} x2={kafka.l} y={420} color={COLORS.warning} label="publish(task-events, projectId, payload)" delay={D(8)} />
-			<HA x1={NP.db.cx+NP.db.w/2} x2={kafka.l} y={530} color={COLORS.warning} label="publish batch 2..." delay={D(9)} dashed />
+			{/* Phase 4: Finalize */}
+			<Arrow x1={nodes.podA.x - 120} y1={nodes.podA.y + 55} x2={nodes.db.x + 110} y2={nodes.db.y} color={COLORS.danger} label="DELETE processed" delay={D(11)} labelPos={0.8} labelOffset={35} />
 
-			{/* Delete from outbox after publish */}
-			<Chip text="🗑️ DELETE FROM outbox_events WHERE id IN (...)" color={COLORS.danger} top={300} left={NP.db.l-10} delay={D(10)} />
-
-			<Ban text="✅ No polling, no thundering herd, no duplicates — just reactive, lock-free publishing" color={COLORS.success} delay={D(11.5)} />
+			<Ban text="🚀 Decoupled, Atomic, and Fault-Tolerant event distribution architecture" color={COLORS.success} delay={D(12.5)} />
 		</Shell>
 	);
 };
 
 /* ════════════════════════════════════════════════
-   ROOT — 3+10+8+16+14 = 51s = 1530 frames
+   ROOT — Total Duration: 50s = 1500 frames
 ════════════════════════════════════════════════ */
 export const TransactionalOutbox: React.FC = () => {
 	const { fps } = useVideoConfig();
@@ -323,16 +234,13 @@ export const TransactionalOutbox: React.FC = () => {
 			<Sequence from={0} durationInFrames={fps*3}>
 				<TitleCard title="The Transactional Outbox Pattern" />
 			</Sequence>
-			<Sequence from={fps*3} durationInFrames={fps*10}>
-				<ProblemRecap />
+			<Sequence from={fps*3} durationInFrames={fps*12}>
+				<ProblemSlide />
 			</Sequence>
-			<Sequence from={fps*13} durationInFrames={fps*8}>
-				<OutboxIntroSlide />
+			<Sequence from={fps*15} durationInFrames={fps*16}>
+				<SolutionIntroSlide />
 			</Sequence>
-			<Sequence from={fps*21} durationInFrames={fps*16}>
-				<WCTESlide />
-			</Sequence>
-			<Sequence from={fps*37}>
+			<Sequence from={fps*31}>
 				<RelaySlide />
 			</Sequence>
 		</AbsoluteFill>
