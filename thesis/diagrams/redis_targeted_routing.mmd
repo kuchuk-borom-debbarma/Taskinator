@@ -1,0 +1,24 @@
+sequenceDiagram
+    participant User 1
+    participant Node 1
+    participant Redis
+    participant Kafka
+    participant Node 2
+    participant User 2
+    
+    User 1->>Node 1: Connect SSE (Project A)
+    Node 1->>Redis: SADD route:project:A Node1
+    
+    User 2->>Node 2: Connect SSE (Project A)
+    Node 2->>Redis: SADD route:project:A Node2
+    
+    Kafka->>Node 2: Consume Event: Task 123 Completed
+    Node 2->>Redis: SMEMBERS route:project:A
+    Redis-->>Node 2: [Node1, Node2]
+    
+    Node 2->>Redis: PUBLISH instance:Node1 Payload
+    Node 2->>Node 2: Push to local SSE connections
+    Node 2-->>User 2: SSE Payload
+    
+    Redis-->>Node 1: Message via PUBSUB
+    Node 1-->>User 1: SSE Payload

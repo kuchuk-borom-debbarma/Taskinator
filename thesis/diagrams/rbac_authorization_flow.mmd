@@ -1,0 +1,22 @@
+sequenceDiagram
+    participant Client
+    participant API as GraphQL Gateway
+    participant DB as PostgreSQL 16
+    
+    Client->>API: Mutation (createTaskLink)
+    API->>DB: BEGIN TRANSACTION
+    
+    rect rgb(230, 240, 255)
+        note right of DB: Data-Modifying CTE (wCTE)
+        DB-->>DB: WITH auth_check AS (SELECT 1 FROM project_member WHERE user_id = $2)
+        DB-->>DB: INSERT INTO task_link ... WHERE EXISTS (SELECT 1 FROM auth_check)
+    end
+    
+    alt User Unauthorized
+        DB-->>API: 0 Rows Affected
+        API-->>Client: 403 Forbidden
+    else User Authorized
+        DB-->>DB: INSERT INTO outbox_events ...
+        DB-->>API: COMMIT
+        API-->>Client: 200 OK
+    end

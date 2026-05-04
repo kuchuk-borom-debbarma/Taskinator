@@ -13,11 +13,20 @@ const getChapter2_2 = require('./sections/05_chapter_2_2_summary');
 const getChapter3_1 = require('./sections/06_chapter_3_1_architecture');
 const getChapter3_2 = require('./sections/06_chapter_3_2_domain_modeling');
 const getChapter3_3 = require('./sections/06_chapter_3_3_database_optimization');
-const getChapter4 = require('./sections/07_chapter_4_eda');
-const getChapter5 = require('./sections/08_chapter_5_frontend');
-const getChapter6 = require('./sections/09_chapter_6_testing');
-const getChapter7 = require('./sections/10_chapter_7_conclusion');
-const getReferences = require('./sections/11_references');
+const getChapter4_1 = require('./sections/07_chapter_4_1_wcte_outbox');
+const getChapter4_2 = require('./sections/07_chapter_4_2_skip_locked');
+const getChapter4_3 = require('./sections/07_chapter_4_3_smart_aggregator');
+const getChapter4_4 = require('./sections/07_chapter_4_4_chunked_deletion');
+const getChapter5_1 = require('./sections/08_chapter_5_1_atomic_authorization');
+const getChapter5_2 = require('./sections/08_chapter_5_2_team_inheritance');
+const getChapter6_1 = require('./sections/09_chapter_6_1_react_d3');
+const getChapter6_2 = require('./sections/09_chapter_6_2_redis_routing');
+const getChapter6_3 = require('./sections/09_chapter_6_3_apollo_cache');
+const getChapter7_1 = require('./sections/10_chapter_7_1_testcontainers');
+const getChapter7_2 = require('./sections/10_chapter_7_2_mutation_testing');
+const getChapter7_3 = require('./sections/10_chapter_7_3_performance');
+const getChapter8 = require('./sections/11_chapter_8_conclusion');
+const getReferences = require('./sections/12_references');
 
 const doc = new Document({
   numbering: {
@@ -69,10 +78,19 @@ const doc = new Document({
       ...getChapter3_1(),
       ...getChapter3_2(),
       ...getChapter3_3(),
-      ...getChapter4(),
-      ...getChapter5(),
-      ...getChapter6(),
-      ...getChapter7(),
+      ...getChapter4_1(),
+      ...getChapter4_2(),
+      ...getChapter4_3(),
+      ...getChapter4_4(),
+      ...getChapter5_1(),
+      ...getChapter5_2(),
+      ...getChapter6_1(),
+      ...getChapter6_2(),
+      ...getChapter6_3(),
+      ...getChapter7_1(),
+      ...getChapter7_2(),
+      ...getChapter7_3(),
+      ...getChapter8(),
       ...getReferences(),
     ]
   }]

@@ -13,5 +13,6 @@ module.exports = function getReferences() {
     numbered("Stopford, B. (2018). Designing Event-Driven Systems: Concepts and Patterns for Streaming Services with Apache Kafka. O'Reilly Media.", "n5"),
     numbered("Brewer, E. A. (2000). Towards robust distributed systems. Proceedings of the Nineteenth Annual ACM Symposium on Principles of Distributed Computing - PODC '00.", "n5"),
     numbered("Fowler, M. (2006). Patterns of Enterprise Application Architecture. Addison-Wesley Professional.", "n5"),
+    numbered("Banks, A. & Gupta, R. (2014). MQTT Version 3.1.1. OASIS Standard.", "n5"),
   ];
 };

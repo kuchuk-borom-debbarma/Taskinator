@@ -1,0 +1,29 @@
+flowchart LR
+    subgraph Ancestors of A
+        A1[Task A1]
+        A2[Task A2]
+    end
+    
+    A[Task A]
+    
+    B[Task B]
+    
+    subgraph Descendants of B
+        B1[Task B1]
+        B2[Task B2]
+        B3[Task B3]
+    end
+    
+    A1 -.-> A
+    A2 -.-> A
+    A -->|New Link| B
+    B -.-> B1
+    B -.-> B2
+    B -.-> B3
+    
+    A1 -.->|Cartesian Cross-Join| B1
+    A1 -.->|Cartesian Cross-Join| B2
+    A1 -.->|Cartesian Cross-Join| B3
+    A2 -.->|Cartesian Cross-Join| B1
+    A2 -.->|Cartesian Cross-Join| B2
+    A2 -.->|Cartesian Cross-Join| B3

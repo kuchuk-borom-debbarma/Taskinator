@@ -1,0 +1,19 @@
+stateDiagram-v2
+    [*] --> EventFired: Task Marked Done
+    EventFired --> CheckGuards: Automation Engine
+    
+    state CheckGuards {
+        [*] --> QueryDescendants
+        QueryDescendants --> CheckStatus: Any Subtasks TODO?
+        CheckStatus --> Pass: No
+        CheckStatus --> Fail: Yes
+    }
+    
+    CheckGuards --> Proceed: Pass
+    Proceed --> ExecuteAction: Trigger Webhook / Next Phase
+    ExecuteAction --> [*]
+    
+    CheckGuards --> Cleanup: Fail
+    Cleanup --> RevertDatabase: Update Task Status -> TODO
+    RevertDatabase --> NotifyUser: Emit SSE (Policy Violation)
+    NotifyUser --> [*]
