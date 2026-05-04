@@ -39,6 +39,7 @@ for (const file of files) {
     console.log(`  Converting: ${file} → ${outputName}`);
     execSync(cmd, { stdio: 'pipe', timeout: 60000 });
     console.log(`  ✓ Done: ${outputName}`);
+    fs.unlinkSync(inputPath); // Remove the MMD file after successful conversion
     success++;
   } catch (err) {
     console.error(`  ✗ FAILED: ${file}`);
