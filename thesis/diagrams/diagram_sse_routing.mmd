@@ -1,0 +1,23 @@
+sequenceDiagram
+    participant Client A
+    participant Client B
+    participant Node 1
+    participant Node 2
+    participant Redis
+    participant Router as Real-Time Router
+    
+    Client A->>Node 1: SSE Connect (Project X)
+    Node 1->>Redis: SADD route:project:X "Node 1"
+    
+    Client B->>Node 2: SSE Connect (Project Y)
+    Node 2->>Redis: SADD route:project:Y "Node 2"
+    
+    Note over Router: Kafka Event: Project X Updated
+    Router->>Redis: SMEMBERS route:project:X
+    Redis-->>Router: ["Node 1"]
+    
+    Router->>Redis: PUBLISH instance:Node 1 (Payload)
+    Redis-->>Node 1: Receives PubSub message
+    Node 1->>Client A: Pushes SSE Payload
+    
+    Note over Client B, Node 2: Zero traffic routed to Node 2.<br/>Zero Fan-Out Achieved.

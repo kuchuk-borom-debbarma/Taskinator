@@ -1,0 +1,19 @@
+sequenceDiagram
+    participant DB as PostgreSQL Outbox
+    participant Pod1 as Relay Pod 1
+    participant Pod2 as Relay Pod 2
+    participant Pod3 as Relay Pod 3
+    
+    Note over DB: 500 New Events Arrive
+    
+    par Concurrent Polling
+        Pod1->>DB: SELECT ... FOR UPDATE SKIP LOCKED LIMIT 100
+        Pod2->>DB: SELECT ... FOR UPDATE SKIP LOCKED LIMIT 100
+        Pod3->>DB: SELECT ... FOR UPDATE SKIP LOCKED LIMIT 100
+    end
+    
+    DB-->>Pod1: Returns Rows 1-100 (Locks them)
+    DB-->>Pod2: Skips 1-100, Returns Rows 101-200
+    DB-->>Pod3: Skips 1-200, Returns Rows 201-300
+    
+    Note over Pod1,Pod3: Zero overlap. Zero deadlocks.<br/>100% throughput utilization.

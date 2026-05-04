@@ -1,0 +1,14 @@
+sequenceDiagram
+    participant App as API Server (Node.js)
+    participant DB as PostgreSQL
+    participant Kafka
+    
+    App->>DB: BEGIN TRANSACTION
+    Note over App,DB: WITH inserted_task AS (<br/>  INSERT INTO project_task... RETURNING *<br/>),<br/>inserted_event AS (<br/>  INSERT INTO outbox_events...<br/>)<br/>SELECT * FROM inserted_task;
+    DB-->>App: Return inserted Task
+    App->>DB: COMMIT
+    
+    DB->>DB: Fire pg_notify('outbox_event')
+    
+    Note right of DB: Outbox Relay wakes up
+    DB-->>Kafka: Relay publishes event

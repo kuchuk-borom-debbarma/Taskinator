@@ -1,0 +1,15 @@
+graph LR
+    classDef kafka fill:#f3e5f5,stroke:#6a1b9a,stroke-width:2px;
+    classDef mem fill:#fff3e0,stroke:#e65100,stroke-width:2px;
+    classDef db fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
+
+    K1[Event: TaskCreated +1]:::kafka --> Batch
+    K2[Event: TaskDeleted -1]:::kafka --> Batch
+    K3[Event: TaskCreated +1]:::kafka --> Batch
+    K4[Event: TaskCreated +1]:::kafka --> Batch
+    
+    Batch["In-Memory Batch (100 events)"]:::mem --> Fold[Semantic Folder]:::mem
+    Fold --> Delta["Net Delta: +2"]:::mem
+    
+    Delta --> DB[(PostgreSQL)]:::db
+    DB -.-> Action[Single SQL Execution:<br/>UPDATE project SET <br/>task_count = task_count + 2]:::db

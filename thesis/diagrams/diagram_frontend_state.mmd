@@ -1,0 +1,11 @@
+sequenceDiagram
+    participant UI as React Component
+    participant Apollo as Apollo Cache
+    participant SSE as SSE Link
+    participant Server as Backend Node
+    
+    Server->>SSE: Event: { id: 123, status: "DONE" }
+    SSE->>Apollo: cache.modify()
+    Note over Apollo: Evict stale fields<br/>Inject specific delta
+    Apollo->>UI: Broadcast Cache Update
+    UI->>UI: Granular Re-render (O(1))

@@ -1,0 +1,26 @@
+graph TD
+    classDef ext fill:#fff3e0,stroke:#e65100,stroke-width:2px;
+    classDef k8s fill:#e3f2fd,stroke:#1565c0,stroke-width:2px;
+    classDef store fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
+
+    Internet((Internet)):::ext --> LB[Ingress Load Balancer]:::k8s
+    
+    subgraph Kubernetes Cluster
+        LB --> API1[API Pod 1]:::k8s
+        LB --> API2[API Pod 2]:::k8s
+        LB --> APIN[API Pod N...]:::k8s
+        
+        API1 --> Redis[(Redis Cluster)]:::store
+        API2 --> Redis
+        APIN --> Redis
+        
+        API1 --> Kafka[Kafka Brokers]:::store
+        API2 --> Kafka
+        
+        Kafka --> W1[Worker Pod 1]:::k8s
+        Kafka --> W2[Worker Pod 2]:::k8s
+        
+        W1 --> DB[(PostgreSQL Primary)]:::store
+        W2 --> DB
+        API1 --> DB
+    end

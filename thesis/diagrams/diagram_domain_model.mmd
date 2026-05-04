@@ -1,0 +1,30 @@
+erDiagram
+    Project ||--o{ Team : has
+    Project ||--o{ Task : contains
+    Team ||--o{ User : includes
+    Task ||--o{ TaskLink : depends_on
+    Task ||--o{ TaskReachability : reaches
+    
+    Project {
+        uuid id PK
+        string name
+        int task_count
+        int version "Optimistic Lock"
+    }
+    Task {
+        uuid id PK
+        uuid project_id FK
+        string status
+        string materialized_path
+        int version
+    }
+    TaskReachability {
+        uuid ancestor_id FK
+        uuid descendant_id FK
+        int depth
+    }
+    TaskLink {
+        uuid source_task_id FK
+        uuid target_task_id FK
+        string link_type
+    }

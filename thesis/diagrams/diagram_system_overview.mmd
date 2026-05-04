@@ -1,0 +1,36 @@
+graph TD
+    classDef client fill:#e3f2fd,stroke:#1565c0,stroke-width:2px;
+    classDef gateway fill:#fff3e0,stroke:#e65100,stroke-width:2px;
+    classDef service fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
+    classDef broker fill:#f3e5f5,stroke:#6a1b9a,stroke-width:2px;
+    classDef db fill:#ffebee,stroke:#c62828,stroke-width:2px;
+
+    Client["React Frontend (Apollo Client)"]:::client
+    API["GraphQL API Gateway"]:::gateway
+    
+    subgraph Modular Monolith Backend
+        Sync["Synchronous Mutators"]:::service
+        Outbox["Outbox Relay (LISTEN/NOTIFY)"]:::service
+        Async["Async Consumers"]:::service
+        Agg["Smart Aggregator"]:::service
+        SSE["SSE Router"]:::service
+    end
+
+    Kafka[("Apache Kafka (Event Bus)")]:::broker
+    Redis[("Redis (Pub/Sub & Routing)")]:::db
+    Postgres[("PostgreSQL 16 (Primary DB)")]:::db
+
+    Client -- "GraphQL HTTP" --> API
+    API -- "wCTE Mutations" --> Postgres
+    API -- "Executes" --> Sync
+    
+    Postgres -. "pg_notify" .-> Outbox
+    Outbox -- "Publish (Partitioned)" --> Kafka
+    
+    Kafka -- "Consume" --> Async
+    Kafka -- "Consume" --> Agg
+    Kafka -- "Consume" --> SSE
+    
+    Agg -- "Batch Updates" --> Postgres
+    SSE -- "Fetch Routes" --> Redis
+    SSE -- "Targeted Push" --> Client
