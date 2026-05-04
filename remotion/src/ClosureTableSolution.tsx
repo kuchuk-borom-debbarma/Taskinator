@@ -39,17 +39,20 @@ const TaskChainGraph: React.FC<{ t: Record<string, number> }> = ({ t: timeline }
 	const frame = useCurrentFrame();
 	const { fps } = useVideoConfig();
 
-	const W = 200; const H = 40; const X = 10; const GAP = 32;
+	const R = 32;           // same radius as TaskGraph in TaskLinkProblem
+	const GAP = 28;         // gap between circle edges
+	const CX = 110;         // horizontal centre
+	const STEP = R * 2 + GAP;
 	const nodes = [
-		{ id: 'T-1', label: 'Design UI',   y: 0,            highlight: true  },
-		{ id: 'T-2', label: 'Build API',   y: H + GAP,      highlight: false },
-		{ id: 'T-3', label: 'Write Tests', y: (H + GAP) * 2, highlight: false },
+		{ id: 'T-1', label: 'Design UI',   cy: R,             highlight: true  },
+		{ id: 'T-2', label: 'Build API',   cy: R + STEP,      highlight: false },
+		{ id: 'T-3', label: 'Write Tests', cy: R + STEP * 2,  highlight: false },
 	];
 
-	const svgH = (H + GAP) * 2 + H + 10;
+	const svgH = R + STEP * 2 + R + 8;
 
 	return (
-		<svg width={W + X * 2} height={svgH} style={{ overflow: 'visible', display: 'block' }}>
+		<svg width={CX * 2} height={svgH} style={{ overflow: 'visible', display: 'block' }}>
 			<defs>
 				{[0, 1].map(i => (
 					<marker key={i} id={`tcg-arr-${i}`} markerWidth="7" markerHeight="7" refX="3.5" refY="6" orient="auto">
@@ -67,23 +70,30 @@ const TaskChainGraph: React.FC<{ t: Record<string, number> }> = ({ t: timeline }
 				const edgeAt = i === 0 ? timeline.arrow1 : timeline.arrow2;
 				if (frame < edgeAt) return null;
 				const ep = spring({ frame: frame - edgeAt, fps, config: { damping: 16, stiffness: 110 } });
-				const fromY = nodes[i].y + H;
-				const toY   = nodes[i + 1].y;
-				const midX  = X + W / 2;
+				const fromY = nodes[i].cy + R;        // bottom of source circle
+				const toY   = nodes[i + 1].cy - R;   // top of target circle
 				const lineEndY = fromY + (toY - fromY) * ep;
 				return (
 					<g key={i}>
+						{/* Ghost track */}
+						<line x1={CX} y1={fromY} x2={CX} y2={toY}
+							stroke={COLORS.accent3} strokeWidth={1} opacity={0.12} />
+						{/* Animated line */}
 						<line
-							x1={midX} y1={fromY + 1}
-							x2={midX} y2={lineEndY}
+							x1={CX} y1={fromY + 1}
+							x2={CX} y2={lineEndY}
 							stroke={COLORS.accent3} strokeWidth={2}
 							strokeLinecap="round"
 							markerEnd={ep > 0.88 ? `url(#tcg-arr-${i})` : undefined}
 							style={{ filter: `drop-shadow(0 0 4px ${COLORS.accent3}77)` }}
 						/>
+						{/* Glow dot at tip */}
+						<circle cx={CX} cy={lineEndY} r={3} fill={COLORS.accent3} opacity={ep * 0.8}
+							style={{ filter: `drop-shadow(0 0 5px ${COLORS.accent3})` }} />
+						{/* BLOCKS label */}
 						{ep > 0.5 && (
 							<text
-								x={midX + 10} y={fromY + (toY - fromY) * 0.46}
+								x={CX + 12} y={fromY + (toY - fromY) * 0.48}
 								fontSize={8} fontFamily="Inter" fontWeight={800}
 								fill={COLORS.muted} opacity={ep}
 							>BLOCKS</text>
@@ -98,23 +108,41 @@ const TaskChainGraph: React.FC<{ t: Record<string, number> }> = ({ t: timeline }
 				if (frame < nodeAt) return null;
 				const np = spring({ frame: frame - nodeAt, fps, config: { damping: 13, stiffness: 130 } });
 				const color = node.highlight ? COLORS.accent : COLORS.accent3;
+				const words = node.label.split(' ');
 				return (
-					<g key={node.id} opacity={np} transform={`translate(0, ${node.y + H * 0.15 * (1 - np)})`}>
-						{/* Background rect */}
-						<rect
-							x={X} y={0} width={W} height={H} rx={8}
-							fill={node.highlight ? 'url(#tcg-hl)' : 'rgba(13,18,30,0.95)'}
-							stroke={color} strokeWidth={node.highlight ? 2 : 1.5}
-							style={{ filter: node.highlight ? `drop-shadow(0 0 10px ${color}66)` : `drop-shadow(0 0 5px ${color}33)` }}
+					<g key={node.id} opacity={np}>
+						{/* Circle — same style as TaskGraph */}
+						<circle
+							cx={CX} cy={node.cy} r={R * np}
+							fill="rgba(13,18,30,0.95)"
+							stroke={color}
+							strokeWidth={node.highlight ? 2.5 : 1.8}
+							style={{
+								filter: node.highlight
+									? `drop-shadow(0 0 12px ${color}88)`
+									: `drop-shadow(0 0 6px ${color}44)`,
+							}}
 						/>
 						{/* ID label */}
-						<text x={X + 10} y={14} fontSize={8} fontFamily="Inter" fontWeight={800} fill={COLORS.muted}>
+						<text x={CX} y={node.cy - 9}
+							textAnchor="middle" fontSize={9} fontWeight={800}
+							fill={COLORS.muted} fontFamily="Inter">
 							{node.id}
 						</text>
-						{/* Task name */}
-						<text x={X + W / 2} y={H / 2 + 6} textAnchor="middle" fontSize={13} fontFamily="Inter" fontWeight={700} fill={color}>
-							{node.label}
+						{/* Task name line 1 */}
+						<text x={CX} y={node.cy + (words[1] ? 4 : 7)}
+							textAnchor="middle" fontSize={11} fontWeight={700}
+							fill={color} fontFamily="Inter">
+							{words[0]}
 						</text>
+						{/* Task name line 2 */}
+						{words[1] && (
+							<text x={CX} y={node.cy + 17}
+								textAnchor="middle" fontSize={11} fontWeight={700}
+								fill={color} fontFamily="Inter">
+								{words[1]}
+							</text>
+						)}
 					</g>
 				);
 			})}
