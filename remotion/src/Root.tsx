@@ -6,6 +6,7 @@ import { FeatureShowcase } from "./FeatureShowcase";
 import { SchemaDesign } from "./SchemaDesign";
 import { SyncArchitecture } from "./SyncArchitecture";
 import { AsyncProblems } from "./AsyncProblems";
+import { TransactionalOutbox } from "./TransactionalOutbox";
 
 export const RemotionRoot: React.FC = () => {
   return (
@@ -38,6 +39,14 @@ export const RemotionRoot: React.FC = () => {
         id="AsyncProblems"
         component={AsyncProblems}
         durationInFrames={1500}
+        fps={30}
+        width={1280}
+        height={720}
+      />
+      <Composition
+        id="TransactionalOutbox"
+        component={TransactionalOutbox}
+        durationInFrames={1530}
         fps={30}
         width={1280}
         height={720}
