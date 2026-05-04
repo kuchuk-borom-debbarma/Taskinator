@@ -1,0 +1,21 @@
+sequenceDiagram
+    participant API as API Layer
+    participant DB as PostgreSQL
+    participant Relay as Outbox Relay
+    participant Kafka as Apache Kafka
+
+    Note over API,DB: SYNCHRONOUS PATH — User waits for this
+    API->>DB: Execute wCTE (Single Atomic Transaction)
+    Note right of DB: WITH inserted_task AS (<br/>  INSERT INTO project_task ...<br/>  RETURNING *<br/>)<br/>INSERT INTO outbox_events<br/>SELECT 'task-events', id, payload<br/>FROM inserted_task
+    DB-->>API: COMMIT — Both rows persisted or both rolled back
+    API-->>API: Return HTTP 200 to Client (< 10ms)
+
+    Note over DB,Kafka: ASYNCHRONOUS PATH — Runs independently
+    DB-)Relay: pg_notify('outbox_event_notification')
+    Relay->>DB: SELECT * FROM outbox_events\nFOR UPDATE SKIP LOCKED LIMIT 100
+    DB-->>Relay: Return locked batch
+    Relay->>Kafka: ProduceRequest — Batch publish (partitioned by projectId)
+    Kafka-->>Relay: ACK — All messages confirmed durable
+    Relay->>DB: DELETE FROM outbox_events WHERE id IN (...)\n(Hard delete — keeps table near-zero size)
+
+    Note over Relay,Kafka: Crash Safety: If crash before DELETE,\noutbox rows are re-fetched on next poll cycle

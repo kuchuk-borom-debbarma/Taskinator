@@ -1,0 +1,26 @@
+flowchart TD
+    subgraph Registration["Phase 1: Connection Registration"]
+        Client1["Client Browser\n(User viewing Project ABC)"]
+        Server2["Node Server 2"]
+        Redis1["Redis\nroute:project:ABC → {Server-2}"]
+        Client1 -->|"SSE Connect"| Server2
+        Server2 -->|"SADD route:project:ABC Server-2"| Redis1
+    end
+
+    subgraph Delivery["Phase 2: Targeted Event Delivery"]
+        KafkaEvent["Kafka Event:\nTASK_UPDATED for Project ABC"]
+        Router["Real-Time Router\n(Dedicated Kafka Consumer)"]
+        Redis2["Redis"]
+        Server2B["Node Server 2"]
+        ClientOut["Client Browser"]
+
+        KafkaEvent --> Router
+        Router -->|"SMEMBERS route:project:ABC"| Redis2
+        Redis2 -->|"Returns: {Server-2}"| Router
+        Router -->|"PUBLISH instance:Server-2 {payload}"| Redis2
+        Redis2 -->|"Local Bridge subscription fires"| Server2B
+        Server2B -->|"SSE Push → client"| ClientOut
+        ClientOut -->|"Apollo cache.modify() → O(1) re-render"| ClientOut
+    end
+
+    note1["If SMEMBERS returns empty set:\nEvent DROPPED immediately.\nZero wasted network traffic."]

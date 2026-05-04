@@ -1,0 +1,42 @@
+sequenceDiagram
+    autonumber
+    actor Client
+    participant API as GraphQL API
+    participant DB as PostgreSQL
+    participant Relay as Outbox Relay
+    participant Kafka as Apache Kafka
+    participant Aggregator as Smart Aggregator
+    participant Reachability as Reachability Engine
+    participant Router as Real-Time Router
+    participant Redis as Redis
+
+    Client->>API: Mutation: createTaskLink(parent: A, child: B)
+    API->>DB: wCTE: Auth Check + Insert Link + Insert Outbox Event
+    DB-->>API: Commit Success (Atomic)
+    API-->>Client: HTTP 200 OK (Optimistic UI updates immediately)
+
+    DB-)Relay: pg_notify outbox_event_notification
+    Relay->>DB: SELECT LIMIT 100 FOR UPDATE SKIP LOCKED
+    DB-->>Relay: Return Outbox Batch
+    Relay->>Kafka: Publish TASK_LINK_CREATED (Partition Key: projectId)
+    Kafka-->>Relay: ACK
+    Relay->>DB: Hard DELETE Outbox Rows
+
+    par Async Processing Pipelines
+        Kafka->>Aggregator: Consume Batch
+        Aggregator->>DB: Idempotency Claim (INSERT ON CONFLICT DO NOTHING)
+        Aggregator->>Aggregator: Semantic Fold → Net Delta
+        Aggregator->>DB: UPDATE project SET link_count = link_count + 1
+
+        Kafka->>Reachability: Consume Batch
+        Reachability->>DB: Fetch Ancestors(A) and Descendants(B)
+        Reachability->>DB: Cross-Join INSERT INTO task_reachability
+
+        Kafka->>Router: Consume Batch
+        Router->>Redis: SMEMBERS route:project:123
+        Redis-->>Router: Returns ["Server-1"]
+        Router->>Redis: PUBLISH instance:Server-1 Payload
+        Redis-)API: Local Bridge Receives Pub/Sub
+        API-)Client: SSE Push: TASK_LINK_CREATED
+        Client->>Client: Apollo cache.modify (Instant Graph Re-render)
+    end

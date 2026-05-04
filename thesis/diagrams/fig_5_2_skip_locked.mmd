@@ -1,0 +1,26 @@
+sequenceDiagram
+    participant DB as PostgreSQL
+    participant P1 as Relay Pod 1
+    participant P2 as Relay Pod 2
+    participant P3 as Relay Pod 3
+
+    DB-)P1: NOTIFY outbox_event_notification
+    DB-)P2: NOTIFY outbox_event_notification
+    DB-)P3: NOTIFY outbox_event_notification
+
+    Note over P1,P3: All pods wake simultaneously (Thundering Herd)
+
+    P1->>DB: SELECT LIMIT 100 FOR UPDATE SKIP LOCKED
+    Note right of DB: Pod 1 acquires exclusive row-locks\non outbox rows 1–100
+
+    P2->>DB: SELECT LIMIT 100 FOR UPDATE SKIP LOCKED
+    Note right of DB: SKIP LOCKED: Rows 1–100 are locked.\nPod 2 skips them, acquires rows 101–200
+
+    P3->>DB: SELECT LIMIT 100 FOR UPDATE SKIP LOCKED
+    Note right of DB: SKIP LOCKED: Rows 1–200 are locked.\nPod 3 acquires rows 201–300
+
+    DB-->>P1: Returns rows 1–100
+    DB-->>P2: Returns rows 101–200
+    DB-->>P3: Returns rows 201–300
+
+    Note over P1,P3: No deadlocks. No duplicate events.\nConcurrent throughput scales linearly with pod count.

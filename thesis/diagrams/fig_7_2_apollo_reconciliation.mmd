@@ -1,0 +1,18 @@
+sequenceDiagram
+    participant KR as Kafka Real-Time Router
+    participant NS as Node Server (SSE)
+    participant AL as Apollo Link (React)
+    participant AC as Apollo In-Memory Cache
+    participant DOM as React DOM
+
+    KR->>NS: Targeted Redis PUBLISH instance:Server-2
+    NS->>AL: SSE Push: {__typename: Task, id: task-123, status: DONE}
+
+    Note over AL: Apollo SSE Link intercepts payload
+    AL->>AC: cache.modify({id: 'Task:task-123', fields: {status: () => 'DONE'}})
+
+    Note over AC: Normalized cache entry updated in O(1)\nNo network request made to server
+    AC->>DOM: React detects specific cache node change
+    DOM->>DOM: Granular re-render of <TaskCard id=task-123> only
+
+    Note over DOM: All other components remain untouched.\nNo page reload. No full data refetch.\nDatabase receives 0 additional queries.

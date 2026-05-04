@@ -1,0 +1,23 @@
+flowchart TD
+    User(["User: Delete Root Task"])
+    API["API Layer\nMark task deleted\nEmit DELETE_TASK_REACHABILITY signal"]
+    Outbox[("outbox_events table")]
+    Kafka["Apache Kafka"]
+
+    subgraph Loop["Self-Signaling Chunked Loop (runs until table is clean)"]
+        Listener["Reachability Purge Listener\n(Atomic Claim via processed_event)"]
+        Query["Query Chunk:\nDELETE FROM task_reachability\nWHERE ctid IN (\n  SELECT ctid WHERE task_id = $id\n  LIMIT 2000\n)\nRETURNING fk_project_id"]
+        Check{"affectedCount\n== 2000?"}
+        Signal["Atomically write\nDELETE_TASK_REACHABILITY_CHUNK\nto outbox_events\n(within same transaction)"]
+        Repair["repairTaskReachabilityForProjects()\nRuns ONCE on final chunk only"]
+    end
+
+    User --> API
+    API --> Outbox
+    Outbox --> Kafka
+    Kafka --> Listener
+    Listener --> Query
+    Query --> Check
+    Check -->|"Yes — more rows remain"| Signal
+    Signal -->|"Next iteration via Outbox Relay"| Listener
+    Check -->|"No — final chunk complete"| Repair

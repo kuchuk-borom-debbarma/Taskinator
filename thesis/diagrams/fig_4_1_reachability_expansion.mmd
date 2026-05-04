@@ -1,0 +1,29 @@
+flowchart TD
+    subgraph Input["Input: New Link A → B Created"]
+        Start(["New Direct Link: A → B"])
+    end
+
+    subgraph Discovery["Step 1: Discovery Phase"]
+        FetchA["Query: SELECT ancestor_task_id\nFROM task_reachability\nWHERE descendant_task_id = A\n(Fetch all Ancestors of A including A itself)"]
+        FetchB["Query: SELECT descendant_task_id\nFROM task_reachability\nWHERE ancestor_task_id = B\n(Fetch all Descendants of B including B itself)"]
+    end
+
+    subgraph Expansion["Step 2: Cross-Join Expansion"]
+        CrossJoin["CROSS JOIN:\nAncestors(A) × Descendants(B)\n\nIf |Anc| = n, |Desc| = m\n→ n × m new reachability rows"]
+        CalcDepth["Calculate Depth:\ndepth = Depth(Anc→A) + 1 + Depth(B→Desc)"]
+    end
+
+    subgraph Write["Step 3: Atomic Batch Insert"]
+        Insert["INSERT INTO task_reachability\n(fk_project_id, ancestor_task_id, descendant_task_id, depth)\nON CONFLICT DO NOTHING"]
+    end
+
+    subgraph Result["Result: O(1) Graph Queries"]
+        Query["SELECT descendant_task_id\nFROM task_reachability\nWHERE ancestor_task_id = $taskId\n(Instant index-backed lookup)"]
+    end
+
+    Start --> FetchA & FetchB
+    FetchA --> CrossJoin
+    FetchB --> CrossJoin
+    CrossJoin --> CalcDepth
+    CalcDepth --> Insert
+    Insert --> Query
