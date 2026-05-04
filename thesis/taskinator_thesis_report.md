@@ -299,7 +299,7 @@ Every discovered ancestor must now reach every discovered descendant. If `A` has
 ### 3.3.2 Optimistic Locking & Concurrency
 In a high-throughput environment, multiple users or background services may attempt to update the same task simultaneously. Instead of acquiring pessimistic database locks (`SELECT ... FOR UPDATE`), which block concurrent reads and severely limit throughput, the system employs **Optimistic Locking**.
 
-![Figure 3.6: Optimistic Locking](diagrams/fig_4_3_optimistic_locking.png)
+![Figure 3.6: Optimistic Locking](diagrams/fig_4_2_optimistic_locking.png)
 *Figure 3.6: Optimistic Locking Update Sequence*
 
 Every record includes a `version` column. When a client reads a task, it receives version `1`. When it attempts an update, it sends `WHERE version = 1`. If another client updated the task in the meantime, the version in the database is now `2`. The update fails, returning 0 rows. The system catches this, rejects the stale update, and forces the client to reconcile, guaranteeing data integrity without read-blocking.
