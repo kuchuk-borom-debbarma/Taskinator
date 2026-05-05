@@ -7,6 +7,7 @@ import { SchemaDesign } from "./SchemaDesign";
 import { SyncArchitecture } from "./SyncArchitecture";
 import { AsyncProblems } from "./AsyncProblems";
 import { TransactionalOutbox } from "./TransactionalOutbox";
+import { UpgradedAsyncFlow } from "./UpgradedAsyncFlow";
 
 export const RemotionRoot: React.FC = () => {
   return (
@@ -47,6 +48,14 @@ export const RemotionRoot: React.FC = () => {
         id="TransactionalOutbox"
         component={TransactionalOutbox}
         durationInFrames={2820}
+        fps={30}
+        width={1280}
+        height={720}
+      />
+      <Composition
+        id="UpgradedAsyncFlow"
+        component={UpgradedAsyncFlow}
+        durationInFrames={930}
         fps={30}
         width={1280}
         height={720}
