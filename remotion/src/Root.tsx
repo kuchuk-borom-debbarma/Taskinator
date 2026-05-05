@@ -46,7 +46,7 @@ export const RemotionRoot: React.FC = () => {
       <Composition
         id="TransactionalOutbox"
         component={TransactionalOutbox}
-        durationInFrames={1500}
+        durationInFrames={2820}
         fps={30}
         width={1280}
         height={720}

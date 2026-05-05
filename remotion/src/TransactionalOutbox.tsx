@@ -1,5 +1,5 @@
 import React from 'react';
-import { AbsoluteFill, Sequence, useVideoConfig, useCurrentFrame, spring, interpolate } from 'remotion';
+import { AbsoluteFill, Sequence, useVideoConfig, useCurrentFrame, spring, interpolate, interpolateColors } from 'remotion';
 import { COLORS, GRADIENTS } from './components/Nodes';
 import { TitleCard } from './components/TitleCard';
 
@@ -225,7 +225,175 @@ const RelaySlide: React.FC = () => {
 };
 
 /* ════════════════════════════════════════════════
-   ROOT — Total Duration: 50s = 1500 frames
+   SLIDE 4 — The Relay Hazard
+   Sequence: 50s - 70s (1500 - 2100 frames)
+════════════════════════════════════════════════ */
+const DuplicateProblemSlide: React.FC = () => {
+	const f = useCurrentFrame(); const { fps } = useVideoConfig();
+	const D = (s: number) => F(s);
+	const s0 = SP(f, D(0.5), fps);
+	
+	const nodes = {
+		db:     { x: 180, y: 360, w: 220 },
+		podA:   { x: 640, y: 220, w: 240 },
+		podB:   { x: 640, y: 500, w: 240 },
+		kafka:  { x: 1100, y: 360, w: 220 }
+	};
+
+	return (
+		<Shell>
+			<div style={{ position:'absolute', top:40, left:50, right:50, opacity:s0, transform:tx(s0) }}>
+				<div style={{ fontSize:12, fontWeight:900, color:COLORS.danger, letterSpacing:3, textTransform:'uppercase', fontFamily:'Inter', marginBottom:10 }}>The Relay Hazard</div>
+				<h2 style={{ fontSize:36, fontWeight:900, color:COLORS.ink, fontFamily:'Inter', margin:'0 0 8px' }}>At-Least-Once Delivery</h2>
+				<p style={{ fontSize:16, color:COLORS.muted, fontFamily:'Inter', margin:0, maxWidth:800, lineHeight:1.6 }}>If a Relay worker crashes after publishing to Kafka but before deleting the Outbox row, the visibility timeout expires. Another worker will pick up the same row, creating <strong>duplicate events</strong>.</p>
+			</div>
+
+			<SNode icon="🗄️" label="PostgreSQL" sub="Outbox (Events 99, 100)" color={COLORS.accent3} top={nodes.db.y - 55} left={nodes.db.x - 110} w={nodes.db.w} delay={D(1)} />
+			<SNode icon="📡" label="Relay Pod A" sub="Worker #1" color={COLORS.accent} top={nodes.podA.y - 55} left={nodes.podA.x - 120} w={nodes.podA.w} delay={D(1.5)} />
+			<SNode icon="📡" label="Relay Pod B" sub="Worker #2" color={COLORS.accent} top={nodes.podB.y - 55} left={nodes.podB.x - 120} w={nodes.podB.w} delay={D(2)} />
+			<SNode icon="⚡" label="Kafka Topic" sub="[Empty]" color={COLORS.warning} top={nodes.kafka.y - 55} left={nodes.kafka.x - 110} w={nodes.kafka.w} delay={D(2.5)} />
+
+			{/* Phase 1: Fetch */}
+			<Arrow x1={nodes.podA.x - 120} y1={nodes.podA.y + 30} x2={nodes.db.x + 110} y2={nodes.db.y - 15} color={COLORS.accent} label="SELECT SKIP LOCKED" delay={D(3)} labelPos={0.55} labelOffset={-25} />
+			<StatusChip text="📦 Locked: Batch [99, 100]" color={COLORS.accent} top={nodes.podA.y - 25} left={nodes.podA.x + 135} delay={D(4)} />
+
+			{/* Phase 2: Publish */}
+			<Arrow x1={nodes.podA.x + 120} y1={nodes.podA.y - 15} x2={nodes.kafka.x - 110} y2={nodes.kafka.y - 30} color={COLORS.warning} label="publish(99)" delay={D(5)} labelPos={0.6} />
+			<Arrow x1={nodes.podA.x + 120} y1={nodes.podA.y + 15} x2={nodes.kafka.x - 110} y2={nodes.kafka.y - 10} color={COLORS.warning} label="publish(100)" delay={D(6)} labelPos={0.6} />
+			
+			{/* Phase 3: Crash */}
+			<StatusChip text="💥 Kernel Panic! (Crash)" color={COLORS.danger} top={nodes.podA.y - 90} left={nodes.podA.x - 100} delay={D(7.5)} />
+			<Arrow x1={nodes.podA.x - 120} y1={nodes.podA.y + 55} x2={nodes.db.x + 110} y2={nodes.db.y} color={COLORS.danger} label="DELETE IN (99,100) FAILED" delay={D(8)} dashed labelPos={0.8} labelOffset={35} />
+
+			{/* Phase 4: Redelivery */}
+			<StatusChip text="⏱️ Lock Expires (30s)" color={COLORS.muted} top={nodes.db.y + 70} left={nodes.db.x - 80} delay={D(10)} />
+			<Arrow x1={nodes.podB.x - 120} y1={nodes.podB.y - 30} x2={nodes.db.x + 110} y2={nodes.db.y + 15} color={COLORS.danger} label="SELECT SKIP LOCKED" delay={D(11.5)} labelPos={0.55} labelOffset={25} />
+			<StatusChip text="⚠️ Fetches [99, 100] Again" color={COLORS.danger} top={nodes.podB.y - 25} left={nodes.podB.x + 135} delay={D(12.5)} />
+			
+			<Arrow x1={nodes.podB.x + 120} y1={nodes.podB.y - 15} x2={nodes.kafka.x - 110} y2={nodes.kafka.y + 10} color={COLORS.danger} label="publish(99) AGAIN" delay={D(14)} dashed labelPos={0.6} />
+			<Arrow x1={nodes.podB.x + 120} y1={nodes.podB.y + 15} x2={nodes.kafka.x - 110} y2={nodes.kafka.y + 30} color={COLORS.danger} label="publish(100) AGAIN" delay={D(15)} dashed labelPos={0.6} />
+
+			<Ban text="❌ Result: The consumer will now receive these events twice." color={COLORS.danger} delay={D(17)} />
+		</Shell>
+	);
+};
+
+/* ════════════════════════════════════════════════
+   SLIDE 5 — The Solution: Idempotent Consumer
+   Sequence: 70s - 94s (2100 - 2820 frames)
+════════════════════════════════════════════════ */
+const IdempotencySlide: React.FC = () => {
+	const f = useCurrentFrame(); const { fps } = useVideoConfig();
+	const D = (s: number) => F(s);
+	const s0 = SP(f, D(0.5), fps);
+	
+	const nodes = {
+		kafka:    { x: 120, y: 360, w: 200 },
+		consumer: { x: 450, y: 360, w: 220 },
+		db:       { x: 820, y: 180, w: 380 }
+	};
+
+	// Timeline
+	const rcvA = D(3);
+	const insertA = D(4.5);
+	const insertASuccess = D(5.5);
+	const updateA = D(7);
+	const updateASuccess = D(8);
+	const commitA = D(9.5);
+	
+	const rcvB = D(11.5);
+	const insertB = D(13);
+	const conflictB = D(14);
+	const skipB = D(16);
+	const commitB = D(17.5);
+
+	return (
+		<Shell>
+			<div style={{ position:'absolute', top:40, left:50, right:50, opacity:s0, transform:tx(s0) }}>
+				<div style={{ fontSize:12, fontWeight:900, color:COLORS.success, letterSpacing:3, textTransform:'uppercase', fontFamily:'Inter', marginBottom:10 }}>The Consumer Solution</div>
+				<h2 style={{ fontSize:36, fontWeight:900, color:COLORS.ink, fontFamily:'Inter', margin:'0 0 8px' }}>Transactional Inbox (Idempotency)</h2>
+				<p style={{ fontSize:16, color:COLORS.muted, fontFamily:'Inter', margin:0, maxWidth:800, lineHeight:1.6 }}>By making the "deduplication check" and the "business logic" share the same atomic database transaction, we guarantee that the domain state is updated <strong>exactly once</strong>, even if the worker receives duplicates.</p>
+			</div>
+
+			<SNode icon="📦" label="Kafka Topic" sub="[#99 (Copy A), #99 (Copy B)]" color={COLORS.warning} top={nodes.kafka.y - 45} left={nodes.kafka.x - 100} w={nodes.kafka.w} delay={D(1)} />
+			<SNode icon="⚙️" label="Task Service" sub="Consumer Pod" color={COLORS.accent} top={nodes.consumer.y - 45} left={nodes.consumer.x - 110} w={nodes.consumer.w} delay={D(1.5)} />
+			
+			{/* Custom Database UI */}
+			<div style={{ position:'absolute', top:nodes.db.y, left:nodes.db.x, width:nodes.db.w, opacity:SP(f, D(2), fps), background:'rgba(15,23,42,0.95)', border:`2px solid ${COLORS.accent3}66`, borderRadius:24, padding:24, boxShadow:'0 20px 50px rgba(0,0,0,0.5)', zIndex:20 }}>
+				<div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16 }}>
+					<div style={{ fontSize:14, fontWeight:900, color:COLORS.accent3, letterSpacing:2, textTransform:'uppercase' }}>PostgreSQL</div>
+					<div style={{ background:'rgba(0,229,255,0.1)', border:`1px solid ${COLORS.accent3}66`, padding:'4px 8px', borderRadius:8, fontSize:10, color:COLORS.accent3, fontWeight:800 }}>ATOMIC TRANSACTION</div>
+				</div>
+				
+				{/* Processed Events Table */}
+				<div style={{ marginBottom:20 }}>
+					<div style={{ fontSize:12, color:COLORS.muted, marginBottom:8, display:'flex', justifyContent:'space-between' }}>
+						<span>Table: <strong>processed_event</strong></span>
+						<span style={{ color:COLORS.warning }}>PK (event_id)</span>
+					</div>
+					<div style={{ border:`1px solid rgba(255,255,255,0.1)`, borderRadius:8, overflow:'hidden', background:'rgba(0,0,0,0.3)' }}>
+						<div style={{ background:'rgba(255,255,255,0.05)', padding:'8px 12px', fontSize:11, color:COLORS.muted, borderBottom:`1px solid rgba(255,255,255,0.1)` }}>event_id</div>
+						{/* Row 99 */}
+						<div style={{ 
+							padding:'8px 12px', fontSize:12, color:COLORS.ink, fontFamily:'monospace',
+							background: interpolateColors(f, [insertASuccess, insertASuccess+10, conflictB, conflictB+10, conflictB+30], ['transparent', 'rgba(0,230,118,0.1)', 'rgba(0,230,118,0.1)', 'rgba(255,50,50,0.3)', 'rgba(0,230,118,0.1)']),
+							opacity: SP(f, insertASuccess, fps)
+						}}>
+							'evt_99'
+						</div>
+					</div>
+				</div>
+
+				{/* Tasks Table */}
+				<div>
+					<div style={{ fontSize:12, color:COLORS.muted, marginBottom:8 }}>Table: <strong>tasks</strong> (Domain State)</div>
+					<div style={{ border:`1px solid rgba(255,255,255,0.1)`, borderRadius:8, overflow:'hidden', background:'rgba(0,0,0,0.3)' }}>
+						<div style={{ display:'flex', background:'rgba(255,255,255,0.05)', padding:'8px 12px', fontSize:11, color:COLORS.muted, borderBottom:`1px solid rgba(255,255,255,0.1)` }}>
+							<div style={{ flex:1 }}>id</div>
+							<div style={{ flex:1 }}>status</div>
+						</div>
+						<div style={{ display:'flex', padding:'8px 12px', fontSize:12, color:COLORS.ink, fontFamily:'monospace' }}>
+							<div style={{ flex:1 }}>'task_1'</div>
+							<div style={{ flex:1, fontWeight:900, color: interpolateColors(f, [updateASuccess, updateASuccess+10], [COLORS.warning, COLORS.success]) }}>
+								{f < updateASuccess ? 'PENDING' : 'DONE'}
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			{/* Phase 1: Copy A */}
+			<div style={{ opacity: interpolate(f, [rcvB - 15, rcvB - 5], [1, 0], { extrapolateRight: 'clamp' }) }}>
+				<Arrow x1={nodes.kafka.x + 100} y1={nodes.kafka.y} x2={nodes.consumer.x - 110} y2={nodes.consumer.y} color={COLORS.warning} label="1. poll() -> #99 (A)" delay={rcvA} />
+				<Arrow x1={nodes.consumer.x + 110} y1={nodes.consumer.y - 40} x2={nodes.db.x} y2={nodes.db.y + 110} color={COLORS.accent3} label="2. INSERT ON CONFLICT" delay={insertA} labelPos={0.5} labelOffset={-20} />
+				<StatusChip text="✅ Row Created" color={COLORS.success} top={nodes.db.y + 110} left={nodes.db.x - 100} delay={insertASuccess} />
+				
+				<Arrow x1={nodes.consumer.x + 110} y1={nodes.consumer.y} x2={nodes.db.x} y2={nodes.db.y + 240} color={COLORS.success} label="3. UPDATE tasks" delay={updateA} labelPos={0.5} />
+				<StatusChip text="🔄 State Changed" color={COLORS.success} top={nodes.db.y + 240} left={nodes.db.x - 100} delay={updateASuccess} />
+				
+				<Arrow x1={nodes.consumer.x + 110} y1={nodes.consumer.y + 40} x2={nodes.db.x} y2={nodes.db.y + 300} color={COLORS.accent2} label="4. COMMIT" delay={commitA} labelPos={0.5} labelOffset={20} />
+			</div>
+
+			{/* Phase 2: Copy B (Duplicate) */}
+			{f >= rcvB - 5 && (
+				<>
+					<Arrow x1={nodes.kafka.x + 100} y1={nodes.kafka.y} x2={nodes.consumer.x - 110} y2={nodes.consumer.y} color={COLORS.danger} label="5. poll() -> #99 (B)" delay={rcvB} dashed />
+					<Arrow x1={nodes.consumer.x + 110} y1={nodes.consumer.y - 40} x2={nodes.db.x} y2={nodes.db.y + 110} color={COLORS.danger} label="6. INSERT ON CONFLICT" delay={insertB} labelPos={0.5} labelOffset={-20} dashed />
+					
+					<StatusChip text="💥 Conflict! (0 rows)" color={COLORS.danger} top={nodes.db.y + 110} left={nodes.db.x - 100} delay={conflictB} />
+					
+					<Arrow x1={nodes.consumer.x + 110} y1={nodes.consumer.y} x2={nodes.db.x} y2={nodes.db.y + 240} color={COLORS.muted} label="7. UPDATE tasks (SKIPPED)" delay={skipB} labelPos={0.5} dashed />
+					<Arrow x1={nodes.consumer.x + 110} y1={nodes.consumer.y + 40} x2={nodes.db.x} y2={nodes.db.y + 300} color={COLORS.muted} label="8. ROLLBACK / COMMIT" delay={commitB} labelPos={0.5} labelOffset={20} dashed />
+				</>
+			)}
+
+			<Ban text="🛡️ Zero extra reads, zero partial states, mathematically perfect idempotency." color={COLORS.success} delay={D(20)} />
+		</Shell>
+	);
+};
+
+/* ════════════════════════════════════════════════
+   ROOT — Total Duration: 94s = 2820 frames
 ════════════════════════════════════════════════ */
 export const TransactionalOutbox: React.FC = () => {
 	const { fps } = useVideoConfig();
@@ -240,8 +408,14 @@ export const TransactionalOutbox: React.FC = () => {
 			<Sequence from={fps*15} durationInFrames={fps*16}>
 				<SolutionIntroSlide />
 			</Sequence>
-			<Sequence from={fps*31}>
+			<Sequence from={fps*31} durationInFrames={fps*19}>
 				<RelaySlide />
+			</Sequence>
+			<Sequence from={fps*50} durationInFrames={fps*20}>
+				<DuplicateProblemSlide />
+			</Sequence>
+			<Sequence from={fps*70} durationInFrames={fps*24}>
+				<IdempotencySlide />
 			</Sequence>
 		</AbsoluteFill>
 	);
