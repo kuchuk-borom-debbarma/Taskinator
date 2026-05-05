@@ -1,13 +1,13 @@
 import "react";
 import "./index.css";
 import { Composition } from "remotion";
-import { MyComposition } from "./Composition";
 import { FeatureShowcase } from "./FeatureShowcase";
 import { SchemaDesign } from "./SchemaDesign";
 import { SyncArchitecture } from "./SyncArchitecture";
 import { AsyncProblems } from "./AsyncProblems";
 import { TransactionalOutbox } from "./TransactionalOutbox";
 import { UpgradedAsyncFlow } from "./UpgradedAsyncFlow";
+import { ConcurrencyControl } from "./ConcurrencyControl";
 
 export const RemotionRoot: React.FC = () => {
   return (
@@ -56,6 +56,14 @@ export const RemotionRoot: React.FC = () => {
         id="UpgradedAsyncFlow"
         component={UpgradedAsyncFlow}
         durationInFrames={930}
+        fps={30}
+        width={1280}
+        height={720}
+      />
+      <Composition
+        id="ConcurrencyControl"
+        component={ConcurrencyControl}
+        durationInFrames={1560}
         fps={30}
         width={1280}
         height={720}
