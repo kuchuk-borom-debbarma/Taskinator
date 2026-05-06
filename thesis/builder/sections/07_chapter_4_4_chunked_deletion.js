@@ -1,4 +1,4 @@
-const { h2, h3, body, emptyLine, insertImage, figCaption, pageBreak } = require('../utils');
+const { h2, h3, body, codeBlock, emptyLine, insertImage, figCaption, pageBreak } = require('../utils');
 
 module.exports = function getChapter4_4() {
   return [
@@ -18,7 +18,21 @@ module.exports = function getChapter4_4() {
     
     h3("4.4.3 Recursive Bubbling"),
     body("After the first chunk of 2000 rows is successfully deleted, the Listener checks if the operation is complete. If the initial SELECT query returned exactly 2000 rows, there is a high statistical probability that further descendant rows remain in the database. To address this without locking the thread in a synchronous loop, the Listener deliberately emits a new, identical self-signal (PROJECT_DELETED) back into the outbox."),
-    body("This signal propagates through Kafka, eventually re-triggering the Listener a few milliseconds later. The process repeats recursively—\"bubbling\" through the message queue—until a SELECT ... LIMIT 2000 query returns 0 rows. At this point, the mathematical certainty of complete deletion is achieved, the recursive loop terminates, and the parent project record is safely hard-deleted. This pattern represents a fundamental paradigm shift from optimistic database locking to asynchronous, bounded chunk management, proving critical for achieving multi-tenant enterprise scalability."),
+    body("This signal propagates through Kafka, eventually re-triggering the Listener a few milliseconds later. The process repeats recursively—\"bubbling\" through the message queue—until a SELECT ... LIMIT 2000 query returns 0 rows. At this point, the mathematical certainty of complete deletion is achieved, the recursive loop terminates, and the parent project record is safely hard-deleted."),
+
+    h3("4.4.4 Physical Identifier (ctid) Based Chunking"),
+    body("While standard tables with primary keys use IDs for chunking, certain high-volume tables in Taskinator (like the 'task_reachability' index) use composite keys. In these cases, traditional ID-based pagination is inefficient. To maintain high performance, Taskinator utilizes PostgreSQL's 'ctid'—a physical tuple identifier representing the exact storage address of a row."),
+    codeBlock(`DELETE FROM task_reachability
+WHERE ctid IN (
+    SELECT ctid FROM task_reachability
+    WHERE fk_project_id = $projectId
+    LIMIT 2000
+);`),
+    body("Using 'ctid' allows the engine to jump directly to the physical storage locations without scanning index b-trees, ensuring that even index cleanup remains O(1) per chunk regardless of the total table size."),
+
+    h3("4.4.5 Deferred Reachability Repair Strategy"),
+    body("Deleting rows from the 'task_reachability' index is only half the problem. When a task is deleted, the system must repair the surviving transitive paths. Executing a recursive repair CTE after every 2,000-row chunk would be computationally redundant and extremely slow."),
+    body("Taskinator implements a 'Deferred Repair' strategy: the system suppresses the repair logic during all intermediate chunks. Only when the final chunk is reached (indicated by a deletion count < 2,000) does the system execute the expensive graph repair CTE. This guarantees that the repair is run exactly once on a clean, fully-purged table, maximizing both accuracy and performance."),
     
     pageBreak(),
   ];

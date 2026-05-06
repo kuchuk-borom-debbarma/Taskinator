@@ -140,6 +140,15 @@ function codeLine(text, spaceBefore = 0, spaceAfter = 0) {
   });
 }
 
+function codeBlock(text, spaceBefore = 120, spaceAfter = 120) {
+  const lines = text.split('\n');
+  return lines.map((line, i) => {
+    const sb = i === 0 ? spaceBefore : 0;
+    const sa = i === lines.length - 1 ? spaceAfter : 0;
+    return codeLine(line, sb, sa);
+  }).flat();
+}
+
 // Image placeholder (keep for fallback/backwards compatibility)
 function imgPlaceholder(label) {
   return new Table({
@@ -300,6 +309,6 @@ module.exports = {
   CONTENT_W, F, CODE_F,
   body, bodyRuns, run, centered, centeredBold, emptyLine, pageBreak,
   h1, h2, h3, h4, boldLabel, bullet, bulletRuns, numbered, numberedRuns,
-  codeLine, imgPlaceholder, insertImage, figCaption, tocEntry,
+  codeLine, codeBlock, imgPlaceholder, insertImage, figCaption, tocEntry,
   tblHeader, tblRow, tblCaption, sigBlock
 };

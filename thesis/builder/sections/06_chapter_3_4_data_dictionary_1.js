@@ -42,6 +42,40 @@ module.exports = function getChapter3_4() {
         tblRow(["created_at", "TIMESTAMPTZ", "NOT NULL. DEFAULT NOW(). UTC timestamp."], [2000, 2000, 5026], true),
       ]
     }),
+    emptyLine(),
+
+    h3("3.4.3 Table: task_link"),
+    body("The task_link table represents the directed edges in the task graph. It is a lightweight join table that stores only direct relationships between nodes."),
+    emptyLine(),
+    tblCaption("Table 3.4.3: task_link Data Dictionary"),
+    new Table({
+      width: { size: CONTENT_W, type: WidthType.DXA },
+      columnWidths: [2000, 2000, 5026],
+      rows: [
+        tblHeader(["Column Name", "Data Type", "Constraints & Description"], [2000, 2000, 5026]),
+        tblRow(["id", "UUID", "PRIMARY KEY. Unique edge identifier."], [2000, 2000, 5026]),
+        tblRow(["source_task_id", "UUID", "FOREIGN KEY references project_task(id). The 'From' node."], [2000, 2000, 5026], true),
+        tblRow(["target_task_id", "UUID", "FOREIGN KEY references project_task(id). The 'To' node."], [2000, 2000, 5026]),
+        tblRow(["label", "VARCHAR(50)", "NOT NULL. User-defined relationship label (e.g., 'blocks')."], [2000, 2000, 5026], true),
+      ]
+    }),
+    emptyLine(),
+
+    h3("3.4.4 Table: task_reachability"),
+    body("The task_reachability table is the transitive closure index. It stores all possible paths in the graph to enable O(1) connectivity checks."),
+    emptyLine(),
+    tblCaption("Table 3.4.4: task_reachability Data Dictionary"),
+    new Table({
+      width: { size: CONTENT_W, type: WidthType.DXA },
+      columnWidths: [2000, 2000, 5026],
+      rows: [
+        tblHeader(["Column Name", "Data Type", "Constraints & Description"], [2000, 2000, 5026]),
+        tblRow(["fk_project_id", "UUID", "COMPOSITE PRIMARY KEY. Project context."], [2000, 2000, 5026]),
+        tblRow(["ancestor_task_id", "UUID", "COMPOSITE PRIMARY KEY. The starting node."], [2000, 2000, 5026], true),
+        tblRow(["descendant_task_id", "UUID", "COMPOSITE PRIMARY KEY. The destination node."], [2000, 2000, 5026]),
+        tblRow(["min_depth", "INTEGER", "NOT NULL. The shortest distance between the nodes."], [2000, 2000, 5026], true),
+      ]
+    }),
     
     pageBreak(),
   ];

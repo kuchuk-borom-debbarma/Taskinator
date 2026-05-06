@@ -39,7 +39,16 @@ const getChapter6_4 = require('./sections/09_chapter_6_4_react_code_listing');
 const getChapter7_1 = require('./sections/10_chapter_7_1_testcontainers');
 const getChapter7_2 = require('./sections/10_chapter_7_2_mutation_testing');
 const getChapter7_3 = require('./sections/10_chapter_7_3_performance');
+const getChapter3_10 = require('./sections/06_chapter_3_10_task_graph_design');
+const getChapter4_8 = require('./sections/07_chapter_4_8_outbox_relay_deep_dive');
+const getChapter5_5 = require('./sections/08_chapter_5_5_event_orchestration');
+const getChapter5_6 = require('./sections/08_chapter_5_6_data_lifecycle_flows');
+const getChapter6_5 = require('./sections/09_chapter_6_5_targeted_realtime');
+const getChapter6_6 = require('./sections/09_chapter_6_6_security');
+const getChapter7_4 = require('./sections/10_chapter_7_4_infrastructure');
+const getChapter7_5 = require('./sections/10_chapter_7_5_scaling_analysis');
 const getChapter8 = require('./sections/11_chapter_8_conclusion');
+const getChapter8_2 = require('./sections/11_chapter_8_2_future_work');
 const getReferences = require('./sections/12_references');
 
 const doc = new Document({
@@ -100,6 +109,7 @@ const doc = new Document({
       ...getChapter3_7(),
       ...getChapter3_8(),
       ...getChapter3_9(),
+      ...getChapter3_10(),
       ...getChapter4_1(),
       ...getChapter4_2(),
       ...getChapter4_3(),
@@ -107,18 +117,26 @@ const doc = new Document({
       ...getChapter4_5(),
       ...getChapter4_6(),
       ...getChapter4_7(),
+      ...getChapter4_8(),
       ...getChapter5_1(),
       ...getChapter5_2(),
       ...getChapter5_3(),
       ...getChapter5_4(),
+      ...getChapter5_5(),
+      ...getChapter5_6(),
       ...getChapter6_1(),
       ...getChapter6_2(),
       ...getChapter6_3(),
       ...getChapter6_4(),
+      ...getChapter6_5(),
+      ...getChapter6_6(),
       ...getChapter7_1(),
       ...getChapter7_2(),
       ...getChapter7_3(),
+      ...getChapter7_4(),
+      ...getChapter7_5(),
       ...getChapter8(),
+      ...getChapter8_2(),
       ...getReferences(),
     ]
   }]
