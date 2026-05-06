@@ -14,12 +14,14 @@ module.exports = function getChapter6_6() {
     body("Traditional Role-Based Access Control (RBAC) is often too coarse for complex hierarchies. Taskinator transitions to an ABAC model where permissions are evaluated dynamically based on the subject (User), the object (Task/Project), and the environment (Time, IP, Team Context)."),
     body("This evaluation happens atomically within the PostgreSQL transaction using Row Level Security (RLS) policies, ensuring that even if an application-layer vulnerability is exploited, the database remains the final authoritative barrier against unauthorized data access."),
 
-    h3("6.6.3 Inter-Service Security: mTLS and Kafka ACLs"),
-    body("Internal communication between the Workspace service, the Smart Aggregator, and the Outbox Relay is secured via Mutual TLS (mTLS). Each service is issued a unique identity certificate, and connections are only established if both parties can prove their identity."),
-    body("Furthermore, Kafka topics are protected by strict Access Control Lists (ACLs). The Outbox Relay is granted 'Write-Only' access to the raw event topics, while the Smart Aggregator is granted 'Read-Only' access, effectively preventing unauthorized event injection or internal data leaks."),
+    h3("6.6.4 Leaky-Bucket Rate Limiting at the Edge"),
+    body("To protect against Distributed Denial of Service (DDoS) attacks and malicious API scraping, Taskinator implements a Leaky-Bucket rate limiting algorithm at the Cloudflare edge. Every User ID and IP address is assigned a request quota. Once the threshold is exceeded, subsequent requests are dropped with an HTTP 429 status code before they can penetrate the origin server cluster."),
+    
+    h3("6.6.5 Data Encryption at Rest: AES-256"),
+    body("While mTLS secures data in transit, Taskinator ensures that all sensitive data persisted in PostgreSQL is encrypted at rest using industry-standard AES-256 encryption. This protects against scenarios where physical storage media is compromised or improperly decommissioned. The encryption keys are managed by a dedicated Hardware Security Module (HSM) or a cloud-native key management service (AWS KMS / Google Cloud KMS)."),
 
     emptyLine(),
-    tblCaption("Table 6.6.1: Security Layer Responsibilities"),
+    tblCaption("Table 6.6.1: Security Layer Responsibilities and Mitigation Strategies"),
     new Table({
       width: { size: CONTENT_W, type: WidthType.DXA },
       columnWidths: [3000, 6026],

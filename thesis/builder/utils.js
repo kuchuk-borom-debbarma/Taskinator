@@ -64,6 +64,7 @@ function h1(text) {
   return new Paragraph({
     heading: HeadingLevel.HEADING_1,
     spacing: { before: 360, after: 240 },
+    pageBreakBefore: true,
     children: [new TextRun({ text, bold: true, size: 28, font: F })]
   });
 }

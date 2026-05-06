@@ -1,6 +1,6 @@
 const { Document, Packer, LevelFormat, AlignmentType, Footer, Paragraph, TextRun, PageNumber } = require('docx');
 const fs = require('fs');
-const { F } = require('./utils');
+const { F, pageBreak } = require('./utils');
 
 const getCover = require('./sections/00_cover');
 const getDeclarationAndCertificate = require('./sections/01_declaration_certificate');
@@ -12,6 +12,7 @@ const getChapter2_1 = require('./sections/05_chapter_2_1_research_gaps');
 const getChapter2_2 = require('./sections/05_chapter_2_2_summary');
 const getChapter2_3 = require('./sections/05_chapter_2_3_theory_dags');
 const getChapter2_4 = require('./sections/05_chapter_2_4_theory_btrees');
+const getChapter2_5 = require('./sections/05_chapter_2_5_distributed_theory');
 const getChapter3_1 = require('./sections/06_chapter_3_1_architecture');
 const getChapter3_2 = require('./sections/06_chapter_3_2_domain_modeling');
 const getChapter3_3 = require('./sections/06_chapter_3_3_database_optimization');
@@ -40,6 +41,7 @@ const getChapter7_1 = require('./sections/10_chapter_7_1_testcontainers');
 const getChapter7_2 = require('./sections/10_chapter_7_2_mutation_testing');
 const getChapter7_3 = require('./sections/10_chapter_7_3_performance');
 const getChapter3_10 = require('./sections/06_chapter_3_10_task_graph_design');
+const getChapter3_11 = require('./sections/06_chapter_3_11_protocols');
 const getChapter4_8 = require('./sections/07_chapter_4_8_outbox_relay_deep_dive');
 const getChapter5_5 = require('./sections/08_chapter_5_5_event_orchestration');
 const getChapter5_6 = require('./sections/08_chapter_5_6_data_lifecycle_flows');
@@ -47,9 +49,15 @@ const getChapter6_5 = require('./sections/09_chapter_6_5_targeted_realtime');
 const getChapter6_6 = require('./sections/09_chapter_6_6_security');
 const getChapter7_4 = require('./sections/10_chapter_7_4_infrastructure');
 const getChapter7_5 = require('./sections/10_chapter_7_5_scaling_analysis');
+const getChapter11 = require('./sections/11_chapter_11_deployment');
+const getChapter12 = require('./sections/11_chapter_12_devexp');
+const getChapter13 = require('./sections/11_chapter_13_disaster');
 const getChapter8 = require('./sections/11_chapter_8_conclusion');
 const getChapter8_2 = require('./sections/11_chapter_8_2_future_work');
+const getChapter9 = require('./sections/11_chapter_9_comparative_analysis');
+const getChapter10 = require('./sections/11_chapter_10_frontend_ux');
 const getReferences = require('./sections/12_references');
+const getAppendix = require('./sections/13_appendix');
 
 const doc = new Document({
   numbering: {
@@ -100,6 +108,7 @@ const doc = new Document({
       ...getChapter2_2(),
       ...getChapter2_3(),
       ...getChapter2_4(),
+      ...getChapter2_5(),
       ...getChapter3_1(),
       ...getChapter3_2(),
       ...getChapter3_3(),
@@ -110,6 +119,7 @@ const doc = new Document({
       ...getChapter3_8(),
       ...getChapter3_9(),
       ...getChapter3_10(),
+      ...getChapter3_11(),
       ...getChapter4_1(),
       ...getChapter4_2(),
       ...getChapter4_3(),
@@ -135,9 +145,15 @@ const doc = new Document({
       ...getChapter7_3(),
       ...getChapter7_4(),
       ...getChapter7_5(),
+      ...getChapter11(),
+      ...getChapter12(),
+      ...getChapter13(),
       ...getChapter8(),
       ...getChapter8_2(),
+      ...getChapter9(),
+      ...getChapter10(),
       ...getReferences(),
+      ...getAppendix(),
     ]
   }]
 });

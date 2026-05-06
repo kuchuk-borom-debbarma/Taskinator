@@ -29,7 +29,14 @@ module.exports = function getChapter1_2() {
     bulletRuns([run("Primary Relational Database: ", true), run("PostgreSQL 16. Chosen for its unparalleled reliability and advanced feature set. The system heavily exploits PostgreSQL-specific mechanics, including recursive CTEs, LISTEN/NOTIFY pub/sub for reactive outbox polling, and the SKIP LOCKED directive for highly concurrent queue processing.")], "b4"),
     bulletRuns([run("Event Broker: ", true), run("Apache Kafka. Acts as the durable, partitioned backbone of the Event-Driven Architecture. Kafka guarantees strict message ordering via Project ID partitioning keys, ensuring that causally related events are processed sequentially.")], "b4"),
     bulletRuns([run("In-Memory Datastore: ", true), run("Redis. Utilized purely for ephemeral operations and the zero-fan-out targeted routing of real-time Server-Sent Events (SSE) across distributed backend pods.")], "b4"),
-    bulletRuns([run("Containerization and Orchestration: ", true), run("Docker and Docker Compose. Used to orchestrate the complex local development environment, ensuring absolute parity between local testing configurations and eventual Kubernetes production deployments.")], "b4"),
+    h4("Visualization and Media Production:"),
+    bulletRuns([run("Architectural Animation: ", true), run("Remotion. Used to programmatically generate the high-fidelity architectural presentations and video walk-throughs included with this thesis. Remotion allows for React-based animation of complex distributed system state transitions.")], "b5"),
+    bulletRuns([run("Diagramming: ", true), run("Mermaid.js and Playwright. The architectural diagrams are authored in Mermaid markdown and programmatically rendered into high-resolution PNG assets using a custom Playwright-based conversion pipeline.")], "b5"),
+
+    h4("Quality Assurance and Monitoring:"),
+    bulletRuns([run("End-to-End Testing: ", true), run("Playwright. Used for automated, headless browser testing of the reactive task graph and real-time SSE updates across multiple concurrent user sessions.")], "b6"),
+    bulletRuns([run("Unit and Integration Testing: ", true), run("Vitest. A high-performance testing framework that leverages Vite's transformation engine for extremely fast test execution during development.")], "b6"),
+    bulletRuns([run("Structured Logging: ", true), run("Pino. A low-overhead Node.js logger used to capture high-velocity event traces and performance metrics without introducing significant I/O blocking.")], "b6"),
     body("This carefully selected, highly tuned technology stack allows the Taskinator application to remain strictly asynchronous—from the initial HTTP request traversing the GraphQL gateway, all the way down to the database row-lock level—fully satisfying the core research objective of non-blocking, high-throughput execution."),
 
     pageBreak(),

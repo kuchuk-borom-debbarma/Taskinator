@@ -41,6 +41,41 @@ module.exports = function getChapter3_5() {
       ]
     }),
 
+    h3("3.5.3 Table: audit_log"),
+    body("While outbox_events is ephemeral, the audit_log table provides a persistent, immutable history of all user-initiated mutations for compliance and security auditing."),
+    emptyLine(),
+    tblCaption("Table 3.5.3: audit_log Data Dictionary"),
+    new Table({
+      width: { size: CONTENT_W, type: WidthType.DXA },
+      columnWidths: [2000, 2000, 5026],
+      rows: [
+        tblHeader(["Column Name", "Data Type", "Constraints & Description"], [2000, 2000, 5026]),
+        tblRow(["id", "UUID", "PRIMARY KEY. Unique audit entry identifier."], [2000, 2000, 5026]),
+        tblRow(["actor_id", "UUID", "NOT NULL. The ID of the user who performed the action."], [2000, 2000, 5026], true),
+        tblRow(["action", "TEXT", "NOT NULL. Human-readable action description."], [2000, 2000, 5026]),
+        tblRow(["old_value", "JSONB", "NULLABLE. The state of the entity before the mutation."], [2000, 2000, 5026], true),
+        tblRow(["new_value", "JSONB", "NULLABLE. The state of the entity after the mutation."], [2000, 2000, 5026]),
+        tblRow(["created_at", "TIMESTAMPTZ", "DEFAULT now(). High-precision timestamp of the audit event."], [2000, 2000, 5026], true),
+      ]
+    }),
+    emptyLine(),
+
+    h3("3.5.4 Table: project_config"),
+    body("The project_config table stores granular operational settings for each project, such as notification preferences and automation thresholds."),
+    emptyLine(),
+    tblCaption("Table 3.5.4: project_config Data Dictionary"),
+    new Table({
+      width: { size: CONTENT_W, type: WidthType.DXA },
+      columnWidths: [2000, 2000, 5026],
+      rows: [
+        tblHeader(["Column Name", "Data Type", "Constraints & Description"], [2000, 2000, 5026]),
+        tblRow(["fk_project_id", "UUID", "PRIMARY KEY, REFERENCES project(id). One-to-one relationship."], [2000, 2000, 5026]),
+        tblRow(["auto_complete_parents", "BOOLEAN", "DEFAULT FALSE. Determines if parent tasks auto-complete when children are done."], [2000, 2000, 5026], true),
+        tblRow(["max_nested_depth", "INTEGER", "DEFAULT 10. Safety limit for recursive task nesting."], [2000, 2000, 5026]),
+        tblRow(["slack_webhook_url", "TEXT", "NULLABLE. Integration endpoint for external notifications."], [2000, 2000, 5026], true),
+      ]
+    }),
+
     pageBreak(),
   ];
 };

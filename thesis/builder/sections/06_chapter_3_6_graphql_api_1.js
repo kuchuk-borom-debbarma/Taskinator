@@ -37,6 +37,37 @@ module.exports = function getChapter3_6() {
       ]
     }),
 
+    h3("3.6.3 Query: getMe"),
+    body("Retrieves the authenticated user's profile and their global role assignments."),
+    emptyLine(),
+    tblCaption("Table 3.6.3: getMe API Contract"),
+    new Table({
+      width: { size: CONTENT_W, type: WidthType.DXA },
+      columnWidths: [2000, 2000, 5026],
+      rows: [
+        tblHeader(["Field", "GraphQL Type", "Description"], [2000, 2000, 5026]),
+        tblRow(["id", "ID!", "The unique user identifier."], [2000, 2000, 5026]),
+        tblRow(["email", "String!", "The user's verified email address."], [2000, 2000, 5026], true),
+        tblRow(["projects", "[Project!]", "List of projects the user is a member of."], [2000, 2000, 5026]),
+      ]
+    }),
+    emptyLine(),
+
+    h3("3.6.4 Query: getTeamTree"),
+    body("Retrieves the nested hierarchy of teams for the organization. Uses a recursive resolver with a depth limit of 10 to prevent DoS attacks."),
+    emptyLine(),
+    tblCaption("Table 3.6.4: getTeamTree API Contract"),
+    new Table({
+      width: { size: CONTENT_W, type: WidthType.DXA },
+      columnWidths: [2000, 2000, 5026],
+      rows: [
+        tblHeader(["Field", "GraphQL Type", "Description"], [2000, 2000, 5026]),
+        tblRow(["id", "ID!", "The unique team identifier."], [2000, 2000, 5026]),
+        tblRow(["name", "String!", "The team name."], [2000, 2000, 5026], true),
+        tblRow(["children", "[Team!]", "Nested sub-teams."], [2000, 2000, 5026]),
+      ]
+    }),
+
     pageBreak(),
   ];
 };

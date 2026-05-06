@@ -77,6 +77,39 @@ module.exports = function getChapter3_4() {
       ]
     }),
     
+    h3("3.4.5 Table: project_member"),
+    body("The project_member table manages user access to specific projects, including their assigned roles and permissions within that context."),
+    emptyLine(),
+    tblCaption("Table 3.4.5: project_member Data Dictionary"),
+    new Table({
+      width: { size: CONTENT_W, type: WidthType.DXA },
+      columnWidths: [2000, 2000, 5026],
+      rows: [
+        tblHeader(["Column Name", "Data Type", "Constraints & Description"], [2000, 2000, 5026]),
+        tblRow(["fk_project_id", "UUID", "COMPOSITE PK, REFERENCES project(id)."], [2000, 2000, 5026]),
+        tblRow(["fk_user_id", "UUID", "COMPOSITE PK. External identity reference."], [2000, 2000, 5026], true),
+        tblRow(["role", "VARCHAR(50)", "NOT NULL. Enum: 'OWNER', 'ADMIN', 'MEMBER', 'VIEWER'."], [2000, 2000, 5026]),
+        tblRow(["joined_at", "TIMESTAMPTZ", "DEFAULT now(). UTC join timestamp."], [2000, 2000, 5026], true),
+      ]
+    }),
+    emptyLine(),
+
+    h3("3.4.6 Table: team"),
+    body("Teams are organizational units that can be nested to reflect company hierarchies. Access control is inherited down the team tree."),
+    emptyLine(),
+    tblCaption("Table 3.4.6: team Data Dictionary"),
+    new Table({
+      width: { size: CONTENT_W, type: WidthType.DXA },
+      columnWidths: [2000, 2000, 5026],
+      rows: [
+        tblHeader(["Column Name", "Data Type", "Constraints & Description"], [2000, 2000, 5026]),
+        tblRow(["id", "UUID", "PRIMARY KEY. Unique team identifier."], [2000, 2000, 5026]),
+        tblRow(["name", "VARCHAR(255)", "NOT NULL. Human-readable team name."], [2000, 2000, 5026], true),
+        tblRow(["parent_team_id", "UUID", "NULLABLE, REFERENCES team(id). Enables nesting."], [2000, 2000, 5026]),
+        tblRow(["created_at", "TIMESTAMPTZ", "DEFAULT now()."], [2000, 2000, 5026], true),
+      ]
+    }),
+
     pageBreak(),
   ];
 };
