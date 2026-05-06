@@ -39,7 +39,7 @@ export const RemotionRoot: React.FC = () => {
       <Composition
         id="AsyncProblems"
         component={AsyncProblems}
-        durationInFrames={1500}
+        durationInFrames={1620}
         fps={30}
         width={1280}
         height={720}

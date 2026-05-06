@@ -248,26 +248,39 @@ const MessageLossSlide: React.FC = () => {
 const DuplicateSlide: React.FC = () => {
 	const f = useCurrentFrame(); const { fps } = useVideoConfig();
 	const D = (s:number) => F(s, fps);
+	const NB = NP.server.t + 108; // node bottom
 	return (
 		<GlassShell>
 			<Hdr tag="Problem 3" color="#ff6b6b" title="Duplicate Processing" sub="At-least-once delivery guarantees the event arrives — but it may arrive more than once." />
 
-			<SN icon="📨" label="Msg Broker" color={COLORS.accent2} top={NP.broker.t}   left={NP.broker.l}   w={NP.broker.w}   delay={D(1)} />
-			<SN icon="🎧" label="Listener"   color={COLORS.warning} top={NP.listener.t} left={NP.listener.l} w={NP.listener.w} delay={D(1.5)} />
+			{/* Nodes */}
+			<SN icon="📱" label="Client"     color={COLORS.accent}  top={NP.client.t}   left={NP.client.l}   w={NP.client.w}   delay={D(1)} />
+			<SN icon="⚙️" label="API Server" color={COLORS.success} top={NP.server.t}   left={NP.server.l}   w={NP.server.w}   delay={D(1.5)} />
 			<SN icon="🗄️" label="PostgreSQL" color={COLORS.accent3} top={NP.db.t}       left={NP.db.l}       w={NP.db.w}       delay={D(2)} />
+			<SN icon="📨" label="Msg Broker" color={COLORS.accent2} top={NP.broker.t}   left={NP.broker.l}   w={NP.broker.w}   delay={D(2.5)} />
+			<SN icon="🎧" label="Listener"   color={COLORS.warning} top={NP.listener.t} left={NP.listener.l} w={NP.listener.w} delay={D(3)} />
+
+			{/* Step 1–3: initial flow (faster context) */}
+			<HA x1={NP.client.cx+NP.client.w/2}  x2={NP.server.l}               y={228} color={COLORS.accent}  label="POST /tasks" delay={D(2.5)} />
+			<HA x1={NP.server.cx+NP.server.w/2}  x2={NP.db.l}                   y={228} color={COLORS.success} label="INSERT task"  delay={D(3.5)} />
+			<VA x={NP.server.cx} y1={NB} y2={NP.broker.t} color={COLORS.accent2} label="emit EVENT" delay={D(4.5)} dashed />
 
 			{/* Delivery 1 */}
-			<HA x1={NP.broker.cx+NP.broker.w/2} x2={NP.listener.l}               y={412} color={COLORS.accent2} label="Deliver TASK_CREATED (attempt 1)" delay={D(2)} />
-			<VA x={NP.listener.cx} y1={NP.listener.t} y2={NP.db.t+NP.db.w/2} color={COLORS.warning} label="UPDATE tasks_count += 1" delay={D(3.5)} />
-			<Chip text="tasks_count: 4 → 5 ✓" color={COLORS.success} top={NP.db.t+50} left={NP.db.l-30} delay={D(5)} />
+			<HA x1={NP.broker.cx+NP.broker.w/2} x2={NP.listener.l} y={412} color={COLORS.accent2} label="Deliver (Attempt 1)" delay={D(6)} />
+			<VA x={NP.listener.cx} y1={NP.listener.t} y2={NP.db.t+NP.db.w/2} color={COLORS.warning} label="UPDATE tasks_count += 1" delay={D(7.5)} />
+			<Chip text="tasks_count: 5 ✓" color={COLORS.success} top={NP.db.t+50} left={NP.db.l-30} delay={D(8.5)} />
 
-			{/* Delivery 2 (duplicate) */}
-			<HA x1={NP.broker.cx+NP.broker.w/2} x2={NP.listener.l}               y={435} color={COLORS.danger} label="Deliver TASK_CREATED (retry/duplicate)" delay={D(6.5)} dashed />
-			<VA x={NP.listener.cx+20} y1={NP.listener.t} y2={NP.db.t+NP.db.w/2} color={COLORS.danger} label="UPDATE tasks_count += 1 AGAIN" delay={D(7.5)} dashed />
-			<Chip text="tasks_count: 5 → 6 ❌ WRONG" color={COLORS.danger} top={NP.db.t+90} left={NP.db.l-30} delay={D(9)} />
+			{/* The Reason: Crash before ACK */}
+			<div style={{ position:'absolute', top:NP.listener.t+20, left:NP.listener.cx-20, opacity:SP(f, D(9.5), fps), transform:`scale(${SP(f, D(9.5), fps)})`, fontSize:32, zIndex:35 }}>💥</div>
+			<Chip text="Crash before sending ACK!" color={COLORS.danger} top={NP.listener.t+105} left={NP.listener.l-10} delay={D(9.8)} />
+
+			{/* Delivery 2 (Duplicate) */}
+			<HA x1={NP.broker.cx+NP.broker.w/2} x2={NP.listener.l} y={435} color={COLORS.danger} label="Retry (No ACK received)" delay={D(11.5)} dashed />
+			<VA x={NP.listener.cx+20} y1={NP.listener.t} y2={NP.db.t+NP.db.w/2} color={COLORS.danger} label="UPDATE tasks_count += 1 AGAIN" delay={D(12.8)} dashed />
+			<Chip text="tasks_count: 6 ❌ WRONG" color={COLORS.danger} top={NP.db.t+90} left={NP.db.l-30} delay={D(13.8)} />
 
 			{/* Expected vs got */}
-			<div style={{ position:'absolute', top:NP.client.t, left:NP.client.l, width:220, opacity:SP(f, D(9.5), fps) }}>
+			<div style={{ position:'absolute', top:NP.client.t, left:NP.client.l, width:220, opacity:SP(f, D(14.5), fps) }}>
 				<div style={{ background:'rgba(255,23,68,0.1)', border:`2px solid ${COLORS.danger}`, borderRadius:12, padding:'14px 16px' }}>
 					<div style={{ fontSize:11, fontWeight:800, color:COLORS.danger, fontFamily:'Inter', marginBottom:6 }}>🔁 Silent Corruption</div>
 					<div style={{ fontSize:11, color:COLORS.muted, fontFamily:'Inter', lineHeight:1.6 }}>
@@ -277,13 +290,13 @@ const DuplicateSlide: React.FC = () => {
 				</div>
 			</div>
 
-			<Ban text="🔁 The listener ran twice — tasks_count is now wrong with no error, no alert" color="#ff6b6b" delay={D(11)} />
+			<Ban text="🔁 At-least-once delivery means retries can cause the same side-effect twice" color="#ff6b6b" delay={D(16)} />
 		</GlassShell>
 	);
 };
 
 /* ─────────────────────────────────────────────────────
-   ROOT  —  3+7+14+13+13 = 50s = 1500 frames
+   ROOT  —  3+7+14+13+17 = 54s = 1620 frames
 ───────────────────────────────────────────────────── */
 export const AsyncProblems: React.FC = () => {
 	const { fps } = useVideoConfig();
