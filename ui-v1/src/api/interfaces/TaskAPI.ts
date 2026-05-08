@@ -19,7 +19,16 @@ export interface TaskAPI {
 
   createTask(input: { projectId: string; title: string; description?: string; status?: string; teamId?: string; memberId?: string }): Promise<ProjectTask>;
 
-  updateTask(taskId: string, input: { projectId: string; version: number; title?: string; description?: string; status?: string; teamId?: string; memberId?: string }): Promise<ProjectTask>;
+  updateTask(taskId: string, input: { 
+    projectId: string; 
+    version: number; 
+    title?: string; 
+    description?: string; 
+    status?: string; 
+    teamId?: string | null; 
+    memberId?: string | null;
+    priority?: number;
+  }): Promise<ProjectTask>;
 
   deleteTask(projectId: string, taskId: string): Promise<string>;
 

@@ -287,7 +287,16 @@ export class GraphQLTaskAPI implements TaskAPI {
     return data.task.create;
   }
 
-  async updateTask(taskId: string, input: { projectId: string; version: number; title?: string; description?: string; status?: string; teamId?: string; memberId?: string }): Promise<ProjectTask> {
+  async updateTask(taskId: string, input: { 
+    projectId: string; 
+    version: number; 
+    title?: string; 
+    description?: string; 
+    status?: string; 
+    teamId?: string | null; 
+    memberId?: string | null;
+    priority?: number;
+  }): Promise<ProjectTask> {
     const data = await this.query<any>(gql`
       mutation UpdateTask($taskId: ID!, $input: UpdateTaskInput!) {
         task {

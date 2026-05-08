@@ -646,6 +646,7 @@ export const insertTask = async (param: {
                 title, 
                 description, 
                 status, 
+                priority,
                 created_by, 
                 updated_by
             )
@@ -654,6 +655,7 @@ export const insertTask = async (param: {
                 ${param.title}, 
                 ${param.description ?? ''}, 
                 ${param.status ?? 'TODO'}, 
+                ${param.priority ?? 0},
                 ${param.actorId}, 
                 ${param.actorId}
             WHERE EXISTS (SELECT 1 FROM authorized)
@@ -725,12 +727,22 @@ export const updateTask = async (param: {
         updates.push(sql`description = ${param.description ?? ''}`);
     if (param.status !== undefined)
         updates.push(sql`status = ${param.status ?? 'TODO'}`);
+    if (param.priority !== undefined)
+        updates.push(sql`priority = ${param.priority ?? 0}`);
 
     // Assignment updates
-    if (param.teamId !== undefined)
+    if (param.teamId !== undefined) {
         updates.push(sql`fk_team_id = ${param.teamId}::uuid`);
-    if (param.memberId !== undefined)
+        // Rule: If team is removed, remove member assignment too
+        if (param.teamId === null) {
+            updates.push(sql`fk_member_id = NULL`);
+        }
+    }
+
+    // Only update memberId if it was provided AND we aren't already nullifying it via team removal
+    if (param.memberId !== undefined && param.teamId !== null) {
         updates.push(sql`fk_member_id = ${param.memberId}::text`);
+    }
 
     if (updates.length === 0) {
         // No updates, just fetch and return current state (or maybe we should require version check anyway?)

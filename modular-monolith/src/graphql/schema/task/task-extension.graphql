@@ -86,6 +86,10 @@ input CreateTaskInput {
     Initial lifecycle status. Defaults to server-defined value if omitted.
     """
     status: String
+    """
+    Initial numeric priority. Lower is higher urgency.
+    """
+    priority: Int
 }
 
 input UpdateTaskInput {
@@ -117,6 +121,10 @@ input UpdateTaskInput {
     Member to assign this task to.
     """
     memberId: ID
+    """
+    Updated numeric priority. Lower is higher urgency.
+    """
+    priority: Int
 }
 
 input CreateTaskLinkInput {

@@ -37,11 +37,16 @@ const getCachedTask = (queryClient: QueryClient, taskId: string) => {
 };
 
 export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose }) => {
-  const { taskApi } = useApi();
+  const { taskApi, teamApi, projectApi } = useApi();
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
   const [titleDraft, setTitleDraft] = useState('');
   const [descriptionDraft, setDescriptionDraft] = useState('');
+  const [statusDraft, setStatusDraft] = useState('');
+  const [priorityDraft, setPriorityDraft] = useState(0);
+  const [teamIdDraft, setTeamIdDraft] = useState<string | null>(null);
+  const [memberIdDraft, setMemberIdDraft] = useState<string | null>(null);
+
   const [incomingCursor, setIncomingCursor] = useState<string | undefined>();
   const [incomingDir, setIncomingDir] = useState<'forward' | 'backward'>('forward');
   const [outgoingCursor, setOutgoingCursor] = useState<string | undefined>();
@@ -62,6 +67,27 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
   });
 
   const task = detail?.task;
+
+  // Fetch project teams for dropdown
+  const { data: teamsData } = useQuery({
+    queryKey: ['project-teams-all', task?.project?.id],
+    queryFn: () => teamApi.getTeams(task!.project!.id, { first: 100 }),
+    enabled: !!task?.project?.id && isEditing,
+  });
+
+  // Fetch team members for dropdown
+  const { data: membersData } = useQuery({
+    queryKey: ['team-members-all', teamIdDraft],
+    queryFn: () => teamApi.getTeamMembers(task!.project!.id, teamIdDraft!, { first: 100 }),
+    enabled: !!task?.project?.id && !!teamIdDraft && isEditing,
+  });
+
+  const handleTeamChange = (newTeamId: string | null) => {
+    setTeamIdDraft(newTeamId);
+    if (!newTeamId) {
+      setMemberIdDraft(null);
+    }
+  };
 
   const { data: incomingData, isLoading: incomingLoading } = useQuery({
     queryKey: ['task-links', taskId, 'incoming', incomingCursor, incomingDir],
@@ -100,10 +126,15 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
         version: task.version,
         title: titleDraft.trim(),
         description: descriptionDraft.trim() || undefined,
+        status: statusDraft || undefined,
+        priority: priorityDraft,
+        teamId: teamIdDraft,
+        memberId: memberIdDraft,
       });
     },
     onSuccess: (updated) => {
       queryClient.setQueryData(['task', taskId], updated);
+      queryClient.invalidateQueries({ queryKey: ['task-detail', taskId] });
       queryClient.invalidateQueries({ queryKey: ['tasks', updated.project?.id] });
       queryClient.invalidateQueries({ queryKey: ['project-dashboard', updated.project?.id] });
       setIsEditing(false);
@@ -236,6 +267,10 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
               onClick={() => {
                 setTitleDraft(task.title);
                 setDescriptionDraft(task.description);
+                setStatusDraft(task.status);
+                setPriorityDraft(task.priority);
+                setTeamIdDraft(task.team?.id || null);
+                setMemberIdDraft(task.assignedMember?.id || null);
                 setIsEditing(true);
               }}
               className="inline-flex items-center gap-2 rounded-full border border-app-line bg-white/80 px-4 py-2 text-sm font-semibold text-app-ink transition hover:border-app-ink/20"
@@ -396,10 +431,71 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
               </button>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-4 max-h-[70vh] overflow-y-auto px-1">
               <TextField label="Title" value={titleDraft} onChange={setTitleDraft} />
-              <TextAreaField label="Description" value={descriptionDraft} onChange={setDescriptionDraft} rows={6} />
-              <div className="flex flex-wrap gap-3 pt-2">
+              <TextAreaField label="Description" value={descriptionDraft} onChange={setDescriptionDraft} rows={4} />
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-app-muted">Status</p>
+                  <select
+                    value={statusDraft}
+                    onChange={(e) => setStatusDraft(e.target.value)}
+                    className="w-full rounded-xl border border-app-line bg-white/50 px-3 py-2 text-sm outline-none shadow-sm cursor-pointer"
+                  >
+                    <option value="TODO">Todo</option>
+                    <option value="IN_PROGRESS">In Progress</option>
+                    <option value="DONE">Done</option>
+                    <option value="CANCELED">Canceled</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-app-muted">Priority</p>
+                  <select
+                    value={priorityDraft}
+                    onChange={(e) => setPriorityDraft(Number(e.target.value))}
+                    className="w-full rounded-xl border border-app-line bg-white/50 px-3 py-2 text-sm outline-none shadow-sm cursor-pointer"
+                  >
+                    <option value={0}>Urgent (P0)</option>
+                    <option value={1}>High (P1)</option>
+                    <option value={2}>Medium (P2)</option>
+                    <option value={3}>Low (P3)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-app-muted">Assign Team</p>
+                  <select
+                    value={teamIdDraft || ''}
+                    onChange={(e) => handleTeamChange(e.target.value || null)}
+                    className="w-full rounded-xl border border-app-line bg-white/50 px-3 py-2 text-sm outline-none shadow-sm cursor-pointer"
+                  >
+                    <option value="">Unassigned</option>
+                    {teamsData?.teams.map(t => (
+                      <option key={t.id} value={t.id}>{t.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-app-muted">Assign Member</p>
+                  <select
+                    value={memberIdDraft || ''}
+                    onChange={(e) => setMemberIdDraft(e.target.value || null)}
+                    disabled={!teamIdDraft}
+                    className="w-full rounded-xl border border-app-line bg-white/50 px-3 py-2 text-sm outline-none shadow-sm cursor-pointer disabled:opacity-50"
+                  >
+                    <option value="">No member assigned</option>
+                    {membersData?.members.map(m => (
+                      <option key={m.id} value={m.id}>{m.username}</option>
+                    ))}
+                  </select>
+                  {!teamIdDraft && <p className="text-[10px] text-app-muted">Assign a team first to pick a member.</p>}
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-3 pt-4 border-t border-app-line">
                 <button
                   onClick={() => setIsEditing(false)}
                   className="rounded-full border border-app-line bg-white/80 px-5 py-3 text-sm font-semibold text-app-ink transition hover:border-app-ink/20"
