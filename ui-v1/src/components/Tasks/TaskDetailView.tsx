@@ -297,10 +297,10 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
                 title="Incoming"
                 links={incoming}
                 direction="incoming"
-                description="Tasks that impact this one. Usually blockers, requirements, or higher-level parents."
+                description="Tasks that impact this task. Usually parent tasks, follow-ups, or dependents."
                 onAdd={() => {
                   setLinkModalDir('incoming');
-                  setQuickAddLabel('blocked by');
+                  setQuickAddLabel('blocks');
                 }}
                 onEdit={(link) => {
                   setEditingLink(link);
@@ -335,10 +335,10 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
                 title="Outgoing"
                 links={outgoing}
                 direction="outgoing"
-                description="Tasks that this one impacts. Usually subtasks, follow-ups, or dependents."
+                description="Tasks that this task depends on. Usually sub-tasks, blockers, or requirements."
                 onAdd={() => {
                   setLinkModalDir('outgoing');
-                  setQuickAddLabel('blocks');
+                  setQuickAddLabel('blocked by');
                 }}
                 onEdit={(link) => {
                   setEditingLink(link);
@@ -470,8 +470,8 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
                 </>
               ) : (
                 <>
-                  <option value="blocks">This task blocks new task</option>
-                  <option value="parent of">This task is parent of new task</option>
+                  <option value="blocked by">This task is blocked by new task</option>
+                  <option value="sub-task of">This task is a sub-task of new task</option>
                   <option value="duplicates">This task duplicates new task</option>
                   <option value="relates to">This task relates to new task</option>
                 </>
@@ -553,8 +553,8 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
                 </>
               ) : (
                 <>
-                  <option value="blocks">This task blocks new task</option>
-                  <option value="parent of">This task is parent of new task</option>
+                  <option value="blocked by">This task is blocked by new task</option>
+                  <option value="sub-task of">This task is a sub-task of new task</option>
                   <option value="duplicates">This task duplicates new task</option>
                   <option value="relates to">This task relates to new task</option>
                 </>
