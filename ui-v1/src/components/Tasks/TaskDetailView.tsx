@@ -56,14 +56,14 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
   const [existingTaskId, setExistingTaskId] = useState('');
   const [editingLink, setEditingLink] = useState<TaskLink | null>(null);
 
-  const { data: task, isLoading } = useQuery({
-    queryKey: ['task', taskId],
-    queryFn: () => taskApi.getTask(taskId),
-    initialData: () => getCachedTask(queryClient, taskId),
-    staleTime: 1000 * 60 * 10,
+  const { data: detail, isLoading: detailLoading } = useQuery({
+    queryKey: ['task-detail', taskId],
+    queryFn: () => taskApi.getTaskDetail(taskId),
   });
 
-  const { data: incomingData } = useQuery({
+  const task = detail?.task;
+
+  const { data: incomingData, isLoading: incomingLoading } = useQuery({
     queryKey: ['task-links', taskId, 'incoming', incomingCursor, incomingDir],
     queryFn: () => {
       if (incomingDir === 'backward') {
@@ -71,11 +71,11 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
       }
       return taskApi.getTaskNeighbourLinks(taskId, 'incoming', 1, { first: 8, after: incomingDir === 'forward' ? incomingCursor : undefined });
     },
-    enabled: !!task,
-    staleTime: 1000 * 60 * 3,
+    enabled: !!incomingCursor, // Only run for pagination
+    initialData: incomingCursor ? undefined : detail?.incoming,
   });
 
-  const { data: outgoingData } = useQuery({
+  const { data: outgoingData, isLoading: outgoingLoading } = useQuery({
     queryKey: ['task-links', taskId, 'outgoing', outgoingCursor, outgoingDir],
     queryFn: () => {
       if (outgoingDir === 'backward') {
@@ -83,9 +83,14 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
       }
       return taskApi.getTaskNeighbourLinks(taskId, 'outgoing', 1, { first: 8, after: outgoingDir === 'forward' ? outgoingCursor : undefined });
     },
-    enabled: !!task,
-    staleTime: 1000 * 60 * 3,
+    enabled: !!outgoingCursor, // Only run for pagination
+    initialData: outgoingCursor ? undefined : detail?.outgoing,
   });
+
+  const incoming = incomingData?.links || [];
+  const outgoing = outgoingData?.links || [];
+
+  const isLoading = detailLoading || (!!incomingCursor && (incomingLoading || outgoingLoading));
 
   const updateTask = useMutation({
     mutationFn: () => {
@@ -137,6 +142,7 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
       return { id: targetId };
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['task-detail', taskId] });
       queryClient.invalidateQueries({ queryKey: ['task-links', taskId] });
       queryClient.invalidateQueries({ queryKey: ['tasks'] });
       setQuickAddTitle('');
@@ -152,11 +158,12 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
   const updateLink = useMutation({
     mutationFn: (input: { linkId: string; label: string }) => 
       taskApi.updateTaskLink({
-        projectId: task.project?.id || '',
+        projectId: task?.project?.id || '',
         linkId: input.linkId,
         label: input.label,
       }),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['task-detail', taskId] });
       queryClient.invalidateQueries({ queryKey: ['task-links', taskId] });
       setEditingLink(null);
       setQuickAddLabel('blocks');
@@ -166,8 +173,9 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
 
   const deleteLink = useMutation({
     mutationFn: (linkId: string) => 
-      taskApi.deleteTaskLink(task.project?.id || '', linkId),
+      taskApi.deleteTaskLink(task?.project?.id || '', linkId),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['task-detail', taskId] });
       queryClient.invalidateQueries({ queryKey: ['task-links', taskId] });
     },
   });
@@ -187,9 +195,6 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
       </div>
     );
   }
-
-  const incoming = incomingData?.links ?? [];
-  const outgoing = outgoingData?.links ?? [];
 
   return (
     <div className="page-frame">

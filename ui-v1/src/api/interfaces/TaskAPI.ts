@@ -11,6 +11,12 @@ export interface TaskAPI {
 
   getTask(id: string): Promise<ProjectTask | null>;
 
+  getTaskDetail(id: string): Promise<{
+    task: ProjectTask | null,
+    incoming: { links: TaskLink[], pageInfo: PageInfo },
+    outgoing: { links: TaskLink[], pageInfo: PageInfo },
+  }>;
+
   createTask(input: { projectId: string; title: string; description?: string; status?: string; teamId?: string; memberId?: string }): Promise<ProjectTask>;
 
   updateTask(taskId: string, input: { projectId: string; version: number; title?: string; description?: string; status?: string; teamId?: string; memberId?: string }): Promise<ProjectTask>;

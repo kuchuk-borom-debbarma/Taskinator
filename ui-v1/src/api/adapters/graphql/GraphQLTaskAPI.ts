@@ -185,6 +185,46 @@ export class GraphQLTaskAPI implements TaskAPI {
     return data.task || null;
   }
 
+  async getTaskDetail(id: string): Promise<{
+    task: ProjectTask | null,
+    incoming: { links: TaskLink[], pageInfo: PageInfo },
+    outgoing: { links: TaskLink[], pageInfo: PageInfo },
+  }> {
+    const data = await this.query<any>(gql`
+      query GetTaskDetail($id: ID!) {
+        task(id: $id) {
+          ${TASK_FIELDS}
+          incoming: neighbourLinks(direction: incoming, first: 5) {
+            edges { node { ${TASK_LINK_FIELDS} } }
+            pageInfo { hasNextPage hasPreviousPage startCursor endCursor }
+          }
+          outgoing: neighbourLinks(direction: outgoing, first: 5) {
+            edges { node { ${TASK_LINK_FIELDS} } }
+            pageInfo { hasNextPage hasPreviousPage startCursor endCursor }
+          }
+        }
+      }
+    `, { id });
+
+    const task = data.task || null;
+    const incoming = data.task?.incoming;
+    const outgoing = data.task?.outgoing;
+
+    const emptyPage = { links: [], pageInfo: { hasNextPage: false, hasPreviousPage: false, endCursor: null, startCursor: null } };
+
+    return {
+      task,
+      incoming: incoming ? {
+        links: incoming.edges.map((e: any) => e.node),
+        pageInfo: incoming.pageInfo
+      } : emptyPage,
+      outgoing: outgoing ? {
+        links: outgoing.edges.map((e: any) => e.node),
+        pageInfo: outgoing.pageInfo
+      } : emptyPage,
+    };
+  }
+
   async getTaskGraphPage(
     taskId: string,
     params: PaginationArgs & {
