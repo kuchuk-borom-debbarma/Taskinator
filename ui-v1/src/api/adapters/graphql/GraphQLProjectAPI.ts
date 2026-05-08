@@ -2,7 +2,9 @@ import type { ProjectAPI } from '../../interfaces/ProjectAPI';
 import type { PageInfo, PaginationArgs, Project, ProjectMember, ProjectTask, Team } from '../../types';
 import { AuthenticationError } from '../../errors';
 
-const GRAPHQL_URL = 'http://localhost:3000/graphql';
+import { CONFIG } from '../../../config';
+
+const GRAPHQL_URL = CONFIG.API_URL;
 
 const gql = String.raw;
 
@@ -189,7 +191,12 @@ export class GraphQLProjectAPI implements ProjectAPI {
           }
         }
       }
-    `, { projectId, teamsFirst: 5, tasksFirst: 10, membersFirst: 5 });
+    `, { 
+      projectId, 
+      teamsFirst: CONFIG.PAGINATION.DASHBOARD_TEAMS, 
+      tasksFirst: CONFIG.PAGINATION.DASHBOARD_TASKS, 
+      membersFirst: CONFIG.PAGINATION.MEMBERS_LIST // Note: Dashboard members uses members list limit
+    });
 
     if (!data.project) {
       return { project: null, teams: [], tasks: [], members: [] };

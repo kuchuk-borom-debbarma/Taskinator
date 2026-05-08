@@ -44,6 +44,29 @@ export const Sidebar: React.FC = () => {
             collapsed={isSidebarCollapsed}
           />
 
+          {!isSidebarCollapsed && user?.projects?.length ? (
+            <div className="mt-8 px-4">
+              <p className="text-xs font-bold uppercase tracking-widest text-app-muted/60">Projects</p>
+              <div className="mt-4 space-y-1">
+                {user.projects.map((project) => (
+                  <Link
+                    key={project.id}
+                    to="/projects/$projectId"
+                    params={{ projectId: project.id }}
+                    className={`flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition ${
+                      location.pathname.includes(project.id)
+                        ? 'bg-app-accent/10 text-app-accent'
+                        : 'text-app-muted hover:bg-app-line/40 hover:text-app-ink'
+                    }`}
+                  >
+                    <div className="h-2 w-2 rounded-full bg-app-accent" />
+                    <span className="truncate">{project.name}</span>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
           <button
             onClick={() => setCreateProjectModalOpen(true)}
             className={`mt-4 flex w-full items-center gap-3 rounded-[22px] px-4 py-3 text-app-accent transition hover:bg-app-accent/10 ${

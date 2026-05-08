@@ -4,6 +4,7 @@ import { ArrowRight, BriefcaseBusiness, LayoutGrid, Users } from 'lucide-react';
 import { useApi } from '../../hooks/useApi';
 import type { Project } from '../../api/types';
 import { EmptyState, LoadingPane, PriorityBadge, StatCard, StatusBadge, SurfaceCard, SurfaceCardStrong, formatDate } from '../shared/workspace';
+import { CONFIG } from '../../config';
 
 const getCachedProject = (queryClient: ReturnType<typeof useQueryClient>, projectId: string) => {
   const direct = queryClient.getQueryData<Project>(['project', projectId]);
@@ -31,7 +32,7 @@ export default function ProjectDashboardView() {
     queryKey: ['project-dashboard', projectId],
     queryFn: () => projectApi.getProjectDashboardData(projectId!),
     enabled: !!projectId,
-    staleTime: 1000 * 60 * 3,
+    staleTime: CONFIG.CACHE.DEFAULT_STALE_TIME,
     placeholderData: () => {
       if (!projectId) return undefined;
       const project = getCachedProject(queryClient, projectId);
@@ -66,20 +67,7 @@ export default function ProjectDashboardView() {
   }
 
   return (
-    <div className="page-frame">
-      <div className="mb-8">
-        <h1 className="text-3xl font-semibold tracking-[-0.04em] text-app-ink">{project.name}</h1>
-        {project.description ? (
-          <p className="mt-3 max-w-3xl text-lg leading-relaxed text-app-muted">
-            {project.description}
-          </p>
-        ) : (
-          <p className="mt-3 max-w-3xl text-lg leading-relaxed text-app-muted">
-            This project does not have a written brief yet, but the execution view below still gives the team a clear operating picture.
-          </p>
-        )}
-      </div>
-
+    <div className="page-frame !pt-2">
       <div className="grid gap-4 md:grid-cols-2">
         <StatCard label="Tasks" value={project.tasksCount} hint="Total tasks in this project." />
         <StatCard label="Teams" value={project.teamsCount} hint="Groups attached to this project." />

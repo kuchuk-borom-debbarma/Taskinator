@@ -4,6 +4,7 @@ import { ArrowLeft, Loader2, Users } from 'lucide-react';
 import { useApi } from './hooks/useApi';
 import type { Team } from './api/types';
 import { EmptyState, SurfaceCard, SurfaceCardStrong, formatDate } from './components/shared/workspace';
+import { CONFIG } from './config';
 
 type TeamSearch = {
   cursor?: string;
@@ -29,30 +30,33 @@ export default function TeamDetailPage() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
 
-  const { data: team, isLoading: isTeamLoading } = useQuery({
-    queryKey: ['team', teamId],
-    queryFn: () => teamApi.getTeam(teamId),
+  const { data: detail, isLoading: isDetailLoading } = useQuery({
+    queryKey: ['team-detail', teamId],
+    queryFn: () => teamApi.getTeamDetail(teamId),
     enabled: !!teamId,
-    initialData: () => getCachedTeam(queryClient, teamId),
-    staleTime: 1000 * 60 * 10,
+    staleTime: CONFIG.CACHE.DEFAULT_STALE_TIME,
   });
+
+  const team = detail?.team;
 
   const { data: membersData, isLoading: isMembersLoading } = useQuery({
     queryKey: ['team-members', teamId, cursor, direction],
     queryFn: () =>
       teamApi.getTeamMembers(projectId, teamId, {
-        first: direction === 'backward' ? undefined : 12,
+        first: direction === 'backward' ? undefined : CONFIG.PAGINATION.MEMBERS_LIST,
         after: direction === 'forward' ? cursor : undefined,
-        last: direction === 'backward' ? 12 : undefined,
+        last: direction === 'backward' ? CONFIG.PAGINATION.MEMBERS_LIST : undefined,
         before: direction === 'backward' ? cursor : undefined,
       }),
-    enabled: !!projectId && !!teamId,
-    staleTime: 1000 * 60 * 3,
+    enabled: !!projectId && !!teamId && !!cursor, // Only for pagination
+    initialData: cursor ? undefined : detail?.members,
+    staleTime: CONFIG.CACHE.DEFAULT_STALE_TIME,
   });
 
   const members = membersData?.members ?? [];
+  const isLoading = isDetailLoading || (!!cursor && isMembersLoading);
 
-  if (isTeamLoading) {
+  if (isLoading) {
     return (
       <div className="page-frame">
         <div className="flex min-h-[18rem] items-center justify-center">

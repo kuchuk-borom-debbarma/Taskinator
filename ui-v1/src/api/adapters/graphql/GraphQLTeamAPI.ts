@@ -2,7 +2,9 @@ import type { TeamAPI } from '../../interfaces/TeamAPI';
 import type { PageInfo, PaginationArgs, Team, TeamMember } from '../../types';
 import { AuthenticationError } from '../../errors';
 
-const GRAPHQL_URL = 'http://localhost:3000/graphql';
+import { CONFIG } from '../../../config';
+
+const GRAPHQL_URL = CONFIG.API_URL;
 
 const gql = String.raw;
 
@@ -113,6 +115,52 @@ export class GraphQLTeamAPI implements TeamAPI {
       }
     `, { teamId });
     return data.team || null;
+  }
+
+  async getTeamDetail(teamId: string): Promise<{
+    team: Team | null,
+    members: { members: TeamMember[], pageInfo: PageInfo },
+  }> {
+    const data = await this.query<any>(gql`
+      query GetTeamDetail($teamId: ID!) {
+        team(id: $teamId) {
+          id
+          name
+          createdAt
+          updatedAt
+          version
+          createdBy { id username }
+          project { id name }
+          members(first: ${CONFIG.PAGINATION.MEMBERS_LIST}) {
+            edges {
+              node {
+                id
+                user { id username }
+                createdAt
+                version
+              }
+            }
+            pageInfo {
+              hasNextPage
+              hasPreviousPage
+              startCursor
+              endCursor
+            }
+          }
+        }
+      }
+    `, { teamId });
+
+    const team = data.team || null;
+    const membersConn = team?.members;
+
+    return {
+      team,
+      members: {
+        members: membersConn?.edges.map((e: any) => e.node) || [],
+        pageInfo: membersConn?.pageInfo || { hasNextPage: false, hasPreviousPage: false, startCursor: null, endCursor: null }
+      }
+    };
   }
 
   async getTeamMembers(

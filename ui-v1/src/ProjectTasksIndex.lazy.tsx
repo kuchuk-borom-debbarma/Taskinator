@@ -16,6 +16,7 @@ import {
   formatDate,
 } from './components/shared/workspace';
 import { PagingButton } from './components/shared/PagingButton';
+import { CONFIG } from './config';
 
 type TaskSearch = {
   cursor?: string;
@@ -38,16 +39,16 @@ export default function ProjectTasksIndex() {
     queryKey: ['tasks', projectId, cursor, direction],
     queryFn: () => {
       if (direction === 'backward') {
-        return taskApi.getTasks(projectId!, { last: 12, before: cursor });
+        return taskApi.getTasks(projectId!, { last: CONFIG.PAGINATION.TASKS_LIST, before: cursor });
       }
       return taskApi.getTasks(projectId!, {
-        first: 12,
+        first: CONFIG.PAGINATION.TASKS_LIST,
         after: direction === 'forward' ? cursor : undefined,
       });
     },
     enabled: !!projectId,
     placeholderData: (previous) => previous,
-    staleTime: 1000 * 60 * 3,
+    staleTime: CONFIG.CACHE.DEFAULT_STALE_TIME,
   });
 
   const createTask = useMutation({

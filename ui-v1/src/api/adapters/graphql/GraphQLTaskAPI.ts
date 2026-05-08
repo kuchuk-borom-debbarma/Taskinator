@@ -2,7 +2,9 @@ import type { TaskAPI } from '../../interfaces/TaskAPI';
 import type { PageInfo, PaginationArgs, ProjectTask, TaskLink, NeighbourDirection } from '../../types';
 import { AuthenticationError } from '../../errors';
 
-const GRAPHQL_URL = 'http://localhost:3000/graphql';
+import { CONFIG } from '../../../config';
+
+const GRAPHQL_URL = CONFIG.API_URL;
 
 const gql = String.raw;
 

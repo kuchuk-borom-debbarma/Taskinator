@@ -6,6 +6,7 @@ import { useApi } from '../../hooks/useApi';
 import type { ProjectMember } from '../../api/types';
 import { EmptyState, formatDate } from '../shared/workspace';
 import { PagingButton } from '../shared/PagingButton';
+import { CONFIG } from '../../config';
 
 export default function ProjectMembersView() {
   const { projectId } = useParams({ from: '/authenticated-layout/projects/$projectId/members' });
@@ -19,10 +20,10 @@ export default function ProjectMembersView() {
     queryFn: () => projectApi.getProjectMembers(
       projectId,
       direction === 'backward'
-        ? { last: 15, before: cursor }
-        : { first: 15, after: cursor }
+        ? { last: CONFIG.PAGINATION.MEMBERS_LIST, before: cursor }
+        : { first: CONFIG.PAGINATION.MEMBERS_LIST, after: cursor }
     ),
-    staleTime: 1000 * 60 * 3,
+    staleTime: CONFIG.CACHE.DEFAULT_STALE_TIME,
     placeholderData: (prev) => prev,
   });
 

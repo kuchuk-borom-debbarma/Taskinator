@@ -7,6 +7,7 @@ import { useApi } from '../../hooks/useApi';
 import { useAuth } from '../../context/AuthContext';
 import { EmptyState, PageHeader, StatCard, SurfaceCardStrong, formatDate } from '../shared/workspace';
 import { useLayout } from '../../context/LayoutContext';
+import { CONFIG } from '../../config';
 
 export function ProjectDashboard() {
   const navigate = useNavigate();
@@ -21,10 +22,10 @@ export function ProjectDashboard() {
     queryKey: ['workspace-projects-list', cursor, direction],
     queryFn: () => projectApi.getProjects(
       direction === 'backward'
-        ? { last: 9, before: cursor }
-        : { first: 9, after: cursor }
+        ? { last: CONFIG.PAGINATION.PROJECTS_LIST, before: cursor }
+        : { first: CONFIG.PAGINATION.PROJECTS_LIST, after: cursor }
     ),
-    staleTime: 1000 * 60 * 3,
+    staleTime: CONFIG.CACHE.DEFAULT_STALE_TIME,
     placeholderData: (prev) => prev,
   });
 
