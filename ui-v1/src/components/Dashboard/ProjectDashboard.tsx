@@ -126,9 +126,7 @@ export function ProjectDashboard() {
                 >
                   <div className="mb-6 flex items-start justify-between gap-4">
                     <div>
-                      <div className="mb-3 inline-flex rounded-full bg-app-accent-soft px-3 py-1 text-xs font-semibold text-app-accent">
-                        v{project.version}
-                      </div>
+
                       <h3 className="text-xl font-semibold tracking-[-0.03em] text-app-ink">{project.name}</h3>
                       <p className="mt-2 truncate-2 text-sm leading-6 text-app-muted">
                         {project.description || 'No project description yet. Open the project to shape its direction.'}

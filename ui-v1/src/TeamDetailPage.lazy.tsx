@@ -107,10 +107,7 @@ export default function TeamDetailPage() {
               <p className="text-xs font-semibold uppercase tracking-[0.18em] text-app-accent">Updated</p>
               <p className="mt-2 text-sm font-semibold text-app-ink">{formatDate(team.updatedAt || team.createdAt)}</p>
             </div>
-            <div className="rounded-2xl bg-app-accent/10 px-4 py-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-app-accent">Version</p>
-              <p className="mt-2 text-sm font-semibold text-app-ink">v{team.version ?? 1}</p>
-            </div>
+
           </div>
         </SurfaceCard>
 

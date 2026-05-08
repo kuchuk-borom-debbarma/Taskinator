@@ -93,10 +93,7 @@ function MemberCard({ member }: { member: ProjectMember }) {
         </div>
         <div>
           <h3 className="text-lg font-semibold text-app-ink">{username}</h3>
-          <div className="mt-1 inline-flex items-center gap-2 rounded-full bg-app-accent-2-soft px-3 py-1 text-xs font-semibold text-app-accent-2">
-            <ShieldCheck size={14} />
-            Active project member
-          </div>
+
         </div>
       </div>
       <p className="mt-5 text-sm text-app-muted">Joined {formatDate(member.createdAt)}</p>

@@ -115,9 +115,7 @@ export default function ProjectTeamsView() {
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div>
-                      <div className="mb-3 inline-flex rounded-full bg-app-accent-2-soft px-3 py-1 text-xs font-semibold text-app-accent-2">
-                        Team
-                      </div>
+
                       <h3 className="text-xl font-semibold text-app-ink">{team.name}</h3>
                       <p className="mt-2 text-sm text-app-muted">Created {formatDate(team.createdAt)}</p>
                     </div>

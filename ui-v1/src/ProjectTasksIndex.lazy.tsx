@@ -121,18 +121,7 @@ export default function ProjectTasksIndex() {
             </div>
           </div>
 
-          <div className="mt-6 space-y-3">
-            <MiniInsight
-              label="Filtered results"
-              value={filteredTasks.length}
-              description="Tasks that match the active search and status."
-            />
-            <MiniInsight
-              label="Page state"
-              value={isPlaceholderData ? 'Syncing' : 'Fresh'}
-              description="Whether React Query is serving placeholder data during paging."
-            />
-          </div>
+
         </SurfaceCard>
 
         <SurfaceCardStrong className="p-5 md:p-6">
@@ -289,14 +278,6 @@ function TaskRow({ task, projectId }: { task: ProjectTask; projectId: string }) 
   );
 }
 
-function MiniInsight({ label, value, description }: { label: string; value: string | number; description: string }) {
-  return (
-    <div className="rounded-2xl bg-app-accent/10 px-4 py-4">
-      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-app-accent">{label}</p>
-      <p className="mt-2 text-2xl font-semibold tracking-[-0.03em] text-app-ink">{value}</p>
-      <p className="mt-2 text-sm leading-6 text-app-muted">{description}</p>
-    </div>
-  );
-}
+
 
 
