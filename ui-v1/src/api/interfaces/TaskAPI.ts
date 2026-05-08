@@ -18,6 +18,8 @@ export interface TaskAPI {
   deleteTask(projectId: string, taskId: string): Promise<string>;
 
   createTaskLink(input: { projectId: string; sourceTaskId: string; targetTaskId: string; label: string }): Promise<TaskLink>;
+  
+  updateTaskLink(input: { projectId: string; linkId: string; sourceTaskId?: string; targetTaskId?: string; label?: string }): Promise<TaskLink>;
 
   deleteTaskLink(projectId: string, linkId: string): Promise<string>;
 

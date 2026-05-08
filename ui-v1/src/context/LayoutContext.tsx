@@ -4,6 +4,8 @@ interface LayoutContextType {
   isSidebarCollapsed: boolean;
   setSidebarCollapsed: (collapsed: boolean) => void;
   toggleSidebar: () => void;
+  isCreateProjectModalOpen: boolean;
+  setCreateProjectModalOpen: (open: boolean) => void;
 }
 
 const LayoutContext = createContext<LayoutContextType | undefined>(undefined);
@@ -14,6 +16,8 @@ export const LayoutProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return saved === 'true';
   });
 
+  const [isCreateProjectModalOpen, setCreateProjectModalOpen] = useState(false);
+
   useEffect(() => {
     localStorage.setItem('taskinator_sidebar_collapsed', String(isSidebarCollapsed));
   }, [isSidebarCollapsed]);
@@ -21,7 +25,13 @@ export const LayoutProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const toggleSidebar = () => setSidebarCollapsed(prev => !prev);
 
   return (
-    <LayoutContext.Provider value={{ isSidebarCollapsed, setSidebarCollapsed, toggleSidebar }}>
+    <LayoutContext.Provider value={{
+      isSidebarCollapsed,
+      setSidebarCollapsed,
+      toggleSidebar,
+      isCreateProjectModalOpen,
+      setCreateProjectModalOpen
+    }}>
       {children}
     </LayoutContext.Provider>
   );

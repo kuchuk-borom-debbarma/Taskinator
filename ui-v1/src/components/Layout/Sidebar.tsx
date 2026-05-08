@@ -4,12 +4,13 @@ import { Link, useLocation } from '@tanstack/react-router';
 import { Home, LogOut, PanelLeftClose, PanelLeftOpen, User2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useLayout } from '../../context/LayoutContext';
+import { Plus } from 'lucide-react';
 import { SurfaceCard } from '../shared/workspace';
 
 export const Sidebar: React.FC = () => {
   const { user, logout } = useAuth();
   const location = useLocation();
-  const { isSidebarCollapsed, toggleSidebar } = useLayout();
+  const { isSidebarCollapsed, toggleSidebar, setCreateProjectModalOpen } = useLayout();
 
 
 
@@ -42,6 +43,16 @@ export const Sidebar: React.FC = () => {
             active={location.pathname === '/'}
             collapsed={isSidebarCollapsed}
           />
+
+          <button
+            onClick={() => setCreateProjectModalOpen(true)}
+            className={`mt-4 flex w-full items-center gap-3 rounded-[22px] px-4 py-3 text-app-accent transition hover:bg-app-accent/10 ${
+              isSidebarCollapsed ? 'justify-center px-0' : ''
+            }`}
+          >
+            <Plus size={18} />
+            {!isSidebarCollapsed && <span className="text-sm font-semibold">New Project</span>}
+          </button>
         </nav>
 
 

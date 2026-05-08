@@ -282,6 +282,19 @@ export class GraphQLTaskAPI implements TaskAPI {
     return data.task.createLink;
   }
 
+  async updateTaskLink(input: { projectId: string; linkId: string; sourceTaskId?: string; targetTaskId?: string; label?: string }): Promise<TaskLink> {
+    const data = await this.query<any>(gql`
+      mutation UpdateTaskLink($input: UpdateTaskLinkInput!) {
+        task {
+          updateLink(input: $input) {
+            ${TASK_LINK_FIELDS}
+          }
+        }
+      }
+    `, { input });
+    return data.task.updateLink;
+  }
+
   async deleteTaskLink(projectId: string, linkId: string): Promise<string> {
     const data = await this.query<any>(gql`
       mutation DeleteTaskLink($projectId: ID!, $linkId: ID!) {

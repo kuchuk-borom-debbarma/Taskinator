@@ -140,8 +140,17 @@ export default function ProjectTasksIndex() {
               <p className="eyebrow mb-2">Task list</p>
               <h2 className="text-2xl font-semibold tracking-[-0.04em] text-app-ink">Prioritized work</h2>
             </div>
-            <div className="rounded-full bg-app-ink/5 px-3 py-1.5 text-xs font-semibold text-app-muted">
-              {filteredTasks.length} shown
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => setShowCreate(true)}
+                className="inline-flex items-center gap-2 rounded-full bg-app-accent px-4 py-2 text-sm font-semibold text-white transition hover:bg-app-accent/90"
+              >
+                <Plus size={16} />
+                Create task
+              </button>
+              <div className="rounded-full bg-app-ink/5 px-3 py-1.5 text-xs font-semibold text-app-muted">
+                {filteredTasks.length} shown
+              </div>
             </div>
           </div>
 

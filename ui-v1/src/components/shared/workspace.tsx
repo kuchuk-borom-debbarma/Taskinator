@@ -112,20 +112,23 @@ export function AppModal({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-[#111827]/30 p-4 backdrop-blur-sm md:items-center">
-      <button className="absolute inset-0 cursor-default" aria-label="Close modal" onClick={onClose} />
-      <div className="surface-card-strong relative z-10 w-full max-w-lg rounded-[28px] p-6 md:p-7">
+    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-[#111827]/40 p-4 backdrop-blur-sm md:items-center">
+      <div className="absolute inset-0 cursor-default" aria-hidden="true" onClick={onClose} />
+      <div className="surface-card-strong relative z-[110] w-full max-w-lg rounded-[28px] p-6 shadow-2xl md:p-7">
         <div className="mb-6 flex items-start justify-between gap-4">
-          <div>
+          <div className="min-w-0 flex-1">
             <h2 className="text-2xl font-semibold tracking-[-0.03em] text-app-ink">{title}</h2>
             {description ? <p className="mt-2 text-sm leading-6 text-app-muted">{description}</p> : null}
           </div>
           <button
-            className="rounded-full border border-app-line p-2 text-app-muted transition hover:border-app-ink/20 hover:text-app-ink"
-            onClick={onClose}
+            className="group -mr-2 -mt-2 flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-app-ink/5"
+            onClick={(e) => {
+              e.stopPropagation();
+              onClose();
+            }}
             aria-label="Close modal"
           >
-            <X size={18} />
+            <X size={20} className="text-app-muted transition-colors group-hover:text-app-ink" />
           </button>
         </div>
         {children}

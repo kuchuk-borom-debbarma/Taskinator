@@ -13,6 +13,7 @@ import { NotFoundComponent, GlobalErrorComponent } from './components/Layout/Rou
 import { RootComponent } from './components/Layout/RootComponent';
 import { ProjectDashboard } from './components/Dashboard/ProjectDashboard';
 import { LayoutProvider, useLayout } from './context/LayoutContext';
+import { CreateProjectModal } from './components/Project/CreateProjectModal';
 
 interface MyRouterContext {
   auth: AuthContextType;
@@ -37,6 +38,7 @@ const AuthenticatedLayout = () => {
           <Outlet />
         </div>
       </main>
+      <CreateProjectModal />
     </div>
   );
 };

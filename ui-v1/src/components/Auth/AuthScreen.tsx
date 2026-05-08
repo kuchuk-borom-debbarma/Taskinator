@@ -40,7 +40,7 @@ export const AuthScreen: React.FC = () => {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            query: `mutation SignUp($email: String!, $username: String!, $password: String!) { signUp(email: $email, username: $username, password_raw: $password) { id username } }`,
+            query: `mutation SignUp($email: String!, $username: String!, $password: String!) { signUp(email: $email, username: $username, password_raw: $password) }`,
             variables: { email, username, password },
           }),
         });
