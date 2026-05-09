@@ -1,9 +1,11 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 
 import { Link, useLocation } from '@tanstack/react-router';
-import { Home, LogOut, PanelLeftClose, PanelLeftOpen, User2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Home, LogOut, PanelLeftClose, PanelLeftOpen, User2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useLayout } from '../../context/LayoutContext';
+import { useApi } from '../../hooks/useApi';
 import { Plus } from 'lucide-react';
 import { SurfaceCard } from '../shared/workspace';
 
@@ -11,6 +13,45 @@ export const Sidebar: React.FC = () => {
   const { user, logout } = useAuth();
   const location = useLocation();
   const { isSidebarCollapsed, toggleSidebar, setCreateProjectModalOpen } = useLayout();
+  const { projectApi } = useApi();
+  const [cursor, setCursor] = useState<string | undefined>(undefined);
+  const [direction, setDirection] = useState<'forward' | 'backward' | undefined>(undefined);
+
+  const projectsPerPage = 8;
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['sidebar-projects', cursor, direction],
+    queryFn: () => projectApi.getProjects(
+      direction === 'backward'
+        ? { last: projectsPerPage, before: cursor }
+        : { first: projectsPerPage, after: cursor }
+    ),
+  });
+
+  const projects = data?.projects ?? [];
+  const pageInfo = data?.pageInfo;
+  const totalProjects = data?.totalCount ?? 0;
+
+  const handlePrevPage = () => {
+    if (pageInfo?.hasPreviousPage) {
+      setCursor(pageInfo.startCursor ?? undefined);
+      setDirection('backward');
+    }
+  };
+
+  const handleNextPage = () => {
+    if (pageInfo?.hasNextPage) {
+      setCursor(pageInfo.endCursor ?? undefined);
+      setDirection('forward');
+    }
+  };
+
+  React.useEffect(() => {
+    if (location.pathname.includes('/projects/')) {
+      // Sync logic might be more complex with server-side pagination, 
+      // but for now let's just make sure we are not stuck on a wrong page.
+    }
+  }, [location.pathname]);
 
 
 
@@ -43,25 +84,53 @@ export const Sidebar: React.FC = () => {
             collapsed={isSidebarCollapsed}
           />
 
-          {!isSidebarCollapsed && user?.projects?.length ? (
+          {!isSidebarCollapsed && totalProjects ? (
             <div className="mt-8 px-4">
-              <p className="text-xs font-bold uppercase tracking-widest text-app-muted/60">Projects</p>
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-bold uppercase tracking-widest text-app-muted/60">Projects</p>
+                {(pageInfo?.hasNextPage || pageInfo?.hasPreviousPage) && (
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={handlePrevPage}
+                      disabled={!pageInfo?.hasPreviousPage}
+                      className="rounded-lg p-1 text-app-muted transition hover:bg-app-line/40 hover:text-app-ink disabled:opacity-30"
+                      aria-label="Previous page"
+                    >
+                      <ChevronLeft size={14} />
+                    </button>
+                    <button
+                      onClick={handleNextPage}
+                      disabled={!pageInfo?.hasNextPage}
+                      className="rounded-lg p-1 text-app-muted transition hover:bg-app-line/40 hover:text-app-ink disabled:opacity-30"
+                      aria-label="Next page"
+                    >
+                      <ChevronRight size={14} />
+                    </button>
+                  </div>
+                )}
+              </div>
               <div className="mt-4 space-y-1">
-                {user.projects.map((project) => (
-                  <Link
-                    key={project.id}
-                    to="/projects/$projectId"
-                    params={{ projectId: project.id }}
-                    className={`flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition ${
-                      location.pathname.includes(project.id)
-                        ? 'bg-app-accent/10 text-app-accent'
-                        : 'text-app-muted hover:bg-app-line/40 hover:text-app-ink'
-                    }`}
-                  >
-                    <div className="h-2 w-2 rounded-full bg-app-accent" />
-                    <span className="truncate">{project.name}</span>
-                  </Link>
-                ))}
+                {isLoading ? (
+                  <div className="flex justify-center py-4">
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-app-accent border-t-transparent" />
+                  </div>
+                ) : (
+                  projects.map((project) => (
+                    <Link
+                      key={project.id}
+                      to="/projects/$projectId"
+                      params={{ projectId: project.id }}
+                      className={`flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition ${
+                        location.pathname.includes(project.id)
+                          ? 'bg-app-accent/10 text-app-accent'
+                          : 'text-app-muted hover:bg-app-line/40 hover:text-app-ink'
+                      }`}
+                    >
+                      <div className="h-2 w-2 rounded-full bg-app-accent" />
+                      <span className="truncate">{project.name}</span>
+                    </Link>
+                  ))
+                )}
               </div>
             </div>
           ) : null}

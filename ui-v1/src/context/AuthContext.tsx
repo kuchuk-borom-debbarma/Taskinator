@@ -41,7 +41,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               me { 
                 id 
                 username 
-                projects(first: 10) {
+                projects(first: 50) {
                   edges {
                     node {
                       id
