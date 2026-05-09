@@ -23,8 +23,7 @@ export const Sidebar: React.FC = () => {
       >
         <div className="mb-6 flex items-center justify-between gap-3">
           <div className={`overflow-hidden transition-all ${isSidebarCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'}`}>
-            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-app-muted">Taskinator</p>
-            <h2 className="mt-1 text-2xl font-semibold tracking-[-0.04em] text-app-ink">Workspace</h2>
+            <h2 className="text-2xl font-bold tracking-tight text-app-ink">Taskinator</h2>
           </div>
           <button
             onClick={toggleSidebar}
@@ -38,7 +37,7 @@ export const Sidebar: React.FC = () => {
         <nav className="space-y-2">
           <SidebarLink
             to="/"
-            label="Workspace Home"
+            label="Home"
             icon={<Home size={18} />}
             active={location.pathname === '/'}
             collapsed={isSidebarCollapsed}
@@ -89,7 +88,6 @@ export const Sidebar: React.FC = () => {
               {!isSidebarCollapsed ? (
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold text-app-ink">{user?.username ?? 'Workspace user'}</p>
-                  <p className="text-xs text-app-muted">Authenticated session</p>
                 </div>
               ) : null}
             </div>

@@ -214,7 +214,7 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
   if (isLoading) {
     return (
       <div className="page-frame">
-        <LoadingPane title="Loading task details" message="Pulling the latest task and dependency context." />
+        <LoadingPane title="Loading task details" message="Fetching task and dependency context." />
       </div>
     );
   }
@@ -251,7 +251,7 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
 
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="max-w-3xl">
-            <p className="eyebrow mb-3">Task detail</p>
+            <p className="eyebrow mb-3">Task</p>
             <h1 className="text-4xl font-semibold tracking-[-0.05em] text-app-ink">{task.title}</h1>
           </div>
         </div>
@@ -322,7 +322,7 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
               </div>
             </div>
             <p className="text-sm leading-7 text-app-muted whitespace-pre-wrap">
-              {task.description || 'No description has been added yet.'}
+              {task.description || 'No description provided.'}
             </p>
           </SurfaceCardStrong>
 
@@ -337,7 +337,7 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
                 title="Incoming"
                 links={incoming}
                 direction="incoming"
-                description="Tasks that impact this task. Usually parent tasks, follow-ups, or dependents."
+                description="Tasks that impact this task."
                 onAdd={() => {
                   setLinkModalDir('incoming');
                   setQuickAddLabel('blocks');
@@ -375,7 +375,7 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
                 title="Outgoing"
                 links={outgoing}
                 direction="outgoing"
-                description="Tasks that this task depends on. Usually sub-tasks, blockers, or requirements."
+                description="Tasks that this task depends on."
                 onAdd={() => {
                   setLinkModalDir('outgoing');
                   setQuickAddLabel('blocked by');
@@ -421,7 +421,7 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
             <div className="mb-5 flex items-center justify-between">
               <div>
                 <h2 className="text-2xl font-semibold tracking-[-0.04em] text-app-ink">Edit task</h2>
-                <p className="mt-2 text-sm leading-6 text-app-muted">Keep the task crisp. Title states the outcome; description adds context.</p>
+                <p className="mt-2 text-sm leading-6 text-app-muted">Update task details and assignments.</p>
               </div>
               <button
                 onClick={() => setIsEditing(false)}
@@ -519,11 +519,7 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
       <AppModal
         open={!!linkModalDir}
         title={linkModalDir === 'incoming' ? 'Add incoming link' : 'Add outgoing link'}
-        description={
-          linkModalDir === 'incoming'
-            ? 'Create a task that points to the current task. Good for blockers or parent tasks.'
-            : 'Create a task that the current task points to. Good for subtasks or follow-up work.'
-        }
+        description="Define a relationship between tasks."
         onClose={() => setLinkModalDir(null)}
       >
         <div className="space-y-4">

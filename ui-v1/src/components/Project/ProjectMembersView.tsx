@@ -56,7 +56,7 @@ export default function ProjectMembersView() {
           <EmptyState
             icon={Users}
             title="No members found"
-            description="Once members are attached to the project, they will appear here with a cleaner access overview."
+            description="Manage members and access for this project."
           />
         ) : (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">

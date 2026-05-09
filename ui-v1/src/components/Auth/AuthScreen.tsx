@@ -71,25 +71,25 @@ export const AuthScreen: React.FC = () => {
                 Taskinator v2
               </div>
               <h1 className="mt-6 max-w-xl text-4xl font-semibold leading-tight tracking-[-0.05em] text-app-ink md:text-6xl">
-                Operations clarity for teams with real task dependency pressure.
+                Modern task management for high-performance teams.
               </h1>
               <p className="mt-5 max-w-2xl text-base leading-8 text-app-muted md:text-lg">
-                The new workspace keeps projects, execution flow, teams, and task relationships in one calmer, faster interface.
+                Manage projects, teams, and task dependencies in one fast, clear interface.
               </p>
             </div>
 
             <div className="grid gap-4 md:grid-cols-3">
               <FeatureCard
-                title="Decision-ready overview"
-                description="See progress, blockers, and workload in one pass instead of jumping between disconnected pages."
+                title="Decision-ready"
+                description="Track progress, blockers, and workload in a single pass."
               />
               <FeatureCard
-                title="Task flow that makes sense"
-                description="Navigate from project summary to execution detail without losing context."
+                title="Seamless flow"
+                description="Navigate from project summaries to task details instantly."
               />
               <FeatureCard
-                title="Shared team context"
-                description="Keep people, squads, and dependencies visible where the work actually happens."
+                title="Team context"
+                description="Keep teams and dependencies visible where work happens."
               />
             </div>
           </div>
@@ -104,8 +104,8 @@ export const AuthScreen: React.FC = () => {
               </h2>
               <p className="mt-3 text-sm leading-6 text-app-muted">
                 {isLogin
-                  ? 'Use your existing account to continue where you left off.'
-                  : 'Set up your account, then step into the redesigned project experience.'}
+                  ? 'Sign in to continue where you left off.'
+                  : 'Create an account to start managing your projects.'}
               </p>
             </div>
 
@@ -155,7 +155,7 @@ export const AuthScreen: React.FC = () => {
             <div className="mt-8 flex items-center justify-between gap-4 rounded-[28px] bg-app-accent/10 px-4 py-4 text-sm text-app-muted">
               <div className="flex items-center gap-2">
                 <ShieldCheck size={16} className="text-app-accent-2" />
-                Session token stored locally after authentication
+                Secure local session storage
               </div>
               <button
                 onClick={() => {

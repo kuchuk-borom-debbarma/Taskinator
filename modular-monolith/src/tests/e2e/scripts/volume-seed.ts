@@ -25,22 +25,22 @@
 // ============================================================
 const CFG = {
     GQL_URL: process.env.GQL_URL || 'http://localhost:3000/graphql',
-    OWNER_COUNT: 100, // how many "owner" accounts to create
-    TOTAL_USERS: 500, // X — total users (includes owners)
-    PROJECTS_PER_OWNER_MIN: 2, // Y_min (random projects per owner)
-    PROJECTS_PER_OWNER_MAX: 10, // Y_max
+    OWNER_COUNT: 1, // how many "owner" accounts to create
+    TOTAL_USERS: 1, // X — total users (includes owners)
+    PROJECTS_PER_OWNER_MIN: 200, // Y_min (random projects per owner)
+    PROJECTS_PER_OWNER_MAX: 500, // Y_max
     MEMBERS_PER_PROJECT_MIN: 10, // Z_min  (random members per project)
-    MEMBERS_PER_PROJECT_MAX: 50, // Z_max
+    MEMBERS_PER_PROJECT_MAX: 20, // Z_max
     TEAMS_PER_PROJECT_MIN: 4, // N_min  (random teams per project)
     TEAMS_PER_PROJECT_MAX: 10, // N_max
     TEAM_MEMBERS_MIN: 5, // B
     TEAM_MEMBERS_MAX: 50, // C
-    TASKS_PER_PROJECT_MIN: 10, // D_min  (random tasks per project)
-    TASKS_PER_PROJECT_MAX: 40, // D_max
-    LINK_DEPTH_MIN: 3, // E
-    LINK_DEPTH_MAX: 12, // F
+    TASKS_PER_PROJECT_MIN: 100, // D_min  (random tasks per project)
+    TASKS_PER_PROJECT_MAX: 1000, // D_max
+    LINK_DEPTH_MIN: 10, // E
+    LINK_DEPTH_MAX: 50, // F
     LINKED_TASK_PCT: 90, // G  (percent of tasks in link graphs)
-    CONCURRENCY: 20, // parallel GQL calls
+    CONCURRENCY: 50, // parallel GQL calls
     PASSWORD: '123',
 } as const;
 

@@ -53,9 +53,9 @@ export function ProjectDashboard() {
     <div className="page-frame">
       <SurfaceCardStrong className="hero-gradient mesh-backdrop overflow-hidden p-6 md:p-8">
         <PageHeader
-          eyebrow="Workspace overview"
+          eyebrow="Dashboard"
           title={`Welcome back${user?.username ? `, ${user.username}` : ''}`}
-          description="Your projects now live in a clearer workspace: less hunting, faster decisions, and stronger execution context from the first click."
+          description="Manage your projects and track progress across your workspace."
           actions={
             <>
               <button
@@ -80,17 +80,16 @@ export function ProjectDashboard() {
       </SurfaceCardStrong>
 
       <div className="mt-6 grid gap-4 md:grid-cols-3">
-        <StatCard label="Projects" value={totalProjects} hint="Active spaces you can step into." />
-        <StatCard label="Tasks in view" value={totalTasks} hint="Current workload across the fetched project set." accent="teal" />
-        <StatCard label="Teams" value={totalTeams} hint="Operating groups currently attached to these projects." accent="ink" />
+        <StatCard label="Projects" value={totalProjects} hint="" />
+        <StatCard label="Tasks in view" value={totalTasks} hint="" accent="teal" />
+        <StatCard label="Teams" value={totalTeams} hint="" accent="ink" />
       </div>
 
       <div className="mt-8">
         <SurfaceCardStrong className="p-5 md:p-6">
           <div className="mb-6 flex items-center justify-between gap-4">
             <div>
-              <p className="eyebrow mb-2">Project lineup</p>
-              <h2 className="text-2xl font-semibold tracking-[-0.04em] text-app-ink">Choose the workstream to enter</h2>
+              <h2 className="text-2xl font-semibold tracking-[-0.04em] text-app-ink">Projects</h2>
             </div>
             <div className="rounded-full bg-app-ink/5 px-3 py-1.5 text-xs font-semibold text-app-muted">
               {projects.length} loaded
@@ -129,7 +128,7 @@ export function ProjectDashboard() {
 
                       <h3 className="text-xl font-semibold tracking-[-0.03em] text-app-ink">{project.name}</h3>
                       <p className="mt-2 truncate-2 text-sm leading-6 text-app-muted">
-                        {project.description || 'No project description yet. Open the project to shape its direction.'}
+                        {project.description || 'No description provided.'}
                       </p>
                     </div>
                     <div className="rounded-full border border-app-line bg-white p-2 text-app-muted transition group-hover:text-app-accent">

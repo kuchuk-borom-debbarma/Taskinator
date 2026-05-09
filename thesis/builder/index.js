@@ -80,6 +80,14 @@ const doc = new Document({
       { id: "Heading1", name: "Heading 1", basedOn: "Normal", next: "Normal", quickFormat: true, run: { size: 28, bold: true, font: F }, paragraph: { spacing: { before: 360, after: 240 }, outlineLevel: 0 } },
       { id: "Heading2", name: "Heading 2", basedOn: "Normal", next: "Normal", quickFormat: true, run: { size: 24, bold: true, font: F }, paragraph: { spacing: { before: 280, after: 180 }, outlineLevel: 1 } },
       { id: "Heading3", name: "Heading 3", basedOn: "Normal", next: "Normal", quickFormat: true, run: { size: 22, bold: true, font: F }, paragraph: { spacing: { before: 200, after: 120 }, outlineLevel: 2 } },
+      { id: "Heading4", name: "Heading 4", basedOn: "Normal", next: "Normal", quickFormat: true, run: { size: 20, italics: true, bold: true, font: F }, paragraph: { alignment: AlignmentType.CENTER, spacing: { before: 120, after: 240 }, outlineLevel: 3 } },
+      { id: "Heading5", name: "Heading 5", basedOn: "Normal", next: "Normal", quickFormat: true, run: { size: 22, bold: true, font: F }, paragraph: { alignment: AlignmentType.CENTER, spacing: { before: 160, after: 80 }, outlineLevel: 4 } },
+      // TOC Styles for better layout
+      { id: "TOC1", name: "TOC 1", basedOn: "Normal", next: "Normal", run: { font: F, size: 22, bold: true }, paragraph: { spacing: { before: 120, after: 60 } } },
+      { id: "TOC2", name: "TOC 2", basedOn: "Normal", next: "Normal", run: { font: F, size: 22 }, paragraph: { spacing: { before: 40, after: 40 }, indent: { left: 360, hanging: 360 } } },
+      { id: "TOC3", name: "TOC 3", basedOn: "Normal", next: "Normal", run: { font: F, size: 22 }, paragraph: { spacing: { before: 40, after: 40 }, indent: { left: 720, hanging: 360 } } },
+      { id: "TOC4", name: "TOC 4", basedOn: "Normal", next: "Normal", run: { font: F, size: 22 }, paragraph: { spacing: { before: 80, after: 80 }, indent: { left: 0, hanging: 440 } } },
+      { id: "TOC5", name: "TOC 5", basedOn: "Normal", next: "Normal", run: { font: F, size: 22 }, paragraph: { spacing: { before: 80, after: 80 }, indent: { left: 0, hanging: 440 } } },
     ]
   },
   sections: [{

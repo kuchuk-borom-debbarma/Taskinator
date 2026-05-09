@@ -2,7 +2,8 @@ const {
   Paragraph, TextRun, Table, TableRow, TableCell,
   AlignmentType, HeadingLevel, BorderStyle,
   WidthType, ShadingType, VerticalAlign, PageBreak, ImageRun,
-  PositionalTab, PositionalTabAlignment, PositionalTabRelativeTo, PositionalTabLeader
+  PositionalTab, PositionalTabAlignment, PositionalTabRelativeTo, PositionalTabLeader,
+  TableOfContents
 } = require('docx');
 const fs = require('fs');
 const path = require('path');
@@ -220,9 +221,8 @@ function insertImage(filename) {
 
 function figCaption(text) {
   return new Paragraph({
-    alignment: AlignmentType.CENTER,
-    spacing: { before: 80, after: 240 },
-    children: [new TextRun({ text, italics: true, bold: true, size: 20, font: F })]
+    heading: HeadingLevel.HEADING_4,
+    children: [new TextRun({ text, size: 20, font: F })]
   });
 }
 
@@ -277,9 +277,8 @@ function tblRow(cells, widths, shade = false) {
 
 function tblCaption(text) {
   return new Paragraph({
-    alignment: AlignmentType.CENTER,
-    spacing: { before: 160, after: 80 },
-    children: [new TextRun({ text, bold: true, size: 22, font: F })]
+    heading: HeadingLevel.HEADING_5,
+    children: [new TextRun({ text, size: 22, font: F })]
   });
 }
 
@@ -311,5 +310,5 @@ module.exports = {
   body, bodyRuns, run, centered, centeredBold, emptyLine, pageBreak,
   h1, h2, h3, h4, boldLabel, bullet, bulletRuns, numbered, numberedRuns,
   codeLine, codeBlock, imgPlaceholder, insertImage, figCaption, tocEntry,
-  tblHeader, tblRow, tblCaption, sigBlock
+  tblHeader, tblRow, tblCaption, sigBlock, TableOfContents
 };

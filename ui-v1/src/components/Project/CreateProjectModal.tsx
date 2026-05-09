@@ -32,7 +32,7 @@ export const CreateProjectModal: React.FC = () => {
     <AppModal
       open
       title="Create a new project"
-      description="Start with a lightweight brief. You can shape tasks and teams after the project exists."
+      description="Enter project details to get started."
       onClose={() => setCreateProjectModalOpen(false)}
     >
       <form
