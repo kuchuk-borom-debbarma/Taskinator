@@ -19,6 +19,8 @@
  *  G  LINKED_TASK_PCT       — % of tasks that participate in a link sub-graph (0-100)
  *  CONCURRENCY              — parallel in-flight GQL calls at once
  */
+import fs from 'node:fs';
+import path from 'node:path';
 
 // ============================================================
 //  ⚙️  CONFIGURATION
@@ -26,7 +28,7 @@
 const CFG = {
     GQL_URL: process.env.GQL_URL || 'http://localhost:3000/graphql',
     OWNER_COUNT: 1, // how many "owner" accounts to create
-    TOTAL_USERS: 1, // X — total users (includes owners)
+    TOTAL_USERS: 500, // X — total users (includes owners)
     PROJECTS_PER_OWNER_MIN: 200, // Y_min (random projects per owner)
     PROJECTS_PER_OWNER_MAX: 500, // Y_max
     MEMBERS_PER_PROJECT_MIN: 10, // Z_min  (random members per project)
@@ -35,13 +37,19 @@ const CFG = {
     TEAMS_PER_PROJECT_MAX: 10, // N_max
     TEAM_MEMBERS_MIN: 5, // B
     TEAM_MEMBERS_MAX: 50, // C
-    TASKS_PER_PROJECT_MIN: 100, // D_min  (random tasks per project)
-    TASKS_PER_PROJECT_MAX: 1000, // D_max
+    TASKS_PER_PROJECT_MIN: 5, // D_min  (random tasks per project)
+    TASKS_PER_PROJECT_MAX: 100, // D_max
     LINK_DEPTH_MIN: 10, // E
     LINK_DEPTH_MAX: 50, // F
     LINKED_TASK_PCT: 90, // G  (percent of tasks in link graphs)
     CONCURRENCY: 50, // parallel GQL calls
     PASSWORD: '123',
+    PROJECT_OVERRIDES: [{ index: 0, taskCount: 5000 }] as {
+        index: number;
+        taskCount: number;
+    }[],
+    SUMMARY_FILE: 'seed-summary.json',
+    TEMP_FILE: 'seed-temp.log',
 } as const;
 
 // ============================================================
@@ -550,6 +558,10 @@ async function seed() {
     console.log('🚀 Volume Seed starting…');
     console.log('📋 Config:', JSON.stringify(CFG, null, 2));
     console.log(`🌐 Target: ${CFG.GQL_URL}\n`);
+    const tempPath = path.join(import.meta.dir, CFG.TEMP_FILE);
+    if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
+    const flush = (data: any) =>
+        fs.appendFileSync(tempPath, `${JSON.stringify(data)}\n`);
 
     // ── 1. CREATE ALL USERS ─────────────────────────────────────
     console.log(`👤 Creating ${CFG.TOTAL_USERS} users…`);
@@ -655,9 +667,12 @@ async function seed() {
         teamIds: string[];
         teamMemberMap: Map<string, string[]>; // teamId → [userId]
         taskIds: string[];
+        name: string;
+        targetTaskCount: number;
     };
 
     const projects: ProjectCtx[] = [];
+    let projectIdx = 0;
 
     const projectTasks: (() => Promise<void>)[] = [];
     for (let oi = 0; oi < CFG.OWNER_COUNT; oi++) {
@@ -667,8 +682,19 @@ async function seed() {
             CFG.PROJECTS_PER_OWNER_MAX,
         );
         for (let pi = 0; pi < numProjects; pi++) {
+            const currentIdx = projectIdx++;
             projectTasks.push(async () => {
                 const name = generateProjectName();
+                const override = CFG.PROJECT_OVERRIDES.find(
+                    (o) => o.index === currentIdx,
+                );
+                const targetTaskCount = override
+                    ? override.taskCount
+                    : randomInt(
+                          CFG.TASKS_PER_PROJECT_MIN,
+                          CFG.TASKS_PER_PROJECT_MAX,
+                      );
+
                 const d = await gql<{ createProject: { id: string } }>(
                     M_CREATE_PROJECT,
                     { name, desc: `Volume test project — ${name}` },
@@ -682,6 +708,8 @@ async function seed() {
                     teamIds: [],
                     teamMemberMap: new Map(),
                     taskIds: [],
+                    name,
+                    targetTaskCount,
                 });
             });
         }
@@ -778,15 +806,10 @@ async function seed() {
     console.log(`   ✓ Team members added  (${elapsed(t0)})\n`);
 
     // ── 6. CREATE TASKS ─────────────────────────────────────────
-    console.log(
-        `📋 Creating ${CFG.TASKS_PER_PROJECT_MIN}–${CFG.TASKS_PER_PROJECT_MAX} tasks per project (${projects.length} projects)…`,
-    );
+    console.log(`📋 Creating tasks for ${projects.length} projects…`);
     const taskCreateTasks: (() => Promise<void>)[] = [];
     for (const proj of projects) {
-        const numTasks = randomInt(
-            CFG.TASKS_PER_PROJECT_MIN,
-            CFG.TASKS_PER_PROJECT_MAX,
-        );
+        const numTasks = proj.targetTaskCount;
         for (let i = 0; i < numTasks; i++) {
             taskCreateTasks.push(async () => {
                 const title = generateTaskTitle();
@@ -1014,6 +1037,39 @@ async function seed() {
         `   Link depth range : ${CFG.LINK_DEPTH_MIN}–${CFG.LINK_DEPTH_MAX}`,
     );
     console.log(`   Linked task pct  : ${CFG.LINKED_TASK_PCT}%`);
+
+    // ── 9. GENERATE REPORT ──────────────────────────────────────
+    console.log('\n📝 Generating summary report…');
+    const finalReport: any[] = [];
+    for (const user of users) {
+        const userProjects = projects.filter((p) => p.ownerUserId === user.id);
+        const reportEntry = {
+            id: user.id,
+            email: user.email,
+            username: user.username,
+            password: CFG.PASSWORD,
+            projectCount: userProjects.length,
+            totalTasks: userProjects.reduce((s, p) => s + p.taskIds.length, 0),
+            totalMembers: userProjects.reduce(
+                (s, p) => s + p.memberIds.length,
+                0,
+            ),
+            totalTeams: userProjects.reduce((s, p) => s + p.teamIds.length, 0),
+            projects: userProjects.map((p) => ({
+                id: p.id,
+                name: p.name,
+                tasks: p.taskIds.length,
+                members: p.memberIds.length,
+                teams: p.teamIds.length,
+            })),
+        };
+        finalReport.push(reportEntry);
+        flush(reportEntry);
+    }
+    const reportPath = path.join(import.meta.dir, CFG.SUMMARY_FILE);
+    fs.writeFileSync(reportPath, JSON.stringify(finalReport, null, 2));
+    if (fs.existsSync(tempPath)) fs.unlinkSync(tempPath);
+    console.log(`   ✓ Report saved to ${CFG.SUMMARY_FILE}`);
 }
 
 seed().catch((err) => {
