@@ -89,7 +89,7 @@ export const RedisPubSubSlide: React.FC = () => {
 				<div style={{ position: 'absolute', top: 40, left: 50 }}>
 					<div style={{ fontSize: 12, fontWeight: 900, color: COLORS.accent2, letterSpacing: 3, textTransform: 'uppercase', fontFamily: 'Inter', marginBottom: 10 }}>THE SOLUTION: PUB/SUB BRIDGE</div>
 					<h2 style={{ fontSize: 36, fontWeight: 900, color: COLORS.ink, fontFamily: 'Inter', margin: '0 0 8px' }}>Bridging Kafka to Redis</h2>
-					<p style={{ fontSize: 16, color: COLORS.muted, fontFamily: 'Inter', margin: 0, maxWidth: 800, lineHeight: 1.6 }}>Kafka handles durability. Redis handles blazing-fast, ephemeral, fan-out delivery.</p>
+					<p style={{ fontSize: 16, color: COLORS.muted, fontFamily: 'Inter', margin: 0, maxWidth: 800, lineHeight: 1.6 }}>Redis handles 100k+ concurrent connections effortlessly, completely offloading the DB.</p>
 				</div>
 			</Appear>
 
@@ -136,10 +136,10 @@ export const GraphQLSubscriptionSlide: React.FC = () => {
 			<SNode icon="🔴" label="Redis Pub/Sub" color={COLORS.danger} top={300} left={100} w={180} delay={10} glow />
 			<Arrow x1={290} y1={350} x2={450} y2={350} color={COLORS.accent} delay={20} label="Message Event" labelOffset={-20} />
 
-			<SNode icon="⚡" label="GraphQL Yoga" sub="Subscription Resolver" color={COLORS.accent} top={300} left={450} w={180} delay={25} />
+			<SNode icon="⚡" label="GraphQL Yoga" sub="API Layer" color={COLORS.accent} top={300} left={450} w={180} delay={25} />
 			<Arrow x1={640} y1={350} x2={800} y2={350} color={COLORS.success} delay={40} dashed label="WebSocket PUSH" labelOffset={-20} />
 
-			<SNode icon="📱" label="Client Application" sub="Apollo Client" color={COLORS.success} top={300} left={800} w={180} delay={35} glow />
+			<SNode icon="👥" label="100k WebSockets" sub="No Database Impact" color={COLORS.success} top={300} left={800} w={180} delay={35} glow />
 
 			{/* Code snippet */}
 			<Appear at={50} y={20}>

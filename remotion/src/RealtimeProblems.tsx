@@ -39,6 +39,47 @@ const SNode: React.FC<{ icon: string; label: string; sub?: string; color: string
 	);
 };
 
+const Arrow: React.FC<{ x1: number; y1: number; x2: number; y2: number; color: string; label?: string; delay: number; dashed?: boolean; labelOffset?: number; labelPos?: number }> = ({ x1, y1, x2, y2, color, label, delay, dashed, labelOffset = 0, labelPos = 0.5 }) => {
+	const f = useCurrentFrame(); const { fps } = useVideoConfig();
+	const p = spring({ frame: f - delay, fps, config: { damping: 20, stiffness: 70 } });
+	const id = `arrow_${x1}_${y1}_${delay}`;
+	const midX = x1 + (x2 - x1) * p;
+	const midY = y1 + (y2 - y1) * p;
+	
+	const lx = x1 + (x2 - x1) * labelPos;
+	const ly = y1 + (y2 - y1) * labelPos;
+	const angle = Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI;
+
+	return (
+		<>
+			<svg style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', overflow: 'visible', pointerEvents: 'none', zIndex: 10 }}>
+				<defs>
+					<marker id={id} markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+						<path d="M 0 0 L 8 4 L 0 8 z" fill={color} />
+					</marker>
+				</defs>
+				<line x1={x1} y1={y1} x2={x2} y2={y2} stroke={color} strokeWidth={1} opacity={0.1} strokeDasharray="4 4" />
+				<line x1={x1} y1={y1} x2={midX} y2={midY} stroke={color} strokeWidth={3} strokeLinecap="round" markerEnd={p > 0.95 ? `url(#${id})` : undefined} strokeDasharray={dashed ? '10 5' : undefined} style={{ filter: `drop-shadow(0 0 5px ${color}66)` }} />
+			</svg>
+			{label && (
+				<div style={{ 
+					position: 'absolute', 
+					left: lx, 
+					top: ly + labelOffset, 
+					opacity: p, 
+					transform: `translate(-50%, -50%) rotate(${angle}deg)`, 
+					transformOrigin: 'center',
+					zIndex: 25 
+				}}>
+					<div style={{ transform: `rotate(${-angle}deg)`, background: 'rgba(15,23,42,0.95)', border: `1.5px solid ${color}55`, borderRadius: 8, padding: '4px 12px', fontSize: 11, fontWeight: 800, color, fontFamily: 'monospace', whiteSpace: 'nowrap', boxShadow: '0 4px 15px rgba(0,0,0,0.5)' }}>
+						{label}
+					</div>
+				</div>
+			)}
+		</>
+	);
+};
+
 /* ════════════════════════════════════════════════
    SLIDE 1 — Title
 ════════════════════════════════════════════════ */
@@ -71,18 +112,16 @@ export const PollingProblemSlide: React.FC = () => {
 				<div style={{ position: 'absolute', top: 40, left: 50 }}>
 					<div style={{ fontSize: 12, fontWeight: 900, color: COLORS.danger, letterSpacing: 3, textTransform: 'uppercase', fontFamily: 'Inter', marginBottom: 10 }}>THE INEFFICIENCY</div>
 					<h2 style={{ fontSize: 36, fontWeight: 900, color: COLORS.ink, fontFamily: 'Inter', margin: '0 0 8px' }}>HTTP Polling</h2>
-					<p style={{ fontSize: 16, color: COLORS.muted, fontFamily: 'Inter', margin: 0, maxWidth: 800, lineHeight: 1.6 }}>Clients repeatedly ask the server for updates. 98% of these requests return absolutely nothing.</p>
+					<p style={{ fontSize: 16, color: COLORS.muted, fontFamily: 'Inter', margin: 0, maxWidth: 800, lineHeight: 1.6 }}>10,000 active users × 1 request/sec = 10,000 req/sec hitting the API. 98% return absolutely nothing.</p>
 				</div>
 			</Appear>
 
 			{/* Nodes */}
-			<SNode icon="📱" label="Client A" color={COLORS.accent} top={200} left={100} w={150} delay={10} />
-			<SNode icon="💻" label="Client B" color={COLORS.accent} top={350} left={100} w={150} delay={15} />
-			<SNode icon="🌐" label="Client C" color={COLORS.accent} top={500} left={100} w={150} delay={20} />
+			<SNode icon="👥" label="10k Clients" color={COLORS.accent} top={350} left={100} w={150} delay={10} />
 
 			<SNode icon="⚙️" label="API Server" color={COLORS.warning} top={350} left={500} w={180} delay={25} />
 			
-			<SNode icon="🗄️" label="Database" color={COLORS.danger} top={350} left={900} w={180} delay={30} />
+			<SNode icon="🗄️" label="PostgreSQL" sub="Max 500 connections" color={COLORS.danger} top={350} left={900} w={180} delay={30} glow />
 
 			{/* Polling Animation Lines */}
 			{loops.map(l => l.active && (
@@ -119,7 +158,41 @@ export const PollingProblemSlide: React.FC = () => {
 				<Appear at={100} y={20}>
 					<div style={{ position: 'absolute', bottom: 40, left: 0, right: 0, display: 'flex', justifyContent: 'center', zIndex: 30 }}>
 						<div style={{ background: `${COLORS.danger}22`, border: `2px solid ${COLORS.danger}`, borderRadius: 20, padding: '16px 48px', fontSize: 18, fontWeight: 900, color: COLORS.danger, fontFamily: 'Inter', boxShadow: `0 0 50px ${COLORS.danger}33`, backdropFilter: 'blur(20px)' }}>
-							⚠️ DB Connection pool exhausts under load just from empty polling.
+							⚠️ DB Connection pool crashes under the load of empty polling.
+						</div>
+					</div>
+				</Appear>
+			)}
+		</Shell>
+	);
+};
+
+/* ════════════════════════════════════════════════
+   SLIDE 3 — The Direct DB WebSocket Problem
+════════════════════════════════════════════════ */
+export const DirectWebSocketProblemSlide: React.FC = () => {
+	const f = useCurrentFrame();
+
+	return (
+		<Shell>
+			<Appear at={5} y={-20}>
+				<div style={{ position: 'absolute', top: 40, left: 50 }}>
+					<div style={{ fontSize: 12, fontWeight: 900, color: COLORS.danger, letterSpacing: 3, textTransform: 'uppercase', fontFamily: 'Inter', marginBottom: 10 }}>THE SCALING BOTTLENECK</div>
+					<h2 style={{ fontSize: 36, fontWeight: 900, color: COLORS.ink, fontFamily: 'Inter', margin: '0 0 8px' }}>Why not direct DB subscriptions?</h2>
+					<p style={{ fontSize: 16, color: COLORS.muted, fontFamily: 'Inter', margin: 0, maxWidth: 800, lineHeight: 1.6 }}>Why not just connect WebSockets directly to Postgres (e.g. LISTEN/NOTIFY)?</p>
+				</div>
+			</Appear>
+
+			<SNode icon="🗄️" label="PostgreSQL" sub="1 Process per connection" color={COLORS.danger} top={300} left={700} w={200} delay={10} glow />
+			<SNode icon="👥" label="100,000 WebSockets" color={COLORS.accent} top={300} left={200} w={200} delay={15} />
+			<Arrow x1={400} y1={350} x2={700} y2={350} color={COLORS.danger} delay={25} label="100k DB Connections" />
+
+			{f >= 40 && (
+				<Appear at={40} y={20}>
+					<div style={{ position: 'absolute', bottom: 140, left: 0, right: 0, display: 'flex', justifyContent: 'center', zIndex: 30 }}>
+						<div style={{ background: `rgba(0,0,0,0.9)`, border: `2px solid ${COLORS.danger}`, borderRadius: 20, padding: '24px 48px', textAlign: 'center', boxShadow: `0 0 50px ${COLORS.danger}33` }}>
+							<div style={{ fontSize: 24, fontWeight: 900, color: COLORS.danger, fontFamily: 'monospace' }}>Postgres Architecture Mismatch</div>
+							<div style={{ fontSize: 16, color: COLORS.muted, marginTop: 10 }}>100k connections = 100k OS Processes = Out of Memory (OOM) Server Crash.</div>
 						</div>
 					</div>
 				</Appear>

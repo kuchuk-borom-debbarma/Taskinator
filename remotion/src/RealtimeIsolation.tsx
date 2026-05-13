@@ -89,7 +89,7 @@ export const MultiInstanceIsolationSlide: React.FC = () => {
 				<div style={{ position: 'absolute', top: 40, left: 50 }}>
 					<div style={{ fontSize: 12, fontWeight: 900, color: COLORS.accent, letterSpacing: 3, textTransform: 'uppercase', fontFamily: 'Inter', marginBottom: 10 }}>HORIZONTAL SCALING</div>
 					<h2 style={{ fontSize: 36, fontWeight: 900, color: COLORS.ink, fontFamily: 'Inter', margin: '0 0 8px' }}>Multi-Instance Isolation</h2>
-					<p style={{ fontSize: 16, color: COLORS.muted, fontFamily: 'Inter', margin: 0, maxWidth: 800, lineHeight: 1.6 }}>How do two clients connected to different servers get the same event? Redis connects them.</p>
+					<p style={{ fontSize: 16, color: COLORS.muted, fontFamily: 'Inter', margin: 0, maxWidth: 800, lineHeight: 1.6 }}>How do 100,000 clients spread across 50 different API servers get the same event instantly?</p>
 				</div>
 			</Appear>
 
@@ -120,9 +120,9 @@ export const MultiInstanceIsolationSlide: React.FC = () => {
 			<Appear at={65} x={0}>
 				<div style={{ position: 'absolute', top: 320, left: 750, width: 350, background: 'rgba(0,0,0,0.8)', border: `1px solid ${COLORS.accent}55`, borderRadius: 12, padding: '16px', boxShadow: `0 10px 30px rgba(0,0,0,0.5)` }}>
 					<div style={{ fontSize: 13, color: COLORS.ink, fontFamily: 'Inter', lineHeight: 1.6 }}>
-						<strong style={{ color: COLORS.accent }}>API 1</strong> gets the Kafka event, but Client B is on <strong style={{ color: COLORS.accent }}>API 2</strong>.
+						<strong style={{ color: COLORS.accent }}>API 1</strong> gets the Kafka event, but Client B is isolated on <strong style={{ color: COLORS.accent }}>API 2</strong>.
 						<br/><br/>
-						By publishing to Redis, the event fans out to <strong>all</strong> API instances, instantly bridging isolated WebSockets.
+						By publishing to Redis, the event fans out to <strong>all 50 API instances</strong> simultaneously. Redis is the hyper-fast backbone enabling infinite horizontal scale.
 					</div>
 				</div>
 			</Appear>
