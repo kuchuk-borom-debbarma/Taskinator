@@ -84,6 +84,7 @@ export class TaskServiceImpl implements TaskService {
         title: string;
         description?: string | null;
         status?: string | null;
+        priority?: number | null;
     }): Promise<Task> {
         logger.info(
             `TaskService.createTask started by ${param.actorId} in project ${param.projectId} for "${param.title}"`,
@@ -106,6 +107,7 @@ export class TaskServiceImpl implements TaskService {
         status?: string | null;
         teamId?: string | null;
         memberId?: string | null;
+        priority?: number | null;
     }): Promise<Task> {
         logger.info(
             `TaskService.updateTask started for ${param.taskId} by ${param.actorId}`,

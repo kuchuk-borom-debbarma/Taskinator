@@ -2,7 +2,9 @@ import type { TeamAPI } from '../../interfaces/TeamAPI';
 import type { PageInfo, PaginationArgs, Team, TeamMember } from '../../types';
 import { AuthenticationError } from '../../errors';
 
-const GRAPHQL_URL = 'http://localhost:3000/graphql';
+import { CONFIG } from '../../../config';
+
+const GRAPHQL_URL = CONFIG.API_URL;
 
 const gql = String.raw;
 
@@ -115,6 +117,52 @@ export class GraphQLTeamAPI implements TeamAPI {
     return data.team || null;
   }
 
+  async getTeamDetail(teamId: string): Promise<{
+    team: Team | null,
+    members: { members: TeamMember[], pageInfo: PageInfo },
+  }> {
+    const data = await this.query<any>(gql`
+      query GetTeamDetail($teamId: ID!) {
+        team(id: $teamId) {
+          id
+          name
+          createdAt
+          updatedAt
+          version
+          createdBy { id username }
+          project { id name }
+          members(first: ${CONFIG.PAGINATION.MEMBERS_LIST}) {
+            edges {
+              node {
+                id
+                user { id username }
+                createdAt
+                version
+              }
+            }
+            pageInfo {
+              hasNextPage
+              hasPreviousPage
+              startCursor
+              endCursor
+            }
+          }
+        }
+      }
+    `, { teamId });
+
+    const team = data.team || null;
+    const membersConn = team?.members;
+
+    return {
+      team,
+      members: {
+        members: membersConn?.edges.map((e: any) => e.node) || [],
+        pageInfo: membersConn?.pageInfo || { hasNextPage: false, hasPreviousPage: false, startCursor: null, endCursor: null }
+      }
+    };
+  }
+
   async getTeamMembers(
     projectId: string, 
     teamId: string, 
@@ -169,6 +217,26 @@ export class GraphQLTeamAPI implements TeamAPI {
       }
     `, { projectId, name });
     return data.createTeam;
+  }
+
+  async updateTeam(projectId: string, teamId: string, name: string, version: number): Promise<{ success: boolean; team?: Team }> {
+    const data = await this.query<any>(gql`
+      mutation UpdateTeam($projectId: ID!, $teamId: ID!, $name: String!, $version: Int!) {
+        updateTeam(projectId: $projectId, teamId: $teamId, name: $name, version: $version) {
+          success
+          team {
+            id
+            name
+            createdBy { id username }
+            createdAt
+            updatedAt
+            version
+            project { id name }
+          }
+        }
+      }
+    `, { projectId, teamId, name, version });
+    return data.updateTeam;
   }
 
   async deleteTeams(projectId: string, teamIds: string[]): Promise<{ success: boolean; deletedCount: number }> {

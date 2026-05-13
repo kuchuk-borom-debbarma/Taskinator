@@ -3,6 +3,7 @@ import React, { createContext, useContext, useEffect, useState, useMemo, useCall
 interface AuthUser {
   id: string;
   username: string;
+  projects: { id: string; name: string }[];
 }
 
 export interface AuthContextType {
@@ -16,7 +17,9 @@ export interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
-const GRAPHQL_URL = 'http://localhost:3000/graphql';
+import { CONFIG } from '../config';
+
+const GRAPHQL_URL = CONFIG.API_URL;
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [token, setToken] = useState<string | null>(() => localStorage.getItem('taskinator_token'));
@@ -33,7 +36,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           'Authorization': `Bearer ${authToken}`,
         },
         body: JSON.stringify({
-          query: `query GetMe { me { id username } }`,
+          query: `
+            query GetMe { 
+              me { 
+                id 
+                username 
+                projects(first: 50) {
+                  edges {
+                    node {
+                      id
+                      name
+                    }
+                  }
+                }
+              } 
+            }
+          `,
         }),
       });
 
@@ -46,7 +64,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       const result = await response.json();
       if (result.data?.me) {
-        setUser(result.data.me);
+        const userData = result.data.me;
+        setUser({
+          ...userData,
+          projects: userData.projects?.edges.map((e: any) => e.node) || [],
+        });
       } else {
         if (result.errors?.[0]?.extensions?.code === 'UNAUTHENTICATED') {
           console.warn('[Auth] Session invalid or expired');

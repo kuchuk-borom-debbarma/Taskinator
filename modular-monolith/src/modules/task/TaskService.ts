@@ -103,6 +103,7 @@ export interface TaskService extends BaseService {
         title: string;
         description?: string | null;
         status?: string | null;
+        priority?: number | null;
     }): Promise<Task>;
 
     updateTask(param: {
@@ -115,6 +116,7 @@ export interface TaskService extends BaseService {
         status?: string | null;
         teamId?: string | null;
         memberId?: string | null;
+        priority?: number | null;
     }): Promise<Task>;
 
     deleteTask(param: {

@@ -11,13 +11,30 @@ export interface TaskAPI {
 
   getTask(id: string): Promise<ProjectTask | null>;
 
-  createTask(input: { projectId: string; title: string; description?: string; status?: string; teamId?: string; memberId?: string }): Promise<ProjectTask>;
+  getTaskDetail(id: string): Promise<{
+    task: ProjectTask | null,
+    incoming: { links: TaskLink[], pageInfo: PageInfo },
+    outgoing: { links: TaskLink[], pageInfo: PageInfo },
+  }>;
 
-  updateTask(taskId: string, input: { projectId: string; version: number; title?: string; description?: string; status?: string; teamId?: string; memberId?: string }): Promise<ProjectTask>;
+  createTask(input: { projectId: string; title: string; description?: string; status?: string; priority?: number }): Promise<ProjectTask>;
+
+  updateTask(taskId: string, input: { 
+    projectId: string; 
+    version: number; 
+    title?: string; 
+    description?: string; 
+    status?: string; 
+    teamId?: string | null; 
+    memberId?: string | null;
+    priority?: number;
+  }): Promise<ProjectTask>;
 
   deleteTask(projectId: string, taskId: string): Promise<string>;
 
   createTaskLink(input: { projectId: string; sourceTaskId: string; targetTaskId: string; label: string }): Promise<TaskLink>;
+  
+  updateTaskLink(input: { projectId: string; linkId: string; sourceTaskId?: string; targetTaskId?: string; label?: string }): Promise<TaskLink>;
 
   deleteTaskLink(projectId: string, linkId: string): Promise<string>;
 

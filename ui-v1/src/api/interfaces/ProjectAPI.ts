@@ -1,4 +1,4 @@
-import type { PageInfo, PaginationArgs, Project, ProjectMember, ProjectTask, Team } from '../types';
+import type { PageInfo, PaginationArgs, Project, ProjectMember, ProjectTask, TaskLink, Team } from '../types';
 
 export interface ProjectAPI {
   getProjects(pagination?: PaginationArgs): Promise<{ projects: Project[], pageInfo: PageInfo, totalCount?: number }>;
@@ -15,5 +15,6 @@ export interface ProjectAPI {
     teams: Team[],
     tasks: ProjectTask[],
     members: ProjectMember[],
+    links: TaskLink[],
   }>;
 }

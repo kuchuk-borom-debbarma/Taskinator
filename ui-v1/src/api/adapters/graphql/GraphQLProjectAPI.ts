@@ -1,8 +1,10 @@
 import type { ProjectAPI } from '../../interfaces/ProjectAPI';
-import type { PageInfo, PaginationArgs, Project, ProjectMember, ProjectTask, Team } from '../../types';
+import type { PageInfo, PaginationArgs, Project, ProjectMember, ProjectTask, TaskLink, Team } from '../../types';
 import { AuthenticationError } from '../../errors';
 
-const GRAPHQL_URL = 'http://localhost:3000/graphql';
+import { CONFIG } from '../../../config';
+
+const GRAPHQL_URL = CONFIG.API_URL;
 
 const gql = String.raw;
 
@@ -132,6 +134,7 @@ export class GraphQLProjectAPI implements ProjectAPI {
     teams: Team[],
     tasks: ProjectTask[],
     members: ProjectMember[],
+    links: TaskLink[],
   }> {
     const data = await this.query<any>(gql`
       query GetProjectDashboardData($projectId: ID!, $teamsFirst: Int, $tasksFirst: Int, $membersFirst: Int) {
@@ -187,12 +190,31 @@ export class GraphQLProjectAPI implements ProjectAPI {
               }
             }
           }
+          projectLinks(first: 6) {
+            edges {
+              node {
+                id
+                label
+                createdAt
+                updatedAt
+                source { id title status priority project { id } team { id name } assignedMember { id username } }
+                target { id title status priority project { id } team { id name } assignedMember { id username } }
+                createdBy { id username }
+                updatedBy { id username }
+              }
+            }
+          }
         }
       }
-    `, { projectId, teamsFirst: 5, tasksFirst: 10, membersFirst: 5 });
+    `, { 
+      projectId, 
+      teamsFirst: CONFIG.PAGINATION.DASHBOARD_TEAMS, 
+      tasksFirst: CONFIG.PAGINATION.DASHBOARD_TASKS, 
+      membersFirst: CONFIG.PAGINATION.MEMBERS_LIST // Note: Dashboard members uses members list limit
+    });
 
     if (!data.project) {
-      return { project: null, teams: [], tasks: [], members: [] };
+      return { project: null, teams: [], tasks: [], members: [], links: [] };
     }
 
     return {
@@ -203,6 +225,7 @@ export class GraphQLProjectAPI implements ProjectAPI {
       teams: data.project.teams?.edges.map((e: any) => e.node) || [],
       tasks: data.project.projectTasks?.edges.map((e: any) => e.node) || [],
       members: data.project.projectMembers?.edges.map((e: any) => e.node) || [],
+      links: data.project.projectLinks?.edges.map((e: any) => e.node) || [],
     };
   }
 

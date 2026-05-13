@@ -6,6 +6,7 @@ import { useApi } from '../../hooks/useApi';
 import type { Team } from '../../api/types';
 import { AppModal, EmptyState, SurfaceCardStrong, TextField, formatDate } from '../shared/workspace';
 import { PagingButton } from '../shared/PagingButton';
+import { CONFIG } from '../../config';
 
 type TeamSearch = {
   cursor?: string;
@@ -33,9 +34,9 @@ export default function ProjectTeamsView() {
     queryKey: ['project-teams', projectId, cursor, direction],
     queryFn: () => {
       if (direction === 'backward') {
-        return teamApi.getTeams(projectId, { last: 12, before: cursor });
+        return teamApi.getTeams(projectId, { last: CONFIG.PAGINATION.TASKS_LIST, before: cursor });
       }
-      return teamApi.getTeams(projectId, { first: 12, after: direction === 'forward' ? cursor : undefined });
+      return teamApi.getTeams(projectId, { first: CONFIG.PAGINATION.TASKS_LIST, after: direction === 'forward' ? cursor : undefined });
     },
     enabled: !!projectId,
     initialData: () => {
@@ -45,7 +46,7 @@ export default function ProjectTeamsView() {
         ? { teams, pageInfo: { hasNextPage: false, hasPreviousPage: false, endCursor: null, startCursor: null } }
         : undefined;
     },
-    staleTime: 1000 * 60 * 3,
+    staleTime: CONFIG.CACHE.DEFAULT_STALE_TIME,
   });
 
   const createTeam = useMutation({
@@ -114,9 +115,7 @@ export default function ProjectTeamsView() {
                 >
                   <div className="flex items-start justify-between gap-4">
                     <div>
-                      <div className="mb-3 inline-flex rounded-full bg-app-accent-2-soft px-3 py-1 text-xs font-semibold text-app-accent-2">
-                        Team
-                      </div>
+
                       <h3 className="text-xl font-semibold text-app-ink">{team.name}</h3>
                       <p className="mt-2 text-sm text-app-muted">Created {formatDate(team.createdAt)}</p>
                     </div>

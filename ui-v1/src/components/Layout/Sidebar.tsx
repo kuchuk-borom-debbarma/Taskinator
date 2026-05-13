@@ -1,15 +1,57 @@
-import React from 'react';
+import React, { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 
 import { Link, useLocation } from '@tanstack/react-router';
-import { Home, LogOut, PanelLeftClose, PanelLeftOpen, User2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Home, LogOut, PanelLeftClose, PanelLeftOpen, User2 } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { useLayout } from '../../context/LayoutContext';
+import { useApi } from '../../hooks/useApi';
+import { Plus } from 'lucide-react';
 import { SurfaceCard } from '../shared/workspace';
 
 export const Sidebar: React.FC = () => {
   const { user, logout } = useAuth();
   const location = useLocation();
-  const { isSidebarCollapsed, toggleSidebar } = useLayout();
+  const { isSidebarCollapsed, toggleSidebar, setCreateProjectModalOpen } = useLayout();
+  const { projectApi } = useApi();
+  const [cursor, setCursor] = useState<string | undefined>(undefined);
+  const [direction, setDirection] = useState<'forward' | 'backward' | undefined>(undefined);
+
+  const projectsPerPage = 8;
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['sidebar-projects', cursor, direction],
+    queryFn: () => projectApi.getProjects(
+      direction === 'backward'
+        ? { last: projectsPerPage, before: cursor }
+        : { first: projectsPerPage, after: cursor }
+    ),
+  });
+
+  const projects = data?.projects ?? [];
+  const pageInfo = data?.pageInfo;
+  const totalProjects = data?.totalCount ?? 0;
+
+  const handlePrevPage = () => {
+    if (pageInfo?.hasPreviousPage) {
+      setCursor(pageInfo.startCursor ?? undefined);
+      setDirection('backward');
+    }
+  };
+
+  const handleNextPage = () => {
+    if (pageInfo?.hasNextPage) {
+      setCursor(pageInfo.endCursor ?? undefined);
+      setDirection('forward');
+    }
+  };
+
+  React.useEffect(() => {
+    if (location.pathname.includes('/projects/')) {
+      // Sync logic might be more complex with server-side pagination, 
+      // but for now let's just make sure we are not stuck on a wrong page.
+    }
+  }, [location.pathname]);
 
 
 
@@ -22,8 +64,7 @@ export const Sidebar: React.FC = () => {
       >
         <div className="mb-6 flex items-center justify-between gap-3">
           <div className={`overflow-hidden transition-all ${isSidebarCollapsed ? 'w-0 opacity-0' : 'w-auto opacity-100'}`}>
-            <p className="text-xs font-semibold uppercase tracking-[0.3em] text-app-muted">Taskinator</p>
-            <h2 className="mt-1 text-2xl font-semibold tracking-[-0.04em] text-app-ink">Workspace</h2>
+            <h2 className="text-2xl font-bold tracking-tight text-app-ink">Taskinator</h2>
           </div>
           <button
             onClick={toggleSidebar}
@@ -37,11 +78,72 @@ export const Sidebar: React.FC = () => {
         <nav className="space-y-2">
           <SidebarLink
             to="/"
-            label="Workspace Home"
+            label="Home"
             icon={<Home size={18} />}
             active={location.pathname === '/'}
             collapsed={isSidebarCollapsed}
           />
+
+          {!isSidebarCollapsed && totalProjects ? (
+            <div className="mt-8 px-4">
+              <div className="flex items-center justify-between">
+                <p className="text-xs font-bold uppercase tracking-widest text-app-muted/60">Projects</p>
+                {(pageInfo?.hasNextPage || pageInfo?.hasPreviousPage) && (
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={handlePrevPage}
+                      disabled={!pageInfo?.hasPreviousPage}
+                      className="rounded-lg p-1 text-app-muted transition hover:bg-app-line/40 hover:text-app-ink disabled:opacity-30"
+                      aria-label="Previous page"
+                    >
+                      <ChevronLeft size={14} />
+                    </button>
+                    <button
+                      onClick={handleNextPage}
+                      disabled={!pageInfo?.hasNextPage}
+                      className="rounded-lg p-1 text-app-muted transition hover:bg-app-line/40 hover:text-app-ink disabled:opacity-30"
+                      aria-label="Next page"
+                    >
+                      <ChevronRight size={14} />
+                    </button>
+                  </div>
+                )}
+              </div>
+              <div className="mt-4 space-y-1">
+                {isLoading ? (
+                  <div className="flex justify-center py-4">
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-app-accent border-t-transparent" />
+                  </div>
+                ) : (
+                  projects.map((project) => (
+                    <Link
+                      key={project.id}
+                      to="/projects/$projectId"
+                      params={{ projectId: project.id }}
+                      className={`flex items-center gap-3 rounded-xl px-3 py-2 text-sm font-medium transition ${
+                        location.pathname.includes(project.id)
+                          ? 'bg-app-accent/10 text-app-accent'
+                          : 'text-app-muted hover:bg-app-line/40 hover:text-app-ink'
+                      }`}
+                    >
+                      <div className="h-2 w-2 rounded-full bg-app-accent" />
+                      <span className="truncate">{project.name}</span>
+                    </Link>
+                  ))
+                )}
+              </div>
+            </div>
+          ) : null}
+
+          <button
+            onClick={() => setCreateProjectModalOpen(true)}
+            className={`mt-4 flex w-full items-center gap-3 rounded-[22px] px-4 py-3 text-app-accent transition hover:bg-app-accent/10 ${
+              isSidebarCollapsed ? 'justify-center px-0' : ''
+            }`}
+          >
+            <Plus size={18} />
+            {!isSidebarCollapsed && <span className="text-sm font-semibold">New Project</span>}
+          </button>
         </nav>
 
 
@@ -55,7 +157,6 @@ export const Sidebar: React.FC = () => {
               {!isSidebarCollapsed ? (
                 <div className="min-w-0">
                   <p className="truncate text-sm font-semibold text-app-ink">{user?.username ?? 'Workspace user'}</p>
-                  <p className="text-xs text-app-muted">Authenticated session</p>
                 </div>
               ) : null}
             </div>
