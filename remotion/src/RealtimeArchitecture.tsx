@@ -80,14 +80,14 @@ const Arrow: React.FC<{ x1: number; y1: number; x2: number; y2: number; color: s
 };
 
 /* ════════════════════════════════════════════════
-   SLIDE 1 — Redis Connection Registry
+   SLIDE 1 — Evolution 4: Redis Registry 
 ════════════════════════════════════════════════ */
 export const RedisRegistrySlide: React.FC = () => {
 	return (
 		<Shell>
 			<Appear at={5} y={-20}>
 				<div style={{ position: 'absolute', top: 40, left: 50 }}>
-					<div style={{ fontSize: 12, fontWeight: 900, color: COLORS.accent2, letterSpacing: 3, textTransform: 'uppercase', fontFamily: 'Inter', marginBottom: 10 }}>THE SOLUTION: PART 1</div>
+					<div style={{ fontSize: 12, fontWeight: 900, color: COLORS.success, letterSpacing: 3, textTransform: 'uppercase', fontFamily: 'Inter', marginBottom: 10 }}>EVOLUTION 4: THE FINAL SOLUTION</div>
 					<h2 style={{ fontSize: 36, fontWeight: 900, color: COLORS.ink, fontFamily: 'Inter', margin: '0 0 8px' }}>Redis Connection Registry</h2>
 					<p style={{ fontSize: 16, color: COLORS.muted, fontFamily: 'Inter', margin: 0, maxWidth: 800, lineHeight: 1.6 }}>When a user connects, the API instance registers exactly where they are connected.</p>
 				</div>
@@ -97,8 +97,8 @@ export const RedisRegistrySlide: React.FC = () => {
 			<SNode icon="📱" label="User A" color={COLORS.success} top={300} left={100} w={150} delay={15} />
 			<Arrow x1={250} y1={350} x2={450} y2={350} color={COLORS.success} delay={25} label="WebSocket Connect" labelOffset={-20} />
 			
-			<SNode icon="⚙️" label="API Instance 5" color={COLORS.accent} top={300} left={450} w={180} delay={30} />
-			<Arrow x1={640} y1={350} x2={800} y2={350} color={COLORS.accent2} delay={45} label="SET user:A => api_5" labelOffset={-20} />
+			<SNode icon="⚙️" label="API Server 5" color={COLORS.accent} top={300} left={450} w={180} delay={30} />
+			<Arrow x1={640} y1={350} x2={800} y2={350} color={COLORS.accent2} delay={45} label="SET user:A => server_5" labelOffset={-20} />
 
 			<SNode icon="🔴" label="Redis" sub="Key-Value Store" color={COLORS.danger} top={300} left={800} w={180} delay={40} glow />
 
@@ -106,7 +106,7 @@ export const RedisRegistrySlide: React.FC = () => {
 			<Appear at={60} y={20}>
 				<div style={{ position: 'absolute', top: 450, left: 800, width: 180, background: 'rgba(0,0,0,0.8)', border: `1px solid ${COLORS.danger}55`, borderRadius: 12, padding: '16px', fontFamily: 'monospace', fontSize: 14, color: COLORS.ink, boxShadow: `0 10px 30px rgba(0,0,0,0.5)` }}>
 					<div style={{ color: COLORS.muted, fontSize: 10, marginBottom: 8 }}>Redis KV:</div>
-					<div><span style={{ color: COLORS.success }}>user_A</span> : <span style={{ color: COLORS.accent }}>api_5</span></div>
+					<div><span style={{ color: COLORS.success }}>user_A</span> : <span style={{ color: COLORS.accent }}>server_5</span></div>
 				</div>
 			</Appear>
 		</Shell>
@@ -123,9 +123,9 @@ export const TargetedDeliverySlide: React.FC = () => {
 		<Shell>
 			<Appear at={5} y={-20}>
 				<div style={{ position: 'absolute', top: 40, left: 50 }}>
-					<div style={{ fontSize: 12, fontWeight: 900, color: COLORS.success, letterSpacing: 3, textTransform: 'uppercase', fontFamily: 'Inter', marginBottom: 10 }}>THE SOLUTION: PART 2</div>
+					<div style={{ fontSize: 12, fontWeight: 900, color: COLORS.success, letterSpacing: 3, textTransform: 'uppercase', fontFamily: 'Inter', marginBottom: 10 }}>EVOLUTION 4: THE FINAL SOLUTION</div>
 					<h2 style={{ fontSize: 36, fontWeight: 900, color: COLORS.ink, fontFamily: 'Inter', margin: '0 0 8px' }}>Targeted Delivery</h2>
-					<p style={{ fontSize: 16, color: COLORS.muted, fontFamily: 'Inter', margin: 0, maxWidth: 800, lineHeight: 1.6 }}>Events are routed exclusively to the required instance. No blind broadcasting.</p>
+					<p style={{ fontSize: 16, color: COLORS.muted, fontFamily: 'Inter', margin: 0, maxWidth: 800, lineHeight: 1.6 }}>Events are routed exclusively to the required server. No blind broadcasting.</p>
 				</div>
 			</Appear>
 
@@ -137,12 +137,12 @@ export const TargetedDeliverySlide: React.FC = () => {
 			
 			{/* Lookup */}
 			<Arrow x1={425} y1={290} x2={425} y2={180} color={COLORS.danger} delay={35} dashed label="GET user_A" labelPos={0.4} />
-			<SNode icon="🔴" label="Redis" sub="Returns: API 5" color={COLORS.danger} top={60} left={350} w={150} delay={30} />
+			<SNode icon="🔴" label="Redis" sub="Returns: Server 5" color={COLORS.danger} top={60} left={350} w={150} delay={30} />
 			<Arrow x1={450} y1={180} x2={450} y2={290} color={COLORS.success} delay={50} dashed />
 
 			{/* Deliver */}
-			<Arrow x1={500} y1={350} x2={700} y2={350} color={COLORS.accent2} delay={65} label="Publish to API 5 channel" />
-			<SNode icon="⚙️" label="API Instance 5" color={COLORS.accent} top={300} left={700} w={150} delay={60} />
+			<Arrow x1={500} y1={350} x2={700} y2={350} color={COLORS.accent2} delay={65} label="Publish to Server 5" />
+			<SNode icon="⚙️" label="API Server 5" color={COLORS.accent} top={300} left={700} w={150} delay={60} />
 			
 			<Arrow x1={850} y1={350} x2={1000} y2={350} color={COLORS.success} delay={80} dashed />
 			<SNode icon="📱" label="User A" color={COLORS.success} top={300} left={1000} w={130} delay={75} />
@@ -152,7 +152,7 @@ export const TargetedDeliverySlide: React.FC = () => {
 				<Appear at={95} y={20}>
 					<div style={{ position: 'absolute', bottom: 40, left: 0, right: 0, display: 'flex', justifyContent: 'center', zIndex: 30 }}>
 						<div style={{ background: `${COLORS.success}15`, border: `2px solid ${COLORS.success}`, borderRadius: 20, padding: '16px 48px', fontSize: 16, fontWeight: 900, color: COLORS.success, fontFamily: 'Inter', boxShadow: `0 0 50px ${COLORS.success}33`, backdropFilter: 'blur(20px)' }}>
-							✓ Event bypasses instances 1-49 entirely. Zero wasted bandwidth.
+							✓ Event bypasses servers 1-49 entirely. Zero wasted bandwidth.
 						</div>
 					</div>
 				</Appear>

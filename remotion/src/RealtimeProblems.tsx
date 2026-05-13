@@ -81,46 +81,164 @@ const Arrow: React.FC<{ x1: number; y1: number; x2: number; y2: number; color: s
 };
 
 /* ════════════════════════════════════════════════
-   SLIDE 1 — Title
+   SLIDE 0 — Title
 ════════════════════════════════════════════════ */
 export const TitleSlide: React.FC = () => {
-	return <TitleCard title="Real-Time Routing" />;
+	return <TitleCard title="Real-Time Architecture" />;
 };
 
 /* ════════════════════════════════════════════════
-   SLIDE 2 — Naive WebSocket Problem
+   SLIDE 1 — Evolution 1: HTTP Polling
 ════════════════════════════════════════════════ */
-export const NaiveWebSocketSlide: React.FC = () => {
+export const PollingProblemSlide: React.FC = () => {
+	const f = useCurrentFrame();
+	const { fps } = useVideoConfig();
+
+	// Counter simulation
+	const isPollingActive = f > 30;
+	const requests = isPollingActive ? Math.floor(Math.pow((f - 30) / fps * 10, 2)) : 0;
+	const emptyRate = 98;
+
+	// Looping arrows
+	const loops = Array.from({ length: 15 }).map((_, i) => {
+		const startF = 30 + (i * 10);
+		const isActive = f >= startF && f < startF + 20;
+		return { id: i, active: isActive, startF };
+	});
+
+	return (
+		<Shell>
+			<Appear at={5} y={-20}>
+				<div style={{ position: 'absolute', top: 40, left: 50 }}>
+					<div style={{ fontSize: 12, fontWeight: 900, color: COLORS.danger, letterSpacing: 3, textTransform: 'uppercase', fontFamily: 'Inter', marginBottom: 10 }}>EVOLUTION 1</div>
+					<h2 style={{ fontSize: 36, fontWeight: 900, color: COLORS.ink, fontFamily: 'Inter', margin: '0 0 8px' }}>HTTP Polling</h2>
+					<p style={{ fontSize: 16, color: COLORS.muted, fontFamily: 'Inter', margin: 0, maxWidth: 800, lineHeight: 1.6 }}>10,000 users asking "Are there updates?" every second. 98% of responses are empty.</p>
+				</div>
+			</Appear>
+
+			<SNode icon="👥" label="10k Clients" color={COLORS.accent} top={350} left={100} w={150} delay={10} />
+			<SNode icon="⚙️" label="API Server" color={COLORS.warning} top={350} left={500} w={180} delay={25} />
+			<SNode icon="🗄️" label="PostgreSQL" sub="Max 500 connections" color={COLORS.danger} top={350} left={900} w={180} delay={30} glow />
+
+			{loops.map(l => l.active && (
+				<React.Fragment key={l.id}>
+					<div style={{ position: 'absolute', top: 395, left: 260, width: 230, height: 2, background: COLORS.danger, opacity: 0.5, boxShadow: `0 0 10px ${COLORS.danger}` }} />
+					<div style={{ position: 'absolute', top: 395, left: 690, width: 200, height: 2, background: COLORS.danger, opacity: 0.8, boxShadow: `0 0 10px ${COLORS.danger}` }} />
+				</React.Fragment>
+			))}
+
+			<Appear at={40} x={30}>
+				<div style={{ position: 'absolute', top: 200, right: 100, width: 300, background: `rgba(0,0,0,0.8)`, border: `2px solid ${COLORS.danger}`, borderRadius: 16, padding: '20px', boxShadow: '0 20px 40px rgba(0,0,0,0.5)' }}>
+					<div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 15 }}>
+						<div style={{ fontSize: 12, fontWeight: 900, color: COLORS.muted, textTransform: 'uppercase' }}>HTTP Requests</div>
+						<div style={{ fontSize: 16, fontWeight: 900, color: COLORS.ink, fontFamily: 'monospace', fontVariantNumeric: 'tabular-nums' }}>{requests.toLocaleString()}</div>
+					</div>
+					<div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 15 }}>
+						<div style={{ fontSize: 12, fontWeight: 900, color: COLORS.muted, textTransform: 'uppercase' }}>Empty / Wasted</div>
+						<div style={{ fontSize: 16, fontWeight: 900, color: COLORS.danger, fontFamily: 'monospace', fontVariantNumeric: 'tabular-nums' }}>{Math.floor(requests * (emptyRate/100)).toLocaleString()}</div>
+					</div>
+					<div style={{ width: '100%', height: 8, background: 'rgba(255,255,255,0.1)', borderRadius: 4, overflow: 'hidden' }}>
+						<div style={{ width: `${emptyRate}%`, height: '100%', background: COLORS.danger }} />
+					</div>
+					<div style={{ textAlign: 'right', fontSize: 10, color: COLORS.danger, marginTop: 5, fontWeight: 800 }}>{emptyRate}% WASTE</div>
+				</div>
+			</Appear>
+
+			{f >= 100 && (
+				<Appear at={100} y={20}>
+					<div style={{ position: 'absolute', bottom: 40, left: 0, right: 0, display: 'flex', justifyContent: 'center', zIndex: 30 }}>
+						<div style={{ background: `${COLORS.danger}22`, border: `2px solid ${COLORS.danger}`, borderRadius: 20, padding: '16px 48px', fontSize: 18, fontWeight: 900, color: COLORS.danger, fontFamily: 'Inter', boxShadow: `0 0 50px ${COLORS.danger}33`, backdropFilter: 'blur(20px)' }}>
+							⚠️ Result: Database connection pool crashes under the load.
+						</div>
+					</div>
+				</Appear>
+			)}
+		</Shell>
+	);
+};
+
+/* ════════════════════════════════════════════════
+   SLIDE 2 — Evolution 2: Simple WebSockets
+════════════════════════════════════════════════ */
+export const SimpleWebSocketProblemSlide: React.FC = () => {
 	const f = useCurrentFrame();
 
 	return (
 		<Shell>
 			<Appear at={5} y={-20}>
 				<div style={{ position: 'absolute', top: 40, left: 50 }}>
-					<div style={{ fontSize: 12, fontWeight: 900, color: COLORS.danger, letterSpacing: 3, textTransform: 'uppercase', fontFamily: 'Inter', marginBottom: 10 }}>THE NAIVE APPROACH</div>
-					<h2 style={{ fontSize: 36, fontWeight: 900, color: COLORS.ink, fontFamily: 'Inter', margin: '0 0 8px' }}>Blind Broadcast Overkill</h2>
-					<p style={{ fontSize: 16, color: COLORS.muted, fontFamily: 'Inter', margin: 0, maxWidth: 800, lineHeight: 1.6 }}>Kafka broadcasts an event to ALL 50 API instances. They all wake up and iterate through their WebSockets just to see if the user is there.</p>
+					<div style={{ fontSize: 12, fontWeight: 900, color: COLORS.warning, letterSpacing: 3, textTransform: 'uppercase', fontFamily: 'Inter', marginBottom: 10 }}>EVOLUTION 2</div>
+					<h2 style={{ fontSize: 36, fontWeight: 900, color: COLORS.ink, fontFamily: 'Inter', margin: '0 0 8px' }}>Simple WebSockets</h2>
+					<p style={{ fontSize: 16, color: COLORS.muted, fontFamily: 'Inter', margin: 0, maxWidth: 800, lineHeight: 1.6 }}>Solves polling waste, but fails at horizontal scale. Isolation prevents delivery.</p>
+				</div>
+			</Appear>
+
+			{/* Server 1 & Client A */}
+			<SNode icon="⚙️" label="API Server 1" color={COLORS.accent} top={250} left={250} w={180} delay={10} />
+			<Arrow x1={430} y1={290} x2={750} y2={290} color={COLORS.accent} delay={20} dashed label="WebSocket Connected" />
+			<SNode icon="📱" label="User A" sub="Listening for updates" color={COLORS.accent} top={250} left={750} w={180} delay={15} />
+
+			{/* Server 2 & User B (updater) */}
+			<SNode icon="⚙️" label="API Server 2" color={COLORS.warning} top={450} left={250} w={180} delay={30} />
+			<Arrow x1={750} y1={490} x2={430} y2={490} color={COLORS.warning} delay={40} label="POST /task/update" />
+			<SNode icon="💻" label="User B" sub="Makes an update" color={COLORS.warning} top={450} left={750} w={180} delay={35} glow />
+
+			{/* The Wall */}
+			{f >= 55 && (
+				<Appear at={55}>
+					<div style={{ position: 'absolute', top: 350, left: 200, width: 280, height: 80, borderTop: `4px dashed ${COLORS.danger}`, borderBottom: `4px dashed ${COLORS.danger}`, opacity: 0.8, display: 'flex', justifyContent: 'center', alignItems: 'center', zIndex: 10 }}>
+						<span style={{ background: COLORS.danger, color: '#fff', padding: '4px 12px', borderRadius: 8, fontSize: 12, fontWeight: 'bold' }}>ISOLATION BARRIER</span>
+					</div>
+				</Appear>
+			)}
+
+			{f >= 80 && (
+				<Appear at={80} y={20}>
+					<div style={{ position: 'absolute', bottom: 40, left: 0, right: 0, display: 'flex', justifyContent: 'center', zIndex: 30 }}>
+						<div style={{ background: `${COLORS.warning}22`, border: `2px solid ${COLORS.warning}`, borderRadius: 20, padding: '16px 48px', fontSize: 18, fontWeight: 900, color: COLORS.warning, fontFamily: 'Inter', boxShadow: `0 0 50px ${COLORS.warning}33`, backdropFilter: 'blur(20px)' }}>
+							⚠️ Result: User A never receives User B's update because they are on different servers.
+						</div>
+					</div>
+				</Appear>
+			)}
+		</Shell>
+	);
+};
+
+/* ════════════════════════════════════════════════
+   SLIDE 3 — Evolution 3: WebSockets + Kafka Broadcast
+════════════════════════════════════════════════ */
+export const NaiveKafkaBroadcastSlide: React.FC = () => {
+	const f = useCurrentFrame();
+
+	return (
+		<Shell>
+			<Appear at={5} y={-20}>
+				<div style={{ position: 'absolute', top: 40, left: 50 }}>
+					<div style={{ fontSize: 12, fontWeight: 900, color: COLORS.danger, letterSpacing: 3, textTransform: 'uppercase', fontFamily: 'Inter', marginBottom: 10 }}>EVOLUTION 3</div>
+					<h2 style={{ fontSize: 36, fontWeight: 900, color: COLORS.ink, fontFamily: 'Inter', margin: '0 0 8px' }}>WebSockets + Kafka Broadcast</h2>
+					<p style={{ fontSize: 16, color: COLORS.muted, fontFamily: 'Inter', margin: 0, maxWidth: 800, lineHeight: 1.6 }}>Kafka bridges the gap, but broadcasting to all 50 servers wastes massive CPU.</p>
 				</div>
 			</Appear>
 
 			{/* Source */}
-			<SNode icon="📨" label="Kafka Topic" sub="New Event" color={COLORS.warning} top={350} left={100} w={150} delay={10} glow />
+			<SNode icon="📨" label="Kafka Topic" sub="Broadcasts to all" color={COLORS.warning} top={350} left={100} w={150} delay={10} glow />
 
 			{/* API Instances */}
-			<SNode icon="⚙️" label="API Instance 1" color={COLORS.danger} top={200} left={400} w={180} delay={15} />
+			<SNode icon="⚙️" label="API Server 1" color={COLORS.danger} top={200} left={400} w={180} delay={15} />
 			<Arrow x1={250} y1={360} x2={400} y2={230} color={COLORS.danger} delay={20} />
 			{f >= 25 && <div style={{ position: 'absolute', top: 220, left: 600, fontSize: 14, color: COLORS.danger, fontFamily: 'monospace' }}>❌ Not connected. Dropped.</div>}
 
-			<SNode icon="⚙️" label="API Instance 2" color={COLORS.danger} top={300} left={400} w={180} delay={17} />
+			<SNode icon="⚙️" label="API Server 2" color={COLORS.danger} top={300} left={400} w={180} delay={17} />
 			<Arrow x1={250} y1={380} x2={400} y2={330} color={COLORS.danger} delay={22} />
 			{f >= 27 && <div style={{ position: 'absolute', top: 320, left: 600, fontSize: 14, color: COLORS.danger, fontFamily: 'monospace' }}>❌ Not connected. Dropped.</div>}
 
-			<SNode icon="⚙️" label="API Instance 3" color={COLORS.danger} top={400} left={400} w={180} delay={19} />
+			<SNode icon="⚙️" label="API Server 3" color={COLORS.danger} top={400} left={400} w={180} delay={19} />
 			<Arrow x1={250} y1={400} x2={400} y2={430} color={COLORS.danger} delay={24} />
 			{f >= 29 && <div style={{ position: 'absolute', top: 420, left: 600, fontSize: 14, color: COLORS.danger, fontFamily: 'monospace' }}>❌ Not connected. Dropped.</div>}
 
 			{/* The one successful instance */}
-			<SNode icon="⚙️" label="API Instance 50" color={COLORS.success} top={500} left={400} w={180} delay={21} glow />
+			<SNode icon="⚙️" label="API Server 50" color={COLORS.success} top={500} left={400} w={180} delay={21} glow />
 			<Arrow x1={250} y1={420} x2={400} y2={530} color={COLORS.success} delay={26} />
 			{f >= 31 && <div style={{ position: 'absolute', top: 520, left: 600, fontSize: 14, color: COLORS.success, fontFamily: 'monospace' }}>✅ Found. Pushed to client.</div>}
 
@@ -129,11 +247,11 @@ export const NaiveWebSocketSlide: React.FC = () => {
 			<Arrow x1={580} y1={530} x2={900} y2={530} color={COLORS.success} delay={45} dashed />
 
 			{/* Warning Banner */}
-			{f >= 60 && (
-				<Appear at={60} y={20}>
+			{f >= 70 && (
+				<Appear at={70} y={20}>
 					<div style={{ position: 'absolute', bottom: 40, left: 0, right: 0, display: 'flex', justifyContent: 'center', zIndex: 30 }}>
 						<div style={{ background: `${COLORS.danger}22`, border: `2px solid ${COLORS.danger}`, borderRadius: 20, padding: '16px 48px', fontSize: 18, fontWeight: 900, color: COLORS.danger, fontFamily: 'Inter', boxShadow: `0 0 50px ${COLORS.danger}33`, backdropFilter: 'blur(20px)' }}>
-							⚠️ 49 instances wasted CPU cycles processing an event not meant for them.
+							⚠️ Result: 49 servers waste CPU iterating WebSocket lists for an event not meant for them.
 						</div>
 					</div>
 				</Appear>

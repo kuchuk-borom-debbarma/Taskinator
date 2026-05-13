@@ -18,7 +18,7 @@ export const RemotionRoot: React.FC = () => {
       <Composition
         id="RealtimeSSE"
         component={RealtimeSSE}
-        durationInFrames={2190}
+        durationInFrames={3090}
         fps={30}
         width={1280}
         height={720}
