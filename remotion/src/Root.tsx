@@ -8,10 +8,19 @@ import { AsyncProblems } from "./AsyncProblems";
 import { TransactionalOutbox } from "./TransactionalOutbox";
 import { UpgradedAsyncFlow } from "./UpgradedAsyncFlow";
 import { ConcurrencyControl } from "./ConcurrencyControl";
+import { SmartAggregation } from "./SmartAggregation";
 
 export const RemotionRoot: React.FC = () => {
   return (
     <>
+      <Composition
+        id="SmartAggregation"
+        component={SmartAggregation}
+        durationInFrames={3660}
+        fps={30}
+        width={1280}
+        height={720}
+      />
       <Composition
         id="FeatureShowcase"
         component={FeatureShowcase}
