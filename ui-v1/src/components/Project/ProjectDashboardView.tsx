@@ -1,6 +1,6 @@
 import { Link, useParams } from '@tanstack/react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowRight, BriefcaseBusiness, LayoutGrid, Users } from 'lucide-react';
+import { ArrowRight, BriefcaseBusiness, GitBranch, LayoutGrid, Users } from 'lucide-react';
 import { useApi } from '../../hooks/useApi';
 import type { Project } from '../../api/types';
 import { EmptyState, LoadingPane, PriorityBadge, StatCard, StatusBadge, SurfaceCard, SurfaceCardStrong, formatDate } from '../shared/workspace';
@@ -36,7 +36,7 @@ export default function ProjectDashboardView() {
     placeholderData: () => {
       if (!projectId) return undefined;
       const project = getCachedProject(queryClient, projectId);
-      return project ? { project, teams: [], tasks: [], members: [] } : undefined;
+      return project ? { project, teams: [], tasks: [], members: [], links: [] } : undefined;
     },
   });
 
@@ -44,6 +44,7 @@ export default function ProjectDashboardView() {
   const tasks = data?.tasks ?? [];
   const teams = data?.teams ?? [];
   const members = data?.members ?? [];
+  const links = data?.links ?? [];
   const resolvedProjectId = projectId ?? project?.id;
 
   if (isLoading) {
@@ -119,6 +120,44 @@ export default function ProjectDashboardView() {
                     <span>Updated {formatDate(task.updatedAt)}</span>
                   </div>
                 </Link>
+              ))
+            )}
+          </div>
+        </SurfaceCardStrong>
+
+        <SurfaceCardStrong className="p-5 md:p-6">
+          <div className="mb-5 flex items-center justify-between gap-4">
+            <div>
+              <p className="eyebrow mb-2">Links</p>
+              <h2 className="text-2xl font-semibold tracking-[-0.04em] text-app-ink">Recent task links</h2>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            {links.length === 0 ? (
+              <EmptyState icon={GitBranch} title="No task links yet" description="Create task links from task details." />
+            ) : (
+              links.map((link) => (
+                <div key={link.id} className="rounded-[24px] border border-app-line bg-white/75 p-4">
+                  <div className="flex flex-wrap items-center gap-3 text-sm">
+                    <Link
+                      to="/projects/$projectId/tasks/$taskId"
+                      params={{ projectId: resolvedProjectId!, taskId: link.source.id }}
+                      className="font-semibold text-app-ink hover:text-app-accent"
+                    >
+                      {link.source.title}
+                    </Link>
+                    <span className="rounded-full bg-app-accent/10 px-3 py-1 text-xs font-semibold text-app-accent">{link.label}</span>
+                    <ArrowRight size={14} className="text-app-muted" />
+                    <Link
+                      to="/projects/$projectId/tasks/$taskId"
+                      params={{ projectId: resolvedProjectId!, taskId: link.target.id }}
+                      className="font-semibold text-app-ink hover:text-app-accent"
+                    >
+                      {link.target.title}
+                    </Link>
+                  </div>
+                </div>
               ))
             )}
           </div>

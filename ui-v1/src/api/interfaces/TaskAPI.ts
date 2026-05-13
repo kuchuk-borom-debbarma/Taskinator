@@ -17,7 +17,7 @@ export interface TaskAPI {
     outgoing: { links: TaskLink[], pageInfo: PageInfo },
   }>;
 
-  createTask(input: { projectId: string; title: string; description?: string; status?: string; teamId?: string; memberId?: string }): Promise<ProjectTask>;
+  createTask(input: { projectId: string; title: string; description?: string; status?: string; priority?: number }): Promise<ProjectTask>;
 
   updateTask(taskId: string, input: { 
     projectId: string; 

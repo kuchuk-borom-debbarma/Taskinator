@@ -219,6 +219,26 @@ export class GraphQLTeamAPI implements TeamAPI {
     return data.createTeam;
   }
 
+  async updateTeam(projectId: string, teamId: string, name: string, version: number): Promise<{ success: boolean; team?: Team }> {
+    const data = await this.query<any>(gql`
+      mutation UpdateTeam($projectId: ID!, $teamId: ID!, $name: String!, $version: Int!) {
+        updateTeam(projectId: $projectId, teamId: $teamId, name: $name, version: $version) {
+          success
+          team {
+            id
+            name
+            createdBy { id username }
+            createdAt
+            updatedAt
+            version
+            project { id name }
+          }
+        }
+      }
+    `, { projectId, teamId, name, version });
+    return data.updateTeam;
+  }
+
   async deleteTeams(projectId: string, teamIds: string[]): Promise<{ success: boolean; deletedCount: number }> {
     const data = await this.query<any>(gql`
       mutation DeleteTeams($projectId: ID!, $teamIds: [ID!]!) {

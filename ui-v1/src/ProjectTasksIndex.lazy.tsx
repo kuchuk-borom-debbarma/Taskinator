@@ -34,8 +34,10 @@ export default function ProjectTasksIndex() {
   const [showCreate, setShowCreate] = useState(false);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
+  const [status, setStatus] = useState<'TODO' | 'IN_PROGRESS' | 'DONE'>('TODO');
+  const [priority, setPriority] = useState(3);
 
-  const { data, isLoading, isPlaceholderData } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: ['tasks', projectId, cursor, direction],
     queryFn: () => {
       if (direction === 'backward') {
@@ -52,7 +54,13 @@ export default function ProjectTasksIndex() {
   });
 
   const createTask = useMutation({
-    mutationFn: () => taskApi.createTask({ projectId: projectId!, title: title.trim(), description: description.trim() || undefined }),
+    mutationFn: () => taskApi.createTask({
+      projectId: projectId!,
+      title: title.trim(),
+      description: description.trim() || undefined,
+      status,
+      priority,
+    }),
     onSuccess: (task) => {
       queryClient.invalidateQueries({ queryKey: ['tasks', projectId] });
       queryClient.invalidateQueries({ queryKey: ['project-dashboard', projectId] });
@@ -60,12 +68,14 @@ export default function ProjectTasksIndex() {
       setShowCreate(false);
       setTitle('');
       setDescription('');
+      setStatus('TODO');
+      setPriority(3);
       navigate({ to: '/projects/$projectId/tasks/$taskId', params: { projectId: projectId!, taskId: task.id } });
     },
   });
 
-  const tasks = data?.tasks ?? [];
   const filteredTasks = useMemo(() => {
+    const tasks = data?.tasks ?? [];
     return tasks.filter((task) => {
       const matchesStatus = statusFilter === 'ALL' || task.status === statusFilter;
       const q = query.trim().toLowerCase();
@@ -77,7 +87,7 @@ export default function ProjectTasksIndex() {
         task.assignedMember?.username?.toLowerCase().includes(q);
       return matchesStatus && matchesQuery;
     });
-  }, [query, statusFilter, tasks]);
+  }, [data?.tasks, query, statusFilter]);
 
   return (
     <div className="page-frame">
@@ -223,6 +233,33 @@ export default function ProjectTasksIndex() {
         >
           <TextField label="Title" value={title} onChange={setTitle} placeholder="Write launch checklist" required />
           <TextAreaField label="Description" value={description} onChange={setDescription} placeholder="Describe the outcome and any key notes." />
+          <div className="grid grid-cols-2 gap-4">
+            <label className="block">
+              <span className="mb-2 block text-sm font-medium text-app-ink">Status</span>
+              <select
+                value={status}
+                onChange={(event) => setStatus(event.target.value as typeof status)}
+                className="w-full rounded-2xl border border-app-line bg-white/85 px-4 py-3 text-sm text-app-ink outline-none transition focus:border-app-accent focus:ring-4 focus:ring-app-accent/10"
+              >
+                <option value="TODO">Todo</option>
+                <option value="IN_PROGRESS">In progress</option>
+                <option value="DONE">Done</option>
+              </select>
+            </label>
+            <label className="block">
+              <span className="mb-2 block text-sm font-medium text-app-ink">Priority</span>
+              <select
+                value={priority}
+                onChange={(event) => setPriority(Number(event.target.value))}
+                className="w-full rounded-2xl border border-app-line bg-white/85 px-4 py-3 text-sm text-app-ink outline-none transition focus:border-app-accent focus:ring-4 focus:ring-app-accent/10"
+              >
+                <option value={1}>Urgent</option>
+                <option value={2}>High</option>
+                <option value={3}>Medium</option>
+                <option value={0}>Low</option>
+              </select>
+            </label>
+          </div>
           <div className="flex flex-wrap gap-3 pt-2">
             <button
               type="button"
@@ -277,7 +314,4 @@ function TaskRow({ task, projectId }: { task: ProjectTask; projectId: string }) 
     </Link>
   );
 }
-
-
-
 

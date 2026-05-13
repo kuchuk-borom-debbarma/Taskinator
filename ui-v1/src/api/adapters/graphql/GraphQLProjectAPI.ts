@@ -1,5 +1,5 @@
 import type { ProjectAPI } from '../../interfaces/ProjectAPI';
-import type { PageInfo, PaginationArgs, Project, ProjectMember, ProjectTask, Team } from '../../types';
+import type { PageInfo, PaginationArgs, Project, ProjectMember, ProjectTask, TaskLink, Team } from '../../types';
 import { AuthenticationError } from '../../errors';
 
 import { CONFIG } from '../../../config';
@@ -134,6 +134,7 @@ export class GraphQLProjectAPI implements ProjectAPI {
     teams: Team[],
     tasks: ProjectTask[],
     members: ProjectMember[],
+    links: TaskLink[],
   }> {
     const data = await this.query<any>(gql`
       query GetProjectDashboardData($projectId: ID!, $teamsFirst: Int, $tasksFirst: Int, $membersFirst: Int) {
@@ -189,6 +190,20 @@ export class GraphQLProjectAPI implements ProjectAPI {
               }
             }
           }
+          projectLinks(first: 6) {
+            edges {
+              node {
+                id
+                label
+                createdAt
+                updatedAt
+                source { id title status priority project { id } team { id name } assignedMember { id username } }
+                target { id title status priority project { id } team { id name } assignedMember { id username } }
+                createdBy { id username }
+                updatedBy { id username }
+              }
+            }
+          }
         }
       }
     `, { 
@@ -199,7 +214,7 @@ export class GraphQLProjectAPI implements ProjectAPI {
     });
 
     if (!data.project) {
-      return { project: null, teams: [], tasks: [], members: [] };
+      return { project: null, teams: [], tasks: [], members: [], links: [] };
     }
 
     return {
@@ -210,6 +225,7 @@ export class GraphQLProjectAPI implements ProjectAPI {
       teams: data.project.teams?.edges.map((e: any) => e.node) || [],
       tasks: data.project.projectTasks?.edges.map((e: any) => e.node) || [],
       members: data.project.projectMembers?.edges.map((e: any) => e.node) || [],
+      links: data.project.projectLinks?.edges.map((e: any) => e.node) || [],
     };
   }
 

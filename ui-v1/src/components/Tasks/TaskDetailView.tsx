@@ -1,10 +1,9 @@
 import { useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import type { QueryClient } from '@tanstack/react-query';
 import { ArrowLeft, ArrowRight, Copy, Loader2, Network, PencilLine, Plus, Save, Trash2, X } from 'lucide-react';
 import { useApi } from '../../hooks/useApi';
-import type { ProjectTask, TaskLink } from '../../api/types';
+import type { TaskLink } from '../../api/types';
 import {
   AppModal,
   EmptyState,
@@ -24,20 +23,8 @@ interface TaskDetailViewProps {
   onClose: () => void;
 }
 
-const getCachedTask = (queryClient: QueryClient, taskId: string) => {
-  const direct = queryClient.getQueryData<ProjectTask>(['task', taskId]);
-  if (direct) return direct;
-
-  const taskPages = queryClient.getQueriesData<{ tasks: ProjectTask[] }>({ queryKey: ['tasks'] });
-  for (const [, page] of taskPages) {
-    const match = page?.tasks?.find((task) => task.id === taskId);
-    if (match) return match;
-  }
-  return undefined;
-};
-
 export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose }) => {
-  const { taskApi, teamApi, projectApi } = useApi();
+  const { taskApi, teamApi } = useApi();
   const queryClient = useQueryClient();
   const [isEditing, setIsEditing] = useState(false);
   const [titleDraft, setTitleDraft] = useState('');
@@ -55,7 +42,6 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
   const [quickAddDescription, setQuickAddDescription] = useState('');
   const [quickAddLabel, setQuickAddLabel] = useState('blocks');
   const [customLabel, setCustomLabel] = useState('');
-  const [isQuickAdding, setIsQuickAdding] = useState(false);
   const [linkModalDir, setLinkModalDir] = useState<'incoming' | 'outgoing' | null>(null);
   const [addMode, setAddMode] = useState<'new' | 'existing'>('new');
   const [existingTaskId, setExistingTaskId] = useState('');
@@ -113,8 +99,10 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
     initialData: outgoingCursor ? undefined : detail?.outgoing,
   });
 
-  const incoming = incomingData?.links || [];
-  const outgoing = outgoingData?.links || [];
+  const incomingSource = incomingCursor ? incomingData : detail?.incoming;
+  const outgoingSource = outgoingCursor ? outgoingData : detail?.outgoing;
+  const incoming = incomingSource?.links || [];
+  const outgoing = outgoingSource?.links || [];
 
   const isLoading = detailLoading || (!!incomingCursor && (incomingLoading || outgoingLoading));
 
@@ -182,7 +170,6 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
       setExistingTaskId('');
       setAddMode('new');
       setLinkModalDir(null);
-      setIsQuickAdding(false);
     },
   });
 
@@ -208,6 +195,20 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['task-detail', taskId] });
       queryClient.invalidateQueries({ queryKey: ['task-links', taskId] });
+    },
+  });
+
+  const deleteTask = useMutation({
+    mutationFn: () => {
+      if (!task?.project?.id) throw new Error('Project not loaded');
+      return taskApi.deleteTask(task.project.id, taskId);
+    },
+    onSuccess: () => {
+      queryClient.removeQueries({ queryKey: ['task-detail', taskId] });
+      queryClient.removeQueries({ queryKey: ['task', taskId] });
+      queryClient.invalidateQueries({ queryKey: ['tasks', task?.project?.id] });
+      queryClient.invalidateQueries({ queryKey: ['project-dashboard', task?.project?.id] });
+      onClose();
     },
   });
 
@@ -277,6 +278,16 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
             >
               <PencilLine size={15} />
               Edit
+            </button>
+            <button
+              onClick={() => {
+                if (confirm('Delete this task and its links?')) deleteTask.mutate();
+              }}
+              disabled={deleteTask.isPending}
+              className="ml-2 inline-flex items-center gap-2 rounded-full border border-app-danger/20 bg-app-danger/10 px-4 py-2 text-sm font-semibold text-app-danger transition hover:bg-app-danger/15 disabled:opacity-60"
+            >
+              {deleteTask.isPending ? <Loader2 size={15} className="animate-spin" /> : <Trash2 size={15} />}
+              Delete
             </button>
           </div>
           <div className="space-y-3 mt-6">
@@ -488,7 +499,7 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
                   >
                     <option value="">No member assigned</option>
                     {membersData?.members.map(m => (
-                      <option key={m.id} value={m.id}>{m.username}</option>
+                      <option key={m.id} value={m.user?.id}>{m.user?.username || m.user?.id}</option>
                     ))}
                   </select>
                   {!teamIdDraft && <p className="text-[10px] text-app-muted">Assign a team first to pick a member.</p>}
@@ -816,4 +827,3 @@ function DependencyCard({
     </SurfaceCard>
   );
 }
-
