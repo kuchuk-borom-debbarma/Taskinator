@@ -30,19 +30,22 @@ A technically rigorous, visually compelling walkthrough that shows *why* each ar
 - ✓ **Upgraded async flow comparison** — Before/after with outbox guarantee — `UpgradedAsyncFlow`
 - ✓ **Concurrency & optimistic locking** — Version column + delta updates — `ConcurrencyControl`
 
+- ✓ **Smart event aggregation composition** — Two-phase aggregation: BatchAggregator → Execution Listeners with idempotency — `SmartAggregation`
+- ✓ **Chunked background deletion composition** — Self-signaling chunked cascade delete via Kafka re-publish — `ChunkedDeletion`
+- ✓ **Real-time SSE composition** — Kafka → Redis pub-sub bridge → GraphQL WebSocket subscriptions — `RealtimeSSE`
+- ✓ **Final unified architecture composition** — Complete system diagram + metrics callout + outro — `FinalArchitecture`
+
 ### Active
 
-- [ ] **Smart event aggregation composition** — Two-phase aggregation: BatchAggregator → Execution Listeners with idempotency
-- [ ] **Chunked background deletion composition** — Self-signaling chunked cascade delete via Kafka re-publish
-- [ ] **Real-time SSE composition** — Kafka → Redis pub-sub bridge → GraphQL WebSocket subscriptions
-- [ ] **Final unified architecture composition** — Complete system diagram + metrics callout + outro
-
-### Out of Scope
+- [ ] Define requirements for v1.1 or v2 (e.g. Auth, Frontend, or specific deep-dives)
 
 - Voiceover/narration audio — visual-only compositions (subtitles/captions can be added later)
 - Auth/identity service walkthrough — out of this video's scope (different concern)
 - Production deployment pipeline — not relevant to the architecture story
 - Performance benchmarks/numbers — the video explains *why* not *what the numbers are*
+
+## Current State
+**v1.0 Shipped (2026-05-13)**: The entire architectural narrative consisting of 10 compositions is built, complete, and verified. The total runtime covers feature showcase, relational problems, synchronous vs async, outbox patterns, smart aggregation, chunked deletion, realtime SSE, and a final system overview tracing end-to-end data flows.
 
 ## Context
 
