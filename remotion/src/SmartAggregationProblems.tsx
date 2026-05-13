@@ -92,9 +92,9 @@ export const NaiveListenerSlide: React.FC = () => {
 		<Shell>
 			<Appear at={5} y={-20}>
 				<div style={{ position: 'absolute', top: 40, left: 50 }}>
-					<div style={{ fontSize: 12, fontWeight: 900, color: COLORS.danger, letterSpacing: 3, textTransform: 'uppercase', fontFamily: 'Inter', marginBottom: 10 }}>NAIVE APPROACH</div>
-					<h2 style={{ fontSize: 36, fontWeight: 900, color: COLORS.ink, fontFamily: 'Inter', margin: '0 0 8px' }}>One Event, Many Listeners</h2>
-					<p style={{ fontSize: 16, color: COLORS.muted, fontFamily: 'Inter', margin: 0, maxWidth: 800, lineHeight: 1.6 }}>High database load and wasteful processing of intermediate states.</p>
+					<div style={{ fontSize: 12, fontWeight: 900, color: COLORS.danger, letterSpacing: 3, textTransform: 'uppercase', fontFamily: 'Inter', marginBottom: 10 }}>THE PERFORMANCE BOTTLENECK</div>
+					<h2 style={{ fontSize: 36, fontWeight: 900, color: COLORS.ink, fontFamily: 'Inter', margin: '0 0 8px' }}>Excessive Database Operations</h2>
+					<p style={{ fontSize: 16, color: COLORS.muted, fontFamily: 'Inter', margin: 0, maxWidth: 800, lineHeight: 1.6 }}>100 events trigger 500 individual DB writes instead of a single batched operation.</p>
 				</div>
 			</Appear>
 
@@ -130,10 +130,10 @@ export const NaiveListenerSlide: React.FC = () => {
 				<Appear at={90} y={20}>
 					<div style={{ position: 'absolute', bottom: 40, left: 0, right: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, zIndex: 30 }}>
 						<div style={{ background: `${COLORS.danger}15`, border: `2px solid ${COLORS.danger}`, borderRadius: 20, padding: '14px 48px', fontSize: 16, fontWeight: 900, color: COLORS.danger, fontFamily: 'Inter', boxShadow: `0 0 50px ${COLORS.danger}33`, backdropFilter: 'blur(20px)' }}>
-							⚠️ 5 concurrent DB writes per event = Database Overload
+							⚠️ N Events × 5 Listeners = DB Connection Pool Exhaustion
 						</div>
 						<div style={{ background: `rgba(0,0,0,0.8)`, border: `1px solid ${COLORS.warning}55`, borderLeft: `4px solid ${COLORS.warning}`, borderRadius: 12, padding: '12px 24px', fontSize: 14, color: COLORS.ink, fontFamily: 'Inter', boxShadow: `0 10px 30px rgba(0,0,0,0.5)` }}>
-							<strong>Wasteful:</strong> Cancelling events (e.g. create then delete) are fully processed instead of squashed.
+							<strong>The Core Problem:</strong> We are missing the opportunity to group, batch, and execute as a single DB call.
 						</div>
 					</div>
 				</Appear>
@@ -152,9 +152,9 @@ export const FanoutExplosionSlide: React.FC = () => {
 		<Shell>
 			<Appear at={5} y={-20}>
 				<div style={{ position: 'absolute', top: 40, left: 50 }}>
-					<div style={{ fontSize: 12, fontWeight: 900, color: COLORS.danger, letterSpacing: 3, textTransform: 'uppercase', fontFamily: 'Inter', marginBottom: 10 }}>THE PROBLEM</div>
-					<h2 style={{ fontSize: 36, fontWeight: 900, color: COLORS.ink, fontFamily: 'Inter', margin: '0 0 8px' }}>One Event, Five Side Effects</h2>
-					<p style={{ fontSize: 16, color: COLORS.muted, fontFamily: 'Inter', margin: 0, maxWidth: 800, lineHeight: 1.6 }}>Listeners race each other — no guaranteed order.</p>
+					<div style={{ fontSize: 12, fontWeight: 900, color: COLORS.danger, letterSpacing: 3, textTransform: 'uppercase', fontFamily: 'Inter', marginBottom: 10 }}>UNGROUPED OPERATIONS</div>
+					<h2 style={{ fontSize: 36, fontWeight: 900, color: COLORS.ink, fontFamily: 'Inter', margin: '0 0 8px' }}>One Event, Five Independent Writes</h2>
+					<p style={{ fontSize: 16, color: COLORS.muted, fontFamily: 'Inter', margin: 0, maxWidth: 800, lineHeight: 1.6 }}>No grouping means massive performance overhead and DB contention.</p>
 				</div>
 			</Appear>
 
@@ -189,7 +189,7 @@ export const FanoutExplosionSlide: React.FC = () => {
 				<Appear at={110} y={20}>
 					<div style={{ position: 'absolute', bottom: 40, left: 0, right: 0, display: 'flex', justifyContent: 'center', zIndex: 30 }}>
 						<div style={{ background: `rgba(0,0,0,0.8)`, border: `1px solid ${COLORS.danger}55`, borderLeft: `4px solid ${COLORS.danger}`, borderRadius: 12, padding: '16px 24px', fontSize: 14, color: COLORS.ink, fontFamily: 'Inter', boxShadow: `0 10px 30px rgba(0,0,0,0.5)` }}>
-							<strong>Race Condition:</strong> Listener B assumes Listener A finished — but A hasn't started yet.
+							<strong>The Cost:</strong> Unbatched execution multiplies database load drastically under high throughput.
 						</div>
 					</div>
 				</Appear>

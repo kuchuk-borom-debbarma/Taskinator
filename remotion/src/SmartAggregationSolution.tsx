@@ -97,15 +97,15 @@ export const SolutionIntroSlide: React.FC = () => {
 				
 				<Appear at={20}>
 					<p style={{ fontSize: 16, color: COLORS.muted, fontFamily: 'Inter', margin: '0 0 40px', maxWidth: 600, textAlign: 'center', lineHeight: 1.6 }}>
-						Separate event consolidation from side-effect execution
+						Group and batch events to drastically reduce database operations
 					</p>
 				</Appear>
 				
 				<div style={{ display: 'flex', gap: 30, width: '100%', maxWidth: 900 }}>
 					<Appear at={30} y={30} style={{ flex: 1 }}>
 						<div style={{ background: 'rgba(15,23,42,0.8)', border: `2px solid ${COLORS.warning}66`, borderRadius: 20, padding: 30, height: '100%', boxShadow: `0 20px 40px ${COLORS.warning}22` }}>
-							<div style={{ fontSize: 18, fontWeight: 900, color: COLORS.warning, fontFamily: 'Inter', marginBottom: 12 }}>Phase 1 — Aggregator</div>
-							<div style={{ fontSize: 14, color: COLORS.muted, fontFamily: 'Inter', lineHeight: 1.6 }}>Batches events, squashes cancelling updates, computes consolidated state, and publishes one aggregated signal</div>
+							<div style={{ fontSize: 18, fontWeight: 900, color: COLORS.warning, fontFamily: 'Inter', marginBottom: 12 }}>Phase 1 — Smart Aggregator</div>
+							<div style={{ fontSize: 14, color: COLORS.muted, fontFamily: 'Inter', lineHeight: 1.6 }}>Groups and batches events together to minimize the final number of DB calls</div>
 						</div>
 					</Appear>
 					
@@ -119,7 +119,7 @@ export const SolutionIntroSlide: React.FC = () => {
 				
 				<Appear at={55}>
 					<div style={{ marginTop: 50, background: `${COLORS.accent}22`, border: `1px solid ${COLORS.accent}`, borderRadius: 30, padding: '12px 24px', fontSize: 14, fontWeight: 800, color: COLORS.accent, fontFamily: 'Inter', boxShadow: `0 0 20px ${COLORS.accent}44` }}>
-						Result: ordered, idempotent, non-racing side effects
+						Result: massive reduction in DB load (batching) + bonus of resolving race conditions
 					</div>
 				</Appear>
 			</div>
