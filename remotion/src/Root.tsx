@@ -10,10 +10,19 @@ import { UpgradedAsyncFlow } from "./UpgradedAsyncFlow";
 import { ConcurrencyControl } from "./ConcurrencyControl";
 import { SmartAggregation } from "./SmartAggregation";
 import { ChunkedDeletion } from "./ChunkedDeletion";
+import { RealtimeSSE } from "./RealtimeSSE";
 
 export const RemotionRoot: React.FC = () => {
   return (
     <>
+      <Composition
+        id="RealtimeSSE"
+        component={RealtimeSSE}
+        durationInFrames={2190}
+        fps={30}
+        width={1280}
+        height={720}
+      />
       <Composition
         id="ChunkedDeletion"
         component={ChunkedDeletion}
