@@ -9,10 +9,19 @@ import { TransactionalOutbox } from "./TransactionalOutbox";
 import { UpgradedAsyncFlow } from "./UpgradedAsyncFlow";
 import { ConcurrencyControl } from "./ConcurrencyControl";
 import { SmartAggregation } from "./SmartAggregation";
+import { ChunkedDeletion } from "./ChunkedDeletion";
 
 export const RemotionRoot: React.FC = () => {
   return (
     <>
+      <Composition
+        id="ChunkedDeletion"
+        component={ChunkedDeletion}
+        durationInFrames={1950}
+        fps={30}
+        width={1280}
+        height={720}
+      />
       <Composition
         id="SmartAggregation"
         component={SmartAggregation}
