@@ -105,7 +105,7 @@ export const SolutionIntroSlide: React.FC = () => {
 					<Appear at={30} y={30} style={{ flex: 1 }}>
 						<div style={{ background: 'rgba(15,23,42,0.8)', border: `2px solid ${COLORS.warning}66`, borderRadius: 20, padding: 30, height: '100%', boxShadow: `0 20px 40px ${COLORS.warning}22` }}>
 							<div style={{ fontSize: 18, fontWeight: 900, color: COLORS.warning, fontFamily: 'Inter', marginBottom: 12 }}>Phase 1 — Aggregator</div>
-							<div style={{ fontSize: 14, color: COLORS.muted, fontFamily: 'Inter', lineHeight: 1.6 }}>Batches raw events, computes consolidated state, publishes one aggregated signal</div>
+							<div style={{ fontSize: 14, color: COLORS.muted, fontFamily: 'Inter', lineHeight: 1.6 }}>Batches events, squashes cancelling updates, computes consolidated state, and publishes one aggregated signal</div>
 						</div>
 					</Appear>
 					

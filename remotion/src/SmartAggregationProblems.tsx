@@ -94,6 +94,7 @@ export const NaiveListenerSlide: React.FC = () => {
 				<div style={{ position: 'absolute', top: 40, left: 50 }}>
 					<div style={{ fontSize: 12, fontWeight: 900, color: COLORS.danger, letterSpacing: 3, textTransform: 'uppercase', fontFamily: 'Inter', marginBottom: 10 }}>NAIVE APPROACH</div>
 					<h2 style={{ fontSize: 36, fontWeight: 900, color: COLORS.ink, fontFamily: 'Inter', margin: '0 0 8px' }}>One Event, Many Listeners</h2>
+					<p style={{ fontSize: 16, color: COLORS.muted, fontFamily: 'Inter', margin: 0, maxWidth: 800, lineHeight: 1.6 }}>High database load and wasteful processing of intermediate states.</p>
 				</div>
 			</Appear>
 
@@ -127,9 +128,12 @@ export const NaiveListenerSlide: React.FC = () => {
 			{/* Warning Badge */}
 			{f >= 90 && (
 				<Appear at={90} y={20}>
-					<div style={{ position: 'absolute', bottom: 40, left: 0, right: 0, display: 'flex', justifyContent: 'center', zIndex: 30 }}>
+					<div style={{ position: 'absolute', bottom: 40, left: 0, right: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, zIndex: 30 }}>
 						<div style={{ background: `${COLORS.danger}15`, border: `2px solid ${COLORS.danger}`, borderRadius: 20, padding: '14px 48px', fontSize: 16, fontWeight: 900, color: COLORS.danger, fontFamily: 'Inter', boxShadow: `0 0 50px ${COLORS.danger}33`, backdropFilter: 'blur(20px)' }}>
-							⚠️ 5 concurrent DB writes per event
+							⚠️ 5 concurrent DB writes per event = Database Overload
+						</div>
+						<div style={{ background: `rgba(0,0,0,0.8)`, border: `1px solid ${COLORS.warning}55`, borderLeft: `4px solid ${COLORS.warning}`, borderRadius: 12, padding: '12px 24px', fontSize: 14, color: COLORS.ink, fontFamily: 'Inter', boxShadow: `0 10px 30px rgba(0,0,0,0.5)` }}>
+							<strong>Wasteful:</strong> Cancelling events (e.g. create then delete) are fully processed instead of squashed.
 						</div>
 					</div>
 				</Appear>
