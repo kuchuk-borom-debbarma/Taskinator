@@ -26,11 +26,11 @@ const Appear: React.FC<{ at: number; children: React.ReactNode; y?: number; x?: 
 	);
 };
 
-const SNode: React.FC<{ icon: string; label: string; sub?: string; color: string; top: number; left: number; w: number; delay: number; glow?: boolean }> = ({ icon, label, sub, color, top, left, w, delay, glow }) => {
+const SNode: React.FC<{ icon: string; label: string; sub?: string; color: string; top: number; left: number; w: number; delay: number; glow?: boolean; opacity?: number }> = ({ icon, label, sub, color, top, left, w, delay, glow, opacity = 1 }) => {
 	const f = useCurrentFrame(); const { fps } = useVideoConfig();
 	const s = SP(f, delay, fps);
 	return (
-		<div style={{ position: 'absolute', top, left, width: w, opacity: s, transform: `scale(${s}) translateY(${interpolate(s, [0, 1], [10, 0])}px)`, background: 'rgba(15,23,42,0.95)', border: `2px solid ${color}66`, borderRadius: 20, padding: '18px 20px', textAlign: 'center', boxShadow: glow ? `0 0 40px ${color}22` : '0 15px 40px rgba(0,0,0,0.6)', zIndex: 20 }}>
+		<div style={{ position: 'absolute', top, left, width: w, opacity: s * opacity, transform: `scale(${s}) translateY(${interpolate(s, [0, 1], [10, 0])}px)`, background: 'rgba(15,23,42,0.95)', border: `2px solid ${color}66`, borderRadius: 20, padding: '18px 20px', textAlign: 'center', boxShadow: glow ? `0 0 40px ${color}22` : '0 15px 40px rgba(0,0,0,0.6)', zIndex: 20 }}>
 			<div style={{ fontSize: 32 }}>{icon}</div>
 			<div style={{ fontSize: 13, fontWeight: 900, color, letterSpacing: '2px', textTransform: 'uppercase', fontFamily: 'Inter', marginTop: 8 }}>{label}</div>
 			{sub && <div style={{ fontSize: 10, color: COLORS.muted, fontFamily: 'Inter', marginTop: 4, fontWeight: 600, opacity: 0.8 }}>{sub}</div>}
@@ -80,52 +80,43 @@ const Arrow: React.FC<{ x1: number; y1: number; x2: number; y2: number; color: s
 };
 
 /* ════════════════════════════════════════════════
-   SLIDE 1 — Multi-Instance Isolation
+   SLIDE 1 — Offline Efficiency
 ════════════════════════════════════════════════ */
-export const MultiInstanceIsolationSlide: React.FC = () => {
+export const OfflineEfficiencySlide: React.FC = () => {
+	const f = useCurrentFrame();
+
 	return (
 		<Shell>
 			<Appear at={5} y={-20}>
 				<div style={{ position: 'absolute', top: 40, left: 50 }}>
-					<div style={{ fontSize: 12, fontWeight: 900, color: COLORS.accent, letterSpacing: 3, textTransform: 'uppercase', fontFamily: 'Inter', marginBottom: 10 }}>HORIZONTAL SCALING</div>
-					<h2 style={{ fontSize: 36, fontWeight: 900, color: COLORS.ink, fontFamily: 'Inter', margin: '0 0 8px' }}>Multi-Instance Isolation</h2>
-					<p style={{ fontSize: 16, color: COLORS.muted, fontFamily: 'Inter', margin: 0, maxWidth: 800, lineHeight: 1.6 }}>How do 100,000 clients spread across 50 different API servers get the same event instantly?</p>
+					<div style={{ fontSize: 12, fontWeight: 900, color: COLORS.accent, letterSpacing: 3, textTransform: 'uppercase', fontFamily: 'Inter', marginBottom: 10 }}>THE ULTIMATE BENEFIT</div>
+					<h2 style={{ fontSize: 36, fontWeight: 900, color: COLORS.ink, fontFamily: 'Inter', margin: '0 0 8px' }}>Offline Efficiency</h2>
+					<p style={{ fontSize: 16, color: COLORS.muted, fontFamily: 'Inter', margin: 0, maxWidth: 800, lineHeight: 1.6 }}>If the user is not connected, the event is immediately dropped. No API servers are bothered.</p>
 				</div>
 			</Appear>
 
-			{/* Center Redis */}
-			<SNode icon="🔴" label="Redis" sub="Shared Pub/Sub" color={COLORS.danger} top={350} left={500} w={180} delay={10} glow />
+			{/* Nodes */}
+			<SNode icon="📨" label="Kafka Event" sub="Target: User B" color={COLORS.warning} top={300} left={50} w={150} delay={10} />
+			<Arrow x1={200} y1={350} x2={350} y2={350} color={COLORS.warning} delay={20} />
 
-			{/* Top Layer: Kafka -> API 1 -> Client A */}
-			<SNode icon="📨" label="Kafka" color={COLORS.warning} top={200} left={80} w={140} delay={15} />
-			<Arrow x1={220} y1={250} x2={340} y2={250} color={COLORS.accent} delay={25} />
-			<SNode icon="⚙️" label="API Server 1" sub="Instance A" color={COLORS.accent} top={200} left={340} w={140} delay={20} />
+			<SNode icon="🔀" label="Event Router" sub="Listener" color={COLORS.accent} top={300} left={350} w={150} delay={25} />
 			
-			{/* API 1 publishes to Redis */}
-			<Arrow x1={480} y1={250} x2={550} y2={350} color={COLORS.danger} delay={35} label="Publish" labelOffset={-20} />
-			
-			<Arrow x1={480} y1={220} x2={800} y2={220} color={COLORS.success} delay={55} dashed />
-			<SNode icon="📱" label="Client A" color={COLORS.success} top={170} left={800} w={140} delay={45} />
+			{/* Lookup */}
+			<Arrow x1={425} y1={290} x2={425} y2={180} color={COLORS.danger} delay={35} dashed label="GET user_B" labelPos={0.4} />
+			<SNode icon="🔴" label="Redis" sub="Returns: NULL" color={COLORS.danger} top={60} left={350} w={150} delay={30} />
+			<Arrow x1={450} y1={180} x2={450} y2={290} color={COLORS.danger} delay={50} dashed />
 
-			{/* Bottom Layer: Redis -> API 2 -> Client B */}
-			<SNode icon="⚙️" label="API Server 2" sub="Instance B" color={COLORS.accent} top={500} left={340} w={140} delay={25} />
-			
-			{/* Redis broadcasts to API 2 */}
-			<Arrow x1={550} y1={440} x2={480} y2={550} color={COLORS.danger} delay={45} label="Broadcast" labelOffset={20} />
-			
-			<Arrow x1={480} y1={550} x2={800} y2={550} color={COLORS.success} delay={55} dashed />
-			<SNode icon="💻" label="Client B" color={COLORS.success} top={500} left={800} w={140} delay={50} />
-
-			{/* Explanation */}
-			<Appear at={65} x={0}>
-				<div style={{ position: 'absolute', top: 320, left: 750, width: 350, background: 'rgba(0,0,0,0.8)', border: `1px solid ${COLORS.accent}55`, borderRadius: 12, padding: '16px', boxShadow: `0 10px 30px rgba(0,0,0,0.5)` }}>
-					<div style={{ fontSize: 13, color: COLORS.ink, fontFamily: 'Inter', lineHeight: 1.6 }}>
-						<strong style={{ color: COLORS.accent }}>API 1</strong> gets the Kafka event, but Client B is isolated on <strong style={{ color: COLORS.accent }}>API 2</strong>.
-						<br/><br/>
-						By publishing to Redis, the event fans out to <strong>all 50 API instances</strong> simultaneously. Redis is the hyper-fast backbone enabling infinite horizontal scale.
+			{/* Dropped Action */}
+			{f >= 70 && (
+				<Appear at={70} x={20}>
+					<div style={{ position: 'absolute', top: 320, left: 550, background: 'rgba(0,0,0,0.8)', border: `2px solid ${COLORS.danger}`, borderRadius: 12, padding: '16px 24px', fontFamily: 'monospace', fontSize: 18, fontWeight: 900, color: COLORS.danger, boxShadow: `0 10px 30px rgba(0,0,0,0.5)` }}>
+						🚫 Event Dropped.
+						<div style={{ fontSize: 12, color: COLORS.muted, fontWeight: 'normal', marginTop: 8 }}>0 bytes sent to API layer.</div>
 					</div>
-				</div>
-			</Appear>
+				</Appear>
+			)}
+
+			<SNode icon="⚙️" label="API Instances" sub="Idle / Asleep" color={COLORS.muted} top={300} left={850} w={150} delay={15} opacity={0.5} />
 		</Shell>
 	);
 };
@@ -141,7 +132,7 @@ export const BeforeAfterComparisonSlide: React.FC = () => {
 			<Appear at={5} y={-20}>
 				<div style={{ position: 'absolute', top: 40, left: 50 }}>
 					<div style={{ fontSize: 12, fontWeight: 900, color: COLORS.success, letterSpacing: 3, textTransform: 'uppercase', fontFamily: 'Inter', marginBottom: 10 }}>THE VERDICT</div>
-					<h2 style={{ fontSize: 36, fontWeight: 900, color: COLORS.ink, fontFamily: 'Inter', margin: '0 0 8px' }}>Polling vs. Push</h2>
+					<h2 style={{ fontSize: 36, fontWeight: 900, color: COLORS.ink, fontFamily: 'Inter', margin: '0 0 8px' }}>Broadcast vs. Directed Pub/Sub</h2>
 				</div>
 			</Appear>
 
@@ -149,7 +140,7 @@ export const BeforeAfterComparisonSlide: React.FC = () => {
 				{/* Before Panel */}
 				<Appear at={15} y={30} style={{ flex: 1 }}>
 					<div style={{ background: 'rgba(15,23,42,0.8)', border: `2px solid ${COLORS.danger}66`, borderRadius: 20, padding: 40, height: 420, boxShadow: `0 20px 40px ${COLORS.danger}22`, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-						<div style={{ fontSize: 22, fontWeight: 900, color: COLORS.danger, fontFamily: 'Inter', marginBottom: 30 }}>Before: HTTP Polling</div>
+						<div style={{ fontSize: 22, fontWeight: 900, color: COLORS.danger, fontFamily: 'Inter', marginBottom: 30 }}>Naive WebSocket Broadcast</div>
 						
 						<div style={{ position: 'relative', width: '100%', height: 200, border: `1px solid ${COLORS.danger}33`, borderRadius: 12, overflow: 'hidden' }}>
 							{/* Simulated chaos */}
@@ -165,8 +156,8 @@ export const BeforeAfterComparisonSlide: React.FC = () => {
 						</div>
 
 						<div style={{ marginTop: 'auto', textAlign: 'center' }}>
-							<div style={{ fontSize: 32, fontWeight: 900, color: COLORS.danger, fontFamily: 'monospace' }}>98% Waste</div>
-							<div style={{ fontSize: 14, color: COLORS.muted }}>High latency, DB overload</div>
+							<div style={{ fontSize: 20, fontWeight: 900, color: COLORS.danger, fontFamily: 'monospace' }}>50 APIs process the event.</div>
+							<div style={{ fontSize: 14, color: COLORS.muted }}>49 waste CPU checking lists.</div>
 						</div>
 					</div>
 				</Appear>
@@ -174,19 +165,19 @@ export const BeforeAfterComparisonSlide: React.FC = () => {
 				{/* After Panel */}
 				<Appear at={30} y={30} style={{ flex: 1 }}>
 					<div style={{ background: 'rgba(15,23,42,0.8)', border: `2px solid ${COLORS.success}66`, borderRadius: 20, padding: 40, height: 420, boxShadow: `0 20px 40px ${COLORS.success}22`, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-						<div style={{ fontSize: 22, fontWeight: 900, color: COLORS.success, fontFamily: 'Inter', marginBottom: 30 }}>After: GraphQL Subscriptions</div>
+						<div style={{ fontSize: 22, fontWeight: 900, color: COLORS.success, fontFamily: 'Inter', marginBottom: 30 }}>Redis Registry Routing</div>
 						
 						<div style={{ position: 'relative', width: '100%', height: 200, border: `1px solid ${COLORS.success}33`, borderRadius: 12, overflow: 'hidden', display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
 							{/* Silence, then one clean ping */}
-							<div style={{ fontSize: 48, filter: f % 100 > 80 ? 'drop-shadow(0 0 20px #22c55e)' : 'grayscale(1)', transform: f % 100 > 80 ? 'scale(1.1)' : 'scale(1)', transition: 'all 0.1s' }}>⚡</div>
+							<div style={{ fontSize: 48, filter: f % 100 > 80 ? 'drop-shadow(0 0 20px #22c55e)' : 'grayscale(1)', transform: f % 100 > 80 ? 'scale(1.1)' : 'scale(1)', transition: 'all 0.1s' }}>🎯</div>
 							{(f % 100 > 80) && (
-								<div style={{ position: 'absolute', width: 200, height: 2, background: COLORS.success, left: 200, boxShadow: `0 0 10px ${COLORS.success}` }} />
+								<div style={{ position: 'absolute', width: 200, height: 4, background: COLORS.success, left: 200, boxShadow: `0 0 10px ${COLORS.success}` }} />
 							)}
 						</div>
 
 						<div style={{ marginTop: 'auto', textAlign: 'center' }}>
-							<div style={{ fontSize: 32, fontWeight: 900, color: COLORS.success, fontFamily: 'monospace' }}>0% Waste</div>
-							<div style={{ fontSize: 14, color: COLORS.muted }}>Instant delivery, idle servers</div>
+							<div style={{ fontSize: 20, fontWeight: 900, color: COLORS.success, fontFamily: 'monospace' }}>1 API processes the event.</div>
+							<div style={{ fontSize: 14, color: COLORS.muted }}>Or 0 if the user is offline.</div>
 						</div>
 					</div>
 				</Appear>

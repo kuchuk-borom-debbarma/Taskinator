@@ -80,36 +80,33 @@ const Arrow: React.FC<{ x1: number; y1: number; x2: number; y2: number; color: s
 };
 
 /* ════════════════════════════════════════════════
-   SLIDE 1 — Redis Pub/Sub Bridge
+   SLIDE 1 — Redis Connection Registry
 ════════════════════════════════════════════════ */
-export const RedisPubSubSlide: React.FC = () => {
+export const RedisRegistrySlide: React.FC = () => {
 	return (
 		<Shell>
 			<Appear at={5} y={-20}>
 				<div style={{ position: 'absolute', top: 40, left: 50 }}>
-					<div style={{ fontSize: 12, fontWeight: 900, color: COLORS.accent2, letterSpacing: 3, textTransform: 'uppercase', fontFamily: 'Inter', marginBottom: 10 }}>THE SOLUTION: PUB/SUB BRIDGE</div>
-					<h2 style={{ fontSize: 36, fontWeight: 900, color: COLORS.ink, fontFamily: 'Inter', margin: '0 0 8px' }}>Bridging Kafka to Redis</h2>
-					<p style={{ fontSize: 16, color: COLORS.muted, fontFamily: 'Inter', margin: 0, maxWidth: 800, lineHeight: 1.6 }}>Redis handles 100k+ concurrent connections effortlessly, completely offloading the DB.</p>
+					<div style={{ fontSize: 12, fontWeight: 900, color: COLORS.accent2, letterSpacing: 3, textTransform: 'uppercase', fontFamily: 'Inter', marginBottom: 10 }}>THE SOLUTION: PART 1</div>
+					<h2 style={{ fontSize: 36, fontWeight: 900, color: COLORS.ink, fontFamily: 'Inter', margin: '0 0 8px' }}>Redis Connection Registry</h2>
+					<p style={{ fontSize: 16, color: COLORS.muted, fontFamily: 'Inter', margin: 0, maxWidth: 800, lineHeight: 1.6 }}>When a user connects, the API instance registers exactly where they are connected.</p>
 				</div>
 			</Appear>
 
 			{/* Nodes */}
-			<SNode icon="📨" label="Kafka Topics" sub="Persistent Event Log" color={COLORS.warning} top={300} left={100} w={180} delay={15} />
-			<Arrow x1={290} y1={350} x2={450} y2={350} color={COLORS.accent} delay={25} label="Consume" labelOffset={-20} />
+			<SNode icon="📱" label="User A" color={COLORS.success} top={300} left={100} w={150} delay={15} />
+			<Arrow x1={250} y1={350} x2={450} y2={350} color={COLORS.success} delay={25} label="WebSocket Connect" labelOffset={-20} />
 			
-			<SNode icon="⚙️" label="Kafka Listener" sub="Workspace Service" color={COLORS.accent} top={300} left={450} w={180} delay={30} />
-			<Arrow x1={640} y1={350} x2={800} y2={350} color={COLORS.danger} delay={45} label="Publish" labelOffset={-20} />
+			<SNode icon="⚙️" label="API Instance 5" color={COLORS.accent} top={300} left={450} w={180} delay={30} />
+			<Arrow x1={640} y1={350} x2={800} y2={350} color={COLORS.accent2} delay={45} label="SET user:A => api_5" labelOffset={-20} />
 
-			<SNode icon="🔴" label="Redis Pub/Sub" sub="In-Memory Message Bus" color={COLORS.danger} top={300} left={800} w={180} delay={40} glow />
+			<SNode icon="🔴" label="Redis" sub="Key-Value Store" color={COLORS.danger} top={300} left={800} w={180} delay={40} glow />
 
-			{/* Code snippet appearing below */}
+			{/* DB entry visualization */}
 			<Appear at={60} y={20}>
-				<div style={{ position: 'absolute', top: 480, left: 420, background: 'rgba(0,0,0,0.8)', border: `1px solid ${COLORS.danger}55`, borderRadius: 12, padding: '16px 24px', fontFamily: 'monospace', fontSize: 14, color: COLORS.ink, boxShadow: `0 10px 30px rgba(0,0,0,0.5)` }}>
-					<span style={{ color: COLORS.accent2 }}>getRedisPublisher</span>()
-					.<span style={{ color: COLORS.accent }}>publish</span>(
-					<span style={{ color: COLORS.success }}>'PROJECT_UPDATED:P1'</span>, 
-					payload
-					);
+				<div style={{ position: 'absolute', top: 450, left: 800, width: 180, background: 'rgba(0,0,0,0.8)', border: `1px solid ${COLORS.danger}55`, borderRadius: 12, padding: '16px', fontFamily: 'monospace', fontSize: 14, color: COLORS.ink, boxShadow: `0 10px 30px rgba(0,0,0,0.5)` }}>
+					<div style={{ color: COLORS.muted, fontSize: 10, marginBottom: 8 }}>Redis KV:</div>
+					<div><span style={{ color: COLORS.success }}>user_A</span> : <span style={{ color: COLORS.accent }}>api_5</span></div>
 				</div>
 			</Appear>
 		</Shell>
@@ -117,46 +114,45 @@ export const RedisPubSubSlide: React.FC = () => {
 };
 
 /* ════════════════════════════════════════════════
-   SLIDE 2 — GraphQL Subscriptions
+   SLIDE 2 — Targeted Delivery
 ════════════════════════════════════════════════ */
-export const GraphQLSubscriptionSlide: React.FC = () => {
+export const TargetedDeliverySlide: React.FC = () => {
 	const f = useCurrentFrame();
 
 	return (
 		<Shell>
 			<Appear at={5} y={-20}>
 				<div style={{ position: 'absolute', top: 40, left: 50 }}>
-					<div style={{ fontSize: 12, fontWeight: 900, color: COLORS.success, letterSpacing: 3, textTransform: 'uppercase', fontFamily: 'Inter', marginBottom: 10 }}>THE SOLUTION: WEBSOCKETS</div>
-					<h2 style={{ fontSize: 36, fontWeight: 900, color: COLORS.ink, fontFamily: 'Inter', margin: '0 0 8px' }}>GraphQL Subscriptions</h2>
-					<p style={{ fontSize: 16, color: COLORS.muted, fontFamily: 'Inter', margin: 0, maxWidth: 800, lineHeight: 1.6 }}>Pushing the Redis event down to the specific connected client over WebSockets.</p>
+					<div style={{ fontSize: 12, fontWeight: 900, color: COLORS.success, letterSpacing: 3, textTransform: 'uppercase', fontFamily: 'Inter', marginBottom: 10 }}>THE SOLUTION: PART 2</div>
+					<h2 style={{ fontSize: 36, fontWeight: 900, color: COLORS.ink, fontFamily: 'Inter', margin: '0 0 8px' }}>Targeted Delivery</h2>
+					<p style={{ fontSize: 16, color: COLORS.muted, fontFamily: 'Inter', margin: 0, maxWidth: 800, lineHeight: 1.6 }}>Events are routed exclusively to the required instance. No blind broadcasting.</p>
 				</div>
 			</Appear>
 
 			{/* Nodes */}
-			<SNode icon="🔴" label="Redis Pub/Sub" color={COLORS.danger} top={300} left={100} w={180} delay={10} glow />
-			<Arrow x1={290} y1={350} x2={450} y2={350} color={COLORS.accent} delay={20} label="Message Event" labelOffset={-20} />
+			<SNode icon="📨" label="Kafka Event" sub="Target: User A" color={COLORS.warning} top={300} left={50} w={150} delay={10} glow />
+			<Arrow x1={200} y1={350} x2={350} y2={350} color={COLORS.warning} delay={20} />
 
-			<SNode icon="⚡" label="GraphQL Yoga" sub="API Layer" color={COLORS.accent} top={300} left={450} w={180} delay={25} />
-			<Arrow x1={640} y1={350} x2={800} y2={350} color={COLORS.success} delay={40} dashed label="WebSocket PUSH" labelOffset={-20} />
+			<SNode icon="🔀" label="Event Router" sub="Listener" color={COLORS.accent} top={300} left={350} w={150} delay={25} />
+			
+			{/* Lookup */}
+			<Arrow x1={425} y1={290} x2={425} y2={180} color={COLORS.danger} delay={35} dashed label="GET user_A" labelPos={0.4} />
+			<SNode icon="🔴" label="Redis" sub="Returns: API 5" color={COLORS.danger} top={60} left={350} w={150} delay={30} />
+			<Arrow x1={450} y1={180} x2={450} y2={290} color={COLORS.success} delay={50} dashed />
 
-			<SNode icon="👥" label="100k WebSockets" sub="No Database Impact" color={COLORS.success} top={300} left={800} w={180} delay={35} glow />
-
-			{/* Code snippet */}
-			<Appear at={50} y={20}>
-				<div style={{ position: 'absolute', top: 480, left: 420, background: 'rgba(0,0,0,0.8)', border: `1px solid ${COLORS.accent}55`, borderRadius: 12, padding: '16px 24px', fontFamily: 'monospace', fontSize: 14, color: COLORS.ink, boxShadow: `0 10px 30px rgba(0,0,0,0.5)` }}>
-					<span style={{ color: COLORS.accent2 }}>getRedisSubscriber</span>()
-					.<span style={{ color: COLORS.accent }}>on</span>(<span style={{ color: COLORS.success }}>'message'</span>, (channel, msg) =&gt; {'{'} <br/>
-					&nbsp;&nbsp;pubSub.<span style={{ color: COLORS.accent }}>publish</span>('PROJECT_UPDATES', msg); <br/>
-					{'}'});
-				</div>
-			</Appear>
+			{/* Deliver */}
+			<Arrow x1={500} y1={350} x2={700} y2={350} color={COLORS.accent2} delay={65} label="Publish to API 5 channel" />
+			<SNode icon="⚙️" label="API Instance 5" color={COLORS.accent} top={300} left={700} w={150} delay={60} />
+			
+			<Arrow x1={850} y1={350} x2={1000} y2={350} color={COLORS.success} delay={80} dashed />
+			<SNode icon="📱" label="User A" color={COLORS.success} top={300} left={1000} w={130} delay={75} />
 
 			{/* Banner */}
-			{f >= 70 && (
-				<Appear at={70} y={20}>
+			{f >= 95 && (
+				<Appear at={95} y={20}>
 					<div style={{ position: 'absolute', bottom: 40, left: 0, right: 0, display: 'flex', justifyContent: 'center', zIndex: 30 }}>
 						<div style={{ background: `${COLORS.success}15`, border: `2px solid ${COLORS.success}`, borderRadius: 20, padding: '16px 48px', fontSize: 16, fontWeight: 900, color: COLORS.success, fontFamily: 'Inter', boxShadow: `0 0 50px ${COLORS.success}33`, backdropFilter: 'blur(20px)' }}>
-							✓ Zero wasted polling. Event delivered instantly.
+							✓ Event bypasses instances 1-49 entirely. Zero wasted bandwidth.
 						</div>
 					</div>
 				</Appear>
