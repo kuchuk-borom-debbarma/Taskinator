@@ -11,10 +11,19 @@ import { ConcurrencyControl } from "./ConcurrencyControl";
 import { SmartAggregation } from "./SmartAggregation";
 import { ChunkedDeletion } from "./ChunkedDeletion";
 import { RealtimeSSE } from "./RealtimeSSE";
+import { FinalArchitecture } from "./FinalArchitecture";
 
 export const RemotionRoot: React.FC = () => {
   return (
     <>
+      <Composition
+        id="FinalArchitecture"
+        component={FinalArchitecture}
+        durationInFrames={1290}
+        fps={30}
+        width={1280}
+        height={720}
+      />
       <Composition
         id="RealtimeSSE"
         component={RealtimeSSE}
