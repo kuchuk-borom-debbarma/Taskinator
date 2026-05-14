@@ -15,6 +15,7 @@ This phase modifies schema-relevant files (Kysely migrations/tables). Ensure to 
   - Add `task_audit_log` table: `id` (UUID), `fk_task_id` (UUID), `fk_project_id` (UUID), `action` (VARCHAR), `changed_fields` (JSONB), `correlation_id` (UUID, nullable), `actor_id` (UUID), `trigger_id` (UUID, nullable), `created_at` (TIMESTAMP).
 - **[NEW]** `modular-monolith/src/database/tables/ProjectTrigger.ts`: Define `ProjectTriggerTable`.
 - **[NEW]** `modular-monolith/src/database/tables/TaskAuditLog.ts`: Define `TaskAuditLogTable`.
+- **[MODIFY]** `modular-monolith/database/schema.sql`: Add the `CREATE TABLE project_trigger` and `CREATE TABLE task_audit_log` statements to keep the raw SQL schema file up to date.
 - *(Note: `outbox_events` schema remains untouched. Correlation IDs will just be injected into the generic `payload` JSON.)*
 
 ### 2. Task Service & Queries Update
