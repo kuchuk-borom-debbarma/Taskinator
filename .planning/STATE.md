@@ -23,10 +23,10 @@ See: `.planning/PROJECT.md` (updated 2026-05-14)
 
 ## Current Position
 
-Phase: Not started
+Phase: 1 of 4 (Task Domain Bootstrapping)
 Plan: —
 Status: ready_to_plan
-Last activity: 2026-05-14 — Milestone v1.1 started, roadmap approved
+Last activity: 2026-05-14 — Phase 1 context gathered
 
 ## Codebase Context
 
