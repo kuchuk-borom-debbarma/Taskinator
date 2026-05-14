@@ -5,7 +5,7 @@ milestone_name: rules-engine
 status: planning
 last_updated: "2026-05-14T09:40:00.000Z"
 progress:
-  total_phases: 0
+  total_phases: 4
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -23,10 +23,10 @@ See: `.planning/PROJECT.md` (updated 2026-05-14)
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: Not started
 Plan: —
-Status: Defining requirements
-Last activity: 2026-05-14 — Milestone v1.1 started
+Status: ready_to_plan
+Last activity: 2026-05-14 — Milestone v1.1 started, roadmap approved
 
 ## Codebase Context
 
