@@ -21,7 +21,7 @@ This phase modifies schema-relevant files (Kysely migrations/tables). Ensure to 
 - **[MODIFY]** `modular-monolith/src/modules/task/internal/TaskQueries.ts`: 
   - Update mutations (`insertTask`, `updateTask`, etc.) to accept optional `correlationId: string` and `triggerId?: string`.
   - Inside the CTE for each mutation:
-    - **Loop Detection**: Check `task_audit_log` to ensure this `trigger_id` hasn't already modified this `fk_task_id` in the same `correlation_id` chain. If so, abort silently.
+    - **Loop Detection**: Check `task_audit_log` to ensure this `trigger_id` hasn't already modified this `fk_task_id` in the same `correlation_id` chain. If so, prevent the task modification but explicitly insert a `LOOP_DETECTED` record into `task_audit_log` for visibility.
     - Add an `INSERT INTO task_audit_log`.
     - Update the `INSERT INTO outbox_events` CTE to inject `correlationId` into the `payload` JSON if provided.
 - **[MODIFY]** `modular-monolith/src/modules/task/TaskService.ts` & `TaskServiceImpl.ts`:
