@@ -24,9 +24,9 @@ See: `.planning/PROJECT.md` (updated 2026-05-14)
 ## Current Position
 
 Phase: 1 of 4 (Task Domain Bootstrapping)
-Plan: —
-Status: ready_to_plan
-Last activity: 2026-05-14 — Phase 1 context gathered
+Plan: .planning/phases/01-task-domain-bootstrapping/01-PLAN.md
+Status: ready_to_execute
+Last activity: 2026-05-14 — Phase 1 PLAN generated
 
 ## Codebase Context
 
