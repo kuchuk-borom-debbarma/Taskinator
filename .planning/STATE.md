@@ -1,63 +1,51 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
-status: ready_to_plan
-last_updated: "2026-05-13T17:01:55.121Z"
+milestone: v1.1
+milestone_name: rules-engine
+status: planning
+last_updated: "2026-05-14T09:40:00.000Z"
 progress:
-  total_phases: 4
-  completed_phases: 4
+  total_phases: 0
+  completed_phases: 0
   total_plans: 0
   completed_plans: 0
-  percent: 100
+  percent: 0
 ---
 
-# STATE — Taskinator Architecture Video
+# STATE — Taskinator Backend Rules Engine
 
 ## Project Reference
 
-See: `.planning/PROJECT.md` (updated 2026-05-13)
+See: `.planning/PROJECT.md` (updated 2026-05-14)
 
-**Core value:** A technically rigorous, visually compelling walkthrough that shows *why* each architectural decision was made — not just what the final system looks like.
-**Current focus:** Phase 4 — final-unified-architecture
+**Core value:** A lightning-fast, highly scalable asynchronous automation engine that allows users to define custom triggers without impacting the core API latency (10k RPS target).
+**Current focus:** Planning Milestone v1.1 requirements and roadmap.
 
-## Current Status
+## Current Position
 
-**Phase:** 4 of 4 (final unified architecture)
-**Plan:** Waiting for User Approval
-**Mode:** YOLO — execute without confirmation prompts
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-05-14 — Milestone v1.1 started
 
 ## Codebase Context
 
-See: `.planning/codebase/` (mapped 2026-05-13)
-
 Key files for this project:
-
-- `remotion/src/Root.tsx` — registers all compositions
-- `remotion/src/components/Nodes.tsx` — COLORS, GRADIENTS, shared node components
-- `remotion/src/components/TitleCard.tsx` — title card component
-- `remotion/script-flow.md` — full narrative script (authoritative)
-- Design system: `Shell`, `Appear`, `SNode`, `Arrow`, `spring()` patterns — see existing compositions for reference
+- `backend/services/workspace/` — Spring Boot service where the implementation will reside.
+- `docs/2. Domain Rules.md`, `docs/3. Technical Scaling.md` — Critical architecture constraints.
 
 ## What's Already Built
 
-10 compositions registered in `Root.tsx` covering ~12 minutes of content:
-
-- FeatureShowcase, SchemaDesign, SyncArchitecture, AsyncProblems, TransactionalOutbox, UpgradedAsyncFlow, ConcurrencyControl, SmartAggregation, ChunkedDeletion, RealtimeSSE
+- v1.0: Complete architecture video covering the intended system design.
+- Workspace Service: Base entities for Projects and Teams with Closure Tables and Optimistic Locking.
 
 ## What's Next
 
-**Phase 4 — Final Unified Architecture**
-
-Start with Plan 4.1: full system diagram layout.
-
-Run: `/gsd-plan-phase 4`
+Define requirements for the Rules Engine, refactor SSE, and build the phase roadmap.
 
 ## Decisions Log
 
 | Date | Decision | Reason |
 |---|---|---|
-| 2026-05-13 | Sequential delivery, one composition per phase | Human review between each composition to catch narrative / design issues |
-| 2026-05-13 | Fine granularity — many plans per phase | YouTube deep-dive audience expects detailed slides, not summaries |
-| 2026-05-13 | No parallelization | Compositions build on narrative continuity — must review each before the next |
-| 2026-05-13 | `script-flow.md` updated to reflect actual built state | Original script-flow was outdated and incomplete |
+| 2026-05-14 | Asynchronous execution via Kafka | Protect synchronous API latency and avoid database connection exhaustion. |
+| 2026-05-14 | Pivot to Backend | Video is done, moving to actual implementation in Spring Boot workspace service. |
