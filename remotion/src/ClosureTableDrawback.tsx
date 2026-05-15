@@ -1,7 +1,7 @@
 import React from 'react';
 import {
 	AbsoluteFill, useVideoConfig, useCurrentFrame,
-	spring, interpolate,
+	spring, interpolate, Easing
 } from 'remotion';
 import { COLORS, GRADIENTS } from './components/Nodes';
 
@@ -25,7 +25,7 @@ const Appear: React.FC<{ at: number; children: React.ReactNode; y?: number; x?: 
 	return (
 		<div style={{
 			opacity: s,
-			transform: `translate(${interpolate(s, [0, 1], [x, 0])}px, ${interpolate(s, [0, 1], [y, 0])}px)`,
+			transform: `translate(${interpolate(s, [0, 1], [x, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.out(Easing.cubic) })}px, ${interpolate(s, [0, 1], [y, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.out(Easing.cubic) })}px)`,
 		}}>
 			{children}
 		</div>
@@ -273,21 +273,21 @@ export const ClosureTableDrawback: React.FC = () => {
 						position: 'absolute', top: 86, right: 30, zIndex: 100,
 						display: 'flex', flexDirection: 'column', gap: 10, maxWidth: 520,
 					}}>
-						<div style={{ opacity: showBadge1, transform: `translateX(${interpolate(showBadge1, [0, 1], [60, 0])}px)` }}>
+						<div style={{ opacity: showBadge1, transform: `translateX(${interpolate(showBadge1, [0, 1], [60, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.bezier(0.16, 1, 0.3, 1) })}px)` }}>
 							<StepBadge
 								num={1}
 								text={`INSERT: Write Tests → Deploy  (depth 1)  ← direct edge`}
 								color={COLORS.danger}
 							/>
 						</div>
-						<div style={{ opacity: showBadge2, transform: `translateX(${interpolate(showBadge2, [0, 1], [60, 0])}px)` }}>
+						<div style={{ opacity: showBadge2, transform: `translateX(${interpolate(showBadge2, [0, 1], [60, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.bezier(0.16, 1, 0.3, 1) })}px)` }}>
 							<StepBadge
 								num={2}
 								text={`ancestor Build API → Deploy  (depth 2)  ← Walk ancestors`}
 								color={COLORS.warning}
 							/>
 						</div>
-						<div style={{ opacity: showBadge3, transform: `translateX(${interpolate(showBadge3, [0, 1], [60, 0])}px)` }}>
+						<div style={{ opacity: showBadge3, transform: `translateX(${interpolate(showBadge3, [0, 1], [60, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.bezier(0.16, 1, 0.3, 1) })}px)` }}>
 							<StepBadge
 								num={3}
 								text={`ancestor Design UI → Deploy  (depth 3)  ← Walk deeper`}
@@ -339,7 +339,7 @@ export const ClosureTableDrawback: React.FC = () => {
 					<div style={{
 						position: 'absolute', bottom: 32, left: 50, right: 50,
 						opacity: warningPop,
-						transform: `translateY(${interpolate(warningPop, [0, 1], [40, 0])}px)`,
+						transform: `translateY(${interpolate(warningPop, [0, 1], [40, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.bezier(0.175, 0.885, 0.32, 1.275) })}px)`,
 						display: 'flex', justifyContent: 'center', zIndex: 30,
 					}}>
 						<div style={{

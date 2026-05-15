@@ -1,7 +1,7 @@
 import React from 'react';
 import {
 	AbsoluteFill, useVideoConfig, useCurrentFrame,
-	spring, interpolate,
+	spring, interpolate, Easing
 } from 'remotion';
 import { COLORS, GRADIENTS } from './components/Nodes';
 
@@ -13,7 +13,7 @@ const Appear: React.FC<{ at: number; children: React.ReactNode; y?: number; x?: 
 	return (
 		<div style={{
 			opacity: s,
-			transform: `translate(${interpolate(s, [0, 1], [x, 0])}px, ${interpolate(s, [0, 1], [y, 0])}px)`,
+			transform: `translate(${interpolate(s, [0, 1], [x, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.out(Easing.cubic) })}px, ${interpolate(s, [0, 1], [y, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.out(Easing.cubic) })}px)`,
 		}}>
 			{children}
 		</div>
@@ -311,7 +311,7 @@ export const TaskLinkProblem: React.FC = () => {
 					<div style={{
 						position: 'absolute', bottom: 22, left: 50, right: 50,
 						opacity: bannerPop,
-						transform: `translateY(${interpolate(bannerPop, [0, 1], [36, 0])}px)`,
+						transform: `translateY(${interpolate(bannerPop, [0, 1], [36, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.bezier(0.175, 0.885, 0.32, 1.275) })}px)`,
 						display: 'flex', justifyContent: 'center', zIndex: 30,
 					}}>
 						<div style={{

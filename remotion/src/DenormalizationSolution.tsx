@@ -1,7 +1,7 @@
 import React from 'react';
 import {
 	AbsoluteFill, useVideoConfig, useCurrentFrame,
-	spring, interpolate
+	spring, interpolate, Easing
 } from 'remotion';
 import { COLORS, GRADIENTS } from './components/Nodes';
 
@@ -13,7 +13,7 @@ const Appear: React.FC<{ at: number; children: React.ReactNode; x?: number; y?: 
 	return (
 		<div style={{
 			opacity: s,
-			transform: `translate(${interpolate(s, [0, 1], [x, 0])}px, ${interpolate(s, [0, 1], [y, 0])}px)`,
+			transform: `translate(${interpolate(s, [0, 1], [x, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.out(Easing.cubic) })}px, ${interpolate(s, [0, 1], [y, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.out(Easing.cubic) })}px)`,
 		}}>
 			{children}
 		</div>
@@ -235,7 +235,7 @@ export const DenormalizationSolution: React.FC = () => {
 					<div style={{
 						position: 'absolute', bottom: 30, left: 50, right: 50,
 						opacity: showWarning,
-						transform: `translateY(${interpolate(showWarning, [0, 1], [40, 0])}px)`,
+						transform: `translateY(${interpolate(showWarning, [0, 1], [40, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.bezier(0.16, 1, 0.3, 1) })}px)`,
 						display: 'flex', justifyContent: 'center', zIndex: 30,
 					}}>
 						<div style={{
