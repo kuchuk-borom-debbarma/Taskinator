@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ToggleLeft, ToggleRight, Zap, ListChecks, ChevronDown } from 'lucide-react';
+import { ToggleLeft, ToggleRight, Zap, ListChecks, ChevronDown, GitBranch } from 'lucide-react';
 import type { AutopilotItem, AutopilotConditionNode } from '../../api/interfaces/AutopilotAPI';
 import { ConditionBuilderCanvas } from './Builder/ConditionBuilderCanvas';
+import { ActionPipelineEditor } from './Pipeline/ActionPipelineEditor';
 
 interface AutopilotCardProps {
   autopilot: AutopilotItem;
@@ -34,12 +35,20 @@ function extractConditionSummary(node: AutopilotConditionNode | null | undefined
 
 export const AutopilotCard: React.FC<AutopilotCardProps> = ({ autopilot, onClick }) => {
   const [expanded, setExpanded] = useState(false);
+  const [pipelineExpanded, setPipelineExpanded] = useState(false);
   const conditionSummary = extractConditionSummary(autopilot.conditions);
   const isActive = autopilot.isActive;
 
   const handleExpandToggle = (e: React.MouseEvent) => {
-    e.stopPropagation(); // don't bubble to card onClick
+    e.stopPropagation();
     setExpanded((prev) => !prev);
+    if (pipelineExpanded) setPipelineExpanded(false);
+  };
+
+  const handlePipelineToggle = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setPipelineExpanded((prev) => !prev);
+    if (expanded) setExpanded(false);
   };
 
   return (
@@ -93,26 +102,45 @@ export const AutopilotCard: React.FC<AutopilotCardProps> = ({ autopilot, onClick
       )}
 
       {/* Footer */}
-      <div className="flex items-center justify-between text-xs text-app-muted">
+      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-app-muted">
         <span className="inline-flex items-center gap-1.5">
           <ListChecks size={13} />
           {autopilot.actions.length} action{autopilot.actions.length !== 1 ? 's' : ''}
         </span>
 
-        {/* View Conditions toggle */}
-        <button
-          onClick={handleExpandToggle}
-          className="inline-flex items-center gap-1 rounded-full border border-app-line bg-white/60 px-2.5 py-1 text-[11px] font-semibold text-app-muted transition hover:bg-white hover:text-app-ink"
-        >
-          {expanded ? 'Hide' : 'View Conditions'}
-          <motion.span
-            animate={{ rotate: expanded ? 180 : 0 }}
-            transition={{ duration: 0.2 }}
-            className="inline-flex"
+        <div className="flex items-center gap-2">
+          {/* View Conditions toggle */}
+          <button
+            onClick={handleExpandToggle}
+            className="inline-flex items-center gap-1 rounded-full border border-app-line bg-white/60 px-2.5 py-1 text-[11px] font-semibold text-app-muted transition hover:bg-white hover:text-app-ink"
           >
-            <ChevronDown size={12} />
-          </motion.span>
-        </button>
+            <GitBranch size={11} />
+            {expanded ? 'Hide' : 'Conditions'}
+            <motion.span
+              animate={{ rotate: expanded ? 180 : 0 }}
+              transition={{ duration: 0.2 }}
+              className="inline-flex"
+            >
+              <ChevronDown size={12} />
+            </motion.span>
+          </button>
+
+          {/* View Pipeline toggle */}
+          <button
+            onClick={handlePipelineToggle}
+            className="inline-flex items-center gap-1 rounded-full border border-app-line bg-white/60 px-2.5 py-1 text-[11px] font-semibold text-app-muted transition hover:bg-white hover:text-app-ink"
+          >
+            <ListChecks size={11} />
+            {pipelineExpanded ? 'Hide' : 'Pipeline'}
+            <motion.span
+              animate={{ rotate: pipelineExpanded ? 180 : 0 }}
+              transition={{ duration: 0.2 }}
+              className="inline-flex"
+            >
+              <ChevronDown size={12} />
+            </motion.span>
+          </button>
+        </div>
 
         <span>
           {new Date(autopilot.createdAt).toLocaleDateString('en-US', {
@@ -138,6 +166,28 @@ export const AutopilotCard: React.FC<AutopilotCardProps> = ({ autopilot, onClick
             <div className="h-[320px] w-full">
               <ConditionBuilderCanvas
                 initialCondition={autopilot.conditions}
+                readOnly
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Expanded: Action Pipeline (read-only) */}
+      <AnimatePresence>
+        {pipelineExpanded && (
+          <motion.div
+            key="pipeline"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.25, ease: 'easeInOut' }}
+            className="overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="pt-1">
+              <ActionPipelineEditor
+                actions={autopilot.actions}
                 readOnly
               />
             </div>
