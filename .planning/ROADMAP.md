@@ -6,7 +6,7 @@
 1. `autopilot` and `autopilot_condition` tables are created in PostgreSQL.
 2. Models/Repositories are established with basic CRUD for autopilot definitions.
 
-## Phase 2: Live-Context Retrieval Engine
+## Phase 2: Live-Context Retrieval Engine [DONE]
 **Goal:** Build the mechanism to fetch "fresh" domain state from the DB for condition evaluation.
 **Success Criteria:**
 1. Context resolver can fetch Task and Project state by ID on demand.

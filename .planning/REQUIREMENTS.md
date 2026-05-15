@@ -42,7 +42,7 @@
 |-------------|-------|--------|
 | AUTO-01 | Phase 1 | Complete |
 | AUTO-02 | Phase 6 | Pending |
-| AUTO-03 | Phase 2 | Pending |
+| AUTO-03 | Phase 2 | Complete |
 | AUTO-04 | Phase 3 | Pending |
 | EXEC-01 | Phase 4 | Pending |
 | EXEC-02 | Phase 4 | Pending |
