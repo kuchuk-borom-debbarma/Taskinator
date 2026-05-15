@@ -258,7 +258,7 @@ export const getProjects = async (
             SELECT pm.fk_project_id FROM project_member pm WHERE pm.fk_user_id = ${userId}::text
         ) as sub
     `.execute(db);
-    const totalCount = parseInt(countResult.rows[0].count, 10);
+    const totalCount = parseInt(countResult.rows[0]?.count || '0', 10);
 
     const result = await sql<
         Project & { isOwner: boolean; epochPrecision: string }
