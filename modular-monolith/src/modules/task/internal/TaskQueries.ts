@@ -633,6 +633,7 @@ export const insertTask = async (param: {
     description?: string | null;
     status?: string | null;
     priority?: number | null;
+    traceId?: string | null;
 }): Promise<Task> => {
     const result = await sql<Task>`
         WITH authorized AS (
@@ -695,7 +696,8 @@ export const insertTask = async (param: {
                     'teamId', "teamId",
                     'memberId', "memberId",
                     'title', title,
-                    'actorId', ${param.actorId}::text
+                    'actorId', ${param.actorId}::text,
+                    'traceId', ${param.traceId}::text
                 )
             FROM inserted_task
         )
@@ -723,6 +725,7 @@ export const updateTask = async (param: {
     teamId?: string | null;
     memberId?: string | null;
     priority?: number | null;
+    traceId?: string | null;
 }): Promise<Task> => {
     // 1. Build dynamic SET fragments
     const updates: any[] = [];
@@ -851,7 +854,8 @@ export const updateTask = async (param: {
                         'title', u.title,
                         'status', u.status
                     ),
-                    'actorId', ${param.actorId}::text
+                    'actorId', ${param.actorId}::text,
+                    'traceId', ${param.traceId}::text
                 )
             FROM updated_task u, old_state o
         )

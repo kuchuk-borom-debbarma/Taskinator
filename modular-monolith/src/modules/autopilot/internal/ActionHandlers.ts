@@ -30,6 +30,7 @@ export const createActionHandlers = (
             taskId: task.id,
             version: task.version,
             status,
+            traceId,
         });
     },
 
@@ -48,6 +49,7 @@ export const createActionHandlers = (
             taskId: task.id,
             version: task.version,
             teamId,
+            traceId,
         });
     },
 
@@ -66,6 +68,7 @@ export const createActionHandlers = (
             taskId: task.id,
             version: task.version,
             memberId,
+            traceId,
         });
     },
 
@@ -87,6 +90,7 @@ export const createActionHandlers = (
             taskId: task.id,
             version: task.version,
             priority,
+            traceId,
         });
     },
 
@@ -107,6 +111,7 @@ export const createActionHandlers = (
             taskId: task.id,
             version: task.version,
             teamId: null, // Setting to null unassigns team (and member via service rules)
+            traceId,
         });
     },
 
@@ -127,6 +132,7 @@ export const createActionHandlers = (
             taskId: task.id,
             version: task.version,
             memberId: null,
+            traceId,
         });
     },
 });

@@ -2,6 +2,7 @@ import { yoga } from './graphql';
 import { startConsumers } from './kafka/registry.ts';
 import { logger } from './logger';
 import { authService } from './modules/auth/index.ts';
+import { handleSSE } from './modules/autopilot/internal/SSEController';
 import { externalNotificationService } from './modules/external-notification/index.ts';
 import { internalNotificationService } from './modules/internal-notification/index.ts';
 import { projectService } from './modules/project';
@@ -47,8 +48,14 @@ export async function bootstrap(
     isRunning = true;
     if (!options.silent) logger.info('[App] System is READY');
 
-    // Return the yoga handler for Bun.serve
-    return (req: Request) => yoga(req);
+    // Return the handler for Bun.serve
+    return (req: Request) => {
+        const url = new URL(req.url);
+        if (url.pathname === '/api/autopilot/logs') {
+            return handleSSE(req);
+        }
+        return yoga(req);
+    };
 }
 
 /**

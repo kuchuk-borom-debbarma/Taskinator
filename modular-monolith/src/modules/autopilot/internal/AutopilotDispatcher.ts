@@ -21,6 +21,7 @@ export class AutopilotDispatcher {
                     const traceId =
                         spanContext?.traceId ||
                         event.traceId ||
+                        event.data?.traceId ||
                         `trace-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
                     const eventType = event.type;
