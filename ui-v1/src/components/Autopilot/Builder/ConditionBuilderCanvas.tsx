@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ReactFlow,
   Background,
@@ -13,6 +13,7 @@ import '@xyflow/react/dist/style.css';
 
 import type { AutopilotConditionNode } from '../../../api/interfaces/AutopilotAPI';
 import { conditionTreeToGraph } from './treeSerializer';
+import { graphToConditionTree } from './treeDeserializer';
 import { LogicalNode } from './LogicalNode';
 import { PredicateNode } from './PredicateNode';
 import { PredicateEditorPanel } from './PredicateEditorPanel';
@@ -38,6 +39,7 @@ interface ConditionBuilderCanvasProps {
 
 export const ConditionBuilderCanvas: React.FC<ConditionBuilderCanvasProps> = ({
   initialCondition,
+  onChange,
   readOnly = false,
 }) => {
   const { nodes: initNodes, edges: initEdges, rootId } = useMemo(
@@ -49,7 +51,19 @@ export const ConditionBuilderCanvas: React.FC<ConditionBuilderCanvasProps> = ({
   const [nodes, setNodes, onNodesChange] = useNodesState(initNodes);
   const [edges, setEdges, onEdgesChange] = useEdgesState(initEdges);
   const [selectedPredicateId, setSelectedPredicateId] = useState<string | null>(null);
-  const [, setRootId] = useState(rootId);
+  const [rootIdVal] = useState(rootId);
+
+  // ── Propagation ───────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (readOnly || !onChange) return;
+    try {
+      const tree = graphToConditionTree(nodes, edges, rootIdVal);
+      onChange(tree);
+    } catch (err) {
+      console.warn('ConditionBuilderCanvas: Failed to reconstruct tree', err);
+    }
+  }, [nodes, edges, rootIdVal, onChange, readOnly]);
+
 
   // ── Callbacks injected into node data ──────────────────────────────────────
 

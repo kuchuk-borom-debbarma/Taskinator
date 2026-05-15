@@ -8,6 +8,7 @@ import { ActionPipelineEditor } from './Pipeline/ActionPipelineEditor';
 interface AutopilotCardProps {
   autopilot: AutopilotItem;
   onClick?: () => void;
+  onToggle?: (id: string, isActive: boolean) => void;
 }
 
 /**
@@ -33,7 +34,7 @@ function extractConditionSummary(node: AutopilotConditionNode | null | undefined
   return node.type.toUpperCase();
 }
 
-export const AutopilotCard: React.FC<AutopilotCardProps> = ({ autopilot, onClick }) => {
+export const AutopilotCard: React.FC<AutopilotCardProps> = ({ autopilot, onClick, onToggle }) => {
   const [expanded, setExpanded] = useState(false);
   const [pipelineExpanded, setPipelineExpanded] = useState(false);
   const conditionSummary = extractConditionSummary(autopilot.conditions);
@@ -71,14 +72,22 @@ export const AutopilotCard: React.FC<AutopilotCardProps> = ({ autopilot, onClick
           </span>
         </div>
 
-        {/* Active toggle (visual-only) */}
-        <div className="shrink-0 text-app-muted transition hover:text-app-ink">
+        {/* Active toggle (interactive) */}
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggle?.(autopilot.id, !isActive);
+          }}
+          className="shrink-0 text-app-muted transition hover:text-app-ink focus:outline-none"
+          title={isActive ? 'Deactivate rule' : 'Activate rule'}
+        >
           {isActive ? (
-            <ToggleRight size={22} className="text-app-success" />
+            <ToggleRight size={22} className="text-app-success transition-colors" />
           ) : (
-            <ToggleLeft size={22} />
+            <ToggleLeft size={22} className="transition-colors" />
           )}
-        </div>
+        </button>
       </div>
 
       {/* Trigger badges */}
