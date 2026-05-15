@@ -1,7 +1,8 @@
-import React from 'react';
-import { motion } from 'framer-motion';
-import { ToggleLeft, ToggleRight, Zap, ListChecks } from 'lucide-react';
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { ToggleLeft, ToggleRight, Zap, ListChecks, ChevronDown } from 'lucide-react';
 import type { AutopilotItem, AutopilotConditionNode } from '../../api/interfaces/AutopilotAPI';
+import { ConditionBuilderCanvas } from './Builder/ConditionBuilderCanvas';
 
 interface AutopilotCardProps {
   autopilot: AutopilotItem;
@@ -10,7 +11,6 @@ interface AutopilotCardProps {
 
 /**
  * Extracts a human-readable summary from the first predicate leaf in the condition tree.
- * e.g., { type: 'predicate', field: 'status', operator: '==', value: 'DONE' } → "status == DONE"
  */
 function extractConditionSummary(node: AutopilotConditionNode | null | undefined): string {
   if (!node) return '—';
@@ -22,7 +22,6 @@ function extractConditionSummary(node: AutopilotConditionNode | null | undefined
     return `${field} ${op} ${val}`;
   }
 
-  // Recurse into children/child to find first predicate
   if (node.children && node.children.length > 0) {
     return extractConditionSummary(node.children[0]);
   }
@@ -34,15 +33,21 @@ function extractConditionSummary(node: AutopilotConditionNode | null | undefined
 }
 
 export const AutopilotCard: React.FC<AutopilotCardProps> = ({ autopilot, onClick }) => {
+  const [expanded, setExpanded] = useState(false);
   const conditionSummary = extractConditionSummary(autopilot.conditions);
   const isActive = autopilot.isActive;
 
+  const handleExpandToggle = (e: React.MouseEvent) => {
+    e.stopPropagation(); // don't bubble to card onClick
+    setExpanded((prev) => !prev);
+  };
+
   return (
     <motion.div
-      whileHover={{ y: -3, boxShadow: '0 28px 60px rgba(20, 32, 48, 0.14)' }}
+      whileHover={!expanded ? { y: -3, boxShadow: '0 28px 60px rgba(20, 32, 48, 0.14)' } : {}}
       transition={{ duration: 0.18, ease: 'easeOut' }}
       onClick={onClick}
-      className="surface-card cursor-pointer rounded-[20px] p-5 flex flex-col gap-4"
+      className="surface-card rounded-[20px] p-5 flex flex-col gap-4 cursor-pointer"
     >
       {/* Header */}
       <div className="flex items-start justify-between gap-3">
@@ -57,7 +62,7 @@ export const AutopilotCard: React.FC<AutopilotCardProps> = ({ autopilot, onClick
           </span>
         </div>
 
-        {/* Active toggle (visual-only for Phase 10) */}
+        {/* Active toggle (visual-only) */}
         <div className="shrink-0 text-app-muted transition hover:text-app-ink">
           {isActive ? (
             <ToggleRight size={22} className="text-app-success" />
@@ -80,10 +85,12 @@ export const AutopilotCard: React.FC<AutopilotCardProps> = ({ autopilot, onClick
         ))}
       </div>
 
-      {/* Condition summary */}
-      <p className="rounded-lg bg-app-line/30 px-3 py-2 font-mono text-xs text-app-muted line-clamp-1">
-        {conditionSummary}
-      </p>
+      {/* Condition summary (collapsed) */}
+      {!expanded && (
+        <p className="rounded-lg bg-app-line/30 px-3 py-2 font-mono text-xs text-app-muted line-clamp-1">
+          {conditionSummary}
+        </p>
+      )}
 
       {/* Footer */}
       <div className="flex items-center justify-between text-xs text-app-muted">
@@ -91,6 +98,22 @@ export const AutopilotCard: React.FC<AutopilotCardProps> = ({ autopilot, onClick
           <ListChecks size={13} />
           {autopilot.actions.length} action{autopilot.actions.length !== 1 ? 's' : ''}
         </span>
+
+        {/* View Conditions toggle */}
+        <button
+          onClick={handleExpandToggle}
+          className="inline-flex items-center gap-1 rounded-full border border-app-line bg-white/60 px-2.5 py-1 text-[11px] font-semibold text-app-muted transition hover:bg-white hover:text-app-ink"
+        >
+          {expanded ? 'Hide' : 'View Conditions'}
+          <motion.span
+            animate={{ rotate: expanded ? 180 : 0 }}
+            transition={{ duration: 0.2 }}
+            className="inline-flex"
+          >
+            <ChevronDown size={12} />
+          </motion.span>
+        </button>
+
         <span>
           {new Date(autopilot.createdAt).toLocaleDateString('en-US', {
             month: 'short',
@@ -99,6 +122,28 @@ export const AutopilotCard: React.FC<AutopilotCardProps> = ({ autopilot, onClick
           })}
         </span>
       </div>
+
+      {/* Expanded: Condition Builder Canvas (read-only) */}
+      <AnimatePresence>
+        {expanded && (
+          <motion.div
+            key="canvas"
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 320 }}
+            exit={{ opacity: 0, height: 0 }}
+            transition={{ duration: 0.25, ease: 'easeInOut' }}
+            className="overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="h-[320px] w-full">
+              <ConditionBuilderCanvas
+                initialCondition={autopilot.conditions}
+                readOnly
+              />
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 };
