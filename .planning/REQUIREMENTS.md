@@ -1,0 +1,44 @@
+# Milestone v3.0 Requirements: Remotion Overhaul & Autopilot Showcase
+
+## Categories
+
+### 1. Best Practice Refactoring (REFACTOR)
+Refactoring all previously implemented compositions to strictly adhere to proper Remotion APIs, completely eliminating forbidden CSS or Tailwind transition styles.
+- [ ] **REFACTOR-01**: Refactor `FeatureShowcase` to use Remotion interpolation/springs instead of CSS animations.
+- [ ] **REFACTOR-02**: Refactor `SchemaDesign` and its 6 sub-scenes (`QueryProblem`, `ClosureTableSolution`, etc.) to use proper easing and sequencing.
+- [ ] **REFACTOR-03**: Refactor `SyncArchitecture` (including `BlockingProblem` and `AsyncSolution`) using best practice hooks.
+- [ ] **REFACTOR-04**: Refactor `AsyncProblems` (Dual-Write & Lost Event) with correct Remotion lifecycle animations.
+- [ ] **REFACTOR-05**: Refactor `TransactionalOutbox` and `UpgradedAsyncFlow` with clean timeline layouts.
+- [ ] **REFACTOR-06**: Refactor `ConcurrencyControl` with robust spring-based node animations.
+
+### 2. Autopilot Engine Compositions (AUTOPILOT)
+Brand-new compositions visualizing the core architecture of the recently completed Autopilot engine.
+- [ ] **AUTOPILOT-01**: Create composition `AutopilotOverview` showcasing the event-driven automation trigger loop.
+- [ ] **AUTOPILOT-02**: Create composition `ConditionEvaluator` visualizing live-DB evaluation of nested Boolean trees.
+- [ ] **AUTOPILOT-03**: Create composition `ActionChain` illustrating linked-list, fail-fast atomicity for automation steps.
+- [ ] **AUTOPILOT-04**: Create composition `LoopDetector` illustrating the `TraceID` + depth-based prevention mechanic.
+
+### 3. Autopilot UI Compositions (AUTOUI)
+New compositions visualizing the newly-built frontend systems.
+- [ ] **AUTOUI-01**: Create composition `VisualConditionBuilder` showing React XYFlow node serialization into logical JSON trees.
+- [ ] **AUTOUI-02**: Create composition `ActionPipelineEditor` visualizing drag-and-drop sequential steps and zero-latency optimistic UI toggles.
+- [ ] **AUTOUI-03**: Create composition `DynamicConfig` showcasing overlay config forms and smart fallback selectors.
+
+### 4. Project Finale (FINALE)
+Completing the remaining core compositions from the original architectural roadmap and tying the entire video asset together.
+- [ ] **FINALE-01**: Implement composition `SmartAggregation` (two-phase event batching).
+- [ ] **FINALE-02**: Implement composition `ChunkedDeletion` (self-signaling pac-man cascade delete).
+- [ ] **FINALE-03**: Implement composition `RealtimeSSE` (Redis pub-sub bridge + WebSocket push).
+- [ ] **FINALE-04**: Implement composition `FinalArchitecture` with the unified system diagram & 10k RPS metrics overlay.
+- [ ] **FINALE-05**: Assemble the master timeline in `src/Root.tsx` verifying all sequence durations and transitions.
+
+## Future Requirements
+- [ ] Evaluate performance metrics over 10k RPS using live visual simulators.
+- [ ] Direct voiceover generation sync via ElevenLabs inside the pipeline.
+
+## Out of Scope
+- Real live data simulation within the video — static, structured JSON mock streams only.
+- Exporting to 4K UHD — restricted to 1080p60 standard for speed.
+
+## Traceability
+*To be completed by roadmapper.*
