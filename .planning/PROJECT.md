@@ -12,61 +12,34 @@ Automate the "busy work" of project management through reliable, transparent, an
 
 ### Validated
 
-<!-- Inferred from existing brownfield codebase -->
-- ✓ [Core Domain Service Pattern] — established in `src/modules`
-- ✓ [Transactional Outbox Pattern] — implemented in `src/utils/event-bus`
-- ✓ [Materialized Path Hierarchy] — implemented in `src/modules/task`
-- ✓ [Kafka Event Bus] — initialized in `src/kafka`
+- ✓ [Autopilot Core Engine] — Generic, data-driven execution framework (v1.0).
+- ✓ [Context-Aware Condition Evaluator] — Live-DB evaluation with Boolean logic (AND/OR/NOT) (v1.0).
+- ✓ [Ordered Action Chaining] — Linked-list execution model with "fail-fast" atomicity (v1.0).
+- ✓ [Loop Detection] — TraceID + Depth based infinite cycle prevention (v1.0).
+- ✓ [Audit Logging] — Real-time execution logs for UI visibility (v1.0).
 
-### Active
+### Active (V2)
 
-- [ ] [Autopilot Core Engine] — Generic, data-driven execution framework.
-- [ ] [Context-Aware Condition Evaluator] — Live-DB evaluation with Boolean logic (AND/OR/NOT).
-- [ ] [Ordered Action Chaining] — Linked-list execution model with "fail-fast" atomicity.
-- [ ] [Loop Detection] — TraceID + Mutation-Hash based infinite cycle prevention.
-- [ ] [Audit Logging] — Real-time execution logs for UI visibility.
+- [ ] [Multi-domain Triggers] — Support for events crossing project/team boundaries.
+- [ ] [Visual Definition Builder] — UI for managing autopilots.
+- [ ] [Execution Metrics] — Aggregated throughput and failure rate reporting.
 
 ### Out of Scope
 
-- [Cron-based Triggers] — V1 focus is purely reactive/event-driven.
-- [Cross-Project Triggers] — Initial version is scoped to events within a single project.
-- [Visual Builder] — UI for defining autopilots will be handled in a later milestone; V1 is data-driven (DB configuration).
+- [Cron-based Triggers] — V1/V2 focus is purely reactive/event-driven.
+- [External Service Actions] — Initial version is scoped to internal Taskinator domain mutations.
 
-## Context
-
-Taskinator-v2 is a high-throughput modular monolith (10k RPS target). The Autopilot system must be non-blocking and horizontally scalable. It leverages Kafka for event distribution and PostgreSQL for persistent state and audit logs.
-
-## Constraints
-
-- **Performance**: Autopilot evaluation must not introduce significant lag into the event processing pipeline.
-- **Reliability**: Action chains must be atomic at the autopilot level; failure at step N must halt step N+1.
-- **Safety**: Infinite loops must be detected and terminated before they impact system stability.
-- **Data-Driven**: Autopilot definitions must be stored in the database, allowing for dynamic updates without code deployment.
+## Current State (v1.0)
+The core engine is shipped. It supports reactive task automation, complex boolean conditions, sequential action chains, and real-time audit streaming via SSE. All core safety guards (loop detection) are in place.
 
 ## Key Decisions
 
 | Decision | Rationale | Outcome |
 |----------|-----------|---------|
-| Action Chain Model | Ensures predictable execution order and atomicity. | — Pending |
-| Live-Context Evaluation | Prevents logic execution on stale snapshots; ensures data integrity. | — Pending |
-| TraceID + Hash Loop Detection | Allows for complex task evolution while blocking redundant infinite cycles. | — Pending |
-
-## Evolution
-
-This document evolves at phase transitions and milestone boundaries.
-
-**After each phase transition** (via `/gsd-transition`):
-1. Requirements invalidated? → Move to Out of Scope with reason
-2. Requirements validated? → Move to Validated with phase reference
-3. New requirements emerged? → Add to Active
-4. Decisions to log? → Add to Key Decisions
-5. "What This Is" still accurate? → Update if drifted
-
-**After each milestone** (via `/gsd-complete-milestone`):
-1. Full review of all sections
-2. Core Value check — still the right priority?
-3. Audit Out of Scope — reasons still valid?
-4. Update Context with current state
+| Action Chain Model | Ensures predictable execution order and atomicity. | **Complete** |
+| Live-Context Evaluation | Prevents logic execution on stale snapshots; ensures data integrity. | **Complete** |
+| TraceID + Depth Loop Detection | Simpler and more reliable than mutation hashing for initial release. | **Complete** |
+| SSE Streaming | Low-latency progress updates without polling overhead. | **Complete** |
 
 ---
-*Last updated: 2026-05-15 after initialization*
+*Last updated: 2026-05-15 after v1.0 milestone completion*
