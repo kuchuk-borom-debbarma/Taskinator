@@ -44,8 +44,8 @@
 | AUTO-02 | Phase 6 | Pending |
 | AUTO-03 | Phase 2 | Complete |
 | AUTO-04 | Phase 3 | Pending |
-| EXEC-01 | Phase 4 | Pending |
-| EXEC-02 | Phase 4 | Pending |
+| EXEC-01 | Phase 4 | Complete |
+| EXEC-02 | Phase 4 | Complete |
 | EXEC-03 | Phase 5 | Pending |
 | SAFE-01 | Phase 7 | Pending |
 | AUDT-01 | Phase 8 | Pending |

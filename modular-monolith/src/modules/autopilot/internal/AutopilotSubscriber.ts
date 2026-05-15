@@ -1,5 +1,5 @@
 import { logger } from '../../../logger';
-import eventBus from '../../../utils/EventBus';
+import eventBus from '../../../utils/EventBus.ts';
 import type { AutopilotEngine } from './AutopilotEngine';
 
 export class AutopilotSubscriber {
@@ -15,13 +15,18 @@ export class AutopilotSubscriber {
         for (const topic of topics) {
             await eventBus.subscribe(topic, 'autopilot-engine', {
                 '*': async (payload: any) => {
-                    const eventType = payload.type;
+                    // Try to find eventType in payload or payload.data
+                    const eventType = payload.type || payload.data?.type;
+
                     if (!eventType) {
                         logger.warn(
-                            `[AutopilotSubscriber] Received event without type on topic ${topic}`,
+                            `[AutopilotSubscriber] Received event without type on topic ${topic}. Payload keys: ${Object.keys(payload)}`,
                         );
                         return;
                     }
+
+                    // Extract actual data payload
+                    const data = payload.data || payload;
 
                     // For now, traceId might not be in payload. We'll generate one if missing.
                     const traceId =
@@ -31,7 +36,7 @@ export class AutopilotSubscriber {
                     try {
                         await this.engine.processEvent({
                             type: eventType,
-                            payload,
+                            payload: data,
                             traceId,
                         });
                     } catch (err) {

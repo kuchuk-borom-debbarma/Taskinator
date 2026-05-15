@@ -1,6 +1,7 @@
 import { type Kysely, sql } from 'kysely';
 import type { Database } from '../../../database/index.ts';
 import { logger } from '../../../logger/index.ts';
+import type { ActionRunner } from './ActionRunner';
 import type { ConditionEvaluator } from './ConditionEvaluator';
 import type { ConditionTree } from './ConditionTypes';
 import type { ContextService } from './ContextService';
@@ -16,6 +17,7 @@ export class AutopilotEngine {
         private db: Kysely<Database>,
         private contextService: ContextService,
         private conditionEvaluator: ConditionEvaluator,
+        private actionRunner: ActionRunner,
     ) {}
 
     async processEvent(event: AutopilotEvent) {
@@ -85,7 +87,7 @@ export class AutopilotEngine {
             logger.info(
                 `[AutopilotEngine] Match found for Autopilot: ${autopilot.id} (Trace: ${traceId})`,
             );
-            // TODO: Trigger Action Chain (Phase 4)
+            await this.actionRunner.run(autopilot.id, entityId, traceId);
         } else {
             logger.debug(
                 `[AutopilotEngine] Condition not met for Autopilot: ${autopilot.id}`,

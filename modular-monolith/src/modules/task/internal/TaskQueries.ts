@@ -639,6 +639,8 @@ export const insertTask = async (param: {
             SELECT 1 FROM project WHERE id = ${param.projectId}::uuid AND fk_user_id = ${param.actorId}::text
             UNION ALL
             SELECT 1 FROM project_member WHERE fk_project_id = ${param.projectId}::uuid AND fk_user_id = ${param.actorId}::text
+            UNION ALL
+            SELECT 1 WHERE ${param.actorId}::text LIKE 'system:%'
             LIMIT 1
         ),
         inserted_task AS (
@@ -765,28 +767,38 @@ export const updateTask = async (param: {
             WHERE id = ${param.taskId}::uuid
         ),
         authorized AS (
-            -- Actor must be project owner or member
+            -- Actor must be project owner or member or system
             SELECT 1 FROM project WHERE id = ${param.projectId}::uuid AND fk_user_id = ${param.actorId}::text
             UNION ALL
             SELECT 1 FROM project_member WHERE fk_project_id = ${param.projectId}::uuid AND fk_user_id = ${param.actorId}::text
+            UNION ALL
+            SELECT 1 WHERE ${param.actorId}::text LIKE 'system:%'
             LIMIT 1
         ),
         validation AS (
             SELECT 1
+            FROM old_state
             WHERE (
-                -- If teamId is provided, it must belong to the project
+                -- If teamId is provided, it must be valid
+                (NOT ${param.teamId !== undefined}::boolean) OR 
                 ${param.teamId}::uuid IS NULL OR EXISTS (
                     SELECT 1 FROM project_team WHERE id = ${param.teamId}::uuid AND fk_project_id = ${param.projectId}::uuid
                 )
             ) AND (
-                -- If memberId is provided, they must be a project member
+                -- Same for memberId
+                (NOT ${param.memberId !== undefined}::boolean) OR
                 ${param.memberId}::text IS NULL OR EXISTS (
                     SELECT 1 FROM project_member WHERE fk_user_id = ${param.memberId}::text AND fk_project_id = ${param.projectId}::uuid
                 )
             ) AND (
-                -- If both provided, member must be in the team
-                ((${param.teamId}::uuid IS NULL) OR (${param.memberId}::text IS NULL)) OR EXISTS (
-                    SELECT 1 FROM project_team_member WHERE fk_team_id = ${param.teamId}::uuid AND fk_user_id = ${param.memberId}::text
+                -- Final state must be consistent
+                (
+                    COALESCE(${param.teamId}::uuid, old_state.fk_team_id) IS NULL OR 
+                    COALESCE(${param.memberId}::text, old_state.fk_member_id) IS NULL
+                ) OR EXISTS (
+                    SELECT 1 FROM project_team_member 
+                    WHERE fk_team_id = COALESCE(${param.teamId}::uuid, old_state.fk_team_id)
+                      AND fk_user_id = COALESCE(${param.memberId}::text, old_state.fk_member_id)
                 )
             )
         ),
@@ -887,10 +899,12 @@ export const deleteTask = async (param: {
 }): Promise<string> => {
     const result = await sql<{ id: string }>`
         WITH authorized AS (
-            -- Actor must be project owner or member
+            -- Actor must be project owner or member or system
             SELECT 1 FROM project WHERE id = ${param.projectId}::uuid AND fk_user_id = ${param.actorId}::text
             UNION ALL
             SELECT 1 FROM project_member WHERE fk_project_id = ${param.projectId}::uuid AND fk_user_id = ${param.actorId}::text
+            UNION ALL
+            SELECT 1 WHERE ${param.actorId}::text LIKE 'system:%'
             LIMIT 1
         ),
         deleted_task AS (
@@ -936,10 +950,12 @@ export const insertTaskLink = async (param: {
 }): Promise<TaskLink> => {
     const result = await sql<TaskLink>`
         WITH authorized AS (
-            -- Actor must be project owner or member
+            -- Actor must be project owner or member or system
             SELECT 1 FROM project WHERE id = ${param.projectId}::uuid AND fk_user_id = ${param.actorId}::text
             UNION ALL
             SELECT 1 FROM project_member WHERE fk_project_id = ${param.projectId}::uuid AND fk_user_id = ${param.actorId}::text
+            UNION ALL
+            SELECT 1 WHERE ${param.actorId}::text LIKE 'system:%'
             LIMIT 1
         ),
         validation AS (
@@ -1006,10 +1022,12 @@ export const deleteTaskLink = async (param: {
 }): Promise<string> => {
     const result = await sql<{ id: string }>`
         WITH authorized AS (
-            -- Actor must be project owner or member
+            -- Actor must be project owner or member or system
             SELECT 1 FROM project WHERE id = ${param.projectId}::uuid AND fk_user_id = ${param.actorId}::text
             UNION ALL
             SELECT 1 FROM project_member WHERE fk_project_id = ${param.projectId}::uuid AND fk_user_id = ${param.actorId}::text
+            UNION ALL
+            SELECT 1 WHERE ${param.actorId}::text LIKE 'system:%'
             LIMIT 1
         ),
         deleted_link AS (
@@ -1061,10 +1079,12 @@ export const updateTaskLink = async (param: {
 }): Promise<TaskLink> => {
     const result = await sql<TaskLink>`
         WITH authorized AS (
-            -- Actor must be project owner or member
+            -- Actor must be project owner or member or system
             SELECT 1 FROM project WHERE id = ${param.projectId}::uuid AND fk_user_id = ${param.actorId}::text
             UNION ALL
             SELECT 1 FROM project_member WHERE fk_project_id = ${param.projectId}::uuid AND fk_user_id = ${param.actorId}::text
+            UNION ALL
+            SELECT 1 WHERE ${param.actorId}::text LIKE 'system:%'
             LIMIT 1
         ),
         current_link AS (
