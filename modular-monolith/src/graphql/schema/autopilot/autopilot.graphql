@@ -1,0 +1,110 @@
+# ─────────────────────────────────────────────
+# Autopilot
+# ─────────────────────────────────────────────
+
+"""
+A condition node that forms the condition tree for an autopilot.
+Stored as a JSON blob. Represented as a scalar for flexibility.
+"""
+scalar ConditionTree
+
+"""
+An automated rule that triggers a sequence of actions when conditions are met.
+"""
+type Autopilot {
+    """
+    Unique identifier for the autopilot.
+    """
+    id: ID!
+
+    """
+    The project this autopilot belongs to.
+    """
+    fk_project_id: ID!
+
+    """
+    List of event types this autopilot listens to (e.g., ["task.updated"]).
+    """
+    triggers: [String!]!
+
+    """
+    The boolean condition tree that must evaluate to true.
+    """
+    conditions: ConditionTree!
+
+    """
+    Whether this autopilot is currently active.
+    """
+    isActive: Boolean!
+
+    """
+    Ordered list of actions to execute when conditions match.
+    """
+    actions: [AutopilotAction!]!
+
+    """
+    ISO 8601 creation timestamp.
+    """
+    createdAt: String!
+
+    """
+    Optimistic-concurrency version counter.
+    """
+    version: Int!
+}
+
+"""
+A single action step in an autopilot's execution chain.
+"""
+type AutopilotAction {
+    """
+    Unique identifier for this action.
+    """
+    id: ID!
+
+    """
+    Action type key (e.g., "task.update_status", "task.assign_team").
+    """
+    type: String!
+
+    """
+    Configuration payload for this action (e.g., { status: "DONE" }).
+    """
+    config: ConditionTree!
+
+    """
+    Position in the execution chain (1-indexed).
+    """
+    position: Int!
+}
+
+"""
+Relay-style paginated list of autopilots.
+"""
+type AutopilotConnection {
+    edges: [AutopilotEdge!]!
+    pageInfo: PageInfo!
+    """
+    Total number of autopilots matching the query, regardless of pagination.
+    """
+    totalCount: Int!
+}
+
+type AutopilotEdge {
+    node: Autopilot!
+    cursor: String!
+}
+
+extend type Query {
+    """
+    Fetches a paginated list of autopilots for a given project.
+    Requires the caller to be a member of the project.
+    """
+    autopilots(
+        projectId: ID!
+        first: Int
+        after: String
+        last: Int
+        before: String
+    ): AutopilotConnection!
+}

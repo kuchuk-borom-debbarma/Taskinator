@@ -5,12 +5,14 @@ import { ActionRunner } from './internal/ActionRunner';
 import { AuditService } from './internal/AuditService';
 import { AutopilotDispatcher } from './internal/AutopilotDispatcher';
 import { AutopilotEngine } from './internal/AutopilotEngine';
+import { AutopilotQueryService } from './internal/AutopilotQueryService';
 import { ConditionEvaluator } from './internal/ConditionEvaluator';
 import { ContextService } from './internal/ContextService';
 import { ProjectContextResolver } from './internal/ProjectContextResolver';
 import { TaskContextResolver } from './internal/TaskContextResolver';
 
 export const auditService = new AuditService(db);
+export const autopilotQueryService = new AutopilotQueryService(db);
 export const contextService = new ContextService();
 export const conditionEvaluator = new ConditionEvaluator();
 export const actionHandlers = createActionHandlers(taskService);
