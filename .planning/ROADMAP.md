@@ -50,11 +50,11 @@
 ---
 
 ## Phase 19: Finale & Master Assembly
-- [ ] **FINALE-01**: Implement composition `SmartAggregation` (two-phase event batching).
-- [ ] **FINALE-02**: Implement composition `ChunkedDeletion` (self-signaling pac-man cascade delete).
-- [ ] **FINALE-03**: Implement composition `RealtimeSSE` (Redis pub-sub bridge + WebSocket push).
-- [ ] **FINALE-04**: Implement composition `FinalArchitecture` with the unified system diagram & 10k RPS metrics overlay.
-- [ ] **FINALE-05**: Assemble the master timeline in `src/Root.tsx` verifying all sequence durations and transitions.
+- [x] **FINALE-01**: Implement composition `SmartAggregation` (two-phase event batching).
+- [x] **FINALE-02**: Implement composition `ChunkedDeletion` (self-signaling pac-man cascade delete).
+- [x] **FINALE-03**: Implement composition `RealtimeSSE` (Redis pub-sub bridge + WebSocket push).
+- [x] **FINALE-04**: Implement composition `FinalArchitecture` with the unified system diagram & 10k RPS metrics overlay.
+- [x] **FINALE-05**: Assemble the master timeline in `src/Root.tsx` verifying all sequence durations and transitions.
 
 ### Success Criteria
 1. Pac-Man background chunked deletion scene successfully plays.

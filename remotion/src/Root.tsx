@@ -19,10 +19,19 @@ import { LoopDetector } from "./LoopDetector";
 import { VisualConditionBuilder } from "./VisualConditionBuilder";
 import { ActionPipelineEditor } from "./ActionPipelineEditor";
 import { DynamicConfig } from "./DynamicConfig";
+import { MasterPresentation } from "./MasterPresentation";
 
 export const RemotionRoot: React.FC = () => {
   return (
     <>
+      <Composition
+        id="MasterPresentation"
+        component={MasterPresentation}
+        durationInFrames={29885}
+        fps={30}
+        width={1280}
+        height={720}
+      />
       <Composition
         id="FinalArchitecture"
         component={FinalArchitecture}
