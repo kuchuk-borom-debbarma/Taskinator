@@ -3,13 +3,13 @@ import { db, pool } from '../../../database/index.ts';
 import eventBus from '../../../utils/EventBus.ts';
 import { projectService } from '../../project/index.ts';
 import { taskService } from '../../task/index.ts';
-import { autopilotSubscriber } from '../index.ts';
+import { autopilotDispatcher } from '../index.ts';
 
 describe('Autopilot E2E', () => {
     beforeAll(async () => {
         await db.deleteFrom('autopilot_action').execute();
         await db.deleteFrom('autopilot').execute();
-        await autopilotSubscriber.subscribe();
+        await autopilotDispatcher.init();
     });
 
     afterAll(async () => {
