@@ -12,6 +12,10 @@ import { SmartAggregation } from "./SmartAggregation";
 import { ChunkedDeletion } from "./ChunkedDeletion";
 import { RealtimeSSE } from "./RealtimeSSE";
 import { FinalArchitecture } from "./FinalArchitecture";
+import { AutopilotOverview } from "./AutopilotOverview";
+import { ConditionEvaluator } from "./ConditionEvaluator";
+import { ActionChain } from "./ActionChain";
+import { LoopDetector } from "./LoopDetector";
 
 export const RemotionRoot: React.FC = () => {
   return (
@@ -100,6 +104,38 @@ export const RemotionRoot: React.FC = () => {
         id="ConcurrencyControl"
         component={ConcurrencyControl}
         durationInFrames={1560}
+        fps={30}
+        width={1280}
+        height={720}
+      />
+      <Composition
+        id="AutopilotOverview"
+        component={AutopilotOverview}
+        durationInFrames={900}
+        fps={30}
+        width={1280}
+        height={720}
+      />
+      <Composition
+        id="ConditionEvaluator"
+        component={ConditionEvaluator}
+        durationInFrames={1200}
+        fps={30}
+        width={1280}
+        height={720}
+      />
+      <Composition
+        id="ActionChain"
+        component={ActionChain}
+        durationInFrames={900}
+        fps={30}
+        width={1280}
+        height={720}
+      />
+      <Composition
+        id="LoopDetector"
+        component={LoopDetector}
+        durationInFrames={900}
         fps={30}
         width={1280}
         height={720}

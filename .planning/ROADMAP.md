@@ -24,10 +24,10 @@
 ---
 
 ## Phase 17: Autopilot Engine Visuals
-- [ ] **AUTOPILOT-01**: Create composition `AutopilotOverview` showcasing the event-driven automation trigger loop.
-- [ ] **AUTOPILOT-02**: Create composition `ConditionEvaluator` visualizing live-DB evaluation of nested Boolean trees.
-- [ ] **AUTOPILOT-03**: Create composition `ActionChain` illustrating linked-list, fail-fast atomicity for automation steps.
-- [ ] **AUTOPILOT-04**: Create composition `LoopDetector` illustrating the `TraceID` + depth-based prevention mechanic.
+- [x] **AUTOPILOT-01**: Create composition `AutopilotOverview` showcasing the event-driven automation trigger loop.
+- [x] **AUTOPILOT-02**: Create composition `ConditionEvaluator` visualizing live-DB evaluation of nested Boolean trees.
+- [x] **AUTOPILOT-03**: Create composition `ActionChain` illustrating linked-list, fail-fast atomicity for automation steps.
+- [x] **AUTOPILOT-04**: Create composition `LoopDetector` illustrating the `TraceID` + depth-based prevention mechanic.
 
 ### Success Criteria
 1. Reactive trigger overview composition successfully showcases event flows.
