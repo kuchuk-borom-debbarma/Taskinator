@@ -1,5 +1,5 @@
 import React from 'react';
-import { AbsoluteFill, useVideoConfig, useCurrentFrame, spring, interpolate, Sequence } from 'remotion';
+import { AbsoluteFill, useVideoConfig, useCurrentFrame, spring, interpolate, Sequence, Easing } from 'remotion';
 import { COLORS, GRADIENTS } from './components/Nodes';
 import { TitleCard } from './components/TitleCard';
 
@@ -23,7 +23,7 @@ const Header: React.FC<{ tag: string; tagColor: string; title: string; sub: stri
 	const f = useCurrentFrame(); const { fps } = useVideoConfig();
 	const s = sp(f, fr(delay, fps), fps);
 	return (
-		<div style={{ position: 'absolute', top: 26, left: 32, right: 400, opacity: s, transform: `translateY(${interpolate(s, [0, 1], [-12, 0])}px)` }}>
+		<div style={{ position: 'absolute', top: 26, left: 32, right: 400, opacity: s, transform: `translateY(${interpolate(s, [0, 1], [-12, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.bezier(0.16, 1, 0.3, 1) })}px)` }}>
 			<div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
 				<div style={{ width: 7, height: 7, borderRadius: '50%', background: tagColor, boxShadow: `0 0 8px ${tagColor}` }} />
 				<span style={{ fontSize: 10, fontWeight: 800, color: tagColor, fontFamily: 'Inter', textTransform: 'uppercase', letterSpacing: 1.5 }}>{tag}</span>
@@ -99,7 +99,7 @@ const StepItem: React.FC<{ num: number; label: string; sub: string; color: strin
 	const f = useCurrentFrame(); const { fps } = useVideoConfig();
 	const s = sp(f, delay, fps);
 	return (
-		<div style={{ opacity: s, transform: `translateX(${interpolate(s, [0, 1], [20, 0])}px)`, display: 'flex', gap: 10, marginBottom: 10, alignItems: 'flex-start' }}>
+		<div style={{ opacity: s, transform: `translateX(${interpolate(s, [0, 1], [20, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.bezier(0.16, 1, 0.3, 1) })}px)`, display: 'flex', gap: 10, marginBottom: 10, alignItems: 'flex-start' }}>
 			<div style={{ width: 22, height: 22, borderRadius: '50%', flexShrink: 0, background: color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 900, color: '#000' }}>{num}</div>
 			<div style={{ flex: 1, background: `${color}0d`, border: `1px solid ${color}33`, borderLeft: `3px solid ${color}`, borderRadius: 8, padding: '7px 10px' }}>
 				<div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
@@ -117,7 +117,7 @@ const Banner: React.FC<{ text: string; color: string; delay: number }> = ({ text
 	const f = useCurrentFrame(); const { fps } = useVideoConfig();
 	const s = sp(f, delay, fps);
 	return (
-		<div style={{ position: 'absolute', bottom: 22, left: 32, right: 32, opacity: s, transform: `translateY(${interpolate(s, [0, 1], [20, 0])}px)`, display: 'flex', justifyContent: 'center', zIndex: 30 }}>
+		<div style={{ position: 'absolute', bottom: 22, left: 32, right: 32, opacity: s, transform: `translateY(${interpolate(s, [0, 1], [20, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.bezier(0.175, 0.885, 0.32, 1.275) })}px)`, display: 'flex', justifyContent: 'center', zIndex: 30 }}>
 			<div style={{ background: `${color}12`, border: `2px solid ${color}`, borderRadius: 12, padding: '11px 28px', fontSize: 13, fontWeight: 800, color, fontFamily: 'Inter', boxShadow: `0 0 28px ${color}44`, backdropFilter: 'blur(10px)' }}>{text}</div>
 		</div>
 	);
@@ -206,10 +206,10 @@ export const UpgradedAsyncFlow: React.FC = () => {
 	const { fps } = useVideoConfig();
 	return (
 		<AbsoluteFill style={{ background: GRADIENTS.bg }}>
-			<Sequence from={0} durationInFrames={fps*3}>
+			<Sequence from={0} durationInFrames={fps*3} layout="none">
 				<TitleCard title="The Durable Architecture" />
 			</Sequence>
-			<Sequence from={fps*3} durationInFrames={fps*28}>
+			<Sequence from={fps*3} durationInFrames={fps*28} layout="none">
 				<UpgradedAsyncFlowSlide />
 			</Sequence>
 		</AbsoluteFill>

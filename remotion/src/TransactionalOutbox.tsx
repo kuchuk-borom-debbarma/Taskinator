@@ -1,11 +1,11 @@
 import React from 'react';
-import { AbsoluteFill, Sequence, useVideoConfig, useCurrentFrame, spring, interpolate, interpolateColors } from 'remotion';
+import { AbsoluteFill, Sequence, useVideoConfig, useCurrentFrame, spring, interpolate, interpolateColors, Easing } from 'remotion';
 import { COLORS, GRADIENTS } from './components/Nodes';
 import { TitleCard } from './components/TitleCard';
 
 const SP = (f: number, d: number, fps: number) => spring({ frame: f - d, fps, config: { damping: 16, stiffness: 80 } });
 const F  = (s: number) => 30 * s; 
-const tx = (s: number) => `translateY(${interpolate(s,[0,1],[-20,0])}px)`;
+const tx = (s: number) => `translateY(${interpolate(s, [0, 1], [-20, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.bezier(0.16, 1, 0.3, 1) })}px)`;
 
 /* ── Shell ── */
 const Shell: React.FC<{ children: React.ReactNode }> = ({ children }) => (
@@ -23,7 +23,7 @@ const SNode: React.FC<{ icon:string; label:string; sub?:string; color:string; to
 	const f = useCurrentFrame(); const { fps } = useVideoConfig();
 	const s = SP(f, delay, fps);
 	return (
-		<div style={{ position:'absolute', top, left, width:w, opacity:s, transform:`scale(${s}) translateY(${interpolate(s,[0,1],[10,0])}px)`, background:'rgba(15,23,42,0.95)', border:`2px solid ${color}66`, borderRadius:20, padding:'18px 20px', textAlign:'center', boxShadow: glow ? `0 0 40px ${color}22` : '0 15px 40px rgba(0,0,0,0.6)', zIndex:20 }}>
+		<div style={{ position:'absolute', top, left, width:w, opacity:s, transform:`scale(${s}) translateY(${interpolate(s, [0, 1], [10, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.bezier(0.16, 1, 0.3, 1) })}px)`, background:'rgba(15,23,42,0.95)', border:`2px solid ${color}66`, borderRadius:20, padding:'18px 20px', textAlign:'center', boxShadow: glow ? `0 0 40px ${color}22` : '0 15px 40px rgba(0,0,0,0.6)', zIndex:20 }}>
 			<div style={{ fontSize:32 }}>{icon}</div>
 			<div style={{ fontSize:13, fontWeight:900, color, letterSpacing:'2px', textTransform:'uppercase', fontFamily:'Inter', marginTop:8 }}>{label}</div>
 			{sub && <div style={{ fontSize:10, color:COLORS.muted, fontFamily:'Inter', marginTop:4, fontWeight:600, opacity:0.8 }}>{sub}</div>}
@@ -75,14 +75,14 @@ const Arrow: React.FC<{ x1:number; y1:number; x2:number; y2:number; color:string
 const StatusChip: React.FC<{ text:string; color:string; top:number; left:number; delay:number }> = ({ text,color,top,left,delay }) => {
 	const f = useCurrentFrame(); const { fps } = useVideoConfig();
 	const s = SP(f, delay, fps);
-	return <div style={{ position:'absolute', top, left, opacity:s, transform: `scale(${s}) translateY(${interpolate(s,[0,1],[10,0])}px)`, background:`${color}25`, border:`2px solid ${color}`, borderRadius:12, padding:'10px 20px', fontSize:13, fontWeight:900, color, fontFamily:'Inter', whiteSpace:'nowrap', zIndex:30, backdropFilter:'blur(15px)', boxShadow:`0 10px 40px ${color}44` }}>{text}</div>;
+	return <div style={{ position:'absolute', top, left, opacity:s, transform: `scale(${s}) translateY(${interpolate(s, [0, 1], [10, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.bezier(0.16, 1, 0.3, 1) })}px)`, background:`${color}25`, border:`2px solid ${color}`, borderRadius:12, padding:'10px 20px', fontSize:13, fontWeight:900, color, fontFamily:'Inter', whiteSpace:'nowrap', zIndex:30, backdropFilter:'blur(15px)', boxShadow:`0 10px 40px ${color}44` }}>{text}</div>;
 };
 
 const Ban: React.FC<{ text:string; color:string; delay:number }> = ({ text,color,delay }) => {
 	const f = useCurrentFrame(); const { fps } = useVideoConfig();
 	const s = SP(f, delay, fps);
 	return (
-		<div style={{ position:'absolute', bottom:40, left:60, right:60, opacity:s, transform:`translateY(${interpolate(s,[0,1],[20,0])}px)`, display:'flex', justifyContent:'center', zIndex:40 }}>
+		<div style={{ position:'absolute', bottom:40, left:60, right:60, opacity:s, transform:`translateY(${interpolate(s, [0, 1], [20, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.bezier(0.175, 0.885, 0.32, 1.275) })}px)`, display:'flex', justifyContent:'center', zIndex:40 }}>
 			<div style={{ background:`${color}15`, border:`2px solid ${color}`, borderRadius:20, padding:'14px 48px', fontSize:16, fontWeight:900, color, fontFamily:'Inter', boxShadow:`0 0 50px ${color}33`, backdropFilter:'blur(20px)' }}>{text}</div>
 		</div>
 	);
@@ -399,22 +399,22 @@ export const TransactionalOutbox: React.FC = () => {
 	const { fps } = useVideoConfig();
 	return (
 		<AbsoluteFill style={{ background: GRADIENTS.bg }}>
-			<Sequence from={0} durationInFrames={fps*3}>
+			<Sequence from={0} durationInFrames={fps*3} layout="none">
 				<TitleCard title="The Transactional Outbox Pattern" />
 			</Sequence>
-			<Sequence from={fps*3} durationInFrames={fps*12}>
+			<Sequence from={fps*3} durationInFrames={fps*12} layout="none">
 				<ProblemSlide />
 			</Sequence>
-			<Sequence from={fps*15} durationInFrames={fps*16}>
+			<Sequence from={fps*15} durationInFrames={fps*16} layout="none">
 				<SolutionIntroSlide />
 			</Sequence>
-			<Sequence from={fps*31} durationInFrames={fps*19}>
+			<Sequence from={fps*31} durationInFrames={fps*19} layout="none">
 				<RelaySlide />
 			</Sequence>
-			<Sequence from={fps*50} durationInFrames={fps*20}>
+			<Sequence from={fps*50} durationInFrames={fps*20} layout="none">
 				<DuplicateProblemSlide />
 			</Sequence>
-			<Sequence from={fps*70} durationInFrames={fps*24}>
+			<Sequence from={fps*70} durationInFrames={fps*24} layout="none">
 				<IdempotencySlide />
 			</Sequence>
 		</AbsoluteFill>

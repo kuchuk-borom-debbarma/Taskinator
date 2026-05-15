@@ -1,5 +1,5 @@
 import React from 'react';
-import { spring, useCurrentFrame, useVideoConfig, interpolate, AbsoluteFill } from 'remotion';
+import { spring, useCurrentFrame, useVideoConfig } from 'remotion';
 
 const COLORS = {
 	project: '#4F46E5',

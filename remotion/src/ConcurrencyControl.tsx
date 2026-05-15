@@ -1,5 +1,5 @@
 import React from 'react';
-import { AbsoluteFill, Sequence, useVideoConfig, useCurrentFrame, spring, interpolate, interpolateColors } from 'remotion';
+import { AbsoluteFill, Sequence, useVideoConfig, useCurrentFrame, spring, interpolate, Easing } from 'remotion';
 import { COLORS, GRADIENTS } from './components/Nodes';
 import { TitleCard } from './components/TitleCard';
 
@@ -22,7 +22,7 @@ const SNode: React.FC<{ icon:string; label:string; sub?:string; color:string; to
 	const f = useCurrentFrame(); const { fps } = useVideoConfig();
 	const s = SP(f, delay, fps);
 	return (
-		<div style={{ position:'absolute', top, left, width:w, opacity:s, transform:`scale(${s}) translateY(${interpolate(s,[0,1],[10,0])}px)`, background:'rgba(15,23,42,0.95)', border:`2px solid ${color}66`, borderRadius:20, padding:'18px 20px', textAlign:'center', boxShadow: glow ? `0 0 40px ${color}22` : '0 15px 40px rgba(0,0,0,0.6)', zIndex:20 }}>
+		<div style={{ position:'absolute', top, left, width:w, opacity:s, transform:`scale(${s}) translateY(${interpolate(s, [0, 1], [10, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.bezier(0.16, 1, 0.3, 1) })}px)`, background:'rgba(15,23,42,0.95)', border:`2px solid ${color}66`, borderRadius:20, padding:'18px 20px', textAlign:'center', boxShadow: glow ? `0 0 40px ${color}22` : '0 15px 40px rgba(0,0,0,0.6)', zIndex:20 }}>
 			<div style={{ fontSize:32 }}>{icon}</div>
 			<div style={{ fontSize:13, fontWeight:900, color, letterSpacing:'2px', textTransform:'uppercase', fontFamily:'Inter', marginTop:8 }}>{label}</div>
 			{sub && <div style={{ fontSize:10, color:COLORS.muted, fontFamily:'Inter', marginTop:4, fontWeight:600, opacity:0.8 }}>{sub}</div>}
@@ -39,7 +39,7 @@ const Arrow: React.FC<{ x1:number; y1:number; x2:number; y2:number; color:string
 	
 	const lx = x1 + (x2 - x1) * labelPos;
 	const ly = y1 + (y2 - y1) * labelPos;
-	const angle = Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI;
+	// const angle = Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI;
 
 	return (
 		<>
@@ -93,7 +93,7 @@ const Ban: React.FC<{ text:string; color:string; delay:number }> = ({ text,color
 	const f = useCurrentFrame(); const { fps } = useVideoConfig();
 	const s = SP(f, delay, fps);
 	return (
-		<div style={{ position:'absolute', bottom:40, left:0, right:0, display:'flex', justifyContent:'center', opacity:s, transform:`translateY(${interpolate(s,[0,1],[20,0])}px)`, zIndex:40 }}>
+		<div style={{ position:'absolute', bottom:40, left:0, right:0, display:'flex', justifyContent:'center', opacity:s, transform:`translateY(${interpolate(s, [0, 1], [20, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.bezier(0.175, 0.885, 0.32, 1.275) })}px)`, zIndex:40 }}>
 			<div style={{ background:`${color}1a`, border:`2px solid ${color}`, borderRadius:12, padding:'12px 30px', fontSize:14, fontWeight:800, color, fontFamily:'Inter', boxShadow:`0 0 40px ${color}33`, backdropFilter:'blur(10px)' }}>
 				{text}
 			</div>
@@ -257,13 +257,13 @@ export const ConcurrencyControl: React.FC = () => {
 	const { fps } = useVideoConfig();
 	return (
 		<AbsoluteFill style={{ background: GRADIENTS.bg }}>
-			<Sequence from={0} durationInFrames={fps*2}>
+			<Sequence from={0} durationInFrames={fps*2} layout="none">
 				<TitleCard title="Concurrency Control" />
 			</Sequence>
-			<Sequence from={fps*2} durationInFrames={fps*25}>
+			<Sequence from={fps*2} durationInFrames={fps*25} layout="none">
 				<LostUpdateSlide />
 			</Sequence>
-			<Sequence from={fps*27} durationInFrames={fps*25}>
+			<Sequence from={fps*27} durationInFrames={fps*25} layout="none">
 				<ProtectedFlowSlide />
 			</Sequence>
 		</AbsoluteFill>

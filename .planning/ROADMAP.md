@@ -1,9 +1,9 @@
 # Roadmap - Milestone v3.0: Remotion Overhaul & Autopilot Showcase
 
 ## Phase 15: Refactoring Baseline
-- [ ] **REFACTOR-01**: Refactor `FeatureShowcase` to use Remotion interpolation/springs instead of CSS animations.
-- [ ] **REFACTOR-02**: Refactor `SchemaDesign` and its 6 sub-scenes (`QueryProblem`, `ClosureTableSolution`, etc.) to use proper easing and sequencing.
-- [ ] **REFACTOR-03**: Refactor `SyncArchitecture` (including `BlockingProblem` and `AsyncSolution`) using best practice hooks.
+- [x] **REFACTOR-01**: Refactor `FeatureShowcase` to use Remotion interpolation/springs instead of CSS animations.
+- [x] **REFACTOR-02**: Refactor `SchemaDesign` and its 6 sub-scenes (`QueryProblem`, `ClosureTableSolution`, etc.) to use proper easing and sequencing.
+- [x] **REFACTOR-03**: Refactor `SyncArchitecture` (including `BlockingProblem` and `AsyncSolution`) using best practice hooks.
 
 ### Success Criteria
 1. `FeatureShowcase` renders cleanly via `npx remotion still` without console warning logs regarding CSS animations.
@@ -13,9 +13,9 @@
 ---
 
 ## Phase 16: Refactoring Scale
-- [ ] **REFACTOR-04**: Refactor `AsyncProblems` (Dual-Write & Lost Event) with correct Remotion lifecycle animations.
-- [ ] **REFACTOR-05**: Refactor `TransactionalOutbox` and `UpgradedAsyncFlow` with clean timeline layouts.
-- [ ] **REFACTOR-06**: Refactor `ConcurrencyControl` with robust spring-based node animations.
+- [x] **REFACTOR-04**: Refactor `AsyncProblems` (Dual-Write & Lost Event) with correct Remotion lifecycle animations.
+- [x] **REFACTOR-05**: Refactor `TransactionalOutbox` and `UpgradedAsyncFlow` with clean timeline layouts.
+- [x] **REFACTOR-06**: Refactor `ConcurrencyControl` with robust spring-based node animations.
 
 ### Success Criteria
 1. Outbox relay dispatch animations use `Easing` interpolations.
