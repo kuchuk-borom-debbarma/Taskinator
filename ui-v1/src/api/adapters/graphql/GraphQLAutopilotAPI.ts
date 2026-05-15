@@ -1,4 +1,10 @@
-import type { AutopilotAPI, AutopilotPage, AutopilotPaginationArgs } from '../../interfaces/AutopilotAPI';
+import type {
+  AutopilotAPI,
+  AutopilotPage,
+  AutopilotPaginationArgs,
+  CreateAutopilotInput,
+  AutopilotItem,
+} from '../../interfaces/AutopilotAPI';
 import { AuthenticationError } from '../../errors';
 import { CONFIG } from '../../../config';
 
@@ -124,4 +130,57 @@ export class GraphQLAutopilotAPI implements AutopilotAPI {
       },
     };
   }
+
+  async createAutopilot(input: CreateAutopilotInput): Promise<AutopilotItem> {
+    const data = await this.query<any>(
+      gql`
+        mutation CreateAutopilot($input: CreateAutopilotInput!) {
+          createAutopilot(input: $input) {
+            id
+            fk_project_id
+            triggers
+            isActive
+            conditions
+            createdAt
+            version
+            actions {
+              id
+              type
+              config
+              position
+            }
+          }
+        }
+      `,
+      { input }
+    );
+    return data.createAutopilot;
+  }
+
+  async toggleAutopilot(id: string, isActive: boolean): Promise<AutopilotItem> {
+    const data = await this.query<any>(
+      gql`
+        mutation ToggleAutopilot($id: ID!, $isActive: Boolean!) {
+          toggleAutopilot(id: $id, isActive: $isActive) {
+            id
+            fk_project_id
+            triggers
+            isActive
+            conditions
+            createdAt
+            version
+            actions {
+              id
+              type
+              config
+              position
+            }
+          }
+        }
+      `,
+      { id, isActive }
+    );
+    return data.toggleAutopilot;
+  }
 }
+

@@ -108,3 +108,36 @@ extend type Query {
         before: String
     ): AutopilotConnection!
 }
+
+"""
+Input for an individual autopilot action.
+"""
+input AutopilotActionInput {
+    type: String!
+    config: ConditionTree!
+    position: Int!
+}
+
+"""
+Input structure to create a new autopilot rule.
+"""
+input CreateAutopilotInput {
+    projectId: ID!
+    triggers: [String!]!
+    conditions: ConditionTree!
+    actions: [AutopilotActionInput!]!
+}
+
+extend type Mutation {
+    """
+    Creates an autopilot and its associated action pipeline.
+    Requires user authentication.
+    """
+    createAutopilot(input: CreateAutopilotInput!): Autopilot!
+
+    """
+    Activates or deactivates an autopilot rule.
+    Requires user authentication.
+    """
+    toggleAutopilot(id: ID!, isActive: Boolean!): Autopilot!
+}

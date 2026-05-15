@@ -46,9 +46,25 @@ export interface AutopilotPaginationArgs {
   before?: string;
 }
 
+export interface CreateAutopilotInput {
+  projectId: string;
+  triggers: string[];
+  conditions: AutopilotConditionNode;
+  actions: {
+    type: string;
+    config: Record<string, any>;
+    position: number;
+  }[];
+}
+
 export interface AutopilotAPI {
   getProjectAutopilots(
     projectId: string,
     pagination?: AutopilotPaginationArgs
   ): Promise<AutopilotPage>;
+
+  createAutopilot(input: CreateAutopilotInput): Promise<AutopilotItem>;
+
+  toggleAutopilot(id: string, isActive: boolean): Promise<AutopilotItem>;
 }
+

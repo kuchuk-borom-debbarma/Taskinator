@@ -108,4 +108,26 @@ export class AutopilotQueryService {
 
         return { autopilots, totalCount, nextCursor, prevCursor };
     }
+
+    async getAutopilotById(id: string): Promise<AutopilotWithActions | null> {
+        const autopilot = await this.db
+            .selectFrom('autopilot')
+            .selectAll()
+            .where('id', '=', id)
+            .executeTakeFirst();
+
+        if (!autopilot) return null;
+
+        const actions = await this.db
+            .selectFrom('autopilot_action')
+            .selectAll()
+            .where('fk_autopilot_id', '=', id)
+            .orderBy('position', 'asc')
+            .execute();
+
+        return {
+            ...autopilot,
+            actions,
+        };
+    }
 }
