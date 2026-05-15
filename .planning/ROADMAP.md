@@ -38,9 +38,9 @@
 ---
 
 ## Phase 18: Autopilot UI Visuals
-- [ ] **AUTOUI-01**: Create composition `VisualConditionBuilder` showing React XYFlow node serialization into logical JSON trees.
-- [ ] **AUTOUI-02**: Create composition `ActionPipelineEditor` visualizing drag-and-drop sequential steps and zero-latency optimistic UI toggles.
-- [ ] **AUTOUI-03**: Create composition `DynamicConfig` showcasing overlay config forms and smart fallback selectors.
+- [x] **AUTOUI-01**: Create composition `VisualConditionBuilder` showing React XYFlow node serialization into logical JSON trees.
+- [x] **AUTOUI-02**: Create composition `ActionPipelineEditor` visualizing drag-and-drop sequential steps and zero-latency optimistic UI toggles.
+- [x] **AUTOUI-03**: Create composition `DynamicConfig` showcasing overlay config forms and smart fallback selectors.
 
 ### Success Criteria
 1. XYFlow serialization renders animated nodes converting to compact JSON trees.

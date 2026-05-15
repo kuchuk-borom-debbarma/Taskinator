@@ -16,6 +16,9 @@ import { AutopilotOverview } from "./AutopilotOverview";
 import { ConditionEvaluator } from "./ConditionEvaluator";
 import { ActionChain } from "./ActionChain";
 import { LoopDetector } from "./LoopDetector";
+import { VisualConditionBuilder } from "./VisualConditionBuilder";
+import { ActionPipelineEditor } from "./ActionPipelineEditor";
+import { DynamicConfig } from "./DynamicConfig";
 
 export const RemotionRoot: React.FC = () => {
   return (
@@ -136,6 +139,30 @@ export const RemotionRoot: React.FC = () => {
         id="LoopDetector"
         component={LoopDetector}
         durationInFrames={900}
+        fps={30}
+        width={1280}
+        height={720}
+      />
+      <Composition
+        id="VisualConditionBuilder"
+        component={VisualConditionBuilder}
+        durationInFrames={900}
+        fps={30}
+        width={1280}
+        height={720}
+      />
+      <Composition
+        id="ActionPipelineEditor"
+        component={ActionPipelineEditor}
+        durationInFrames={900}
+        fps={30}
+        width={1280}
+        height={720}
+      />
+      <Composition
+        id="DynamicConfig"
+        component={DynamicConfig}
+        durationInFrames={600}
         fps={30}
         width={1280}
         height={720}
