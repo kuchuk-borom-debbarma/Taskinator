@@ -19,10 +19,8 @@ When a root task with thousands of sub-tasks is deleted:
 - A consumer catches this, finds the immediate children, deletes them in a batch, and fires new `task.parent.deleted` events for each child.
 - This "bubbles down" the tree level-by-level until the entire hierarchy is purged.
 
-### 2. Trigger Engine (Automations)
-The **Task Trigger Engine** reacts to status changes via events:
-- **Parent-Guard Trigger**: When a child task is marked "DONE", an event is fired. The trigger listener checks if all other siblings are "DONE". If they are, it automatically advances the parent task status.
-- **Safety Net**: Every event carries a `userId`. If the `userId` is `SYSTEM`, listeners typically ignore it to prevent infinite recursive loops.
+### 2. Status Cascades
+Some operations require a cascading effect that traverses the task hierarchy (e.g. updating parent stats based on child progress). These are handled asynchronously via domain event listeners.
 
 ## 🛠 Reliability Guarantees
 

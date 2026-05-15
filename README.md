@@ -7,7 +7,6 @@ Taskinator-v2 is a state-of-the-art workflow engine designed for massive task hi
 ## 🚀 Key Capabilities
 
 - **Infinite Task Nesting**: Break down complex projects into deeply nested sub-tasks using performance-optimized Materialized Paths.
-- **Event-Driven Automation**: A robust trigger engine that enforces workflow integrity (e.g., Parent-Guard triggers) asynchronously.
 - **Real-Time Synchronization**: Instant UI updates across the cluster powered by targeted Redis/Kafka routing and GraphQL Subscriptions (SSE).
 - **Enterprise Reliability**: Atomic operations via Transactional Outbox patterns and wCTEs to ensure zero event loss.
 
