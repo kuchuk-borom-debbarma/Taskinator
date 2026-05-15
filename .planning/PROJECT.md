@@ -1,64 +1,55 @@
-# Taskinator — Backend Rules Engine
+# Taskinator — Project Autopilot System
 
 ## What This Is
 
-Taskinator is a high-performance orchestration engine. Previously (Milestone v1.0), this project focused on building an Architecture Video using Remotion. Starting from Milestone v1.1, the project has pivoted to building the actual backend implementation in the Spring Boot Workspace service. The current focus is on building an Event-Driven Rules/Trigger Engine and refactoring the Server-Sent Events (SSE) system.
+A high-performance, data-driven automation engine for the Taskinator-v2 workflow platform. It enables projects to self-manage by executing complex, multi-step actions in response to domain events without manual intervention.
 
 ## Core Value
 
-A lightning-fast, highly scalable asynchronous automation engine that allows users to define custom triggers without impacting the core API latency (10k RPS target).
-
-## Current Milestone: v1.1 Event-Driven Rules Engine & SSE Refactor
-
-**Goal:** Build a high-performance asynchronous trigger system for the Taskinator backend and refactor the existing Real-Time SSE architecture for better maintainability and developer experience.
-
-**Target features:**
-- Task Domain Bootstrapping
-- Core Rules Engine (Triggers on Tasks, Projects, Teams, Members)
-- Async Execution & Chaining via Kafka
-- SSE System Refactoring
+Automate the "busy work" of project management through reliable, transparent, and high-speed execution chains.
 
 ## Requirements
 
 ### Validated
 
-*From Milestone v1.0 (Architecture Video in `remotion/src/`):*
-- ✓ Feature showcase, Schema design, N+1 query problem, Denormalization solution
-- ✓ Closure table solution, Synchronous baseline flows, Thread blocking problem
-- ✓ Async intro + flows, Transactional Outbox pattern, Upgraded async flow
-- ✓ Concurrency & optimistic locking, Smart event aggregation
-- ✓ Chunked background deletion, Real-time SSE composition, Final architecture
+<!-- Inferred from existing brownfield codebase -->
+- ✓ [Core Domain Service Pattern] — established in `src/modules`
+- ✓ [Transactional Outbox Pattern] — implemented in `src/utils/event-bus`
+- ✓ [Materialized Path Hierarchy] — implemented in `src/modules/task`
+- ✓ [Kafka Event Bus] — initialized in `src/kafka`
 
 ### Active
 
-- [ ] Task Domain: Establish foundational Task entity models
-- [ ] Triggers API: Endpoints to define Event + Condition + Action triggers
-- [ ] Async Executor: Consume Kafka events and execute matching triggers
-- [ ] Chaining: Support triggers that produce events which trigger other rules
-- [ ] SSE Refactor: Clean up and simplify the Real-Time SSE push mechanism
+- [ ] [Autopilot Core Engine] — Generic, data-driven execution framework.
+- [ ] [Context-Aware Condition Evaluator] — Live-DB evaluation with Boolean logic (AND/OR/NOT).
+- [ ] [Ordered Action Chaining] — Linked-list execution model with "fail-fast" atomicity.
+- [ ] [Loop Detection] — TraceID + Mutation-Hash based infinite cycle prevention.
+- [ ] [Audit Logging] — Real-time execution logs for UI visibility.
 
-## Current State
+### Out of Scope
 
-**v1.1 Started**: Pivoting from Remotion video to the Spring Boot `workspace` backend service.
+- [Cron-based Triggers] — V1 focus is purely reactive/event-driven.
+- [Cross-Project Triggers] — Initial version is scoped to events within a single project.
+- [Visual Builder] — UI for defining autopilots will be handled in a later milestone; V1 is data-driven (DB configuration).
 
 ## Context
 
-The backend service `Workspace Service` uses Spring Boot 4.0.2, Kotlin, Exposed ORM, and PostgreSQL. It handles Projects and Teams using a Closure Table for deep hierarchies and Optimistic Locking (version column) for concurrency.
-The existing 10k RPS optimizations (e.g. outbox pattern, async execution) must be respected.
+Taskinator-v2 is a high-throughput modular monolith (10k RPS target). The Autopilot system must be non-blocking and horizontally scalable. It leverages Kafka for event distribution and PostgreSQL for persistent state and audit logs.
 
 ## Constraints
 
-- **Tech stack**: Spring Boot, Kotlin, Exposed ORM, PostgreSQL, Kafka.
-- **Performance**: Must not impact the synchronous API endpoints. Triggers must execute asynchronously.
-- **Scalability**: Must support parallel execution and handle heavy triggers without bottlenecking.
+- **Performance**: Autopilot evaluation must not introduce significant lag into the event processing pipeline.
+- **Reliability**: Action chains must be atomic at the autopilot level; failure at step N must halt step N+1.
+- **Safety**: Infinite loops must be detected and terminated before they impact system stability.
+- **Data-Driven**: Autopilot definitions must be stored in the database, allowing for dynamic updates without code deployment.
 
 ## Key Decisions
 
 | Decision | Rationale | Outcome |
-|---|---|---|
-| Pivot to Backend | The architecture video is complete; it's time to build the real system. | Active |
-| Async Triggers via Kafka | Synchronous triggers would violate the 10k RPS latency target. | Active |
-| Real-Time SSE for UI | To ensure the frontend stays updated when background triggers mutate state. | Active |
+|----------|-----------|---------|
+| Action Chain Model | Ensures predictable execution order and atomicity. | — Pending |
+| Live-Context Evaluation | Prevents logic execution on stale snapshots; ensures data integrity. | — Pending |
+| TraceID + Hash Loop Detection | Allows for complex task evolution while blocking redundant infinite cycles. | — Pending |
 
 ## Evolution
 
@@ -78,4 +69,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-14*
+*Last updated: 2026-05-15 after initialization*

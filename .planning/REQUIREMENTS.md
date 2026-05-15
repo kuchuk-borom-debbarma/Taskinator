@@ -1,33 +1,61 @@
-# Milestone v1.1 Requirements
+# Requirements: Taskinator Autopilot System
 
-## Task Domain Bootstrapping (TASK)
-- [ ] **TASK-01**: Establish foundational Task entity with required fields (ID, title, status, project_id, parent_id, optimistic_lock_version).
-- [ ] **TASK-02**: Implement standard repository with Optimistic Locking support.
-- [ ] **TASK-03**: Expose basic GraphQL mutations for Task creation and status updates.
+**Defined:** 2026-05-15
+**Core Value:** Automate the "busy work" of project management through reliable, transparent, and high-speed execution chains.
 
-## Rules Engine Core (RULE)
-- [ ] **RULE-01**: Create Trigger configuration entity linking an Event (e.g. `Task.Completed`), Condition, and Action.
-- [ ] **RULE-02**: Support trigger scoping (Project-level or Team-level only, no global triggers).
-- [ ] **RULE-03**: Implement condition evaluator service (e.g. checking if parent is blocked).
-- [ ] **RULE-04**: Implement action executor service (e.g. modifying related entities).
+## v1 Requirements
 
-## Async Execution (EXEC)
-- [ ] **EXEC-01**: Publish primary domain events (e.g. `TaskCreated`, `TaskUpdated`) to Kafka using the existing Outbox pattern.
-- [ ] **EXEC-02**: Consume events in a background executor pool that triggers the Rules Engine.
-- [ ] **EXEC-03**: Support Trigger Chaining — allow triggers to mutate data, producing new events, with safety limits against infinite loops.
-- [ ] **EXEC-04**: Ensure all trigger execution is non-blocking to the main API threads.
+### Core Engine
+- [ ] **AUTO-01**: Autopilot definitions can be stored in the database (Trigger, Condition Tree, Action Chain).
+- [ ] **AUTO-02**: The engine can listen for all domain events within a project via Kafka.
+- [ ] **AUTO-03**: The engine can retrieve "Live Context" (fresh state) from the DB for condition evaluation.
+- [ ] **AUTO-04**: The engine supports Boolean logic (AND, OR, NOT) in condition trees.
 
-## Real-Time SSE Refactoring (SSE)
-- [ ] **SSE-01**: Refactor existing Redis pub/sub mechanism into a cleaner, highly modular, readable, and refactorable internal component.
-- [ ] **SSE-02**: Ensure background triggered updates correctly stream back to subscribed GraphQL WebSocket/SSE clients.
-- [ ] **SSE-03**: Add clear developer telemetry/logging to easily track events from API → Kafka → Trigger → SSE UI.
+### Action Chaining
+- [ ] **EXEC-01**: Actions are executed as an ordered sequence (Linked List).
+- [ ] **EXEC-02**: If any action in a chain fails, the subsequent actions are aborted (Fail-Fast).
+- [ ] **EXEC-03**: The engine supports task-level actions (Update Status, Assign Member).
+
+### Safety & Observability
+- [ ] **SAFE-01**: The system detects and breaks infinite loops using TraceID and Mutation Hashing.
+- [ ] **AUDT-01**: Every autopilot execution is logged to a persistent audit table.
+- [ ] **AUDT-02**: Autopilot logs are pushed to the UI in real-time via SSE.
+
+## v2 Requirements
+
+### Advanced Logic
+- **ADV-01**: Support for Team and Project-level conditions/actions.
+- **ADV-02**: Support for external webhooks as actions.
+- **ADV-03**: Cross-project autopilot triggers.
 
 ## Out of Scope
-- A visual frontend UI for configuring these triggers (this milestone focuses on the backend engine and APIs).
-- Cross-microservice triggers (only Workspace service entities for now).
+
+| Feature | Reason |
+|---------|--------|
+| Visual Rule Builder | Complexity deferred to later milestone; V1 is data-driven. |
+| Time-based Triggers | V1 focus is purely reactive/event-driven. |
+| Manual Override | Initial version assumes autopilot logic is authoritative once triggered. |
 
 ## Traceability
-- **Phase 1:** TASK-01, TASK-02, TASK-03
-- **Phase 2:** SSE-01, SSE-03
-- **Phase 3:** RULE-01, RULE-02, RULE-03, RULE-04
-- **Phase 4:** EXEC-01, EXEC-02, EXEC-03, EXEC-04, SSE-02
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| AUTO-01 | Phase 1 | Pending |
+| AUTO-02 | Phase 1 | Pending |
+| AUTO-03 | Phase 1 | Pending |
+| AUTO-04 | Phase 1 | Pending |
+| EXEC-01 | Phase 2 | Pending |
+| EXEC-02 | Phase 2 | Pending |
+| EXEC-03 | Phase 2 | Pending |
+| SAFE-01 | Phase 3 | Pending |
+| AUDT-01 | Phase 3 | Pending |
+| AUDT-02 | Phase 3 | Pending |
+
+**Coverage:**
+- v1 requirements: 10 total
+- Mapped to phases: 10
+- Unmapped: 0 ✓
+
+---
+*Requirements defined: 2026-05-15*
+*Last updated: 2026-05-15 after initialization*

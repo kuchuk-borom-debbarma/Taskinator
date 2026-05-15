@@ -1,35 +1,26 @@
-# Milestone v1.1 Roadmap
+# Milestone v1.2: Project Autopilot System
 
-## Phase 1: Task Domain Bootstrapping
-**Goal:** Establish foundational Task entities and baseline CRUD operations.
-**Requirements:** TASK-01, TASK-02, TASK-03
+## Phase 1: Core Foundation & Condition Engine
+**Goal:** Build the generic data model and the live-context condition evaluator.
 **Success Criteria:**
-1. Task entity exists in the database with `project_id`, `parent_id`, and `optimistic_lock_version`.
-2. GraphQL API allows creating a Task and updating its status.
-3. Concurrent updates to the same Task result in an OptimisticLockException.
+1. Autopilot and Condition schemas are implemented in the database.
+2. The `ConditionEvaluator` can resolve complex trees (AND/OR/NOT) against fresh DB state.
+3. Tests verify that mismatched conditions correctly block autopilot execution.
 
-## Phase 2: SSE Architecture Refactoring
-**Goal:** Overhaul the existing SSE mechanism into a highly modular, readable internal component before connecting complex triggers.
-**Requirements:** SSE-01, SSE-03
+## Phase 2: Action Chaining & Async Execution
+**Goal:** Implement the sequential action engine and connect it to the Kafka event bus.
 **Success Criteria:**
-1. The Redis pub/sub mechanism is encapsulated in a dedicated, isolated module with clean interfaces.
-2. Developer telemetry logs clearly trace when a message is published and consumed by the SSE stream.
-3. The existing SSE features (from v1.0) continue to work seamlessly through the new refactored component.
+1. Action Chain runner executes linked actions in strict sequence.
+2. The "Fail-Fast" policy correctly halts execution upon any step failure.
+3. Task mutations (Status, Assignment) are successfully triggered by incoming domain events.
 
-## Phase 3: Rules Engine Core
-**Goal:** Implement the core Trigger entities, conditions, and actions framework.
-**Requirements:** RULE-01, RULE-02, RULE-03, RULE-04
+## Phase 3: Loop Detection & Real-time Audit
+**Goal:** Implement safety mechanisms and UI observability.
 **Success Criteria:**
-1. Triggers can be created and stored in the database, scoped to Projects or Teams.
-2. The condition evaluator can correctly parse a condition (e.g. "parent task is blocked") and return true/false.
-3. The action executor can successfully execute an action (e.g. "update status to ready") when invoked directly in tests.
+1. TraceID + Mutation Hash correctly detects and breaks infinite loops in stress tests.
+2. All executions are recorded in the persistent `autopilot_audit_log`.
+3. Audit logs are pushed to the SSE stream and visible to the client in real-time.
 
-## Phase 4: Async Execution & Integration
-**Goal:** Wire up the rules engine to the Kafka event bus, enabling async execution, chaining, and streaming to SSE.
-**Requirements:** EXEC-01, EXEC-02, EXEC-03, EXEC-04, SSE-02
-**Success Criteria:**
-1. `TaskUpdated` events are published to Kafka via the Outbox pattern.
-2. The background executor pool consumes the event and correctly triggers the Rules Engine without blocking the main API thread.
-3. Chained triggers safely produce new events (e.g., updating a parent task produces another `TaskUpdated` event).
-4. Safety limits correctly catch and abort infinite loops in trigger chaining.
-5. All background mutations correctly push SSE updates to the frontend using the refactored SSE component.
+---
+*Roadmap defined: 2026-05-15*
+*Last updated: 2026-05-15 after initialization*
