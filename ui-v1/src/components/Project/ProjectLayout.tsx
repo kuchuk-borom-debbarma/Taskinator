@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Outlet, Link, useParams, useLocation, useNavigate } from '@tanstack/react-router';
-import { Layout, Users, Kanban, Loader2, PencilLine, Save, Trash2, X } from 'lucide-react';
+import { Layout, Users, Kanban, Loader2, PencilLine, Save, Trash2, X, Zap } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useApi } from '../../hooks/useApi';
 import { AppModal, TextAreaField, TextField } from '../shared/workspace';
@@ -55,6 +55,7 @@ export const ProjectLayout: React.FC = () => {
     { label: 'Tasks', icon: Kanban, to: '/projects/$projectId/tasks' as const },
     { label: 'Teams', icon: Users, to: '/projects/$projectId/teams' as const },
     { label: 'Members', icon: Users, to: '/projects/$projectId/members' as const },
+    { label: 'Autopilot', icon: Zap, to: '/projects/$projectId/autopilot' as const },
   ];
 
   return (
