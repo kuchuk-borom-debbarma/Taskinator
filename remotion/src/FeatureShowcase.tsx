@@ -1,6 +1,6 @@
 import React from 'react';
 import { AbsoluteFill, Sequence, useVideoConfig, spring, useCurrentFrame, interpolate, Easing } from 'remotion';
-import { ProjectNode, TeamNode, MemberNode, TaskNode, COLORS, GRADIENTS } from './components/Nodes';
+import { ProjectNode, TeamNode, MemberNode, TaskNode, AutopilotNode, COLORS, GRADIENTS } from './components/Nodes';
 import { DependencyLink } from './components/Link';
 import { TitleCard } from './components/TitleCard';
 import { TypographyIntro } from './components/TypographyIntro';
@@ -50,7 +50,8 @@ const ProgressIndicator: React.FC<{ segmentFrame: number; fps: number }> = ({ se
 		{ frame: fps * 4, text: "Assigning Members to Teams..." },
 		{ frame: fps * 5.5, text: "Creating New Tasks..." },
 		{ frame: fps * 8.5, text: "Assigning Tasks to Teams..." },
-		{ frame: fps * 11.5, text: "Creating Orchestration Links..." }
+		{ frame: fps * 11.5, text: "Creating Orchestration Links..." },
+		{ frame: fps * 15.0, text: "⚡ Activating Autopilot Engine..." }
 	];
 
 	// Find the current active step based on frame
@@ -100,7 +101,7 @@ export const FeatureShowcase: React.FC = () => {
 			</Sequence>
 
 			{/* Segment 3: The Hierarchical Cascade Flow */}
-			<Sequence from={fps * 7} durationInFrames={fps * 20} layout="none">
+			<Sequence from={fps * 7} durationInFrames={fps * 25} layout="none">
 				<AbsoluteFill style={{ padding: '20px' }}>
 					<div style={{
 						flex: 1,
@@ -151,9 +152,18 @@ export const FeatureShowcase: React.FC = () => {
 						<AnimatedItem component={<TaskNode label="Inventory" />} startPos={{x: centerX - 300, y: 170}} endPos={{x: centerX - 480, y: 430}} showAt={fps * 5.5} moveAt={fps * 8.5} />
 						<AnimatedItem component={<TaskNode label="Prep" />}      startPos={{x: centerX - 150, y: 170}} endPos={{x: centerX - 90,  y: 430}} showAt={fps * 5.7} moveAt={fps * 8.6} />
 						<AnimatedItem component={<TaskNode label="Booking" />}   startPos={{x: centerX + 150, y: 170}} endPos={{x: centerX + 320, y: 430}} showAt={fps * 6.1} moveAt={fps * 8.8} />
-						{/* Row 2 tasks — y≈545 */}
-						<AnimatedItem component={<TaskNode label="Cooking" />}   startPos={{x: centerX,       y: 170}} endPos={{x: centerX - 90,  y: 545}} showAt={fps * 5.9} moveAt={fps * 8.7} />
-						<AnimatedItem component={<TaskNode label="Service" />}   startPos={{x: centerX + 300, y: 170}} endPos={{x: centerX + 320, y: 545}} showAt={fps * 6.3} moveAt={fps * 8.9} />
+						
+						{/* Success Spring for downstream Autopilot tasks */}
+						{(() => {
+							const successSpring = spring({ frame: segmentFrame - fps * 18.0, fps, config: { damping: 15 } });
+							return (
+								<>
+									{/* Row 2 tasks — y≈545 */}
+									<AnimatedItem component={<TaskNode label="Cooking" successProgress={successSpring} />}   startPos={{x: centerX,       y: 170}} endPos={{x: centerX - 90,  y: 545}} showAt={fps * 5.9} moveAt={fps * 8.7} />
+									<AnimatedItem component={<TaskNode label="Service" successProgress={successSpring} />}   startPos={{x: centerX + 300, y: 170}} endPos={{x: centerX + 320, y: 545}} showAt={fps * 6.3} moveAt={fps * 8.9} />
+								</>
+							);
+						})()}
 
 						{/* --- ORCHESTRATION LINKS — connect tasks across the bottom rows --- */}
 						<Sequence from={fps * 11.5} layout="none">
@@ -165,6 +175,25 @@ export const FeatureShowcase: React.FC = () => {
 							<DependencyLink from={{ x: centerX + 385, y: 453 }} to={{ x: centerX + 385, y: 545 }} label="Triggers" />
 							{/* Cooking → Service (row 2, horizontal) */}
 							<DependencyLink from={{ x: centerX + 50,  y: 567 }} to={{ x: centerX + 320, y: 567 }} label="Unlocks" />
+						</Sequence>
+
+						{/* --- AUTOPILOT INTEGRATION — materialize at center, pulse trigger downstream --- */}
+						<Sequence from={fps * 15.0} layout="none">
+							<div style={{ 
+								position: 'absolute', 
+								top: 325, 
+								left: centerX - 110,
+								zIndex: 40
+							}}>
+								<AutopilotNode />
+							</div>
+						</Sequence>
+
+						<Sequence from={fps * 16.5} layout="none">
+							{/* Pulse 1: Autopilot → Cooking */}
+							<DependencyLink from={{ x: centerX, y: 375 }} to={{ x: centerX - 25, y: 545 }} label="Trigger" />
+							{/* Pulse 2: Autopilot → Service */}
+							<DependencyLink from={{ x: centerX, y: 375 }} to={{ x: centerX + 385, y: 545 }} label="Trigger" />
 						</Sequence>
 					</div>
 				</AbsoluteFill>

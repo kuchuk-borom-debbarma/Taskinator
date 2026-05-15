@@ -25,9 +25,12 @@ Automate the "busy work" of project management through reliable, transparent, an
 - ✓ [Best Practice Refactoring] — Overhaul all video scripts using stateless Remotion hooks (v3.0).
 - ✓ [Autopilot Engine Visualization] — Compositions highlighting nested evaluations, fail-fast chains, and loop blockers (v3.0).
 - ✓ [Visual Dashboard Showcase] — Showcase high-fidelity admin dashboard UIs (v3.0).
+- ✓ [Feature Showcase Upgrade] — Integrate Autopilot Feature Segment into the hook composition (v4.0).
 
-- [ ] [Feature Showcase Upgrade] — Integrate Autopilot Feature Segment into the hook composition (v4.0).
+
+
 - [ ] [Multi-domain Triggers] — Evaluate events crossing project boundaries.
+
 - [ ] [Complex Predicates] — Evaluate conditions referencing recursive parent/child states.
 
 ### Out of Scope

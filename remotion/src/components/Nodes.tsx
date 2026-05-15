@@ -1,5 +1,5 @@
 import React from 'react';
-import { spring, useCurrentFrame, useVideoConfig } from 'remotion';
+import { spring, useCurrentFrame, useVideoConfig, interpolate, interpolateColors } from 'remotion';
 
 export const COLORS = {
 	bg: '#0b0f19', // Deep charcoal/navy
@@ -122,29 +122,79 @@ export const MemberNode: React.FC<{ name: string; color?: string }> = ({ name, c
 	);
 };
 
-export const TaskNode: React.FC<{ label: string }> = ({ label }) => {
+export const TaskNode: React.FC<{ label: string; successProgress?: number }> = ({ label, successProgress = 0 }) => {
 	const frame = useCurrentFrame();
 	const { fps } = useVideoConfig();
 	const scale = spring({ frame, fps, config: { damping: 14 } });
 
+	const bg = interpolateColors(successProgress, [0, 1], ['rgba(15, 23, 42, 0.8)', 'rgba(0, 230, 118, 0.25)']);
+	const border = interpolateColors(successProgress, [0, 1], ['rgba(255, 255, 255, 0.05)', COLORS.success]);
+	const boxShadow = successProgress > 0.1 
+		? `0 4px 20px rgba(0, 230, 118, ${successProgress * 0.4}), inset 0 0 15px rgba(0, 230, 118, ${successProgress * 0.15})`
+		: '0 4px 12px rgba(0, 0, 0, 0.5)';
+
 	return (
 		<div style={{ transform: `scale(${scale})`, display: 'flex', flexDirection: 'column', alignItems: 'center', zIndex: 10 }}>
 			<div style={{
-				background: 'rgba(15, 23, 42, 0.8)',
+				background: bg,
 				color: COLORS.ink,
 				padding: '8px 16px',
 				borderRadius: '6px',
 				fontSize: '14px',
 				fontWeight: '600',
-				boxShadow: '0 4px 12px rgba(0, 0, 0, 0.5)',
-				border: '1px solid rgba(255, 255, 255, 0.05)',
+				boxShadow,
+				border: `1px solid ${border}`,
 				borderLeft: `4px solid ${COLORS.accent3}`,
 				minWidth: '130px',
 				textAlign: 'center',
 				backdropFilter: 'blur(8px)',
-				fontFamily: 'Inter, system-ui, sans-serif'
+				fontFamily: 'Inter, system-ui, sans-serif',
+				transition: 'none'
 			}}>
 				{label}
+			</div>
+		</div>
+	);
+};
+
+export const AutopilotNode: React.FC = () => {
+	const frame = useCurrentFrame();
+	const { fps } = useVideoConfig();
+	
+	const scale = spring({ frame, fps, config: { damping: 12, stiffness: 120 } });
+	
+	// Infinite stateless repeating loop for rings
+	const loopDuration = 60;
+	const t = frame % loopDuration;
+	
+	const r1 = t / loopDuration;
+	const r2 = ((t + loopDuration / 2) % loopDuration) / loopDuration;
+
+	return (
+		<div style={{ transform: `scale(${scale})`, position: 'relative', width: '220px', height: '50px', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 30 }}>
+			<svg style={{ position: 'absolute', width: '300px', height: '300px', pointerEvents: 'none', zIndex: -1, overflow: 'visible' }}>
+				<circle cx="110" cy="25" r={40 + r1 * 60} fill="none" stroke={COLORS.accent} strokeWidth="2" opacity={interpolate(r1, [0, 1], [0.6, 0])} />
+				<circle cx="110" cy="25" r={40 + r2 * 60} fill="none" stroke={COLORS.accent} strokeWidth="1.5" opacity={interpolate(r2, [0, 1], [0.4, 0])} />
+			</svg>
+			
+			<div style={{
+				background: 'rgba(0, 229, 255, 0.15)',
+				border: `2px solid ${COLORS.accent}`,
+				boxShadow: `0 0 25px ${COLORS.accent}4d, inset 0 0 15px ${COLORS.accent}33`,
+				borderRadius: '10px',
+				padding: '10px 20px',
+				color: COLORS.ink,
+				fontSize: '13px',
+				fontWeight: '800',
+				letterSpacing: '2px',
+				textAlign: 'center',
+				backdropFilter: 'blur(12px)',
+				fontFamily: 'Inter, system-ui, sans-serif',
+				display: 'flex',
+				alignItems: 'center',
+				gap: '8px'
+			}}>
+				<span style={{ textShadow: `0 0 10px ${COLORS.accent}` }}>⚡ AUTOPILOT ENGINE</span>
 			</div>
 		</div>
 	);
