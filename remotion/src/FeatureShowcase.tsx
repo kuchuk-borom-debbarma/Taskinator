@@ -81,7 +81,7 @@ const ProgressIndicator: React.FC<{ segmentFrame: number; fps: number }> = ({ se
 };
 
 export const FeatureShowcase: React.FC = () => {
-	const { fps, width, height } = useVideoConfig();
+	const { fps, width } = useVideoConfig();
 	const frame = useCurrentFrame();
 
 	const centerX = width / 2;
@@ -90,17 +90,17 @@ export const FeatureShowcase: React.FC = () => {
 	return (
 		<AbsoluteFill style={{ background: GRADIENTS.bg }}>
 			{/* Segment 1: High-level Title Card */}
-			<Sequence from={0} durationInFrames={fps * 3} premountFor={1 * fps} layout="none">
+			<Sequence from={0} durationInFrames={fps * 3} layout="none">
 				<TitleCard title="Designing the High Throughput Backend for Taskinator" />
 			</Sequence>
 
 			{/* Segment 2: Philosophical Intro */}
-			<Sequence from={fps * 3} durationInFrames={fps * 4} premountFor={1 * fps} layout="none">
+			<Sequence from={fps * 3} durationInFrames={fps * 4} layout="none">
 				<TypographyIntro text="Taskinator is a performant project management application with focus on connection between tasks." />
 			</Sequence>
 
 			{/* Segment 3: The Hierarchical Cascade Flow */}
-			<Sequence from={fps * 7} durationInFrames={fps * 20} premountFor={1 * fps} layout="none">
+			<Sequence from={fps * 7} durationInFrames={fps * 20} layout="none">
 				<AbsoluteFill style={{ padding: '20px' }}>
 					<div style={{
 						flex: 1,
@@ -125,7 +125,7 @@ export const FeatureShowcase: React.FC = () => {
 						</div>
 
 						{/* --- LAYER 2: TEAMS — spread wide across mid-canvas --- */}
-						<Sequence from={fps * 2.5} premountFor={1 * fps} layout="none">
+						<Sequence from={fps * 2.5} layout="none">
 							<div style={{ position: 'absolute', top: 210, left: centerX - 490 }}><TeamNode label="Logistics" /></div>
 							<div style={{ position: 'absolute', top: 210, left: centerX - 85 }}><TeamNode label="Kitchen Crew" /></div>
 							<div style={{ position: 'absolute', top: 210, left: centerX + 310 }}><TeamNode label="Front of House" /></div>
@@ -141,7 +141,7 @@ export const FeatureShowcase: React.FC = () => {
 						<AnimatedItem component={<MemberNode name="Sarah" color="#00E5FF" />} startPos={{x: centerX + 240, y: 50}} endPos={{x: centerX + 325, y: 320}} showAt={fps * 1.2} moveAt={fps * 4.2} />
 
 						{/* --- TASK MIGRATION — queue in center, fan out to bottom two rows --- */}
-						<Sequence from={fps * 5.5} premountFor={1 * fps} layout="none">
+						<Sequence from={fps * 5.5} layout="none">
 							<h3 style={{ position: 'absolute', top: 160, left: centerX - 55, fontSize: '10px', fontWeight: '800', color: COLORS.muted, letterSpacing: '1px', textTransform: 'uppercase', opacity: interpolate(segmentFrame, [fps * 5.5, fps * 5.8, fps * 8.5, fps * 9.0], [0, 1, 1, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' }) }}>
 								Incoming Tasks
 							</h3>
@@ -156,7 +156,7 @@ export const FeatureShowcase: React.FC = () => {
 						<AnimatedItem component={<TaskNode label="Service" />}   startPos={{x: centerX + 300, y: 170}} endPos={{x: centerX + 320, y: 545}} showAt={fps * 6.3} moveAt={fps * 8.9} />
 
 						{/* --- ORCHESTRATION LINKS — connect tasks across the bottom rows --- */}
-						<Sequence from={fps * 11.5} premountFor={1 * fps} layout="none">
+						<Sequence from={fps * 11.5} layout="none">
 							{/* Inventory → Prep (row 1, horizontal) */}
 							<DependencyLink from={{ x: centerX - 345, y: 452 }} to={{ x: centerX - 90,  y: 452 }} label="Required" />
 							{/* Prep → Cooking (row 1 → row 2, vertical) */}

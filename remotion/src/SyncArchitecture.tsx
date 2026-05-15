@@ -12,7 +12,7 @@ const CX   = { client: 115, server: 405, db: 700 };
 const NT   = 230;   // node top
 const NW   = 170;   // node width
 const REQ  = 190;   // request arrow y (above nodes)
-const REQ2 = 218;   // second server→db arrow y
+// const REQ2 = 218;   // second server→db arrow y
 const RSP  = 395;   // response arrow y (below nodes)
 
 /* ── Node ─────────────────────────────────────────────── */
@@ -134,29 +134,29 @@ const CreateTask: React.FC = () => {
 	return (
 		<Shell tag="Phase 1 · Synchronous" title="Flow 1 — Create Task" sub="Two sequential writes: insert the task row, then increment the project's denormalized task count." accent={COLORS.accent}>
 			{/* Phase A: request travels to DB */}
-			<Sequence from={t(1.5)} premountFor={1 * fps} layout="none">
+			<Sequence from={t(1.5)} layout="none">
 				<Arrow x1={CX.client+NW/2} x2={CX.server-NW/2} y={REQ} label="POST /api/projects/:id/tasks" color={COLORS.accent} />
 			</Sequence>
-			<Sequence from={t(3.5)} premountFor={1 * fps} layout="none">
+			<Sequence from={t(3.5)} layout="none">
 				<Arrow x1={CX.server+NW/2} x2={CX.db-NW/2} y={REQ} label="Arriving at database…" color={COLORS.success} />
 			</Sequence>
 
 			{/* Phase B: DB operations */}
-			<Sequence from={t(5.5)} premountFor={1 * fps} layout="none">
+			<Sequence from={t(5.5)} layout="none">
 				<div style={{ position: 'absolute', top: 155, left: 866, right: 26 }}>
 					<div style={{ fontSize: 10, fontWeight: 800, color: COLORS.muted, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 12, fontFamily: 'Inter' }}>Database Operations</div>
 					<DbStep num={1} label="Insert task record" sub="INSERT INTO project_task (...) RETURNING *" color={COLORS.success} at={0} />
-					<Sequence from={t(2.5)} premountFor={1 * fps} layout="none">
+					<Sequence from={t(2.5)} layout="none">
 						<DbStep num={2} label="Increment task count" sub="UPDATE project SET tasks_count = tasks_count + 1" color={COLORS.warning} at={0} />
 					</Sequence>
 				</div>
 			</Sequence>
 
 			{/* Phase C: response travels back */}
-			<Sequence from={t(10)} premountFor={1 * fps} layout="none">
+			<Sequence from={t(10)} layout="none">
 				<Arrow x1={CX.db-NW/2} x2={CX.server+NW/2} y={RSP} label="task created · count updated ✓" color={COLORS.success} dir="rtl" />
 			</Sequence>
-			<Sequence from={t(12)} premountFor={1 * fps} layout="none">
+			<Sequence from={t(12)} layout="none">
 				<Arrow x1={CX.server-NW/2} x2={CX.client+NW/2} y={RSP} label="201 Created  { id, title, status }" color={COLORS.accent} dir="rtl" />
 			</Sequence>
 
@@ -174,27 +174,27 @@ const CreateTaskLink: React.FC = () => {
 	const t = (s: number) => fps * s;
 	return (
 		<Shell tag="Phase 1 · Synchronous" title="Flow 2 — Create Task Link" sub="Two writes: the link record itself, then closure table path rows for O(1) reachability." accent={COLORS.accent2}>
-			<Sequence from={t(1.5)} premountFor={1 * fps} layout="none">
+			<Sequence from={t(1.5)} layout="none">
 				<Arrow x1={CX.client+NW/2} x2={CX.server-NW/2} y={REQ} label="POST /api/tasks/:id/links" color={COLORS.accent2} />
 			</Sequence>
-			<Sequence from={t(3.5)} premountFor={1 * fps} layout="none">
+			<Sequence from={t(3.5)} layout="none">
 				<Arrow x1={CX.server+NW/2} x2={CX.db-NW/2} y={REQ} label="Arriving at database…" color={COLORS.success} />
 			</Sequence>
 
-			<Sequence from={t(5.5)} premountFor={1 * fps} layout="none">
+			<Sequence from={t(5.5)} layout="none">
 				<div style={{ position: 'absolute', top: 155, left: 866, right: 26 }}>
 					<div style={{ fontSize: 10, fontWeight: 800, color: COLORS.muted, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 12, fontFamily: 'Inter' }}>Database Operations</div>
 					<DbStep num={1} label="Insert task link record" sub="INSERT INTO task_link (...) RETURNING *" color={COLORS.success} at={0} />
-					<Sequence from={t(2.5)} premountFor={1 * fps} layout="none">
+					<Sequence from={t(2.5)} layout="none">
 						<DbStep num={2} label="Write closure table paths" sub="INSERT INTO closure_table ... (N ancestor rows)" color={COLORS.warning} at={0} />
 					</Sequence>
 				</div>
 			</Sequence>
 
-			<Sequence from={t(10)} premountFor={1 * fps} layout="none">
+			<Sequence from={t(10)} layout="none">
 				<Arrow x1={CX.db-NW/2} x2={CX.server+NW/2} y={RSP} label="link created · closure paths written ✓" color={COLORS.success} dir="rtl" />
 			</Sequence>
-			<Sequence from={t(12)} premountFor={1 * fps} layout="none">
+			<Sequence from={t(12)} layout="none">
 				<Arrow x1={CX.server-NW/2} x2={CX.client+NW/2} y={RSP} label="201 Created  { id, source_task_id, target_task_id }" color={COLORS.accent2} dir="rtl" />
 			</Sequence>
 
@@ -220,10 +220,10 @@ const ReadProject: React.FC = () => {
 	const chip = spring({ frame: f - t(5.5), fps, config: { damping: 13 } });
 	return (
 		<Shell tag="Phase 1 · Synchronous" title="Flow 3 — Read Project" sub="A single SELECT — counts are pre-stored so no JOINs or aggregations are needed at read time." accent={COLORS.success}>
-			<Sequence from={t(1.5)} premountFor={1 * fps} layout="none">
+			<Sequence from={t(1.5)} layout="none">
 				<Arrow x1={CX.client+NW/2} x2={CX.server-NW/2} y={REQ} label="GET /api/projects/:id" color={COLORS.accent} />
 			</Sequence>
-			<Sequence from={t(3.5)} premountFor={1 * fps} layout="none">
+			<Sequence from={t(3.5)} layout="none">
 				<Arrow x1={CX.server+NW/2} x2={CX.db-NW/2} y={REQ} label="SELECT * FROM project WHERE id = ?" color={COLORS.success} />
 			</Sequence>
 
@@ -233,10 +233,10 @@ const ReadProject: React.FC = () => {
 				<DbStep num={1} label="Fetch project row" sub="SELECT id, name, tasks_count, members_count, teams_count FROM project WHERE id = ?" color={COLORS.accent3} at={0} />
 			</div>
 
-			<Sequence from={t(7.5)} premountFor={1 * fps} layout="none">
+			<Sequence from={t(7.5)} layout="none">
 				<Arrow x1={CX.db-NW/2} x2={CX.server+NW/2} y={RSP} label="{ id, name, tasks_count, members_count, ... }" color={COLORS.accent3} dir="rtl" />
 			</Sequence>
-			<Sequence from={t(9.5)} premountFor={1 * fps} layout="none">
+			<Sequence from={t(9.5)} layout="none">
 				<Arrow x1={CX.server-NW/2} x2={CX.client+NW/2} y={RSP} label="200 OK  { project }" color={COLORS.success} dir="rtl" />
 			</Sequence>
 
@@ -312,38 +312,38 @@ export const SyncArchitecture: React.FC = () => {
 	const { fps } = useVideoConfig();
 	return (
 		<AbsoluteFill style={{ background: GRADIENTS.bg }}>
-			<Sequence from={0} durationInFrames={fps * 3} premountFor={1 * fps} layout="none">
+			<Sequence from={0} durationInFrames={fps * 3} layout="none">
 				<TitleCard title="The Architecture: An Evolutionary Flow" />
 			</Sequence>
-			<Sequence from={fps * 3} durationInFrames={fps * 8} premountFor={1 * fps} layout="none">
+			<Sequence from={fps * 3} durationInFrames={fps * 8} layout="none">
 				<RoadmapSlide />
 			</Sequence>
-			<Sequence from={fps * 11} durationInFrames={fps * 15} premountFor={1 * fps} layout="none">
+			<Sequence from={fps * 11} durationInFrames={fps * 15} layout="none">
 				<CreateTask />
 			</Sequence>
-			<Sequence from={fps * 26} durationInFrames={fps * 15} premountFor={1 * fps} layout="none">
+			<Sequence from={fps * 26} durationInFrames={fps * 15} layout="none">
 				<CreateTaskLink />
 			</Sequence>
-			<Sequence from={fps * 41} durationInFrames={fps * 13} premountFor={1 * fps} layout="none">
+			<Sequence from={fps * 41} durationInFrames={fps * 13} layout="none">
 				<ReadProject />
 			</Sequence>
-			<Sequence from={fps * 54} durationInFrames={fps * 12} premountFor={1 * fps} layout="none">
+			<Sequence from={fps * 54} durationInFrames={fps * 12} layout="none">
 				<BlockingSlideA />
 			</Sequence>
-			<Sequence from={fps * 66} durationInFrames={fps * 12} premountFor={1 * fps} layout="none">
+			<Sequence from={fps * 66} durationInFrames={fps * 12} layout="none">
 				<BlockingSlideB />
 			</Sequence>
 			{/* ── Phase 2: Async Solution ── */}
-			<Sequence from={fps * 78} durationInFrames={fps * 7} premountFor={1 * fps} layout="none">
+			<Sequence from={fps * 78} durationInFrames={fps * 7} layout="none">
 				<AsyncIntroSlide />
 			</Sequence>
-			<Sequence from={fps * 85} durationInFrames={fps * 15} premountFor={1 * fps} layout="none">
+			<Sequence from={fps * 85} durationInFrames={fps * 15} layout="none">
 				<AsyncCreateTask />
 			</Sequence>
-			<Sequence from={fps * 100} durationInFrames={fps * 15} premountFor={1 * fps} layout="none">
+			<Sequence from={fps * 100} durationInFrames={fps * 15} layout="none">
 				<AsyncCreateTaskLink />
 			</Sequence>
-			<Sequence from={fps * 115} premountFor={1 * fps} layout="none">
+			<Sequence from={fps * 115} layout="none">
 				<AsyncReadProject />
 			</Sequence>
 		</AbsoluteFill>

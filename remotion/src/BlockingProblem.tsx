@@ -106,7 +106,7 @@ export const BlockingSlideA: React.FC = () => {
 
 					{/* User cards column */}
 					{users.map(u => (
-						<Sequence key={u.id} from={u.at} premountFor={1 * fps} layout="none">
+						<Sequence key={u.id} from={u.at} layout="none">
 							<div style={{ position: 'absolute', top: u.arrowY - 24, left: 32 }}>
 								<UserCard id={u.id} status={u.status} at={0} />
 							</div>
@@ -115,7 +115,7 @@ export const BlockingSlideA: React.FC = () => {
 
 					{/* Arrows: user → server */}
 					{users.map(u => (
-						<Sequence key={u.id} from={u.at + 4} premountFor={1 * fps} layout="none">
+						<Sequence key={u.id} from={u.at + 4} layout="none">
 							<PulsingArrow
 								x1={190} x2={380}
 								y={u.arrowY}
@@ -136,13 +136,13 @@ export const BlockingSlideA: React.FC = () => {
 					</div>
 
 					{/* Arrows: server → DB */}
-					<Sequence from={t(1.5, fps)} premountFor={1 * fps} layout="none">
+					<Sequence from={t(1.5, fps)} layout="none">
 						<PulsingArrow x1={572} x2={750} y={255} color={COLORS.warning} at={0} label="Query 1 — waiting…" />
 					</Sequence>
-					<Sequence from={t(3.5, fps)} premountFor={1 * fps} layout="none">
+					<Sequence from={t(3.5, fps)} layout="none">
 						<PulsingArrow x1={572} x2={750} y={278} color={COLORS.warning} at={0} label="Query 2 — waiting…" />
 					</Sequence>
-					<Sequence from={t(5.5, fps)} premountFor={1 * fps} layout="none">
+					<Sequence from={t(5.5, fps)} layout="none">
 						<PulsingArrow x1={572} x2={750} y={301} color={COLORS.warning} at={0} label="Query 3 — waiting…" />
 					</Sequence>
 
@@ -196,7 +196,7 @@ export const BlockingSlideA: React.FC = () => {
    SLIDE B — At Scale: The Real Impact
    Shows metrics degrading: latency, errors, throughput
 ══════════════════════════════════════════════════════════ */
-const MetricCard: React.FC<{ label: string; value: string; sub: string; color: string; at: number }> = ({ label, value, sub, color, at }) => {
+/* const MetricCard: React.FC<{ label: string; value: string; sub: string; color: string; at: number }> = ({ label, value, sub, color, at }) => {
 	const f = useCurrentFrame(); const { fps } = useVideoConfig();
 	const s = spring({ frame: f - at, fps, config: { damping: 13 } });
 	return (
@@ -206,7 +206,7 @@ const MetricCard: React.FC<{ label: string; value: string; sub: string; color: s
 			<div style={{ fontSize: 11, color: COLORS.muted, fontFamily: 'Inter', marginTop: 8, lineHeight: 1.5 }}>{sub}</div>
 		</div>
 	);
-};
+}; */
 
 export const BlockingSlideB: React.FC = () => {
 	const { fps } = useVideoConfig();

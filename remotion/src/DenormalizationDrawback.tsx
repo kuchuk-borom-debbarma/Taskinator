@@ -17,7 +17,7 @@ const glassBg: React.CSSProperties = {
 	overflow: 'hidden',
 };
 
-const StepChip: React.FC<{ steps: { frame: number; text: string }[]; segmentFrame: number; fps: number }> = ({ steps, segmentFrame, fps }) => {
+/* const StepChip: React.FC<{ steps: { frame: number; text: string }[]; segmentFrame: number; fps: number }> = ({ steps, segmentFrame, fps }) => {
 	const current = [...steps].reverse().find(s => segmentFrame >= s.frame) || steps[0];
 	return (
 		<div style={{
@@ -33,7 +33,7 @@ const StepChip: React.FC<{ steps: { frame: number; text: string }[]; segmentFram
 			</span>
 		</div>
 	);
-};
+}; */
 
 const Appear: React.FC<{ at: number; children: React.ReactNode; x?: number; y?: number; scale?: boolean }> = ({ at, children, x = 0, y = 0, scale = false }) => {
 	const frame = useCurrentFrame();
@@ -146,7 +146,7 @@ const Arrow: React.FC<{ x1: number; y1: number; x2: number; y2: number; color?: 
 export const DenormalizationDrawback: React.FC = () => {
 	const { fps } = useVideoConfig();
 	const frame = useCurrentFrame();
-	const segmentFrame = frame;
+	/* const segmentFrame = frame;
 
 	const steps = [
 		{ frame: 0,        text: 'Showing Tables...' },
@@ -154,7 +154,7 @@ export const DenormalizationDrawback: React.FC = () => {
 		{ frame: fps * 5,  text: 'Step 2: Update Project Count...' },
 		{ frame: fps * 7.5,text: 'Step 3: Update Team Count...' },
 		{ frame: fps * 9.5,text: 'Write Amplification!' },
-	];
+	]; */
 
 	const step1 = frame >= fps * 2.5;
 	const step2 = frame >= fps * 5;
@@ -218,10 +218,10 @@ export const DenormalizationDrawback: React.FC = () => {
 					</div>
 
 					{/* Animated arrows */}
-					<Sequence from={fps * 5} premountFor={1 * fps} layout="none">
+					<Sequence from={fps * 5} layout="none">
 						<Arrow x1={280} y1={280} x2={340} y2={275} color={COLORS.warning} />
 					</Sequence>
-					<Sequence from={fps * 7.5} premountFor={1 * fps} layout="none">
+					<Sequence from={fps * 7.5} layout="none">
 						<Arrow x1={570} y1={280} x2={640} y2={280} color={COLORS.warning} />
 					</Sequence>
 

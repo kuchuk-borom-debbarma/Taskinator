@@ -186,7 +186,7 @@ const AsyncFlowSlide: React.FC<{
 	steps: FlowStep[];
 	showReadProject?: boolean;
 }> = ({ tag, title, sub, accent, reqLabel, syncLabel, eventName, asyncLabel, steps, showReadProject }) => {
-	const f = useCurrentFrame(); const { fps } = useVideoConfig();
+	const { fps } = useVideoConfig();
 	const D = (s: number) => fr(s, fps);
 
 	return (
