@@ -177,12 +177,12 @@ export const FeatureShowcase: React.FC = () => {
 							<DependencyLink from={{ x: centerX + 50,  y: 567 }} to={{ x: centerX + 320, y: 567 }} label="Unlocks" />
 						</Sequence>
 
-						{/* --- AUTOPILOT INTEGRATION — materialize at center, pulse trigger downstream --- */}
+						{/* --- AUTOPILOT INTEGRATION — floating at top-right, pulse trigger downstream --- */}
 						<Sequence from={fps * 15.0} layout="none">
 							<div style={{ 
 								position: 'absolute', 
-								top: 325, 
-								left: centerX - 110,
+								top: 80, 
+								left: centerX + 230,
 								zIndex: 40
 							}}>
 								<AutopilotNode />
@@ -191,9 +191,9 @@ export const FeatureShowcase: React.FC = () => {
 
 						<Sequence from={fps * 16.5} layout="none">
 							{/* Pulse 1: Autopilot → Cooking */}
-							<DependencyLink from={{ x: centerX, y: 375 }} to={{ x: centerX - 25, y: 545 }} label="Trigger" />
+							<DependencyLink from={{ x: centerX + 340, y: 130 }} to={{ x: centerX - 25, y: 545 }} label="Trigger" />
 							{/* Pulse 2: Autopilot → Service */}
-							<DependencyLink from={{ x: centerX, y: 375 }} to={{ x: centerX + 385, y: 545 }} label="Trigger" />
+							<DependencyLink from={{ x: centerX + 340, y: 130 }} to={{ x: centerX + 385, y: 545 }} label="Trigger" />
 						</Sequence>
 					</div>
 				</AbsoluteFill>
