@@ -1,5 +1,5 @@
 import React from 'react';
-import { AbsoluteFill, useVideoConfig, useCurrentFrame, spring, interpolate } from 'remotion';
+import { AbsoluteFill, useVideoConfig, useCurrentFrame, spring, interpolate, Easing } from 'remotion';
 import { COLORS, GRADIENTS } from './components/Nodes';
 
 const fr = (s: number, fps: number) => fps * s;
@@ -22,7 +22,7 @@ const Header: React.FC<{ tag: string; tagColor: string; title: string; sub: stri
 	const f = useCurrentFrame(); const { fps } = useVideoConfig();
 	const s = sp(f, delay, fps);
 	return (
-		<div style={{ position: 'absolute', top: 26, left: 32, right: 400, opacity: s, transform: `translateY(${interpolate(s, [0, 1], [-12, 0])}px)` }}>
+		<div style={{ position: 'absolute', top: 26, left: 32, right: 400, opacity: s, transform: `translateY(${interpolate(s, [0, 1], [-12, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.bezier(0.16, 1, 0.3, 1) })}px)` }}>
 			<div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
 				<div style={{ width: 7, height: 7, borderRadius: '50%', background: tagColor, boxShadow: `0 0 8px ${tagColor}` }} />
 				<span style={{ fontSize: 10, fontWeight: 800, color: tagColor, fontFamily: 'Inter', textTransform: 'uppercase', letterSpacing: 1.5 }}>{tag}</span>
@@ -93,7 +93,7 @@ const StepItem: React.FC<{ num: number; label: string; sub: string; color: strin
 	const s = sp(f, delay, fps);
 	const bc = badge === 'SYNC' ? COLORS.success : COLORS.accent2;
 	return (
-		<div style={{ opacity: s, transform: `translateX(${interpolate(s, [0, 1], [20, 0])}px)`, display: 'flex', gap: 10, marginBottom: 10, alignItems: 'flex-start' }}>
+		<div style={{ opacity: s, transform: `translateX(${interpolate(s, [0, 1], [20, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.bezier(0.16, 1, 0.3, 1) })}px)`, display: 'flex', gap: 10, marginBottom: 10, alignItems: 'flex-start' }}>
 			<div style={{ width: 22, height: 22, borderRadius: '50%', flexShrink: 0, background: color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 900, color: '#000' }}>{num}</div>
 			<div style={{ flex: 1, background: `${color}0d`, border: `1px solid ${color}33`, borderLeft: `3px solid ${color}`, borderRadius: 8, padding: '7px 10px' }}>
 				<div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 3 }}>
@@ -111,7 +111,7 @@ const Banner: React.FC<{ text: string; color: string; delay: number }> = ({ text
 	const f = useCurrentFrame(); const { fps } = useVideoConfig();
 	const s = sp(f, delay, fps);
 	return (
-		<div style={{ position: 'absolute', bottom: 22, left: 32, right: 32, opacity: s, transform: `translateY(${interpolate(s, [0, 1], [20, 0])}px)`, display: 'flex', justifyContent: 'center', zIndex: 30 }}>
+		<div style={{ position: 'absolute', bottom: 22, left: 32, right: 32, opacity: s, transform: `translateY(${interpolate(s, [0, 1], [20, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.bezier(0.175, 0.885, 0.32, 1.275) })}px)`, display: 'flex', justifyContent: 'center', zIndex: 30 }}>
 			<div style={{ background: `${color}12`, border: `2px solid ${color}`, borderRadius: 12, padding: '11px 28px', fontSize: 13, fontWeight: 800, color, fontFamily: 'Inter', boxShadow: `0 0 28px ${color}44`, backdropFilter: 'blur(10px)' }}>{text}</div>
 		</div>
 	);
@@ -133,7 +133,7 @@ export const AsyncIntroSlide: React.FC = () => {
 
 	return (
 		<Shell>
-			<div style={{ position: 'absolute', top: 26, left: 32, right: 32, opacity: s1, transform: `translateY(${interpolate(s1, [0, 1], [-14, 0])}px)`, textAlign: 'center' }}>
+			<div style={{ position: 'absolute', top: 26, left: 32, right: 32, opacity: s1, transform: `translateY(${interpolate(s1, [0, 1], [-14, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.bezier(0.16, 1, 0.3, 1) })}px)`, textAlign: 'center' }}>
 				<div style={{ fontSize: 10, fontWeight: 800, color: COLORS.success, letterSpacing: 2, textTransform: 'uppercase', fontFamily: 'Inter', marginBottom: 10 }}>Phase 2 · The Solution</div>
 				<h1 style={{ fontSize: 36, fontWeight: 900, color: COLORS.ink, fontFamily: 'Inter', margin: '0 0 10px' }}>Async Architecture</h1>
 				<p style={{ fontSize: 13, color: COLORS.muted, fontFamily: 'Inter', margin: '0 auto', lineHeight: 1.7, maxWidth: 660 }}>
@@ -141,7 +141,7 @@ export const AsyncIntroSlide: React.FC = () => {
 				</p>
 			</div>
 
-			<div style={{ position: 'absolute', top: 170, left: 32, right: 32, display: 'flex', gap: 16, opacity: s2, transform: `translateY(${interpolate(s2, [0, 1], [20, 0])}px)` }}>
+			<div style={{ position: 'absolute', top: 170, left: 32, right: 32, display: 'flex', gap: 16, opacity: s2, transform: `translateY(${interpolate(s2, [0, 1], [20, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.bezier(0.16, 1, 0.3, 1) })}px)` }}>
 				{items.map((item, i) => (
 					<div key={i} style={{ flex: 1, background: 'rgba(15,23,42,0.55)', border: `1px solid ${item.color}33`, borderTop: `3px solid ${item.color}`, borderRadius: 14, padding: '20px 16px' }}>
 						<div style={{ fontSize: 26, marginBottom: 10 }}>{item.icon}</div>
@@ -151,7 +151,7 @@ export const AsyncIntroSlide: React.FC = () => {
 				))}
 			</div>
 
-			<div style={{ position: 'absolute', bottom: 28, left: 32, right: 32, opacity: s3, transform: `translateY(${interpolate(s3, [0, 1], [10, 0])}px)`, display: 'flex', justifyContent: 'center' }}>
+			<div style={{ position: 'absolute', bottom: 28, left: 32, right: 32, opacity: s3, transform: `translateY(${interpolate(s3, [0, 1], [10, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.bezier(0.16, 1, 0.3, 1) })}px)`, display: 'flex', justifyContent: 'center' }}>
 				<div style={{ background: 'rgba(0,229,255,0.07)', border: `1px solid ${COLORS.accent}44`, borderRadius: 10, padding: '12px 24px', fontSize: 13, color: COLORS.accent, fontFamily: 'Inter', fontWeight: 600 }}>
 					→ &nbsp;We introduce a <strong>Message Broker</strong> + <strong>Event Listeners</strong> to handle side effects out-of-band
 				</div>
