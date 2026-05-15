@@ -25,6 +25,9 @@ Automate the "busy work" of project management through reliable, transparent, an
 
 ### Active (Future Planning)
 
+- [ ] [Best Practice Refactoring] — Refactor existing video scripts with proper Remotion hooks (v3.0).
+- [ ] [Autopilot Engine Visualization] — Compositions highlighting the engine's rules/locking (v3.0).
+- [ ] [Visual Dashboard Showcase] — Showcase UI v2.0 capabilities inside the video (v3.0).
 - [ ] [Multi-domain Triggers] — Evaluate events crossing project boundaries.
 - [ ] [Complex Predicates] — Evaluate conditions referencing recursive parent/child states.
 
@@ -32,6 +35,16 @@ Automate the "busy work" of project management through reliable, transparent, an
 
 - [Cron-based Triggers] — Reactive/event-driven architecture remains primary focus.
 - [External Service Actions] — Scope confined to internal Taskinator domain mutations.
+
+## Current Milestone: v3.0 Remotion Overhaul & Autopilot Showcase
+
+**Goal:** Overhaul the Remotion architecture video using Remotion best practices and add new compositions visualizing the Autopilot engine.
+
+**Target features:**
+- Refactor all existing compositions (`FeatureShowcase`, `SchemaDesign`, etc.) using proper Remotion APIs.
+- Create new compositions visualizing the Autopilot engine, condition evaluation, and ordered action chaining.
+- Create compositions for the v2.0 Visual Condition Builder and Action Pipeline Editor.
+- Finalize video production flow for a complete video asset.
 
 ## Current State (v2.0)
 The v2.0 UI is fully operational. Users can define visually expressive conditional trees using React XYFlow, assemble sequential execution steps via pipelines, toggle automations with zero-latency optimistic updates, and configure custom fallbacks via smart selector overlays. The UI is seamlessly bound to transactional backend resolvers.
@@ -47,6 +60,23 @@ The v2.0 UI is fully operational. Users can define visually expressive condition
 | XYFlow Serialization | Decoupled graph coordinate state from logical execution JSON trees. | **Complete (v2.0)** |
 | Optimistic Queries | Instantly toggle Active state via TanStack Query to guarantee premium responsive feel. | **Complete (v2.0)** |
 
+## Evolution
+
+This document evolves at phase transitions and milestone boundaries.
+
+**After each phase transition** (via `/gsd-transition`):
+1. Requirements invalidated? → Move to Out of Scope with reason
+2. Requirements validated? → Move to Validated with phase reference
+3. New requirements emerged? → Add to Active
+4. Decisions to log? → Add to Key Decisions
+5. "What This Is" still accurate? → Update if drifted
+
+**After each milestone** (via `/gsd-complete-milestone`):
+1. Full review of all sections
+2. Core Value check — still the right priority?
+3. Audit Out of Scope — reasons still valid?
+4. Update Context with current state
+
 ---
-*Last updated: 2026-05-15 after v2.0 milestone completion*
+*Last updated: 2026-05-15 after v3.0 milestone initialization*
 
