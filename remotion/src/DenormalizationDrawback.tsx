@@ -1,7 +1,7 @@
 import React from 'react';
 import {
 	AbsoluteFill, Sequence, useVideoConfig, useCurrentFrame,
-	spring, interpolate
+	spring, interpolate, Easing
 } from 'remotion';
 import { COLORS, GRADIENTS } from './components/Nodes';
 
@@ -17,7 +17,7 @@ const glassBg: React.CSSProperties = {
 	overflow: 'hidden',
 };
 
-const StepChip: React.FC<{ steps: { frame: number; text: string }[]; segmentFrame: number; fps: number }> = ({ steps, segmentFrame, fps }) => {
+/* const StepChip: React.FC<{ steps: { frame: number; text: string }[]; segmentFrame: number; fps: number }> = ({ steps, segmentFrame, fps }) => {
 	const current = [...steps].reverse().find(s => segmentFrame >= s.frame) || steps[0];
 	return (
 		<div style={{
@@ -33,7 +33,7 @@ const StepChip: React.FC<{ steps: { frame: number; text: string }[]; segmentFram
 			</span>
 		</div>
 	);
-};
+}; */
 
 const Appear: React.FC<{ at: number; children: React.ReactNode; x?: number; y?: number; scale?: boolean }> = ({ at, children, x = 0, y = 0, scale = false }) => {
 	const frame = useCurrentFrame();
@@ -42,7 +42,7 @@ const Appear: React.FC<{ at: number; children: React.ReactNode; x?: number; y?: 
 	return (
 		<div style={{
 			opacity: s,
-			transform: `translate(${interpolate(s, [0, 1], [x, 0])}px, ${interpolate(s, [0, 1], [y, 0])}px) ${scale ? `scale(${s})` : ''}`,
+			transform: `translate(${interpolate(s, [0, 1], [x, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.out(Easing.cubic) })}px, ${interpolate(s, [0, 1], [y, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.out(Easing.cubic) })}px) ${scale ? `scale(${s})` : ''}`,
 		}}>
 			{children}
 		</div>
@@ -146,7 +146,7 @@ const Arrow: React.FC<{ x1: number; y1: number; x2: number; y2: number; color?: 
 export const DenormalizationDrawback: React.FC = () => {
 	const { fps } = useVideoConfig();
 	const frame = useCurrentFrame();
-	const segmentFrame = frame;
+	/* const segmentFrame = frame;
 
 	const steps = [
 		{ frame: 0,        text: 'Showing Tables...' },
@@ -154,7 +154,7 @@ export const DenormalizationDrawback: React.FC = () => {
 		{ frame: fps * 5,  text: 'Step 2: Update Project Count...' },
 		{ frame: fps * 7.5,text: 'Step 3: Update Team Count...' },
 		{ frame: fps * 9.5,text: 'Write Amplification!' },
-	];
+	]; */
 
 	const step1 = frame >= fps * 2.5;
 	const step2 = frame >= fps * 5;
@@ -218,22 +218,22 @@ export const DenormalizationDrawback: React.FC = () => {
 					</div>
 
 					{/* Animated arrows */}
-					<Sequence from={fps * 5}>
+					<Sequence from={fps * 5} layout="none">
 						<Arrow x1={280} y1={280} x2={340} y2={275} color={COLORS.warning} />
 					</Sequence>
-					<Sequence from={fps * 7.5}>
+					<Sequence from={fps * 7.5} layout="none">
 						<Arrow x1={570} y1={280} x2={640} y2={280} color={COLORS.warning} />
 					</Sequence>
 
 					{/* Step badges — top right, stacked, no Sequence wrappers */}
 					<div style={{ position: 'absolute', top: 24, right: 24, zIndex: 100, display: 'flex', flexDirection: 'column', gap: 10, maxWidth: 480 }}>
-						<div style={{ opacity: showBadge1, transform: `translateX(${interpolate(showBadge1, [0, 1], [60, 0])}px)` }}>
+						<div style={{ opacity: showBadge1, transform: `translateX(${interpolate(showBadge1, [0, 1], [60, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.bezier(0.16, 1, 0.3, 1) })}px)` }}>
 							<StepBadge num={1} text="DELETE FROM project_member WHERE id = 'uuid-abc'" color={COLORS.danger} />
 						</div>
-						<div style={{ opacity: showBadge2, transform: `translateX(${interpolate(showBadge2, [0, 1], [60, 0])}px)` }}>
+						<div style={{ opacity: showBadge2, transform: `translateX(${interpolate(showBadge2, [0, 1], [60, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.bezier(0.16, 1, 0.3, 1) })}px)` }}>
 							<StepBadge num={2} text="UPDATE project SET members_count = members_count - 1" color={COLORS.warning} />
 						</div>
-						<div style={{ opacity: showBadge3, transform: `translateX(${interpolate(showBadge3, [0, 1], [60, 0])}px)` }}>
+						<div style={{ opacity: showBadge3, transform: `translateX(${interpolate(showBadge3, [0, 1], [60, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.bezier(0.16, 1, 0.3, 1) })}px)` }}>
 							<StepBadge num={3} text="UPDATE project_team SET members_count = members_count - 1" color={COLORS.warning} />
 						</div>
 					</div>
@@ -242,7 +242,7 @@ export const DenormalizationDrawback: React.FC = () => {
 					<div style={{
 						position: 'absolute', bottom: 32, left: 50, right: 50,
 						opacity: showWarning,
-						transform: `translateY(${interpolate(showWarning, [0, 1], [40, 0])}px)`,
+						transform: `translateY(${interpolate(showWarning, [0, 1], [40, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.bezier(0.175, 0.885, 0.32, 1.275) })}px)`,
 						display: 'flex', justifyContent: 'center', zIndex: 30,
 					}}>
 						<div style={{

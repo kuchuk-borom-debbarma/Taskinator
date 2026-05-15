@@ -1,5 +1,6 @@
 import { logger } from '../logger';
 import { ProjectAggregated_ChangeUserProjectCount } from '../modules/auth/internal/listeners/ProjectAggregated_ChangeUserProjectCount.ts';
+import { autopilotDispatcher } from '../modules/autopilot/index.ts';
 import { ProjectAggregated_ChangeProjectMemberCount } from '../modules/project/internal/listeners/ProjectAggregated_ChangeProjectMemberCount.ts';
 import { ProjectAggregated_DeleteProjectMember } from '../modules/project/internal/listeners/ProjectAggregated_DeleteProjectMember.ts';
 import { ProjectAggregated_RemoveProjectMember } from '../modules/project/internal/listeners/ProjectAggregated_RemoveProjectMember.ts';
@@ -107,6 +108,7 @@ export async function startConsumers() {
         taskLinkCleanupListener.init(),
         taskReachabilitySyncListener.init(),
         taskBulkReachabilityCleanupListener.init(),
+        autopilotDispatcher.init(),
     ]);
 
     logger.info('[Registry] All domain consumers and listeners initialized');

@@ -1,9 +1,9 @@
 import React from 'react';
-import { AbsoluteFill, interpolate, useCurrentFrame, useVideoConfig } from 'remotion';
+import { AbsoluteFill, interpolate, useCurrentFrame } from 'remotion';
 
 export const TypographyIntro: React.FC<{ text: string }> = ({ text }) => {
 	const frame = useCurrentFrame();
-	const { fps } = useVideoConfig();
+
 
 	const opacity = interpolate(frame, [0, 20, 100, 120], [0, 1, 1, 0], {
 		extrapolateLeft: 'clamp',

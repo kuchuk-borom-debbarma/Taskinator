@@ -1,5 +1,5 @@
 import React from 'react';
-import { AbsoluteFill, Sequence, useVideoConfig, useCurrentFrame, spring, interpolate } from 'remotion';
+import { AbsoluteFill, Sequence, useVideoConfig, useCurrentFrame, spring, interpolate, Easing } from 'remotion';
 import { COLORS, GRADIENTS } from './components/Nodes';
 import { TitleCard } from './components/TitleCard';
 
@@ -22,7 +22,7 @@ const Hdr: React.FC<{ tag: string; color: string; title: string; sub: string }> 
 	const f = useCurrentFrame(); const { fps } = useVideoConfig();
 	const s = SP(f, 3, fps);
 	return (
-		<div style={{ position: 'absolute', top: 26, left: 32, right: 32, opacity: s, transform: `translateY(${interpolate(s,[0,1],[-12,0])}px)` }}>
+		<div style={{ position: 'absolute', top: 26, left: 32, right: 32, opacity: s, transform: `translateY(${interpolate(s,[0,1],[-12,0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.bezier(0.16, 1, 0.3, 1) })}px)` }}>
 			<div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:5 }}>
 				<div style={{ width:7, height:7, borderRadius:'50%', background:color, boxShadow:`0 0 8px ${color}` }}/>
 				<span style={{ fontSize:10, fontWeight:800, color, fontFamily:'Inter', textTransform:'uppercase', letterSpacing:1.5 }}>{tag}</span>
@@ -37,7 +37,7 @@ const Ban: React.FC<{ text: string; color: string; delay: number }> = ({ text, c
 	const f = useCurrentFrame(); const { fps } = useVideoConfig();
 	const s = SP(f, delay, fps);
 	return (
-		<div style={{ position:'absolute', bottom:22, left:32, right:32, opacity:s, transform:`translateY(${interpolate(s,[0,1],[20,0])}px)`, display:'flex', justifyContent:'center', zIndex:30 }}>
+		<div style={{ position:'absolute', bottom:22, left:32, right:32, opacity:s, transform:`translateY(${interpolate(s,[0,1],[20,0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.bezier(0.175, 0.885, 0.32, 1.275) })}px)`, display:'flex', justifyContent:'center', zIndex:30 }}>
 			<div style={{ background:`${color}12`, border:`2px solid ${color}`, borderRadius:12, padding:'11px 28px', fontSize:13, fontWeight:800, color, fontFamily:'Inter', boxShadow:`0 0 28px ${color}44` }}>{text}</div>
 		</div>
 	);
@@ -124,14 +124,14 @@ const OverviewSlide: React.FC = () => {
 	];
 	return (
 		<GlassShell>
-			<div style={{ position:'absolute', top:26, left:32, right:32, textAlign:'center', opacity:s1, transform:`translateY(${interpolate(s1,[0,1],[-14,0])}px)` }}>
+			<div style={{ position:'absolute', top:26, left:32, right:32, textAlign:'center', opacity:s1, transform:`translateY(${interpolate(s1,[0,1],[-14,0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.bezier(0.16, 1, 0.3, 1) })}px)` }}>
 				<div style={{ fontSize:10, fontWeight:800, color:COLORS.warning, letterSpacing:2, textTransform:'uppercase', fontFamily:'Inter', marginBottom:10 }}>The Trade-off</div>
 				<h1 style={{ fontSize:34, fontWeight:900, color:COLORS.ink, fontFamily:'Inter', margin:'0 0 10px' }}>Async Solves One Problem, Introduces Three</h1>
 				<p style={{ fontSize:12, color:COLORS.muted, fontFamily:'Inter', margin:'0 auto', lineHeight:1.7, maxWidth:660 }}>
 					Moving to event-driven freed our threads — but distributed systems come with their own failure modes.
 				</p>
 			</div>
-			<div style={{ position:'absolute', top:170, left:32, right:32, display:'flex', gap:20, opacity:s2, transform:`translateY(${interpolate(s2,[0,1],[20,0])}px)` }}>
+			<div style={{ position:'absolute', top:170, left:32, right:32, display:'flex', gap:20, opacity:s2, transform:`translateY(${interpolate(s2,[0,1],[20,0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.bezier(0.16, 1, 0.3, 1) })}px)` }}>
 				{problems.map((p,i) => (
 					<div key={i} style={{ flex:1, background:'rgba(15,23,42,0.55)', border:`1px solid ${p.color}33`, borderTop:`3px solid ${p.color}`, borderRadius:14, padding:'24px 20px' }}>
 						<div style={{ fontSize:32, marginBottom:12 }}>{p.icon}</div>
@@ -148,7 +148,7 @@ const OverviewSlide: React.FC = () => {
    SLIDE 2 — Eventual Consistency (animated flow)
 ───────────────────────────────────────────────────── */
 const EventualConsistencySlide: React.FC = () => {
-	const f = useCurrentFrame(); const { fps } = useVideoConfig();
+	const { fps } = useVideoConfig();
 	const D = (s:number) => F(s, fps);
 	const NB = NP.server.t + 108; // node bottom
 	return (
@@ -198,7 +198,7 @@ const MessageLossSlide: React.FC = () => {
 	const D = (s:number) => F(s, fps);
 	const NB = NP.server.t + 108;
 	const crashS = SP(f, D(5), fps);
-	const pulse   = interpolate(Math.sin(f * 0.2),[-1,1],[0,1]);
+	// const pulse   = interpolate(Math.sin(f * 0.2),[-1,1],[0,1]);
 	return (
 		<GlassShell>
 			<Hdr tag="Problem 2" color={COLORS.danger} title="Message Loss" sub="If the broker crashes after the API responds but before the listener consumes the event, the side effect is gone forever." />
@@ -302,19 +302,19 @@ export const AsyncProblems: React.FC = () => {
 	const { fps } = useVideoConfig();
 	return (
 		<AbsoluteFill style={{ background: GRADIENTS.bg }}>
-			<Sequence from={0} durationInFrames={fps*3}>
+			<Sequence from={0} durationInFrames={fps*3} layout="none">
 				<TitleCard title="Trading Threads for Complexity" />
 			</Sequence>
-			<Sequence from={fps*3} durationInFrames={fps*7}>
+			<Sequence from={fps*3} durationInFrames={fps*7} layout="none">
 				<OverviewSlide />
 			</Sequence>
-			<Sequence from={fps*10} durationInFrames={fps*14}>
+			<Sequence from={fps*10} durationInFrames={fps*14} layout="none">
 				<EventualConsistencySlide />
 			</Sequence>
-			<Sequence from={fps*24} durationInFrames={fps*13}>
+			<Sequence from={fps*24} durationInFrames={fps*13} layout="none">
 				<MessageLossSlide />
 			</Sequence>
-			<Sequence from={fps*37}>
+			<Sequence from={fps*37} layout="none">
 				<DuplicateSlide />
 			</Sequence>
 		</AbsoluteFill>

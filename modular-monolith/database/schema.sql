@@ -183,8 +183,27 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- Outbox Relay Trigger (End of file)
 CREATE TRIGGER trg_outbox_event_inserted
 AFTER INSERT ON outbox_events
 FOR EACH ROW EXECUTE FUNCTION notify_outbox_event();
+
+
+-- Project Autopilot Table
+CREATE TABLE autopilot (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    fk_project_id UUID NOT NULL,
+    triggers TEXT[] NOT NULL DEFAULT '{}',
+    conditions JSONB NOT NULL DEFAULT '{}',
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    trace_history_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+    version INTEGER NOT NULL DEFAULT 1,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Autopilot Indexes
+CREATE INDEX idx_autopilot_project ON autopilot(fk_project_id);
+CREATE INDEX idx_autopilot_triggers ON autopilot USING GIN (triggers);
 
 

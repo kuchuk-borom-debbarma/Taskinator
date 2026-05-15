@@ -1,11 +1,11 @@
 import React from 'react';
 import {
 	AbsoluteFill, Sequence, useVideoConfig, useCurrentFrame,
-	spring, interpolate
+	spring
 } from 'remotion';
 import { COLORS, GRADIENTS } from './components/Nodes';
 import { TitleCard } from './components/TitleCard';
-import { TypographyIntro } from './components/TypographyIntro';
+// import { TypographyIntro } from './components/TypographyIntro';
 import { QueryProblem } from './QueryProblem';
 import { DenormalizationSolution } from './DenormalizationSolution';
 import { DenormalizationDrawback } from './DenormalizationDrawback';
@@ -168,7 +168,7 @@ const FkLine: React.FC<{
 
 	const dx = to.x - from.x;
 	const dy = to.y - from.y;
-	const len = Math.sqrt(dx * dx + dy * dy);
+	// const len = Math.sqrt(dx * dx + dy * dy);
 
 	// Animated endpoint
 	const cx = from.x + dx * progress;
@@ -306,15 +306,15 @@ const SchemaScene: React.FC = () => {
 
 				{/* ── FK Lines — only clean neighbor connections ── */}
 				{/* project → project_member */}
-				<Sequence from={fps * 8}>
+				<Sequence from={fps * 8} layout="none">
 					<FkLine from={mid('project', 'r')} to={mid('project_member', 'l')} color={COLORS.accent} showAt={0} />
 				</Sequence>
 				{/* project_team → project_team_member */}
-				<Sequence from={fps * 8.5}>
+				<Sequence from={fps * 8.5} layout="none">
 					<FkLine from={mid('project_team', 'r')} to={mid('project_team_member', 'l')} color={COLORS.accent3} showAt={0} />
 				</Sequence>
 				{/* project_task → task_link */}
-				<Sequence from={fps * 9}>
+				<Sequence from={fps * 9} layout="none">
 					<FkLine from={mid('project_task', 'r')} to={mid('task_link', 'l')} color={COLORS.warning} showAt={0} />
 				</Sequence>
 			</div>
@@ -333,42 +333,42 @@ export const SchemaDesign: React.FC = () => {
 	return (
 		<AbsoluteFill style={{ background: GRADIENTS.bg }}>
 			{/* 1. Title */}
-			<Sequence from={0} durationInFrames={fps * 3}>
+			<Sequence from={0} durationInFrames={fps * 3} layout="none">
 				<TitleCard title="Schema Design" />
 			</Sequence>
 
 			{/* 2. Schema entities scene */}
-			<Sequence from={fps * 3} durationInFrames={fps * 18}>
+			<Sequence from={fps * 3} durationInFrames={fps * 18} layout="none">
 				<SchemaScene />
 			</Sequence>
 
 			{/* 3. The problem (N+1 queries) */}
-			<Sequence from={fps * 21} durationInFrames={fps * 15}>
+			<Sequence from={fps * 21} durationInFrames={fps * 15} layout="none">
 				<QueryProblem />
 			</Sequence>
 
 			{/* 4. Solution (denormalized columns) */}
-			<Sequence from={fps * 36} durationInFrames={fps * 16}>
+			<Sequence from={fps * 36} durationInFrames={fps * 16} layout="none">
 				<DenormalizationSolution />
 			</Sequence>
 
 			{/* 5. Drawback (write amplification) */}
-			<Sequence from={fps * 52} durationInFrames={fps * 16}>
+			<Sequence from={fps * 52} durationInFrames={fps * 16} layout="none">
 				<DenormalizationDrawback />
 			</Sequence>
 
 			{/* 6. Task link — the recursive query problem */}
-			<Sequence from={fps * 68} durationInFrames={fps * 14}>
+			<Sequence from={fps * 68} durationInFrames={fps * 14} layout="none">
 				<TaskLinkProblem />
 			</Sequence>
 
 			{/* 7. Closure table — O(1) reads (the solution) */}
-			<Sequence from={fps * 82} durationInFrames={fps * 14}>
+			<Sequence from={fps * 82} durationInFrames={fps * 14} layout="none">
 				<ClosureTableSolution />
 			</Sequence>
 
 			{/* 8. Closure table — write amplification (the drawback) */}
-			<Sequence from={fps * 96}>
+			<Sequence from={fps * 96} layout="none">
 				<ClosureTableDrawback />
 			</Sequence>
 		</AbsoluteFill>

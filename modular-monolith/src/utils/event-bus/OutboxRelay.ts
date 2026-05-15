@@ -122,6 +122,9 @@ const setupListener = async () => {
         await listenClient.query('LISTEN outbox_event_notification');
 
         listenClient.on('notification', (msg) => {
+            logger.debug(
+                `Outbox Relay: Received notification on channel ${msg.channel}`,
+            );
             if (msg.channel === 'outbox_event_notification' && isRunning) {
                 processOutboxBatch().catch((err) =>
                     logger.error(

@@ -1,3 +1,5 @@
 .idea
 modular-monolith/app.log
 modular-monolith/src/tests/e2e/scripts/seed-summary.json
+graphify-out/
+

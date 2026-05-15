@@ -1,10 +1,11 @@
-# ROADMAP — Taskinator Architecture Video
+# Roadmap Directory
 
-### Previous Milestones
-- [v1.0 (Completed)](./milestones/v1.0-ROADMAP.md): Built 4-phase architectural animation (Smart Aggregation, Chunked Deletion, Real-Time SSE, Final Unified Architecture).
+## Active Roadmaps
+*(No active roadmap initialized. Start the next milestone cycle with `/gsd-new-milestone`)*
 
 ---
 
-### Phase 5: TBD
-**Goal:** [To be defined in next milestone]
-**Requirements:** [Pending]
+## Archived Milestones
+- **[v3.0 - Remotion Overhaul & Autopilot Showcase](milestones/v3.0-ROADMAP.md)** (Phases 15-19)
+- **[v2.0 - High Performance Database Tuning](milestones/v2.0-ROADMAP.md)** (Phases 10-14)
+- **[v1.0 - Core Remotion Visual Foundation](milestones/v1.0-ROADMAP.md)** (Phases 1-9)

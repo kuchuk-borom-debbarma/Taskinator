@@ -1,7 +1,7 @@
 import React from 'react';
 import {
 	AbsoluteFill, useVideoConfig, useCurrentFrame,
-	spring, interpolate,
+	spring, interpolate, Easing
 } from 'remotion';
 import { COLORS, GRADIENTS } from './components/Nodes';
 
@@ -13,7 +13,7 @@ const Appear: React.FC<{ at: number; children: React.ReactNode; y?: number; x?: 
 	return (
 		<div style={{
 			opacity: s,
-			transform: `translate(${interpolate(s, [0, 1], [x, 0])}px, ${interpolate(s, [0, 1], [y, 0])}px)`,
+			transform: `translate(${interpolate(s, [0, 1], [x, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.out(Easing.cubic) })}px, ${interpolate(s, [0, 1], [y, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.out(Easing.cubic) })}px)`,
 		}}>
 			{children}
 		</div>
@@ -172,7 +172,7 @@ const ClosureTableRow: React.FC<{ row: ClosureRow; at: number }> = ({ row, at })
 			alignItems: 'center', gap: 8,
 			padding: '5px 14px',
 			opacity: s,
-			transform: `translateX(${interpolate(s, [0, 1], [-20, 0])}px)`,
+			transform: `translateX(${interpolate(s, [0, 1], [-20, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.bezier(0.16, 1, 0.3, 1) })}px)`,
 			background: row.isNew ? `rgba(0,229,255,${0.06 + flashPulse * 0.04})` : row.depth === 0 ? 'transparent' : 'transparent',
 			borderLeft: row.isNew ? `3px solid ${COLORS.accent}` : '3px solid transparent',
 			borderBottom: '1px solid rgba(255,255,255,0.04)',
@@ -198,7 +198,7 @@ const SqlBlock: React.FC<{ at: number; lines: string[]; accentLines?: number[] }
 	const s = spring({ frame: frame - at, fps, config: { damping: 14 } });
 	return (
 		<div style={{
-			opacity: s, transform: `translateY(${interpolate(s, [0, 1], [16, 0])}px)`,
+			opacity: s, transform: `translateY(${interpolate(s, [0, 1], [16, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.bezier(0.16, 1, 0.3, 1) })}px)`,
 			background: 'rgba(8,12,22,0.93)',
 			border: `1px solid ${COLORS.accent}30`,
 			borderTop: `3px solid ${COLORS.accent}`,
@@ -293,7 +293,7 @@ export const ClosureTableSolution: React.FC = () => {
 		const s = spring({ frame: frame - at, fps, config: { damping: 13, stiffness: 120 } });
 		return (
 			<div style={{
-				opacity: s, transform: `translateY(${interpolate(s, [0, 1], [-12, 0])}px)`,
+				opacity: s, transform: `translateY(${interpolate(s, [0, 1], [-12, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.bezier(0.16, 1, 0.3, 1) })}px)`,
 				background: 'rgba(0,229,255,0.06)',
 				border: `1.5px solid ${COLORS.accent}50`,
 				borderRadius: 10, padding: '10px 14px',
@@ -494,7 +494,7 @@ export const ClosureTableSolution: React.FC = () => {
 					<div style={{
 						position: 'absolute', bottom: 22, left: 50, right: 50,
 						opacity: bannerPop,
-						transform: `translateY(${interpolate(bannerPop, [0, 1], [36, 0])}px)`,
+						transform: `translateY(${interpolate(bannerPop, [0, 1], [36, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.bezier(0.175, 0.885, 0.32, 1.275) })}px)`,
 						display: 'flex', justifyContent: 'center', zIndex: 30,
 					}}>
 						<div style={{

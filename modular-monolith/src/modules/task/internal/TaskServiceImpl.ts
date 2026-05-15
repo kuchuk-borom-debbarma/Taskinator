@@ -85,9 +85,10 @@ export class TaskServiceImpl implements TaskService {
         description?: string | null;
         status?: string | null;
         priority?: number | null;
+        traceId?: string | null;
     }): Promise<Task> {
         logger.info(
-            `TaskService.createTask started by ${param.actorId} in project ${param.projectId} for "${param.title}"`,
+            `TaskService.createTask started by ${param.actorId} in project ${param.projectId} for "${param.title}" (Trace: ${param.traceId ?? 'none'})`,
         );
         if (param.title.length < 3 || param.title.length > 255) {
             throw new Error('Task title must be between 3 and 255 characters.');
@@ -108,9 +109,10 @@ export class TaskServiceImpl implements TaskService {
         teamId?: string | null;
         memberId?: string | null;
         priority?: number | null;
+        traceId?: string | null;
     }): Promise<Task> {
         logger.info(
-            `TaskService.updateTask started for ${param.taskId} by ${param.actorId}`,
+            `TaskService.updateTask started for ${param.taskId} by ${param.actorId} (Trace: ${param.traceId ?? 'none'})`,
         );
         if (
             param.title &&

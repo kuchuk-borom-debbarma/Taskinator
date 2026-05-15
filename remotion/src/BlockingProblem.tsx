@@ -1,5 +1,5 @@
 import React from 'react';
-import { AbsoluteFill, Sequence, useVideoConfig, useCurrentFrame, spring, interpolate } from 'remotion';
+import { AbsoluteFill, Sequence, useVideoConfig, useCurrentFrame, spring, interpolate, Easing } from 'remotion';
 import { COLORS, GRADIENTS } from './components/Nodes';
 
 const t = (s: number, fps: number) => fps * s;
@@ -26,7 +26,7 @@ const UserCard: React.FC<{ id: number; status: 'waiting' | 'serving' | 'blocked'
 	const color = status === 'serving' ? COLORS.success : status === 'blocked' ? COLORS.danger : COLORS.warning;
 	const label = status === 'serving' ? '⚡ Serving' : status === 'blocked' ? '⏳ Queued' : '🔄 Waiting';
 	return (
-		<div style={{ opacity: s, transform: `translateX(${interpolate(s, [0, 1], [-20, 0])}px)`, display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(15,23,42,0.8)', border: `1px solid ${color}44`, borderRadius: 10, padding: '8px 12px', marginBottom: 8 }}>
+		<div style={{ opacity: s, transform: `translateX(${interpolate(s, [0, 1], [-20, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.bezier(0.16, 1, 0.3, 1) })}px)`, display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(15,23,42,0.8)', border: `1px solid ${color}44`, borderRadius: 10, padding: '8px 12px', marginBottom: 8 }}>
 			<div style={{ fontSize: 20 }}>👤</div>
 			<div>
 				<div style={{ fontSize: 11, fontWeight: 700, color: COLORS.ink, fontFamily: 'Inter' }}>User {id}</div>
@@ -91,7 +91,7 @@ export const BlockingSlideA: React.FC = () => {
 				<div style={{ flex: 1, position: 'relative', overflow: 'hidden', background: 'rgba(30,41,59,0.18)', backdropFilter: 'blur(30px)', borderRadius: 20, border: '1px solid rgba(255,255,255,0.08)', boxShadow: '0 30px 80px rgba(0,0,0,0.55)' }}>
 
 					{/* ── HEADER ── */}
-					<div style={{ position: 'absolute', top: 26, left: 32, right: 32, opacity: headerS, transform: `translateY(${interpolate(headerS,[0,1],[-12,0])}px)` }}>
+					<div style={{ position: 'absolute', top: 26, left: 32, right: 32, opacity: headerS, transform: `translateY(${interpolate(headerS,[0,1],[-12,0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.bezier(0.16, 1, 0.3, 1) })}px)` }}>
 						<div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
 							<div style={{ width: 7, height: 7, borderRadius: '50%', background: COLORS.danger, boxShadow: `0 0 8px ${COLORS.danger}` }} />
 							<span style={{ fontSize: 10, fontWeight: 800, color: COLORS.danger, fontFamily: 'Inter', textTransform: 'uppercase', letterSpacing: 1.5 }}>The Problem</span>
@@ -106,7 +106,7 @@ export const BlockingSlideA: React.FC = () => {
 
 					{/* User cards column */}
 					{users.map(u => (
-						<Sequence key={u.id} from={u.at}>
+						<Sequence key={u.id} from={u.at} layout="none">
 							<div style={{ position: 'absolute', top: u.arrowY - 24, left: 32 }}>
 								<UserCard id={u.id} status={u.status} at={0} />
 							</div>
@@ -115,7 +115,7 @@ export const BlockingSlideA: React.FC = () => {
 
 					{/* Arrows: user → server */}
 					{users.map(u => (
-						<Sequence key={u.id} from={u.at + 4}>
+						<Sequence key={u.id} from={u.at + 4} layout="none">
 							<PulsingArrow
 								x1={190} x2={380}
 								y={u.arrowY}
@@ -136,13 +136,13 @@ export const BlockingSlideA: React.FC = () => {
 					</div>
 
 					{/* Arrows: server → DB */}
-					<Sequence from={t(1.5, fps)}>
+					<Sequence from={t(1.5, fps)} layout="none">
 						<PulsingArrow x1={572} x2={750} y={255} color={COLORS.warning} at={0} label="Query 1 — waiting…" />
 					</Sequence>
-					<Sequence from={t(3.5, fps)}>
+					<Sequence from={t(3.5, fps)} layout="none">
 						<PulsingArrow x1={572} x2={750} y={278} color={COLORS.warning} at={0} label="Query 2 — waiting…" />
 					</Sequence>
-					<Sequence from={t(5.5, fps)}>
+					<Sequence from={t(5.5, fps)} layout="none">
 						<PulsingArrow x1={572} x2={750} y={301} color={COLORS.warning} at={0} label="Query 3 — waiting…" />
 					</Sequence>
 
@@ -180,7 +180,7 @@ export const BlockingSlideA: React.FC = () => {
 					</div>
 
 					{/* ── Warning banner ── */}
-					<div style={{ position: 'absolute', bottom: 22, left: 32, right: 32, opacity: showWarn, transform: `translateY(${interpolate(showWarn,[0,1],[20,0])}px)`, display: 'flex', justifyContent: 'center', zIndex: 30 }}>
+					<div style={{ position: 'absolute', bottom: 22, left: 32, right: 32, opacity: showWarn, transform: `translateY(${interpolate(showWarn,[0,1],[20,0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.bezier(0.175, 0.885, 0.32, 1.275) })}px)`, display: 'flex', justifyContent: 'center', zIndex: 30 }}>
 						<div style={{ background: 'rgba(255,23,68,0.1)', border: `2px solid ${COLORS.danger}`, borderRadius: 12, padding: '11px 28px', fontSize: 13, fontWeight: 800, color: COLORS.danger, fontFamily: 'Inter', boxShadow: '0 0 32px rgba(255,23,68,0.3)', backdropFilter: 'blur(10px)' }}>
 							⚠️ &nbsp;Every blocked thread = one user waiting · Thread pool is the ceiling
 						</div>
@@ -196,17 +196,17 @@ export const BlockingSlideA: React.FC = () => {
    SLIDE B — At Scale: The Real Impact
    Shows metrics degrading: latency, errors, throughput
 ══════════════════════════════════════════════════════════ */
-const MetricCard: React.FC<{ label: string; value: string; sub: string; color: string; at: number }> = ({ label, value, sub, color, at }) => {
+/* const MetricCard: React.FC<{ label: string; value: string; sub: string; color: string; at: number }> = ({ label, value, sub, color, at }) => {
 	const f = useCurrentFrame(); const { fps } = useVideoConfig();
 	const s = spring({ frame: f - at, fps, config: { damping: 13 } });
 	return (
-		<div style={{ opacity: s, transform: `translateY(${interpolate(s, [0, 1], [20, 0])}px)`, flex: 1, background: `${color}0d`, border: `1.5px solid ${color}44`, borderTop: `3px solid ${color}`, borderRadius: 14, padding: '20px 18px' }}>
+		<div style={{ opacity: s, transform: `translateY(${interpolate(s, [0, 1], [20, 0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.bezier(0.16, 1, 0.3, 1) })}px)`, flex: 1, background: `${color}0d`, border: `1.5px solid ${color}44`, borderTop: `3px solid ${color}`, borderRadius: 14, padding: '20px 18px' }}>
 			<div style={{ fontSize: 10, fontWeight: 800, color: COLORS.muted, textTransform: 'uppercase', letterSpacing: 1, fontFamily: 'Inter', marginBottom: 10 }}>{label}</div>
 			<div style={{ fontSize: 32, fontWeight: 900, color, fontFamily: 'Inter', lineHeight: 1 }}>{value}</div>
 			<div style={{ fontSize: 11, color: COLORS.muted, fontFamily: 'Inter', marginTop: 8, lineHeight: 1.5 }}>{sub}</div>
 		</div>
 	);
-};
+}; */
 
 export const BlockingSlideB: React.FC = () => {
 	const { fps } = useVideoConfig();
@@ -230,7 +230,7 @@ export const BlockingSlideB: React.FC = () => {
 				<div style={{ flex: 1, position: 'relative', overflow: 'hidden', background: 'rgba(30,41,59,0.18)', backdropFilter: 'blur(30px)', borderRadius: 20, border: '1px solid rgba(255,255,255,0.08)', boxShadow: '0 30px 80px rgba(0,0,0,0.55)' }}>
 
 					{/* ── Header ── */}
-					<div style={{ position: 'absolute', top: 26, left: 32, right: 32, opacity: headerS, transform: `translateY(${interpolate(headerS,[0,1],[-12,0])}px)` }}>
+					<div style={{ position: 'absolute', top: 26, left: 32, right: 32, opacity: headerS, transform: `translateY(${interpolate(headerS,[0,1],[-12,0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.bezier(0.16, 1, 0.3, 1) })}px)` }}>
 						<div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
 							<div style={{ width: 7, height: 7, borderRadius: '50%', background: COLORS.danger, boxShadow: `0 0 8px ${COLORS.danger}` }} />
 							<span style={{ fontSize: 10, fontWeight: 800, color: COLORS.danger, fontFamily: 'Inter', textTransform: 'uppercase', letterSpacing: 1.5 }}>At Scale — The Real Impact</span>
@@ -242,7 +242,7 @@ export const BlockingSlideB: React.FC = () => {
 					</div>
 
 					{/* ── Metric cards row ── */}
-					<div style={{ position: 'absolute', top: 148, left: 32, right: 32, display: 'flex', gap: 16, opacity: metricsS, transform: `translateY(${interpolate(metricsS,[0,1],[20,0])}px)` }}>
+					<div style={{ position: 'absolute', top: 148, left: 32, right: 32, display: 'flex', gap: 16, opacity: metricsS, transform: `translateY(${interpolate(metricsS,[0,1],[20,0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.bezier(0.16, 1, 0.3, 1) })}px)` }}>
 						{[
 							{ label: 'P99 Latency',  value: `${latency}ms`,              sub: `↑ from 120ms baseline`,          color: latency > 800 ? COLORS.danger : COLORS.warning },
 							{ label: 'Error Rate',   value: `${errorRate}%`,              sub: `↑ from 0.1% baseline`,           color: errorRate > 5 ? COLORS.danger : COLORS.warning },
@@ -257,7 +257,7 @@ export const BlockingSlideB: React.FC = () => {
 					</div>
 
 					{/* ── "Why this happens" step flow ── */}
-					<div style={{ position: 'absolute', top: 360, left: 32, right: 32, opacity: flowS, transform: `translateY(${interpolate(flowS,[0,1],[16,0])}px)` }}>
+					<div style={{ position: 'absolute', top: 360, left: 32, right: 32, opacity: flowS, transform: `translateY(${interpolate(flowS,[0,1],[16,0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.bezier(0.16, 1, 0.3, 1) })}px)` }}>
 						<div style={{ background: 'rgba(15,23,42,0.5)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 14, padding: '18px 24px' }}>
 							<div style={{ fontSize: 10, fontWeight: 800, color: COLORS.muted, textTransform: 'uppercase', letterSpacing: 1, fontFamily: 'Inter', marginBottom: 14 }}>Why This Happens</div>
 							<div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0 }}>
@@ -275,7 +275,7 @@ export const BlockingSlideB: React.FC = () => {
 					</div>
 
 					{/* ── Banner ── */}
-					<div style={{ position: 'absolute', bottom: 22, left: 32, right: 32, opacity: bannerS, transform: `translateY(${interpolate(bannerS,[0,1],[20,0])}px)`, display: 'flex', justifyContent: 'center', zIndex: 30 }}>
+					<div style={{ position: 'absolute', bottom: 22, left: 32, right: 32, opacity: bannerS, transform: `translateY(${interpolate(bannerS,[0,1],[20,0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.bezier(0.175, 0.885, 0.32, 1.275) })}px)`, display: 'flex', justifyContent: 'center', zIndex: 30 }}>
 						<div style={{ background: 'rgba(255,23,68,0.1)', border: `2px solid ${COLORS.danger}`, borderRadius: 12, padding: '11px 28px', fontSize: 13, fontWeight: 800, color: COLORS.danger, fontFamily: 'Inter', boxShadow: '0 0 32px rgba(255,23,68,0.3)', backdropFilter: 'blur(10px)' }}>
 							🔥 &nbsp;The database is a hotspot — synchronous I/O is the bottleneck
 						</div>

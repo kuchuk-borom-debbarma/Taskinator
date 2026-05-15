@@ -1,5 +1,5 @@
 import React from 'react';
-import { AbsoluteFill, Sequence, useVideoConfig, useCurrentFrame, spring, interpolate } from 'remotion';
+import { AbsoluteFill, Sequence, useVideoConfig, useCurrentFrame, spring, interpolate, Easing } from 'remotion';
 import { COLORS, GRADIENTS } from './components/Nodes';
 import { TitleCard } from './components/TitleCard';
 import { BlockingSlideA, BlockingSlideB } from './BlockingProblem';
@@ -12,7 +12,7 @@ const CX   = { client: 115, server: 405, db: 700 };
 const NT   = 230;   // node top
 const NW   = 170;   // node width
 const REQ  = 190;   // request arrow y (above nodes)
-const REQ2 = 218;   // second server→db arrow y
+// const REQ2 = 218;   // second server→db arrow y
 const RSP  = 395;   // response arrow y (below nodes)
 
 /* ── Node ─────────────────────────────────────────────── */
@@ -45,7 +45,7 @@ const Arrow: React.FC<{ x1: number; x2: number; y: number; label: string; color:
 				}
 				<circle cx={tip} cy={y} r={3} fill={color} opacity={p} style={{filter:`drop-shadow(0 0 5px ${color})`}} />
 			</svg>
-			<div style={{ position: 'absolute', left: Math.min(x1,x2)+14, top: dir==='ltr' ? y-30 : y+12, opacity: lp, transform: `translateY(${interpolate(lp,[0,1],[dir==='ltr'?-6:6,0])}px)`, background: 'rgba(15,23,42,0.88)', border: `1px solid ${color}44`, borderRadius: 7, padding: '4px 10px', fontSize: 11, fontWeight: 700, color, fontFamily: 'monospace', maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', backdropFilter: 'blur(8px)', zIndex: 20 }}>
+			<div style={{ position: 'absolute', left: Math.min(x1,x2)+14, top: dir==='ltr' ? y-30 : y+12, opacity: lp, transform: `translateY(${interpolate(lp,[0,1],[dir==='ltr'?-6:6,0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.bezier(0.16, 1, 0.3, 1) })}px)`, background: 'rgba(15,23,42,0.88)', border: `1px solid ${color}44`, borderRadius: 7, padding: '4px 10px', fontSize: 11, fontWeight: 700, color, fontFamily: 'monospace', maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', backdropFilter: 'blur(8px)', zIndex: 20 }}>
 				{label}
 			</div>
 		</>
@@ -57,7 +57,7 @@ const DbStep: React.FC<{ num: number; label: string; sub: string; color: string;
 	const f = useCurrentFrame(); const { fps } = useVideoConfig();
 	const s = spring({ frame: f - at, fps, config: { damping: 13, stiffness: 110 } });
 	return (
-		<div style={{ opacity: s, transform: `translateX(${interpolate(s,[0,1],[30,0])}px)`, display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 10 }}>
+		<div style={{ opacity: s, transform: `translateX(${interpolate(s,[0,1],[30,0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.bezier(0.16, 1, 0.3, 1) })}px)`, display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 10 }}>
 			<div style={{ width: 24, height: 24, borderRadius: '50%', flexShrink: 0, background: color, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 900, color: '#000', boxShadow: `0 0 10px ${color}88` }}>{num}</div>
 			<div style={{ flex: 1, background: `${color}0e`, border: `1px solid ${color}33`, borderLeft: `3px solid ${color}`, borderRadius: 8, padding: '7px 11px' }}>
 				<div style={{ fontSize: 12, fontWeight: 700, color, fontFamily: 'Inter' }}>{label}</div>
@@ -72,7 +72,7 @@ const Banner: React.FC<{ text: string; at: number }> = ({ text, at }) => {
 	const f = useCurrentFrame(); const { fps } = useVideoConfig();
 	const s = spring({ frame: f - at, fps, config: { damping: 12, stiffness: 120 } });
 	return (
-		<div style={{ position: 'absolute', bottom: 26, left: 28, right: 28, opacity: s, transform: `translateY(${interpolate(s,[0,1],[30,0])}px)`, display: 'flex', justifyContent: 'center', zIndex: 30 }}>
+		<div style={{ position: 'absolute', bottom: 26, left: 28, right: 28, opacity: s, transform: `translateY(${interpolate(s,[0,1],[30,0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.bezier(0.175, 0.885, 0.32, 1.275) })}px)`, display: 'flex', justifyContent: 'center', zIndex: 30 }}>
 			<div style={{ background: 'rgba(0,230,118,0.1)', border: `2px solid ${COLORS.success}`, color: COLORS.ink, padding: '11px 28px', borderRadius: 12, fontSize: 14, fontWeight: 800, fontFamily: 'Inter', boxShadow: '0 0 32px rgba(0,230,118,0.3)', backdropFilter: 'blur(10px)' }}>✓ &nbsp;{text}</div>
 		</div>
 	);
@@ -87,7 +87,7 @@ const Shell: React.FC<{ tag: string; title: string; sub: string; accent: string;
 			<AbsoluteFill style={{ padding: 20 }}>
 				<div style={{ flex: 1, position: 'relative', overflow: 'hidden', background: 'rgba(30,41,59,0.18)', backdropFilter: 'blur(30px)', borderRadius: 20, border: '1px solid rgba(255,255,255,0.08)', boxShadow: `0 30px 80px rgba(0,0,0,0.55), inset 0 0 60px ${accent}08` }}>
 					{/* Header */}
-					<div style={{ position: 'absolute', top: 26, left: 28, right: 390, opacity: s, transform: `translateY(${interpolate(s,[0,1],[-12,0])}px)` }}>
+					<div style={{ position: 'absolute', top: 26, left: 28, right: 390, opacity: s, transform: `translateY(${interpolate(s,[0,1],[-12,0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.bezier(0.16, 1, 0.3, 1) })}px)` }}>
 						<div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 5 }}>
 							<div style={{ width: 7, height: 7, borderRadius: '50%', background: accent, boxShadow: `0 0 8px ${accent}` }} />
 							<span style={{ fontSize: 10, fontWeight: 800, color: accent, fontFamily: 'Inter', textTransform: 'uppercase', letterSpacing: 1.5 }}>{tag}</span>
@@ -134,15 +134,15 @@ const CreateTask: React.FC = () => {
 	return (
 		<Shell tag="Phase 1 · Synchronous" title="Flow 1 — Create Task" sub="Two sequential writes: insert the task row, then increment the project's denormalized task count." accent={COLORS.accent}>
 			{/* Phase A: request travels to DB */}
-			<Sequence from={t(1.5)}>
+			<Sequence from={t(1.5)} layout="none">
 				<Arrow x1={CX.client+NW/2} x2={CX.server-NW/2} y={REQ} label="POST /api/projects/:id/tasks" color={COLORS.accent} />
 			</Sequence>
-			<Sequence from={t(3.5)}>
+			<Sequence from={t(3.5)} layout="none">
 				<Arrow x1={CX.server+NW/2} x2={CX.db-NW/2} y={REQ} label="Arriving at database…" color={COLORS.success} />
 			</Sequence>
 
 			{/* Phase B: DB operations */}
-			<Sequence from={t(5.5)}>
+			<Sequence from={t(5.5)} layout="none">
 				<div style={{ position: 'absolute', top: 155, left: 866, right: 26 }}>
 					<div style={{ fontSize: 10, fontWeight: 800, color: COLORS.muted, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 12, fontFamily: 'Inter' }}>Database Operations</div>
 					<DbStep num={1} label="Insert task record" sub="INSERT INTO project_task (...) RETURNING *" color={COLORS.success} at={0} />
@@ -153,10 +153,10 @@ const CreateTask: React.FC = () => {
 			</Sequence>
 
 			{/* Phase C: response travels back */}
-			<Sequence from={t(10)}>
+			<Sequence from={t(10)} layout="none">
 				<Arrow x1={CX.db-NW/2} x2={CX.server+NW/2} y={RSP} label="task created · count updated ✓" color={COLORS.success} dir="rtl" />
 			</Sequence>
-			<Sequence from={t(12)}>
+			<Sequence from={t(12)} layout="none">
 				<Arrow x1={CX.server-NW/2} x2={CX.client+NW/2} y={RSP} label="201 Created  { id, title, status }" color={COLORS.accent} dir="rtl" />
 			</Sequence>
 
@@ -174,14 +174,14 @@ const CreateTaskLink: React.FC = () => {
 	const t = (s: number) => fps * s;
 	return (
 		<Shell tag="Phase 1 · Synchronous" title="Flow 2 — Create Task Link" sub="Two writes: the link record itself, then closure table path rows for O(1) reachability." accent={COLORS.accent2}>
-			<Sequence from={t(1.5)}>
+			<Sequence from={t(1.5)} layout="none">
 				<Arrow x1={CX.client+NW/2} x2={CX.server-NW/2} y={REQ} label="POST /api/tasks/:id/links" color={COLORS.accent2} />
 			</Sequence>
-			<Sequence from={t(3.5)}>
+			<Sequence from={t(3.5)} layout="none">
 				<Arrow x1={CX.server+NW/2} x2={CX.db-NW/2} y={REQ} label="Arriving at database…" color={COLORS.success} />
 			</Sequence>
 
-			<Sequence from={t(5.5)}>
+			<Sequence from={t(5.5)} layout="none">
 				<div style={{ position: 'absolute', top: 155, left: 866, right: 26 }}>
 					<div style={{ fontSize: 10, fontWeight: 800, color: COLORS.muted, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 12, fontFamily: 'Inter' }}>Database Operations</div>
 					<DbStep num={1} label="Insert task link record" sub="INSERT INTO task_link (...) RETURNING *" color={COLORS.success} at={0} />
@@ -191,10 +191,10 @@ const CreateTaskLink: React.FC = () => {
 				</div>
 			</Sequence>
 
-			<Sequence from={t(10)}>
+			<Sequence from={t(10)} layout="none">
 				<Arrow x1={CX.db-NW/2} x2={CX.server+NW/2} y={RSP} label="link created · closure paths written ✓" color={COLORS.success} dir="rtl" />
 			</Sequence>
-			<Sequence from={t(12)}>
+			<Sequence from={t(12)} layout="none">
 				<Arrow x1={CX.server-NW/2} x2={CX.client+NW/2} y={RSP} label="201 Created  { id, source_task_id, target_task_id }" color={COLORS.accent2} dir="rtl" />
 			</Sequence>
 
@@ -220,23 +220,23 @@ const ReadProject: React.FC = () => {
 	const chip = spring({ frame: f - t(5.5), fps, config: { damping: 13 } });
 	return (
 		<Shell tag="Phase 1 · Synchronous" title="Flow 3 — Read Project" sub="A single SELECT — counts are pre-stored so no JOINs or aggregations are needed at read time." accent={COLORS.success}>
-			<Sequence from={t(1.5)}>
+			<Sequence from={t(1.5)} layout="none">
 				<Arrow x1={CX.client+NW/2} x2={CX.server-NW/2} y={REQ} label="GET /api/projects/:id" color={COLORS.accent} />
 			</Sequence>
-			<Sequence from={t(3.5)}>
+			<Sequence from={t(3.5)} layout="none">
 				<Arrow x1={CX.server+NW/2} x2={CX.db-NW/2} y={REQ} label="SELECT * FROM project WHERE id = ?" color={COLORS.success} />
 			</Sequence>
 
 			{/* DB processing chip */}
-			<div style={{ position: 'absolute', top: 130, left: 866, right: 26, opacity: chip, transform: `translateX(${interpolate(chip,[0,1],[30,0])}px)` }}>
+			<div style={{ position: 'absolute', top: 130, left: 866, right: 26, opacity: chip, transform: `translateX(${interpolate(chip,[0,1],[30,0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.bezier(0.16, 1, 0.3, 1) })}px)` }}>
 				<div style={{ fontSize: 11, fontWeight: 800, color: COLORS.muted, letterSpacing: 1, textTransform: 'uppercase', marginBottom: 14, fontFamily: 'Inter' }}>Database Operations</div>
 				<DbStep num={1} label="Fetch project row" sub="SELECT id, name, tasks_count, members_count, teams_count FROM project WHERE id = ?" color={COLORS.accent3} at={0} />
 			</div>
 
-			<Sequence from={t(7.5)}>
+			<Sequence from={t(7.5)} layout="none">
 				<Arrow x1={CX.db-NW/2} x2={CX.server+NW/2} y={RSP} label="{ id, name, tasks_count, members_count, ... }" color={COLORS.accent3} dir="rtl" />
 			</Sequence>
-			<Sequence from={t(9.5)}>
+			<Sequence from={t(9.5)} layout="none">
 				<Arrow x1={CX.server-NW/2} x2={CX.client+NW/2} y={RSP} label="200 OK  { project }" color={COLORS.success} dir="rtl" />
 			</Sequence>
 
@@ -268,7 +268,7 @@ const RoadmapSlide: React.FC = () => {
 				<div style={{ flex: 1, position: 'relative', overflow: 'hidden', background: 'rgba(30,41,59,0.18)', backdropFilter: 'blur(30px)', borderRadius: 20, border: '1px solid rgba(255,255,255,0.08)', boxShadow: '0 30px 80px rgba(0,0,0,0.55)', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', padding: '50px 60px' }}>
 
 					{/* Headline */}
-					<div style={{ opacity: s, transform: `translateY(${interpolate(s,[0,1],[-20,0])}px)`, textAlign: 'center', marginBottom: 48 }}>
+					<div style={{ opacity: s, transform: `translateY(${interpolate(s,[0,1],[-20,0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.bezier(0.16, 1, 0.3, 1) })}px)`, textAlign: 'center', marginBottom: 48 }}>
 						<div style={{ fontSize: 11, fontWeight: 800, color: COLORS.accent, letterSpacing: 2, textTransform: 'uppercase', fontFamily: 'Inter', marginBottom: 12 }}>The Structure</div>
 						<h1 style={{ fontSize: 38, fontWeight: 900, color: COLORS.ink, fontFamily: 'Inter', margin: '0 0 14px', lineHeight: 1.2 }}>Here's How This Works</h1>
 						<p style={{ color: COLORS.muted, fontFamily: 'Inter', fontSize: 15, margin: 0, lineHeight: 1.7, maxWidth: 620 }}>
@@ -277,7 +277,7 @@ const RoadmapSlide: React.FC = () => {
 					</div>
 
 					{/* Cards */}
-					<div style={{ opacity: s2, transform: `translateY(${interpolate(s2,[0,1],[24,0])}px)`, display: 'flex', gap: 18, width: '100%', maxWidth: 1060 }}>
+					<div style={{ opacity: s2, transform: `translateY(${interpolate(s2,[0,1],[24,0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.bezier(0.16, 1, 0.3, 1) })}px)`, display: 'flex', gap: 18, width: '100%', maxWidth: 1060 }}>
 						{steps.map((step, i) => (
 							<div key={i} style={{ flex: 1, background: 'rgba(15,23,42,0.55)', border: `1px solid ${step.color}33`, borderTop: `3px solid ${step.color}`, borderRadius: 14, padding: '22px 18px', position: 'relative' }}>
 								<div style={{ fontSize: 28, marginBottom: 10 }}>{step.icon}</div>
@@ -293,7 +293,7 @@ const RoadmapSlide: React.FC = () => {
 					</div>
 
 					{/* Bottom note */}
-					<div style={{ opacity: s3, transform: `translateY(${interpolate(s3,[0,1],[10,0])}px)`, marginTop: 32 }}>
+					<div style={{ opacity: s3, transform: `translateY(${interpolate(s3,[0,1],[10,0], { extrapolateLeft: 'clamp', extrapolateRight: 'clamp', easing: Easing.bezier(0.16, 1, 0.3, 1) })}px)`, marginTop: 32 }}>
 						<div style={{ background: 'rgba(0,229,255,0.06)', border: `1px solid ${COLORS.accent}33`, borderRadius: 10, padding: '11px 22px', fontSize: 13, color: COLORS.accent, fontFamily: 'Inter', fontWeight: 600 }}>
 							→ &nbsp;Starting now with Phase 1 — the simplest possible synchronous flow
 						</div>
@@ -312,38 +312,38 @@ export const SyncArchitecture: React.FC = () => {
 	const { fps } = useVideoConfig();
 	return (
 		<AbsoluteFill style={{ background: GRADIENTS.bg }}>
-			<Sequence from={0} durationInFrames={fps * 3}>
+			<Sequence from={0} durationInFrames={fps * 3} layout="none">
 				<TitleCard title="The Architecture: An Evolutionary Flow" />
 			</Sequence>
-			<Sequence from={fps * 3} durationInFrames={fps * 8}>
+			<Sequence from={fps * 3} durationInFrames={fps * 8} layout="none">
 				<RoadmapSlide />
 			</Sequence>
-			<Sequence from={fps * 11} durationInFrames={fps * 15}>
+			<Sequence from={fps * 11} durationInFrames={fps * 15} layout="none">
 				<CreateTask />
 			</Sequence>
-			<Sequence from={fps * 26} durationInFrames={fps * 15}>
+			<Sequence from={fps * 26} durationInFrames={fps * 15} layout="none">
 				<CreateTaskLink />
 			</Sequence>
-			<Sequence from={fps * 41} durationInFrames={fps * 13}>
+			<Sequence from={fps * 41} durationInFrames={fps * 13} layout="none">
 				<ReadProject />
 			</Sequence>
-			<Sequence from={fps * 54} durationInFrames={fps * 12}>
+			<Sequence from={fps * 54} durationInFrames={fps * 12} layout="none">
 				<BlockingSlideA />
 			</Sequence>
-			<Sequence from={fps * 66} durationInFrames={fps * 12}>
+			<Sequence from={fps * 66} durationInFrames={fps * 12} layout="none">
 				<BlockingSlideB />
 			</Sequence>
 			{/* ── Phase 2: Async Solution ── */}
-			<Sequence from={fps * 78} durationInFrames={fps * 7}>
+			<Sequence from={fps * 78} durationInFrames={fps * 7} layout="none">
 				<AsyncIntroSlide />
 			</Sequence>
-			<Sequence from={fps * 85} durationInFrames={fps * 15}>
+			<Sequence from={fps * 85} durationInFrames={fps * 15} layout="none">
 				<AsyncCreateTask />
 			</Sequence>
-			<Sequence from={fps * 100} durationInFrames={fps * 15}>
+			<Sequence from={fps * 100} durationInFrames={fps * 15} layout="none">
 				<AsyncCreateTaskLink />
 			</Sequence>
-			<Sequence from={fps * 115}>
+			<Sequence from={fps * 115} layout="none">
 				<AsyncReadProject />
 			</Sequence>
 		</AbsoluteFill>

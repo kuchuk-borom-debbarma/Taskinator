@@ -1,63 +1,47 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
-status: ready_to_plan
-last_updated: "2026-05-13T17:01:55.121Z"
+milestone: v3.0
+milestone_name: Remotion Overhaul & Autopilot Showcase
+status: executing
+last_updated: "2026-05-15T18:24:04.822Z"
+last_activity: 2026-05-15 -- Phase 15 execution started
 progress:
-  total_phases: 4
-  completed_phases: 4
-  total_plans: 0
+  total_phases: 5
+  completed_phases: 0
+  total_plans: 3
   completed_plans: 0
-  percent: 100
+  percent: 0
 ---
 
-# STATE — Taskinator Architecture Video
+# Project State - Milestone v3.0 (Remotion Overhaul & Autopilot Showcase)
 
-## Project Reference
+## Current Phase: [NONE]
 
-See: `.planning/PROJECT.md` (updated 2026-05-13)
+**Goal:** Overhaul the video compositions using Remotion best practices.
 
-**Core value:** A technically rigorous, visually compelling walkthrough that shows *why* each architectural decision was made — not just what the final system looks like.
-**Current focus:** Phase 4 — final-unified-architecture
+## Active Phase: Phase 15 - Refactoring Baseline
 
-## Current Status
+- [ ] **REFACTOR-01**: Refactor `FeatureShowcase` to use Remotion interpolation/springs instead of CSS animations.
+- [ ] **REFACTOR-02**: Refactor `SchemaDesign` and its 6 sub-scenes (`QueryProblem`, `ClosureTableSolution`, etc.) to use proper easing and sequencing.
+- [ ] **REFACTOR-03**: Refactor `SyncArchitecture` (including `BlockingProblem` and `AsyncSolution`) using best practice hooks.
 
-**Phase:** 4 of 4 (final unified architecture)
-**Plan:** Waiting for User Approval
-**Mode:** YOLO — execute without confirmation prompts
+## Progress
 
-## Codebase Context
+- [x] Milestone v2.0 Archiving (Completed)
+- [x] Milestone v3.0 Initialization (Completed)
+- [ ] Phase 15 (Not Started)
 
-See: `.planning/codebase/` (mapped 2026-05-13)
+## Blockers
 
-Key files for this project:
+- None.
 
-- `remotion/src/Root.tsx` — registers all compositions
-- `remotion/src/components/Nodes.tsx` — COLORS, GRADIENTS, shared node components
-- `remotion/src/components/TitleCard.tsx` — title card component
-- `remotion/script-flow.md` — full narrative script (authoritative)
-- Design system: `Shell`, `Appear`, `SNode`, `Arrow`, `spring()` patterns — see existing compositions for reference
+## Next Step
 
-## What's Already Built
+- Run `/gsd-discuss-phase 15` or `/gsd-plan-phase 15` to design the refactoring plan for baseline video compositions.
 
-10 compositions registered in `Root.tsx` covering ~12 minutes of content:
+## Current Position
 
-- FeatureShowcase, SchemaDesign, SyncArchitecture, AsyncProblems, TransactionalOutbox, UpgradedAsyncFlow, ConcurrencyControl, SmartAggregation, ChunkedDeletion, RealtimeSSE
-
-## What's Next
-
-**Phase 4 — Final Unified Architecture**
-
-Start with Plan 4.1: full system diagram layout.
-
-Run: `/gsd-plan-phase 4`
-
-## Decisions Log
-
-| Date | Decision | Reason |
-|---|---|---|
-| 2026-05-13 | Sequential delivery, one composition per phase | Human review between each composition to catch narrative / design issues |
-| 2026-05-13 | Fine granularity — many plans per phase | YouTube deep-dive audience expects detailed slides, not summaries |
-| 2026-05-13 | No parallelization | Compositions build on narrative continuity — must review each before the next |
-| 2026-05-13 | `script-flow.md` updated to reflect actual built state | Original script-flow was outdated and incomplete |
+Phase: 15 (Refactoring Baseline) — EXECUTING
+Plan: 1 of 3
+Status: Executing Phase 15
+Last activity: 2026-05-15 -- Phase 15 execution started
