@@ -14,7 +14,7 @@ Taskinator-v2 is a state-of-the-art workflow engine designed for massive task hi
 
 - `modular-monolith/`: The core backend engine built with Bun/Node.js, PostgreSQL, Kafka, and Redis.
 - `ui-v1/`: Next.js-based professional dashboard for workflow management.
-- `remotion/`: Video generation engine for automated project status reports.
+- `remotion/`: High-fidelity programmatic video suite orchestrating 18 premium architectural simulations and dynamic UI deep-dives.
 
 ## 📖 Documentation
 
