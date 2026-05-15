@@ -1,7 +1,15 @@
 # Roadmap Directory
 
-## Active Roadmaps
-*(No active roadmap initialized. Start the next milestone cycle with `/gsd-new-milestone`)*
+## Active Roadmap: Milestone v4.0
+
+### Phase 20: Autopilot Hook Integration
+**Goal:** Evolve `FeatureShowcase` to incorporate the Project Autopilot System showcase.
+
+- [ ] **FEATURE-401**: Create the `AutopilotNode` primitive with custom glowing glow pulses inside `remotion/src/components/Nodes.tsx`.
+- [ ] **FEATURE-402**: Re-engineer `FeatureShowcase.tsx` layout to extend simulation segment timing and map the dynamic Autopilot activation pulse.
+- [ ] **FEATURE-403**: Program downstream `TaskNode` emerald completions representing programmatic automated fulfillment.
+- [ ] **FEATURE-404**: Register updated expanded frame durations across `Root.tsx` and audit dynamic transition alignment.
+
 
 ---
 

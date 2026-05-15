@@ -26,8 +26,7 @@ Automate the "busy work" of project management through reliable, transparent, an
 - ✓ [Autopilot Engine Visualization] — Compositions highlighting nested evaluations, fail-fast chains, and loop blockers (v3.0).
 - ✓ [Visual Dashboard Showcase] — Showcase high-fidelity admin dashboard UIs (v3.0).
 
-### Active (Future Planning)
-
+- [ ] [Feature Showcase Upgrade] — Integrate Autopilot Feature Segment into the hook composition (v4.0).
 - [ ] [Multi-domain Triggers] — Evaluate events crossing project boundaries.
 - [ ] [Complex Predicates] — Evaluate conditions referencing recursive parent/child states.
 
@@ -36,14 +35,12 @@ Automate the "busy work" of project management through reliable, transparent, an
 - [Cron-based Triggers] — Reactive/event-driven architecture remains primary focus.
 - [External Service Actions] — Scope confined to internal Taskinator domain mutations.
 
-## Current Milestone: Shipped v3.0 🚀
+## Current Milestone: Milestone v4.0 🎯
 
-**Goal:** Remotion Overhaul & Autopilot Showcase. All 18 scenes and the master dynamic scheduler are fully delivered and compiled cleanly.
+**Goal:** Autopilot Integrated Hook. Evolve the premier `FeatureShowcase` introductory hook composition to visually feature our ultimate core capability—the Project Autopilot System.
 
-## Current State (v3.0)
-The complete presentation system is 100% operational. The backend Autopilot engine and frontend management interfaces are fully simulated across 18 premium, frame-accurate Remotion compositions. All legacy CSS transition overhead has been eliminated, achieving perfect design conformance and type safety.
-
-The entire 29,885-frame video asset has been unified under the new `MasterPresentation` orchestrator.
+## Current State (v4.0)
+Following the delivery of the cinema-grade architecture simulator suite in v3.0, our repository documentation and core engine are pristine. We are now integrating the Autopilot highlight directly into the opening video scene to reflect the actual capabilities of our current platform.
 
 ## Key Decisions
 
