@@ -38,5 +38,5 @@
   "features": {},
   "resolve_model_ids": "omit",
   "mode": "interactive",
-  "granularity": "coarse"
+  "granularity": "fine"
 }

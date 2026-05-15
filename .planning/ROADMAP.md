@@ -1,33 +1,53 @@
 # Milestone v1.2: Project Autopilot System
 
-## Phase 1: Core Foundation & Condition Engine
-**Goal:** Build the generic autopilot data model and the "Live-Context" condition evaluator.
+## Phase 1: Autopilot & Condition Schema
+**Goal:** Define and implement the database schema for Autopilots and their logical conditions.
 **Success Criteria:**
-1. Autopilot and Condition schemas are implemented in the database.
-2. The `ConditionEvaluator` can resolve complex trees (AND/OR/NOT) against fresh DB state.
-3. Unit tests verify that conditions correctly pass/fail based on mock domain contexts.
+1. `autopilot` and `autopilot_condition` tables are created in PostgreSQL.
+2. Models/Repositories are established with basic CRUD for autopilot definitions.
 
-## Phase 2: Action Chain Framework
-**Goal:** Implement the sequential action model and the "Fail-Fast" chain runner.
+## Phase 2: Live-Context Retrieval Engine
+**Goal:** Build the mechanism to fetch "fresh" domain state from the DB for condition evaluation.
 **Success Criteria:**
-1. The `ActionChain` data model (Linked List) is implemented.
-2. The execution engine can run a sequence of actions and correctly halt on any step failure.
-3. Core task actions (Status update, Assignment) are implemented as executable units.
+1. Context resolver can fetch Task and Project state by ID on demand.
+2. Context objects are typed and ready for the evaluation engine.
 
-## Phase 3: Async Execution & Event Integration
-**Goal:** Connect the Autopilot engine to the Kafka event bus for reactive execution.
+## Phase 3: Condition Evaluation Engine
+**Goal:** Implement the Boolean logic tree (AND/OR/NOT) for matching autopilots to events.
 **Success Criteria:**
-1. Incoming domain events correctly trigger the corresponding Autopilot lookup and evaluation.
-2. The engine executes action chains asynchronously without blocking the primary event loop.
-3. Initial integration tests verify an end-to-end flow: Event → Condition → Action.
+1. Engine correctly evaluates complex logical trees against context.
+2. Unit tests cover all V1 predicates (`Equals`, `Changed`, `HasParent`, etc.).
 
-## Phase 4: Safety, Loop Detection & Audit
-**Goal:** Implement TraceID-based loop detection and real-time execution logging.
+## Phase 4: Action Chain Framework
+**Goal:** Implement the data model and structural runner for sequential actions.
 **Success Criteria:**
-1. Mutation-Hash based loop detection correctly breaks infinite cycles.
-2. Every autopilot execution is recorded in the `autopilot_audit_log`.
-3. Audit logs are pushed to the SSE stream and visible in real-time.
+1. `autopilot_action` table and Linked List structure are implemented.
+2. The Action Runner correctly manages step execution and failure propagation.
+
+## Phase 5: Core Task Action Handlers
+**Goal:** Implement the executable code for specific task-level mutations.
+**Success Criteria:**
+1. `StatusUpdate` and `MemberAssignment` actions are implemented and tested.
+2. Atomic database writes are verified for each action type.
+
+## Phase 6: Async Event Router & Kafka Integration
+**Goal:** Connect the system to the Kafka outbox for reactive, non-blocking execution.
+**Success Criteria:**
+1. Kafka consumer correctly routes domain events to the Autopilot dispatcher.
+2. Events are processed asynchronously without impacting the main API flow.
+
+## Phase 7: TraceID & Loop Detection
+**Goal:** Implement the safety layer to prevent infinite automation cycles.
+**Success Criteria:**
+1. TraceID is successfully propagated through action-triggered events.
+2. Mutation-Hash based detection identifies and terminates redundant loops.
+
+## Phase 8: Audit Logging & SSE Observability
+**Goal:** Finalize the system with persistent logging and real-time UI updates.
+**Success Criteria:**
+1. `autopilot_audit_log` records every step of every execution.
+2. Logs are successfully broadcasted via SSE for real-time UI monitoring.
 
 ---
 *Roadmap defined: 2026-05-15*
-*Last updated: 2026-05-15 after phase separation*
+*Last updated: 2026-05-15 after granular split*

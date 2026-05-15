@@ -41,15 +41,15 @@
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | AUTO-01 | Phase 1 | Pending |
-| AUTO-02 | Phase 3 | Pending |
-| AUTO-03 | Phase 1 | Pending |
-| AUTO-04 | Phase 1 | Pending |
-| EXEC-01 | Phase 2 | Pending |
-| EXEC-02 | Phase 2 | Pending |
-| EXEC-03 | Phase 2 | Pending |
-| SAFE-01 | Phase 4 | Pending |
-| AUDT-01 | Phase 4 | Pending |
-| AUDT-02 | Phase 4 | Pending |
+| AUTO-02 | Phase 6 | Pending |
+| AUTO-03 | Phase 2 | Pending |
+| AUTO-04 | Phase 3 | Pending |
+| EXEC-01 | Phase 4 | Pending |
+| EXEC-02 | Phase 4 | Pending |
+| EXEC-03 | Phase 5 | Pending |
+| SAFE-01 | Phase 7 | Pending |
+| AUDT-01 | Phase 8 | Pending |
+| AUDT-02 | Phase 8 | Pending |
 
 **Coverage:**
 - v1 requirements: 10 total
