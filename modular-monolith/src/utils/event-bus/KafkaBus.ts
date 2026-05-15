@@ -132,7 +132,10 @@ export class KafkaBus implements Bus {
                                     .map((m) =>
                                         JSON.parse(m.value?.toString() || '{}'),
                                     )
-                                    .filter((e) => handlers[e.type]);
+                                    .filter(
+                                        (e) =>
+                                            handlers[e.type] || handlers['*'],
+                                    );
 
                                 if (allEvents.length > 0) {
                                     logger.info(
@@ -182,6 +185,12 @@ export class KafkaBus implements Bus {
             const bucket = byType.get(e.type) ?? [];
             bucket.push(e);
             byType.set(e.type, bucket);
+
+            if (handlers['*']) {
+                const wildcardBucket = byType.get('*') ?? [];
+                wildcardBucket.push(e);
+                byType.set('*', wildcardBucket);
+            }
         }
 
         await Promise.all(

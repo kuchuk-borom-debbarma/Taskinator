@@ -1,5 +1,10 @@
 # Milestone v1.2: Project Autopilot System
 
+- [x] Phase 01: Autopilot Condition Schema & Evaluator
+- [x] Phase 02: Live-Context Retrieval Engine
+- [x] Phase 03: Condition Evaluation Engine
+- [ ] Phase 04: Action Execution Pipeline
+
 ## Phase 1: Autopilot & Condition Schema [DONE]
 **Goal:** Define and implement the database schema for Autopilots and their logical conditions.
 **Success Criteria:**
@@ -12,7 +17,7 @@
 1. Context resolver can fetch Task and Project state by ID on demand.
 2. Context objects are typed and ready for the evaluation engine.
 
-## Phase 3: Condition Evaluation Engine
+## Phase 3: Condition Evaluation Engine [DONE]
 **Goal:** Implement the Boolean logic tree (AND/OR/NOT) for matching autopilots to events.
 **Success Criteria:**
 1. Engine correctly evaluates complex logical trees against context.

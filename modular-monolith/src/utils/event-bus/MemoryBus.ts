@@ -22,7 +22,10 @@ export class MemoryBus implements Bus {
         const events = items.map((i) => createEvent(type, i.key, i.data, i.id));
         // Emit with a small async delay to simulate Kafka's async delivery
         for (const e of events) {
-            setTimeout(() => this.emitter.emit(`${topic}:${e.type}`, e), 10);
+            setTimeout(() => {
+                this.emitter.emit(`${topic}:${e.type}`, e);
+                this.emitter.emit(`${topic}:*`, e); // Support wildcard listeners
+            }, 10);
         }
     }
 
@@ -40,6 +43,8 @@ export class MemoryBus implements Bus {
                         if (options?.batch) {
                             await handler([e]);
                         } else {
+                            // If it's a wildcard handler, we might want to pass the type too
+                            // but the interface says (data: any)
                             await handler(e.data);
                         }
                     } catch (err) {
