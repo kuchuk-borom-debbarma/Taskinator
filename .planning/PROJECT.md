@@ -18,11 +18,13 @@ Automate the "busy work" of project management through reliable, transparent, an
 - ✓ [Loop Detection] — TraceID + Depth based infinite cycle prevention (v1.0).
 - ✓ [Audit Logging] — Real-time execution logs for UI visibility (v1.0).
 
-### Active (V2)
+### Active (V2 - UI Integration)
 
-- [ ] [Multi-domain Triggers] — Support for events crossing project/team boundaries.
-- [ ] [Visual Definition Builder] — UI for managing autopilots.
-- [ ] [Execution Metrics] — Aggregated throughput and failure rate reporting.
+- [ ] [Autopilot Dashboard] — List view for all autopilots in a project with status and metadata.
+- [ ] [Visual Condition Builder] — Node-based interface (using XYFlow) for defining condition trees.
+- [ ] [Action Pipeline Editor] — Drag-and-drop or sequential list editor for automation steps.
+- [ ] [Dynamic Action Config] — Smart forms with predefined dropdowns and custom fallback fields.
+- [ ] [GraphQL Integration] — End-to-end wiring of the UI with the backend Autopilot mutations.
 
 ### Out of Scope
 
