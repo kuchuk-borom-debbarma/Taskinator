@@ -41,4 +41,8 @@ Completing the remaining core compositions from the original architectural roadm
 - Exporting to 4K UHD — restricted to 1080p60 standard for speed.
 
 ## Traceability
-*To be completed by roadmapper.*
+- **REFACTOR-01** to **REFACTOR-03** → [Phase 15: Refactoring Baseline](ROADMAP.md#phase-15-refactoring-baseline)
+- **REFACTOR-04** to **REFACTOR-06** → [Phase 16: Refactoring Scale](ROADMAP.md#phase-16-refactoring-scale)
+- **AUTOPILOT-01** to **AUTOPILOT-04** → [Phase 17: Autopilot Engine Visuals](ROADMAP.md#phase-17-autopilot-engine-visuals)
+- **AUTOUI-01** to **AUTOUI-03** → [Phase 18: Autopilot UI Visuals](ROADMAP.md#phase-18-autopilot-ui-visuals)
+- **FINALE-01** to **FINALE-05** → [Phase 19: Finale & Master Assembly](ROADMAP.md#phase-19-finale--master-assembly)

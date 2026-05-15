@@ -13,22 +13,23 @@ progress:
   percent: 0
 ---
 
-# Project State - Milestone v2.0 (UI Integration)
+# Project State - Milestone v3.0 (Remotion Overhaul & Autopilot Showcase)
 
 ## Current Phase: [NONE]
 
-**Goal:** Prepare for UI Integration.
+**Goal:** Overhaul the video compositions using Remotion best practices.
 
-## Active Phase: Phase 10 - Autopilot Dashboard & Navigation
+## Active Phase: Phase 15 - Refactoring Baseline
 
-- [ ] UI-01: Create the main Autopilot list view in `ui-v1`.
-- [ ] UI-02: Implement navigation and project context state.
+- [ ] **REFACTOR-01**: Refactor `FeatureShowcase` to use Remotion interpolation/springs instead of CSS animations.
+- [ ] **REFACTOR-02**: Refactor `SchemaDesign` and its 6 sub-scenes (`QueryProblem`, `ClosureTableSolution`, etc.) to use proper easing and sequencing.
+- [ ] **REFACTOR-03**: Refactor `SyncArchitecture` (including `BlockingProblem` and `AsyncSolution`) using best practice hooks.
 
 ## Progress
 
-- [x] Milestone v1.0 Archiving (Completed)
-- [x] Milestone v2.0 Initialization (Completed)
-- [ ] Phase 10 (Not Started)
+- [x] Milestone v2.0 Archiving (Completed)
+- [x] Milestone v3.0 Initialization (Completed)
+- [ ] Phase 15 (Not Started)
 
 ## Blockers
 
@@ -36,11 +37,11 @@ progress:
 
 ## Next Step
 
-- Run `/gsd-ui-phase` to define the design contract for the Autopilot UI.
+- Run `/gsd-discuss-phase 15` or `/gsd-plan-phase 15` to design the refactoring plan for baseline video compositions.
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: Not started (Phase 15 ready)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-05-15 — Milestone v3.0 started
+Status: Milestone Initialized
+Last activity: 2026-05-15 — Milestone v3.0 initialized
