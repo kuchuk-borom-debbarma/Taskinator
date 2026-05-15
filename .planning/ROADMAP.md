@@ -1,6 +1,6 @@
 # Milestone v1.2: Project Autopilot System
 
-## Phase 1: Autopilot & Condition Schema
+## Phase 1: Autopilot & Condition Schema [DONE]
 **Goal:** Define and implement the database schema for Autopilots and their logical conditions.
 **Success Criteria:**
 1. `autopilot` and `autopilot_condition` tables are created in PostgreSQL.

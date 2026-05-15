@@ -5,12 +5,16 @@
 See: .planning/PROJECT.md (updated 2026-05-15)
 
 **Core value:** Automate the "busy work" of project management through reliable, transparent, and high-speed execution chains.
-**Current focus:** Phase 1: Autopilot & Condition Schema
+**Current focus:** Phase 2: Live-Context Retrieval Engine
 
 ## Milestone v1.2: Project Autopilot System
 
-- Phase 1: Autopilot & Condition Schema [Initialization]
-- Phase 2: Live-Context Retrieval Engine [Pending]
+- Phase 1: Autopilot & Condition Schema [DONE]
+**Goal:** Define and implement the database schema for Autopilots and their logical conditions.
+**Success Criteria:**
+1. `autopilot` table created in PostgreSQL. [✓]
+2. Models/Repositories established with basic CRUD. [✓]
+- Phase 2: Live-Context Retrieval Engine [Initialization]
 - Phase 3: Condition Evaluation Engine [Pending]
 - Phase 4: Action Chain Framework [Pending]
 - Phase 5: Core Task Action Handlers [Pending]
