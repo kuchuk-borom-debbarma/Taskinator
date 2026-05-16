@@ -33,17 +33,27 @@ export class ConditionEvaluator {
 
         switch (predicate.operator) {
             case 'eq':
-                return actualValue === predicate.value;
+            case '==':
+                return String(actualValue) === String(predicate.value);
             case 'neq':
-                return actualValue !== predicate.value;
+            case '!=':
+                return String(actualValue) !== String(predicate.value);
             case 'gt':
-                return actualValue > predicate.value;
+            case '>':
+                return Number(actualValue) > Number(predicate.value);
             case 'gte':
-                return actualValue >= predicate.value;
+            case '>=':
+                return Number(actualValue) >= Number(predicate.value);
             case 'lt':
-                return actualValue < predicate.value;
+            case '<':
+                return Number(actualValue) < Number(predicate.value);
             case 'lte':
-                return actualValue <= predicate.value;
+            case '<=':
+                return Number(actualValue) <= Number(predicate.value);
+            case 'contains':
+                return String(actualValue)
+                    .toLowerCase()
+                    .includes(String(predicate.value).toLowerCase());
             case 'in':
                 return (
                     Array.isArray(predicate.value) &&
