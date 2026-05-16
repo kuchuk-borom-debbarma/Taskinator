@@ -1,16 +1,13 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { CreateAutopilotModal } from './CreateAutopilotModal';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AutopilotMetadataProvider } from './AutopilotMetadataContext';
 import { vi } from 'vitest';
+import { useGraphQLClient } from '../../hooks/useGraphQLClient';
 
 // Mock useGraphQLClient
 vi.mock('../../hooks/useGraphQLClient', () => ({
-  useGraphQLClient: () => ({
-    request: vi.fn().mockResolvedValue({
-      autopilotMetadata: { entities: [] }
-    })
-  })
+  useGraphQLClient: vi.fn()
 }));
 
 const queryClient = new QueryClient({
@@ -30,6 +27,14 @@ const wrapper = ({ children }: { children: React.ReactNode }) => (
 );
 
 describe('CreateAutopilotModal', () => {
+  beforeEach(() => {
+    vi.mocked(useGraphQLClient).mockReturnValue({
+      request: vi.fn().mockResolvedValue({
+        autopilotMetadata: { entities: [] }
+      })
+    } as any);
+  });
+
   it('renders trigger selection as step 1', () => {
     render(
       <CreateAutopilotModal
@@ -62,4 +67,64 @@ describe('CreateAutopilotModal', () => {
     // Should see Pipeline Editor content
     expect(screen.getByText(/Build Action Pipeline/i)).toBeInTheDocument();
   });
+
+  it('integration: serializes final pipeline payload to match CreateAutopilotInput', async () => {
+    const mockRequest = vi.fn().mockResolvedValue({
+      createAutopilot: { id: 'auto-1', isActive: true, triggers: [] }
+    });
+    vi.mocked(useGraphQLClient).mockReturnValue({
+      request: mockRequest
+    } as any);
+
+    render(
+      <CreateAutopilotModal
+        open={true}
+        onClose={() => {}}
+        projectId="test-project"
+      />,
+      { wrapper }
+    );
+
+    // Step 1: Trigger
+    fireEvent.click(screen.getByText(/Task Created/i));
+    fireEvent.click(screen.getByText(/Continue/i));
+
+    // Step 2: Pipeline
+    // By default it has an initial condition.
+    expect(screen.getByText(/Build Action Pipeline/i)).toBeInTheDocument();
+    fireEvent.click(screen.getByText(/Continue/i));
+
+    // Step 3: Review
+    expect(screen.getByText(/Review Rule Configuration/i)).toBeInTheDocument();
+    
+    // Create Autopilot
+    fireEvent.click(screen.getByText(/Activate Autopilot/i));
+
+    await waitFor(() => {
+      expect(mockRequest).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({
+          input: {
+            projectId: 'test-project',
+            triggers: ['task.created'],
+            pipeline: [
+              {
+                condition: {
+                  name: 'Main Filter',
+                  definition: {
+                    __typename: 'PredicateNode',
+                    domain: 'task',
+                    field: 'status',
+                    operator: '==',
+                    value: 'TODO',
+                  }
+                }
+              }
+            ]
+          }
+        })
+      );
+    });
+  });
 });
+
