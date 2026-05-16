@@ -4,6 +4,7 @@ import { Reorder, useDragControls } from 'framer-motion';
 import type { PipelineStep, AutopilotAction, AutopilotCondition } from '../../../gql/graphql';
 import { ActionStepCard } from './ActionStepCard';
 import { ConditionStepCard } from '../Builder/ConditionStepCard';
+import { PipelineStepConnector } from './PipelineStepConnector';
 import { AddActionModal } from './AddActionModal';
 import { ActionConfigForm } from './ActionConfigForm';
 import { getActionDefinition } from './actionTypes';
@@ -14,15 +15,6 @@ interface PipelineEditorProps {
   readOnly?: boolean;
   onChange?: (pipeline: PipelineStep[]) => void;
 }
-
-// Connector arrow between steps
-export const PipelineStepConnector: React.FC = () => (
-  <div className="flex flex-col items-center py-1">
-    <div className="h-3 w-px bg-app-line/60" />
-    <ArrowDown size={12} className="text-app-muted/60" />
-    <div className="h-3 w-px bg-app-line/60" />
-  </div>
-);
 
 export const PipelineEditor: React.FC<PipelineEditorProps> = ({
   pipeline,
@@ -137,6 +129,8 @@ export const PipelineEditor: React.FC<PipelineEditorProps> = ({
                 ? (item as AutopilotAction).id 
                 : (item as AutopilotCondition).id;
               
+              const nextStep = displayPipeline[index + 1];
+              
               return (
                 <Reorder.Item
                   key={itemId}
@@ -161,7 +155,9 @@ export const PipelineEditor: React.FC<PipelineEditorProps> = ({
                       onRemove={handleRemove}
                     />
                   )}
-                  {index < displayPipeline.length - 1 && <PipelineStepConnector />}
+                  {nextStep && (
+                    <PipelineStepConnector previousStep={item} nextStep={nextStep} />
+                  )}
                 </Reorder.Item>
               );
             })}

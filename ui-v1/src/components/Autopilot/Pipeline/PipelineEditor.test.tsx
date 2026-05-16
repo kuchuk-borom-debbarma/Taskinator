@@ -66,4 +66,27 @@ describe('PipelineEditor', () => {
     expect(screen.getByText('Update Status')).toBeInTheDocument();
     expect(screen.getByText('Check Priority')).toBeInTheDocument();
   });
+
+  it('renders "Halt if false" indicator after conditions', () => {
+    // Pipeline with condition followed by action
+    const pipeline: PipelineStep[] = [
+      {
+        __typename: 'AutopilotCondition',
+        id: 'cond-1',
+        name: 'Check Priority',
+        definition: { __typename: 'AndNode', children: [] },
+      },
+      {
+        __typename: 'AutopilotAction',
+        id: 'action-1',
+        type: 'task.update_status',
+        config: { status: 'DONE' },
+        position: 2,
+      },
+    ];
+
+    render(<PipelineEditor pipeline={pipeline} onChange={vi.fn()} />);
+    
+    expect(screen.getByText(/halt if false/i)).toBeInTheDocument();
+  });
 });
