@@ -6,7 +6,10 @@ import type {
     AutopilotStepLogTable,
 } from './tables/AuditLog.ts';
 import type { AutopilotTable } from './tables/Autopilot.ts';
-import type { AutopilotActionTable } from './tables/AutopilotAction.ts';
+import type { ActionDefTable } from './tables/AutopilotActionDef.ts';
+import type { ActionLabelTable } from './tables/AutopilotActionLabel.ts';
+import type { ConditionTable } from './tables/AutopilotCondition.ts';
+import type { ConditionLabelTable } from './tables/AutopilotConditionLabel.ts';
 import type { OutboxEventTable } from './tables/OutboxEvent.ts';
 import type { ProcessedEventTable } from './tables/ProcessedEvent.ts';
 import type { ProjectMemberTable, ProjectTable } from './tables/Project.ts';
@@ -21,7 +24,10 @@ import type { PendingUserTable, UserTable } from './tables/User.ts';
 
 export interface Database {
     autopilot: AutopilotTable;
-    autopilot_action: AutopilotActionTable;
+    conditions: ConditionTable;
+    condition_labels: ConditionLabelTable;
+    actions: ActionDefTable;
+    action_labels: ActionLabelTable;
     autopilot_execution: AutopilotExecutionTable;
     autopilot_step_log: AutopilotStepLogTable;
     project: ProjectTable;

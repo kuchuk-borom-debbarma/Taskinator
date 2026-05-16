@@ -86,7 +86,7 @@ describe('Task Concurrency & Locking Stress Test E2E', () => {
         expect(errors.length).toBe(CONCURRENCY - 1);
 
         // Verify errors are conflict related
-        expect(errors[0].body.errors[0].message).toMatch(
+        expect(errors[0]!.body.errors[0].message).toMatch(
             /version mismatch|Conflict/i,
         );
 

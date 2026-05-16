@@ -193,17 +193,64 @@ FOR EACH ROW EXECUTE FUNCTION notify_outbox_event();
 CREATE TABLE autopilot (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     fk_project_id UUID NOT NULL,
-    triggers TEXT[] NOT NULL DEFAULT '{}',
-    conditions JSONB NOT NULL DEFAULT '{}',
+    name TEXT NOT NULL DEFAULT 'Untitled Autopilot',
+    description TEXT,
+    steps JSONB NOT NULL DEFAULT '[]',
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     trace_history_enabled BOOLEAN NOT NULL DEFAULT FALSE,
     version INTEGER NOT NULL DEFAULT 1,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    created_by TEXT NOT NULL,
+    updated_by TEXT NOT NULL
 );
 
 -- Autopilot Indexes
 CREATE INDEX idx_autopilot_project ON autopilot(fk_project_id);
-CREATE INDEX idx_autopilot_triggers ON autopilot USING GIN (triggers);
 
+-- Autopilot Conditions Table
+CREATE TABLE conditions (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    definition JSONB NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    created_by TEXT NOT NULL
+);
+
+-- Autopilot Condition Labels Table
+CREATE TABLE condition_labels (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name TEXT NOT NULL,
+    condition_hash TEXT NOT NULL REFERENCES conditions(id) ON DELETE CASCADE,
+    project_id UUID NOT NULL REFERENCES project(id) ON DELETE CASCADE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    created_by TEXT NOT NULL,
+    updated_by TEXT NOT NULL,
+    UNIQUE(project_id, name)
+);
+
+-- Autopilot Actions Table
+CREATE TABLE actions (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    steps JSONB NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    created_by TEXT NOT NULL
+);
+
+-- Autopilot Action Labels Table
+CREATE TABLE action_labels (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    name TEXT NOT NULL,
+    action_hash TEXT NOT NULL REFERENCES actions(id) ON DELETE CASCADE,
+    project_id UUID NOT NULL REFERENCES project(id) ON DELETE CASCADE,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    created_by TEXT NOT NULL,
+    updated_by TEXT NOT NULL,
+    UNIQUE(project_id, name)
+);
 

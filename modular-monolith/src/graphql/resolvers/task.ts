@@ -24,6 +24,14 @@ interface UpdateTaskInput {
     priority?: number;
 }
 
+interface UpdateTaskLinkInput {
+    projectId: string;
+    linkId: string;
+    sourceTaskId?: string;
+    targetTaskId?: string;
+    label?: string;
+}
+
 interface CreateTaskLinkInput {
     projectId: string;
     sourceTaskId: string;

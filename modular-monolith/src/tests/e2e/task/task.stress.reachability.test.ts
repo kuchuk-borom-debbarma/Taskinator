@@ -82,8 +82,8 @@ describe('Task Graph Reachability Stress Test E2E', () => {
         await waitFor(async () => {
             const reach = await db
                 .selectFrom('task_reachability')
-                .where('ancestor_task_id', '=', taskIds[0])
-                .where('descendant_task_id', '=', taskIds[CHAIN_LENGTH - 1])
+                .where('ancestor_task_id', '=', taskIds[0]!)
+                .where('descendant_task_id', '=', taskIds[CHAIN_LENGTH - 1]!)
                 .select(['depth'])
                 .executeTakeFirst();
 
@@ -96,7 +96,7 @@ describe('Task Graph Reachability Stress Test E2E', () => {
         await waitFor(async () => {
             const task0 = await db
                 .selectFrom('project_task')
-                .where('id', '=', taskIds[0])
+                .where('id', '=', taskIds[0]!)
                 .select(['total_outgoing_count'])
                 .executeTakeFirstOrThrow();
 

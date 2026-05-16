@@ -14,14 +14,14 @@ describe('Autopilot Table Integration', () => {
         const newAutopilot = {
             id: autopilotId,
             fk_project_id: projectId,
-            triggers: ['TASK_CREATED'],
-            conditions: JSON.stringify({
-                type: 'predicate',
-                domain: 'task',
-                field: 'status',
-                operator: 'eq',
-                value: 'DONE',
-            }),
+            name: 'Test Autopilot',
+            description: 'Integration test autopilot',
+            steps: JSON.stringify([
+                { type: 'condition', id: 'hash1' },
+                { type: 'action', id: 'hash2' },
+            ]),
+            created_by: 'user-1',
+            updated_by: 'user-1',
             is_active: true,
             trace_history_enabled: false,
             version: 1,
@@ -37,15 +37,15 @@ describe('Autopilot Table Integration', () => {
 
         expect(result).toBeDefined();
         expect(result?.fk_project_id).toBe(projectId);
-        expect(result?.triggers).toEqual(['TASK_CREATED']);
+        expect(result?.name).toEqual('Test Autopilot');
 
         // Kysely with JSONColumnType might return the object directly or string depending on dialect/setup.
         // In our setup with JSONColumnType, it should be parsed.
-        const conditions =
-            typeof result?.conditions === 'string'
-                ? JSON.parse(result.conditions)
-                : result?.conditions;
+        const steps =
+            typeof result?.steps === 'string'
+                ? JSON.parse(result.steps)
+                : result?.steps;
 
-        expect(conditions.type).toBe('predicate');
+        expect(steps[0].type).toBe('condition');
     });
 });
