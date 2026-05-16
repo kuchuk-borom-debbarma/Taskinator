@@ -1,36 +1,39 @@
 ---
 gsd_state_version: 1.0
-milestone: v6.0
-milestone_name: Rebuild Autopilot Engine
-status: SHIPPED
-last_updated: "2026-05-16T12:00:00.000Z"
-last_activity: 2026-05-16 — Milestone v6.0 Audit Complete (PASS)
+milestone: v7.0
+milestone_name: UI Alignment
+status: Ready
+last_updated: "2026-05-16T16:04:31.790Z"
+last_activity: 2026-05-16 — Phase 27 Planning Completed
 progress:
-  total_phases: 4
-  completed_phases: 4
-  total_plans: 9
-  completed_plans: 9
-  percent: 100
+  total_phases: 7
+  completed_phases: 2
+  total_plans: 16
+  completed_plans: 7
+  percent: 29
 ---
 
-# Project State - Milestone v6.0 (Rebuild Autopilot Engine)
+# Project State - Milestone v7.0 (UI Alignment)
 
-## Active Phase: Phase 25 - Pipeline Orchestrator (Completed)
+## Completed Phase: Phase 26 - GraphQL Sync & Codegen
 
-- [x] **PIPE-01**: Autopilot rules as ordered sequences of saved Conditions/Actions.
-- [x] **PIPE-02**: Support arbitrary pipeline shapes.
-- [x] **PIPE-03**: Enforce strict execution semantics (halt on false condition).
-- [x] **Loop Detection**: Multi-level loop prevention using TraceID + Depth.
-- [x] **Smart Aggregation**: Group actions for optimized bulk database updates.
+- [x] **GQL-01**: Backend GraphQL schema and resolvers aligned with v6.0 engine.
+- [x] **GQL-02**: UI synchronized via `codegen` with updated components and fragments.
+
+## Active Phase: Phase 27 - Builder & Canvas Alignment
+
+- [ ] **UI-CTX-01**: Implement `AutopilotMetadataContext` for global entity-field discovery.
+- [ ] **UI-CTX-02**: Predicate dropdowns filter fields based on trigger entity type.
+- [ ] **UI-CTX-03**: Support "Condition Logic Blocks" interleaved in the sequence.
+- [ ] **UI-PIPE-01**: Mixed Pipeline support in `PipelineEditor`.
+- [ ] **UI-PIPE-02**: Pipeline Step Reordering (DND).
+- [ ] **UI-PIPE-03**: Sequential Semantics (Visual Flow).
 
 ## Progress
 
-- [x] Phase 21 Planning & Execution (Completed)
-- [x] Phase 22 Planning & Execution (Completed)
-- [x] Phase 23 Planning & Execution (Completed)
-- [x] Phase 24 Planning & Execution (Completed)
-- [x] Phase 25 Planning & Execution (Completed)
-- [x] Milestone v5.0 Audit (Completed)
+- [x] Phase 26 Planning & Execution (Completed)
+- [/] Phase 27 Planning & Execution (In Progress)
+- [ ] Phase 28 Planning & Execution (Pending)
 
 ## Blockers
 
@@ -38,15 +41,15 @@ progress:
 
 ## Next Step
 
-- Run `/gsd-complete-milestone` to archive Milestone v5.0 and prepare for the next phase of development!
+- Run `/gsd:execute-phase 27-builder-canvas-alignment` to begin the alignment.
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-05-16 — Milestone v6.0 started
+Phase: 27 - Builder & Canvas Alignment
+Plan: 27-01
+Status: Ready
+Last activity: 2026-05-16 — Phase 27 Plan 00 Completed
 
 ## Operator Next Steps
 
-- Start the next milestone with /gsd-new-milestone
+- Execute Phase 27 with /gsd:execute-phase 27-builder-canvas-alignment

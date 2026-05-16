@@ -15,6 +15,6 @@
 | 23. Condition Engine | v6.0 | 2/2 | Complete | 2026-05-16 |
 | 24. Action Engine | v6.0 | 3/3 | Complete | 2026-05-16 |
 | 25. Pipeline Orchestrator | v6.0 | 3/3 | Complete | 2026-05-16 |
-| 26. GraphQL Sync | v7.0 | 0/2 | In Progress | — |
-| 27. Builder & Canvas Alignment | v7.0 | 3/3 | Planned | — |
+| 26. GraphQL Sync | v7.0 | 2/2 | Complete | 2026-05-16 |
+| 27. Builder & Canvas Alignment | v7.0 | 1/4 | In Progress | — |
 | 28. [Merged into Phase 27] | v7.0 | 0/0 | Merged | — |
