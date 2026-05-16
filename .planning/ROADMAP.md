@@ -1,20 +1,11 @@
-# Roadmap Directory
+# Roadmap — Milestone v5.0 (Revamp Autopilot)
 
-## Active Roadmap: Milestone v4.0
+## Phase 21: Legacy Engine Teardown
+**Goal**: Tear down the existing internal Autopilot engine while stubbing API mutations to prevent UI breakage.
+**Requirements**: [AUTO-01, AUTO-02, AUTO-03, AUTO-04, AUTO-05]
 
-### Phase 20: Autopilot Hook Integration
-**Goal:** Evolve `FeatureShowcase` to incorporate the Project Autopilot System showcase.
-
-- [x] **FEATURE-401**: Create the `AutopilotNode` primitive with custom glowing glow pulses inside `remotion/src/components/Nodes.tsx`.
-- [x] **FEATURE-402**: Re-engineer `FeatureShowcase.tsx` layout to extend simulation segment timing and map the dynamic Autopilot activation pulse.
-- [x] **FEATURE-403**: Program downstream `TaskNode` emerald completions representing programmatic automated fulfillment.
-- [x] **FEATURE-404**: Register updated expanded frame durations across `Root.tsx` and audit dynamic transition alignment.
-
-
-
----
-
-## Archived Milestones
-- **[v3.0 - Remotion Overhaul & Autopilot Showcase](milestones/v3.0-ROADMAP.md)** (Phases 15-19)
-- **[v2.0 - High Performance Database Tuning](milestones/v2.0-ROADMAP.md)** (Phases 10-14)
-- **[v1.0 - Core Remotion Visual Foundation](milestones/v1.0-ROADMAP.md)** (Phases 1-9)
+**Success Criteria**:
+1. `ConditionEvaluator`, `ActionHandlers`, `AutopilotDispatcher`, and `AutopilotEngine` files are safely deleted.
+2. GraphQL API boundary remains intact.
+3. Mutations are stubbed to return safe empty data instead of executing legacy logic.
+4. System compiles and runs without the old engine code.

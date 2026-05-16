@@ -21,3 +21,8 @@ Completely tear down the existing internal Autopilot engine logic (which is cras
 ## 📈 Out of Scope
 - Re-architecting or rebuilding the new engine (this will happen in a future phase/milestone).
 - Removing the Autopilot GraphQL schema or breaking the `ui-v1` application.
+
+---
+
+## 🔗 Traceability
+- **Phase 21**: [AUTO-01, AUTO-02, AUTO-03, AUTO-04, AUTO-05]
