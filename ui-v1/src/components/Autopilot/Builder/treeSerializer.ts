@@ -1,5 +1,5 @@
 import type { Node, Edge } from '@xyflow/react';
-import type { AutopilotConditionNode } from '../../../api/interfaces/AutopilotAPI';
+import type { ConditionNode } from '../../../gql/graphql';
 import type { LogicalNodeData, PredicateNodeData } from './types';
 
 const COL_WIDTH = 270;
@@ -13,7 +13,7 @@ interface TraversalResult {
 let _nodeCounter = 0;
 
 function traverse(
-  node: AutopilotConditionNode,
+  node: ConditionNode,
   parentId: string | null,
   depth: number,
   siblingIndex: number,
@@ -23,26 +23,30 @@ function traverse(
   const x = depth * COL_WIDTH;
   const y = siblingIndex * ROW_HEIGHT;
 
-  if (node.type === 'predicate') {
+  if (node.__typename === 'PredicateNode') {
     result.nodes.push({
       id,
       type: 'predicateNode',
       position: { x, y },
       data: {
-        domain: node.domain ?? 'task',
-        field: node.field ?? 'status',
-        operator: node.operator ?? '==',
+        domain: node.domain,
+        field: node.field,
+        operator: node.operator,
         value: String(node.value ?? ''),
       } satisfies PredicateNodeData,
     });
   } else {
-    // logicalNode
+    // logicalNode (AndNode, OrNode, NotNode)
+    let logicalType: 'and' | 'or' | 'not' = 'and';
+    if (node.__typename === 'OrNode') logicalType = 'or';
+    if (node.__typename === 'NotNode') logicalType = 'not';
+
     result.nodes.push({
       id,
       type: 'logicalNode',
       position: { x, y },
       data: {
-        logicalType: node.type as 'and' | 'or' | 'not',
+        logicalType,
       } satisfies LogicalNodeData,
     });
   }
@@ -58,7 +62,13 @@ function traverse(
   }
 
   // Recurse into children
-  const children = node.children ?? (node.child ? [node.child] : []);
+  let children: ConditionNode[] = [];
+  if (node.__typename === 'AndNode' || node.__typename === 'OrNode') {
+    children = node.children;
+  } else if (node.__typename === 'NotNode') {
+    children = [node.child];
+  }
+
   let rowOffset = siblingIndex;
   for (let i = 0; i < children.length; i++) {
     const child = children[i];
@@ -75,7 +85,7 @@ function traverse(
  * Converts a recursive ConditionTree JSON into flat XYFlow nodes[] + edges[].
  * Returns the root node ID so the canvas knows where to start serialisation.
  */
-export function conditionTreeToGraph(root: AutopilotConditionNode): {
+export function conditionTreeToGraph(root: ConditionNode): {
   nodes: Node[];
   edges: Edge[];
   rootId: string;

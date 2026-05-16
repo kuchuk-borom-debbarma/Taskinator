@@ -1,5 +1,5 @@
 import type { Node, Edge } from '@xyflow/react';
-import type { AutopilotConditionNode } from '../../../api/interfaces/AutopilotAPI';
+import type { ConditionNode } from '../../../gql/graphql';
 import type { LogicalNodeData, PredicateNodeData } from './types';
 
 /**
@@ -9,7 +9,7 @@ export function graphToConditionTree(
   nodes: Node[],
   edges: Edge[],
   rootId: string,
-): AutopilotConditionNode {
+): ConditionNode {
   // Build adjacency list: parentId → childIds[]
   const children = new Map<string, string[]>();
   for (const edge of edges) {
@@ -20,17 +20,17 @@ export function graphToConditionTree(
 
   const nodeMap = new Map(nodes.map((n) => [n.id, n]));
 
-  function reconstruct(id: string): AutopilotConditionNode {
+  function reconstruct(id: string): ConditionNode {
     const node = nodeMap.get(id);
     if (!node) {
       // Fallback — should never happen in valid graphs
-      return { type: 'predicate', domain: 'task', field: 'status', operator: '==', value: '' };
+      return { __typename: 'PredicateNode', domain: 'task', field: 'status', operator: '==', value: '' };
     }
 
     if (node.type === 'predicateNode') {
       const d = node.data as PredicateNodeData;
       return {
-        type: 'predicate',
+        __typename: 'PredicateNode',
         domain: d.domain,
         field: d.field,
         operator: d.operator,
@@ -44,10 +44,29 @@ export function graphToConditionTree(
     const reconstructedChildren = childIds.map(reconstruct);
 
     if (d.logicalType === 'not') {
-      return { type: 'not', child: reconstructedChildren[0] ?? { type: 'predicate', domain: 'task', field: 'status', operator: '==', value: '' } };
+      return {
+        __typename: 'NotNode',
+        child: reconstructedChildren[0] ?? {
+          __typename: 'PredicateNode',
+          domain: 'task',
+          field: 'status',
+          operator: '==',
+          value: '',
+        },
+      };
     }
 
-    return { type: d.logicalType, children: reconstructedChildren };
+    if (d.logicalType === 'or') {
+      return {
+        __typename: 'OrNode',
+        children: reconstructedChildren,
+      };
+    }
+
+    return {
+      __typename: 'AndNode',
+      children: reconstructedChildren,
+    };
   }
 
   return reconstruct(rootId);
