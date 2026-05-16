@@ -32,7 +32,11 @@ Success criteria:
 
 **Phase 23: Condition Engine**
 Goal: Implement the entity-agnostic condition evaluation logic, including structural hashing and composability.
+**Plans:** 1 plan
 Requirements: COND-01, COND-02, COND-03, COND-04, COND-05, COND-06
+Plans:
+- [ ] 23-01-PLAN.md — Implement core evaluation, hashing, and boolean logic.
+
 Success criteria:
 1. Entity-agnostic evaluation logic works
 2. Structural hashing deduplicates correctly
