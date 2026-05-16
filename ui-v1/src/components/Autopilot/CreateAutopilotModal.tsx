@@ -1,21 +1,24 @@
 import React, { useState } from 'react';
 import { Zap, GitBranch, ListChecks, FileText, ArrowLeft, PlusCircle, AlertTriangle } from 'lucide-react';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { AppModal } from '../shared/workspace';
-import { ConditionBuilderCanvas } from './Builder/ConditionBuilderCanvas';
-import { ActionPipelineEditor } from './Pipeline/ActionPipelineEditor';
-import type { AutopilotConditionNode, AutopilotAction, CreateAutopilotInput } from '../../api/interfaces/AutopilotAPI';
+import { PipelineEditor } from './Pipeline/PipelineEditor';
+import { useGraphQLClient } from '../../hooks/useGraphQLClient';
+import { graphql } from '../../gql';
+import { AutopilotTriggerProvider, useAutopilotTrigger } from './AutopilotTriggerContext';
+import { AutopilotMetadataProvider } from './AutopilotMetadataContext';
+import type { PipelineStep, AutopilotAction, AutopilotCondition } from '../../gql/graphql';
 
 interface CreateAutopilotModalProps {
   open: boolean;
   onClose: () => void;
   projectId: string;
-  onSave: (input: CreateAutopilotInput) => Promise<void>;
+  onSave?: () => void;
 }
 
 const STEPS = [
   { id: 'triggers', label: 'Triggers', icon: Zap },
-  { id: 'conditions', label: 'Conditions', icon: GitBranch },
-  { id: 'actions', label: 'Actions', icon: ListChecks },
+  { id: 'pipeline', label: 'Pipeline', icon: GitBranch },
   { id: 'review', label: 'Review', icon: FileText },
 ];
 
@@ -26,37 +29,82 @@ const TRIGGER_OPTIONS = [
   { value: 'task.assigned', label: 'Member Assigned', description: 'Fires when a team member is assigned to a task.' },
 ];
 
-const INITIAL_CONDITION: AutopilotConditionNode = {
-  type: 'predicate',
-  domain: 'task',
-  field: 'status',
-  operator: '==',
-  value: 'TODO',
+const INITIAL_PIPELINE: PipelineStep[] = [
+  {
+    __typename: 'AutopilotCondition',
+    id: 'initial-cond',
+    name: 'Main Filter',
+    definition: {
+      __typename: 'PredicateNode',
+      domain: 'task',
+      field: 'status',
+      operator: '==',
+      value: 'TODO',
+    } as any,
+  },
+];
+
+// ─── GraphQL Mutation ────────────────────────────────────────────────────────
+
+const CREATE_AUTOPILOT = graphql(`
+  mutation CreateAutopilot($input: CreateAutopilotInput!) {
+    createAutopilot(input: $input) {
+      id
+      isActive
+      triggers
+      ...AutopilotCardFragment
+    }
+  }
+`);
+
+
+export const CreateAutopilotModal: React.FC<CreateAutopilotModalProps> = (props) => {
+  return (
+    <AutopilotTriggerProvider>
+      <AutopilotMetadataProvider>
+        <CreateAutopilotModalContent {...props} />
+      </AutopilotMetadataProvider>
+    </AutopilotTriggerProvider>
+  );
 };
 
-export const CreateAutopilotModal: React.FC<CreateAutopilotModalProps> = ({
+const CreateAutopilotModalContent: React.FC<CreateAutopilotModalProps> = ({
   open,
   onClose,
   projectId,
   onSave,
 }) => {
+  const queryClient = useQueryClient();
+  const { request } = useGraphQLClient();
+  const { setSelectedEntityType } = useAutopilotTrigger();
+  
   const [currentStepIdx, setCurrentStepIdx] = useState(0);
-  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   // Form state
   const [triggers, setTriggers] = useState<string[]>([]);
-  const [conditions, setConditions] = useState<AutopilotConditionNode>(INITIAL_CONDITION);
-  const [actions, setActions] = useState<AutopilotAction[]>([]);
+  const [pipeline, setPipeline] = useState<PipelineStep[]>(INITIAL_PIPELINE);
 
   const step = STEPS[currentStepIdx]?.id;
 
+
+  const mutation = useMutation({
+    mutationFn: (input: any) => request(CREATE_AUTOPILOT, { input }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['project-autopilots', projectId] });
+      handleClose();
+      onSave?.();
+    },
+    onError: (err: any) => {
+      setError(err.message || 'Failed to create autopilot.');
+    }
+  });
+
   const handleClose = () => {
-    if (submitting) return;
+    if (mutation.isPending) return;
     setCurrentStepIdx(0);
     setTriggers([]);
-    setConditions(INITIAL_CONDITION);
-    setActions([]);
+    setPipeline(INITIAL_PIPELINE);
     setError(null);
     onClose();
   };
@@ -68,7 +116,14 @@ export const CreateAutopilotModal: React.FC<CreateAutopilotModalProps> = ({
   };
 
   const handleNext = () => {
-    if (step === 'triggers' && triggers.length === 0) return;
+    if (step === 'triggers') {
+      if (triggers.length === 0) return;
+      
+      const firstTrigger = triggers[0];
+      if (firstTrigger.startsWith('task.')) setSelectedEntityType('task');
+      else if (firstTrigger.startsWith('project.')) setSelectedEntityType('project');
+      else if (firstTrigger.startsWith('team.')) setSelectedEntityType('team');
+    }
     setCurrentStepIdx((prev) => Math.min(prev + 1, STEPS.length - 1));
   };
 
@@ -77,27 +132,35 @@ export const CreateAutopilotModal: React.FC<CreateAutopilotModalProps> = ({
   };
 
   const handleCreate = async () => {
-    setSubmitting(true);
-    setError(null);
-    try {
-      const input: CreateAutopilotInput = {
-        projectId,
-        triggers,
-        conditions,
-        actions: actions.map((a) => ({
-          type: a.type,
-          config: a.config,
-          position: a.position,
-        })),
-      };
-      await onSave(input);
-      handleClose();
-    } catch (err: any) {
-      setError(err.message || 'Failed to create autopilot.');
-    } finally {
-      setSubmitting(false);
-    }
+    const pipelineInput = pipeline.map(item => {
+      if (item.__typename === 'AutopilotAction') {
+        const action = item as any;
+        return {
+          action: {
+            type: action.type,
+            params: action.params || action.config || {}
+          }
+        };
+      } else {
+        const condition = item as AutopilotCondition;
+        return {
+          condition: {
+            name: condition.name || 'Logic Block',
+            definition: condition.definition
+          }
+        };
+      }
+    });
+
+    mutation.mutate({
+      projectId,
+      triggers,
+      pipeline: pipelineInput
+    });
   };
+
+
+  const submitting = mutation.isPending;
 
   return (
     <AppModal
@@ -201,45 +264,25 @@ export const CreateAutopilotModal: React.FC<CreateAutopilotModalProps> = ({
             </div>
           )}
 
-          {/* Step 2: Conditions */}
-          {step === 'conditions' && (
-            <div className="flex-1 flex flex-col animate-in fade-in duration-200 min-h-0 h-full">
-              <div className="flex justify-between items-center mb-3 shrink-0">
-                <h4 className="text-xs font-bold uppercase tracking-wider text-app-muted">
-                  Define criteria (Filters)
-                </h4>
-                <span className="text-[11px] font-medium text-app-muted bg-app-ink/5 px-2 py-1 rounded-full">
-                  Drag handles to link nodes
-                </span>
-              </div>
-              <div className="flex-1 relative w-full rounded-2xl overflow-hidden min-h-[350px]">
-                <ConditionBuilderCanvas
-                  initialCondition={conditions}
-                  onChange={setConditions}
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Step 3: Actions */}
-          {step === 'actions' && (
+          {/* Step 2: Pipeline */}
+          {step === 'pipeline' && (
             <div className="space-y-4 animate-in fade-in duration-200 h-full overflow-y-auto px-1 pr-2">
               <h4 className="text-xs font-bold uppercase tracking-wider text-app-muted mb-2">
                 Build Action Pipeline
               </h4>
-              <ActionPipelineEditor
-                actions={actions}
-                onChange={setActions}
+              <PipelineEditor
+                pipeline={pipeline}
+                onChange={setPipeline}
               />
-              {actions.length === 0 && (
+              {pipeline.length === 0 && (
                 <p className="text-xs italic text-app-muted text-center mt-2">
-                  * Autopilots require at least one action step to fire.
+                  * Autopilots require at least one step to fire.
                 </p>
               )}
             </div>
           )}
 
-          {/* Step 4: Review & Create */}
+          {/* Step 3: Review & Create */}
           {step === 'review' && (
             <div className="space-y-5 animate-in fade-in duration-200 h-full overflow-y-auto pr-2">
               <h4 className="text-xs font-bold uppercase tracking-wider text-app-muted">
@@ -260,22 +303,26 @@ export const CreateAutopilotModal: React.FC<CreateAutopilotModalProps> = ({
                 </div>
 
                 <div>
-                  <span className="text-[10px] font-bold uppercase text-app-muted tracking-widest block mb-1.5">IF CONDITIONS MATCH</span>
-                  <p className="text-xs font-mono text-app-ink bg-white border border-app-line rounded-xl p-2 truncate">
-                    {JSON.stringify(conditions).substring(0, 120)}...
-                  </p>
-                </div>
-
-                <div>
-                  <span className="text-[10px] font-bold uppercase text-app-muted tracking-widest block mb-1.5">THEN RUN ACTIONS ({actions.length})</span>
+                  <span className="text-[10px] font-bold uppercase text-app-muted tracking-widest block mb-1.5">PIPELINE STEPS ({pipeline.length})</span>
                   <div className="space-y-1.5">
-                    {actions.map((act, i) => (
-                      <div key={act.id} className="flex items-center gap-2 text-xs text-app-ink bg-white border border-app-line rounded-lg px-3 py-2 shadow-sm">
+                    {pipeline.map((item, i) => (
+                      <div key={i} className="flex items-center gap-2 text-xs text-app-ink bg-white border border-app-line rounded-lg px-3 py-2 shadow-sm">
                         <span className="font-black text-app-accent w-4">{i + 1}</span>
-                        <span className="font-medium capitalize">{act.type.split('.').pop()?.replace('_', ' ')}</span>
-                        <span className="ml-auto text-[10px] text-app-muted font-mono truncate max-w-[150px]">
-                          {JSON.stringify(act.config)}
-                        </span>
+                        {item.__typename === 'AutopilotAction' ? (
+                          <>
+                            <span className="font-medium capitalize">{(item as any).type.split('.').pop()?.replace('_', ' ')}</span>
+                            <span className="ml-auto text-[10px] text-app-muted font-mono truncate max-w-[150px]">
+                              {JSON.stringify((item as any).params || (item as any).config)}
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            <span className="font-medium text-app-warning">Logic Block</span>
+                            <span className="ml-auto text-[10px] text-app-muted font-mono truncate max-w-[150px]">
+                              {JSON.stringify((item as any).definition).substring(0, 30)}...
+                            </span>
+                          </>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -310,9 +357,10 @@ export const CreateAutopilotModal: React.FC<CreateAutopilotModalProps> = ({
           ) : (
             <button
               onClick={handleCreate}
-              disabled={submitting || actions.length === 0}
+              disabled={submitting || pipeline.length === 0}
               className="inline-flex items-center gap-2 rounded-full bg-app-accent px-6 py-2.5 text-sm font-semibold text-white shadow-md transition hover:bg-app-accent/90 disabled:opacity-50 disabled:cursor-not-allowed"
             >
+
               {submitting ? (
                 <>Creating rule...</>
               ) : (
