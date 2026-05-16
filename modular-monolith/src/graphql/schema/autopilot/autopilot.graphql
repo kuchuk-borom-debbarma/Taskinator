@@ -3,10 +3,56 @@
 # ─────────────────────────────────────────────
 
 """
-A condition node that forms the condition tree for an autopilot.
-Stored as a JSON blob. Represented as a scalar for flexibility.
+A JSON blob. Represented as a scalar for flexibility.
 """
-scalar ConditionTree
+scalar JSON
+
+"""
+A condition node that forms the condition tree for an autopilot.
+"""
+union ConditionNode = AndNode | OrNode | NotNode | PredicateNode
+
+type AndNode {
+    children: [ConditionNode!]!
+}
+
+type OrNode {
+    children: [ConditionNode!]!
+}
+
+type NotNode {
+    child: ConditionNode!
+}
+
+type PredicateNode {
+    domain: String!
+    field: String!
+    operator: String!
+    value: JSON!
+}
+
+"""
+A condition step in the pipeline.
+"""
+type AutopilotCondition {
+    id: ID!
+    name: String
+    definition: ConditionNode!
+}
+
+"""
+A single action step in an autopilot's execution chain.
+"""
+type AutopilotAction {
+    id: ID!
+    type: String!
+    params: JSON!
+}
+
+"""
+A step in the autopilot pipeline.
+"""
+union PipelineStep = AutopilotCondition | AutopilotAction
 
 """
 An automated rule that triggers a sequence of actions when conditions are met.
@@ -28,19 +74,14 @@ type Autopilot {
     triggers: [String!]!
 
     """
-    The boolean condition tree that must evaluate to true.
-    """
-    conditions: ConditionTree!
-
-    """
     Whether this autopilot is currently active.
     """
     isActive: Boolean!
 
     """
-    Ordered list of actions to execute when conditions match.
+    The ordered sequence of conditions and actions.
     """
-    actions: [AutopilotAction!]!
+    pipeline: [PipelineStep!]!
 
     """
     ISO 8601 creation timestamp.
@@ -54,28 +95,27 @@ type Autopilot {
 }
 
 """
-A single action step in an autopilot's execution chain.
+Metadata for building autopilots.
 """
-type AutopilotAction {
-    """
-    Unique identifier for this action.
-    """
-    id: ID!
+type AutopilotMetadata {
+    entities: [AutopilotEntityMetadata!]!
+}
 
-    """
-    Action type key (e.g., "task.update_status", "task.assign_team").
-    """
+type AutopilotEntityMetadata {
     type: String!
+    fields: [AutopilotFieldMetadata!]!
+    actions: [AutopilotActionMetadata!]!
+}
 
-    """
-    Configuration payload for this action (e.g., { status: "DONE" }).
-    """
-    config: ConditionTree!
+type AutopilotFieldMetadata {
+    name: String!
+    type: String!
+    operators: [String!]!
+}
 
-    """
-    Position in the execution chain (1-indexed).
-    """
-    position: Int!
+type AutopilotActionMetadata {
+    type: String!
+    parameters: JSON!
 }
 
 """
@@ -107,16 +147,14 @@ extend type Query {
         last: Int
         before: String
     ): AutopilotConnection!
+
+    """
+    Returns metadata for autopilot discovery (fields, operators, actions).
+    """
+    autopilotMetadata(entityType: String!): AutopilotMetadata!
 }
 
-"""
-Input for an individual autopilot action.
-"""
-input AutopilotActionInput {
-    type: String!
-    config: ConditionTree!
-    position: Int!
-}
+# --- Inputs ---
 
 """
 Input structure to create a new autopilot rule.
@@ -124,8 +162,66 @@ Input structure to create a new autopilot rule.
 input CreateAutopilotInput {
     projectId: ID!
     triggers: [String!]!
-    conditions: ConditionTree!
-    actions: [AutopilotActionInput!]!
+    pipeline: [PipelineStepInput!]!
+}
+
+"""
+Input structure to update an existing autopilot rule.
+"""
+input UpdateAutopilotInput {
+    triggers: [String]
+    isActive: Boolean
+    pipeline: [PipelineStepInput!]
+}
+
+"""
+Input for a single step in the pipeline.
+"""
+input PipelineStepInput {
+    condition: AutopilotConditionInput
+    action: AutopilotActionInput
+}
+
+"""
+Input for an individual autopilot condition.
+"""
+input AutopilotConditionInput {
+    name: String
+    definition: ConditionNodeInput!
+}
+
+"""
+Input for an individual autopilot action.
+"""
+input AutopilotActionInput {
+    type: String!
+    params: JSON!
+}
+
+"""
+Input for a recursive condition node.
+"""
+input ConditionNodeInput {
+    and: AndNodeInput
+    or: OrNodeInput
+    not: NotNodeInput
+    predicate: PredicateNodeInput
+}
+
+input AndNodeInput {
+    children: [ConditionNodeInput!]!
+}
+input OrNodeInput {
+    children: [ConditionNodeInput!]!
+}
+input NotNodeInput {
+    child: ConditionNodeInput!
+}
+input PredicateNodeInput {
+    domain: String!
+    field: String!
+    operator: String!
+    value: JSON!
 }
 
 extend type Mutation {
@@ -136,8 +232,18 @@ extend type Mutation {
     createAutopilot(input: CreateAutopilotInput!): Autopilot!
 
     """
+    Updates an existing autopilot rule.
+    """
+    updateAutopilot(id: ID!, input: UpdateAutopilotInput!): Autopilot!
+
+    """
     Activates or deactivates an autopilot rule.
     Requires user authentication.
     """
     toggleAutopilot(id: ID!, isActive: Boolean!): Autopilot!
+
+    """
+    Deletes an autopilot rule.
+    """
+    deleteAutopilot(id: ID!): Boolean!
 }
