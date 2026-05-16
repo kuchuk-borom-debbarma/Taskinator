@@ -15,22 +15,20 @@ progress:
 
 # Project State - Milestone v6.0 (Rebuild Autopilot Engine)
 
-## Current Phase: Phase 23 - Condition Engine
+## Active Phase: Phase 23 - Condition Engine (Completed)
 
-**Goal:** Implement the entity-agnostic condition evaluation logic.
-
-## Active Phase: Phase 22 - Database Schema & Engine Primitives (Completed)
-
-- [x] **[DB-01]**: Update `autopilot` table in `schema.sql`.
-- [x] **[DB-02]**: Create `conditions`, `condition_labels`, `actions`, `action_labels` tables.
-- [x] **[DB-03]**: Update Kysely table definitions.
-- [x] **[DB-04]**: Remove legacy `autopilot_action` table and scripts.
-- [x] **[DB-05]**: Verify types and schema alignment.
+- [x] **COND-01**: Create and name reusable conditions.
+- [x] **COND-02**: Entity-agnostic evaluation logic.
+- [x] **COND-03**: Support change-based triggers.
+- [x] **COND-04**: Support natural-language representations.
+- [x] **COND-05**: Boolean composition (AND/OR/NOT).
+- [x] **COND-06**: Structural hashing for deduplication.
 
 ## Progress
 
 - [x] Phase 21 Planning & Execution (Completed)
 - [x] Phase 22 Planning & Execution (Completed)
+- [x] Phase 23 Planning & Execution (Completed)
 - [x] Milestone v5.0 Audit (Completed)
 
 ## Blockers

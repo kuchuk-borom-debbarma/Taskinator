@@ -69,7 +69,7 @@ function evaluateBranch(
         case 'NOT':
             // The first term must be false (NOT usually has one term)
             if (terms.length === 0) return true;
-            return !evaluateCondition(terms[0], context);
+            return !evaluateCondition(terms[0]!, context);
         default:
             throw new Error(`Unsupported logic operator: ${logic}`);
     }
@@ -129,7 +129,8 @@ function branchToNL(branch: ConditionBranch): string {
     const { logic, terms } = branch;
 
     if (logic === 'NOT') {
-        return `NOT ${toNaturalLanguage(terms[0])}`;
+        if (terms.length === 0) return 'NOT (empty)';
+        return `NOT ${toNaturalLanguage(terms[0]!)}`;
     }
 
     const joiner = ` ${logic} `;

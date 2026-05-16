@@ -17,8 +17,9 @@
 ### 🚧 v6.0 Rebuild Autopilot Engine (In Progress)
 
 - [x] Phase 22: Database Schema & Engine Primitives (1/1 plans) — completed 2026-05-16
-- [ ] Phase 23: Condition Engine (2 plans)
+- [x] Phase 23: Condition Engine (1/1 plans) — completed 2026-05-16
 - [ ] Phase 24: Action Engine & Lazy Resolution (1 plan)
+
 - [ ] Phase 25: Pipeline Orchestrator (1 plan)
 
 ### Phase Details
@@ -64,6 +65,7 @@ Success criteria:
 | ----------------- | --------- | -------------- | ----------- | ---------- |
 | 21. Legacy Engine Teardown | v5.0      | 1/1            | Complete    | 2026-05-16 |
 | 22. Database Schema | v6.0 | 1/1 | Complete | 2026-05-16 |
-| 23. Condition Engine | v6.0 | 0/2 | Not started | - |
+| 23. Condition Engine | v6.0 | 2/2 | Complete | 2026-05-16 |
 | 24. Action Engine | v6.0 | 0/1 | Not started | - |
+
 | 25. Pipeline Orchestrator | v6.0 | 0/1 | Not started | - |

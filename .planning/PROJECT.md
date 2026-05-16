@@ -27,6 +27,7 @@ Automate the "busy work" of project management through reliable, transparent, an
 - ✓ [Visual Dashboard Showcase] — Showcase high-fidelity admin dashboard UIs (v3.0).
 - ✓ [Feature Showcase Upgrade] — Integrate Autopilot Feature Segment into the hook composition (v4.0).
 - ✓ [Legacy Engine Teardown] — Safely removed core logic while preserving UI (v5.0).
+- ✓ [Entity-Agnostic Condition Engine] — Implemented modular, hash-deduplicated evaluation logic (v6.0).
 
 - [ ] [Multi-domain Triggers] — Evaluate events crossing project boundaries.
 - [ ] [Complex Predicates] — Evaluate conditions referencing recursive parent/child states.
