@@ -17,8 +17,11 @@
 ### 🚧 v6.0 Rebuild Autopilot Engine (In Progress)
 
 - [x] Phase 22: Database Schema & Engine Primitives (1/1 plans) — completed 2026-05-16
-- [x] Phase 23: Condition Engine (1/1 plans) — completed 2026-05-16
-- [ ] Phase 24: Action Engine & Lazy Resolution (1 plan)
+- [x] Phase 23: Condition Engine (2/2 plans) — completed 2026-05-16
+- [ ] Phase 24: Action Engine & Lazy Resolution (0/3 plans)
+  - [ ] 24-01-PLAN.md — Core Action Infrastructure
+  - [ ] 24-02-PLAN.md — Lazy Resolution & Contextual Entities
+  - [ ] 24-03-PLAN.md — Action Execution Pipeline
 
 - [ ] Phase 25: Pipeline Orchestrator (1 plan)
 
@@ -36,8 +39,8 @@ Goal: Implement the entity-agnostic condition evaluation logic, including struct
 **Plans:** 2 plans
 Requirements: COND-01, COND-02, COND-03, COND-04, COND-05, COND-06
 Plans:
-- [ ] 23-01-PLAN.md — Implement core evaluation, hashing, and boolean logic.
-- [ ] 23-02-PLAN.md — Implement persistence, structural deduplication, and labeling.
+- [x] 23-01-PLAN.md — Implement core evaluation, hashing, and boolean logic.
+- [x] 23-02-PLAN.md — Implement persistence, structural deduplication, and labeling.
 
 Success criteria:
 1. Entity-agnostic evaluation logic works
@@ -47,7 +50,13 @@ Success criteria:
 
 **Phase 24: Action Engine & Lazy Resolution**
 Goal: Build the getter/setter sequence processor with lazy context resolvers for runtime entities.
+**Plans:** 3 plans
 Requirements: ACT-01, ACT-02, ACT-03
+Plans:
+- [ ] 24-01-PLAN.md — Core Action Infrastructure
+- [ ] 24-02-PLAN.md — Lazy Resolution & Contextual Entities
+- [ ] 24-03-PLAN.md — Action Execution Pipeline
+
 Success criteria:
 1. Contexts resolve correctly at runtime (self, parent, etc)
 2. Getter/setter API mutates state securely
@@ -66,6 +75,6 @@ Success criteria:
 | 21. Legacy Engine Teardown | v5.0      | 1/1            | Complete    | 2026-05-16 |
 | 22. Database Schema | v6.0 | 1/1 | Complete | 2026-05-16 |
 | 23. Condition Engine | v6.0 | 2/2 | Complete | 2026-05-16 |
-| 24. Action Engine | v6.0 | 0/1 | Not started | - |
+| 24. Action Engine | v6.0 | 0/3 | Not started | - |
 
 | 25. Pipeline Orchestrator | v6.0 | 0/1 | Not started | - |
