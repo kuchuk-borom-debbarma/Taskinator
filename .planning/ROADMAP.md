@@ -17,7 +17,7 @@
 ### 🚧 v6.0 Rebuild Autopilot Engine (In Progress)
 
 - [x] Phase 22: Database Schema & Engine Primitives (1/1 plans) — completed 2026-05-16
-- [ ] Phase 23: Condition Engine (1 plan)
+- [ ] Phase 23: Condition Engine (2 plans)
 - [ ] Phase 24: Action Engine & Lazy Resolution (1 plan)
 - [ ] Phase 25: Pipeline Orchestrator (1 plan)
 
@@ -32,15 +32,17 @@ Success criteria:
 
 **Phase 23: Condition Engine**
 Goal: Implement the entity-agnostic condition evaluation logic, including structural hashing and composability.
-**Plans:** 1 plan
+**Plans:** 2 plans
 Requirements: COND-01, COND-02, COND-03, COND-04, COND-05, COND-06
 Plans:
 - [ ] 23-01-PLAN.md — Implement core evaluation, hashing, and boolean logic.
+- [ ] 23-02-PLAN.md — Implement persistence, structural deduplication, and labeling.
 
 Success criteria:
 1. Entity-agnostic evaluation logic works
 2. Structural hashing deduplicates correctly
 3. AND/OR/NOT composability implemented
+4. Condition naming via labels works
 
 **Phase 24: Action Engine & Lazy Resolution**
 Goal: Build the getter/setter sequence processor with lazy context resolvers for runtime entities.
@@ -62,6 +64,6 @@ Success criteria:
 | ----------------- | --------- | -------------- | ----------- | ---------- |
 | 21. Legacy Engine Teardown | v5.0      | 1/1            | Complete    | 2026-05-16 |
 | 22. Database Schema | v6.0 | 1/1 | Complete | 2026-05-16 |
-| 23. Condition Engine | v6.0 | 0/1 | Not started | - |
+| 23. Condition Engine | v6.0 | 0/2 | Not started | - |
 | 24. Action Engine | v6.0 | 0/1 | Not started | - |
 | 25. Pipeline Orchestrator | v6.0 | 0/1 | Not started | - |
