@@ -1,12 +1,12 @@
 ---
 gsd_state_version: 1.0
-milestone: v4.0
-milestone_name: Autopilot Integrated Hook
+milestone: v5.0
+milestone_name: Revamp Autopilot
 status: planning
-last_updated: "2026-05-16T01:00:00.000Z"
-last_activity: 2026-05-16 -- Milestone v4.0 initialized
+last_updated: "2026-05-16T02:54:10.561Z"
+last_activity: 2026-05-16
 progress:
-  total_phases: 1
+  total_phases: 0
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -43,9 +43,7 @@ progress:
 
 ## Current Position
 
-Phase: 20 (Autopilot Hook Integration) — COMPLETED
-Plan: 1 of 1
-Status: Phase 20 fully delivered
-Last activity: 2026-05-16 -- Phase 20 verified and delivered
-
-
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-05-16 — Milestone v5.0 started

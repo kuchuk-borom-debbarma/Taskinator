@@ -38,12 +38,17 @@ Automate the "busy work" of project management through reliable, transparent, an
 - [Cron-based Triggers] — Reactive/event-driven architecture remains primary focus.
 - [External Service Actions] — Scope confined to internal Taskinator domain mutations.
 
-## Current Milestone: Milestone v4.0 🎯
+## Current Milestone: v5.0 Revamp Autopilot
 
-**Goal:** Autopilot Integrated Hook. Evolve the premier `FeatureShowcase` introductory hook composition to visually feature our ultimate core capability—the Project Autopilot System.
+**Goal:** Completely rebuild the Autopilot system from the ground up, starting with tearing down the existing internal engine while preserving the GraphQL API boundary.
 
-## Current State (v4.0)
-Following the delivery of the cinema-grade architecture simulator suite in v3.0, our repository documentation and core engine are pristine. We are now integrating the Autopilot highlight directly into the opening video scene to reflect the actual capabilities of our current platform.
+**Target features:**
+- Teardown of existing internal engine (ConditionEvaluator, ActionHandlers, Dispatcher, etc.)
+- Preservation of GraphQL API boundary
+- Re-architecting and rebuilding the new Autopilot engine
+
+## Current State (v5.0)
+The legacy Autopilot engine suffered from crash loops and design flaws. We are taking a clean slate approach for the internals while maintaining the external UI/API contract.
 
 ## Key Decisions
 
