@@ -2,13 +2,13 @@
 gsd_state_version: 1.0
 milestone: v6.0
 milestone_name: Rebuild Autopilot Engine
-status: planning
-last_updated: "2026-05-16T06:07:38.952Z"
-last_activity: 2026-05-16
+status: Defining requirements
+last_updated: "2026-05-16T06:21:20.488Z"
+last_activity: 2026-05-16 — Milestone v6.0 started
 progress:
-  total_phases: 0
+  total_phases: 2
   completed_phases: 0
-  total_plans: 0
+  total_plans: 1
   completed_plans: 0
   percent: 0
 ---
