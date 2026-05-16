@@ -30,6 +30,8 @@ Automate the "busy work" of project management through reliable, transparent, an
 - ✓ [Entity-Agnostic Condition Engine] — Implemented modular, hash-deduplicated evaluation logic (v6.0).
 - ✓ [Lazy-Context Action Engine] — Implemented sequence processor with async resolvers and dirty tracking (v6.0).
 - ✓ [Event-Driven Pipeline Orchestrator] — Implemented resumable sequential engine with bulk-update aggregation (v6.0).
+- ✓ [UI-v1 Dynamic Context] — Support dynamic trigger entity selection and lazy-context field lookups (v7.0) — Validated in Phase 27: Builder & Canvas Alignment.
+- ✓ [UI-v1 Sequential Pipeline] — Update Pipeline Editor to align with v6.0 sequential payload schema (v7.0) — Validated in Phase 27: Builder & Canvas Alignment.
 
 - [ ] [Multi-domain Triggers] — Evaluate events crossing project boundaries.
 - [ ] [Complex Predicates] — Evaluate conditions referencing recursive parent/child states.
@@ -41,15 +43,15 @@ Automate the "busy work" of project management through reliable, transparent, an
 
 ## Next Milestone Goals (v7.0)
 
-**Goal:** Expand the Autopilot ecosystem to handle cross-project automation and external notifications.
+**Goal:** Update the `ui-v1` Autopilot components to support the v6.0 backend changes.
 
 **Target features:**
-- Implement multi-domain triggers (actions in Project A triggering rules in Project B)
-- Integrate external service actions (Slack/Discord/Email notifications)
-- Implement complex predicates for cross-entity relationship evaluation
+- Implement Dynamic Entity Selector for triggers and conditions.
+- Integrate Lazy-Context fields for action property forms.
+- Update Pipeline Editor to support ordered sequences of Conditions and Actions in a single array.
 
 ## Current State (Post-v6.0)
-The Autopilot engine has been fully rebuilt. It features entity-agnostic condition evaluation, lazy context resolution, and a resumable, event-driven pipeline execution model. Performance is optimized for 10k RPS via smart aggregation and bulk SQL updates.
+The Autopilot engine has been fully rebuilt (v6.0). It features entity-agnostic condition evaluation, lazy context resolution, and a resumable, event-driven pipeline execution model. Performance is optimized for 10k RPS via smart aggregation and bulk SQL updates. The `ui-v1` is currently being updated to align with these changes.
 
 ## Key Decisions
 
@@ -78,4 +80,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-16 after v6.0 milestone completion*
+*Last updated: 2026-05-16 after Phase 27 completion*
