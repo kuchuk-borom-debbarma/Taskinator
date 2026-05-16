@@ -73,7 +73,7 @@ export const createActionHandlers = (
     },
 
     'task.update_priority': async (taskId, config, { traceId }) => {
-        const priority = config.priority;
+        const priority = Number(config.priority);
         logger.info(
             `[ActionHandler] Updating task ${taskId} priority to ${priority} (Trace: ${traceId})`,
         );

@@ -14,41 +14,48 @@ export class AutopilotDispatcher {
         const topics = ['task-events', 'project-events', 'team-events'];
 
         for (const topic of topics) {
-            await eventBus.subscribe(topic, 'autopilot-engine', {
-                '*': async (event: any) => {
-                    // Extract traceId from OpenTelemetry context if available, otherwise from event or generate
-                    const spanContext = trace.getSpanContext(context.active());
-                    const traceId =
-                        spanContext?.traceId ||
-                        event.traceId ||
-                        event.data?.traceId ||
-                        `trace-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+            await eventBus.subscribe(
+                topic,
+                'autopilot-engine',
+                {
+                    '*': async (events: any[]) => {
+                        for (const event of events) {
+                            const spanContext = trace.getSpanContext(
+                                context.active(),
+                            );
+                            const traceId =
+                                spanContext?.traceId ||
+                                event.traceId ||
+                                event.data?.traceId ||
+                                `trace-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
 
-                    const eventType = event.type;
-                    const data = event.data || event;
+                            const eventType = event.type;
+                            const data = event.data || event;
 
-                    if (!eventType) {
-                        logger.warn(
-                            `[AutopilotDispatcher] Received event without type on topic ${topic}`,
-                        );
-                        return;
-                    }
+                            if (!eventType) {
+                                logger.warn(
+                                    `[AutopilotDispatcher] Received event without type on topic ${topic}`,
+                                );
+                                continue;
+                            }
 
-                    try {
-                        await this.engine.processEvent({
-                            type: eventType,
-                            payload: data,
-                            traceId,
-                        });
-                    } catch (err) {
-                        // Fail-safe: log and continue
-                        logger.error(
-                            `[AutopilotDispatcher] Execution failed for event ${eventType}:`,
-                            err,
-                        );
-                    }
+                            try {
+                                await this.engine.processEvent({
+                                    type: eventType,
+                                    payload: data,
+                                    traceId,
+                                });
+                            } catch (err) {
+                                logger.error(
+                                    `[AutopilotDispatcher] Execution failed for event ${eventType}:`,
+                                    err,
+                                );
+                            }
+                        }
+                    },
                 },
-            });
+                { batch: true },
+            );
         }
     }
 }
