@@ -3,82 +3,7 @@
 ## Milestones
 
 - ✅ **v5.0 Revamp Autopilot** — Phase 21 (shipped 2026-05-16)
-- 🚧 **v6.0 Rebuild Autopilot Engine** — Phases 22-25 (in progress)
-
-## Phases
-
-<details>
-<summary>✅ v5.0 Revamp Autopilot (Phase 21) — SHIPPED 2026-05-16</summary>
-
-- [x] Phase 21: Legacy Engine Teardown (1/1 plans) — completed 2026-05-16
-
-</details>
-
-### 🚧 v6.0 Rebuild Autopilot Engine (In Progress)
-
-- [x] Phase 22: Database Schema & Engine Primitives (1/1 plans) — completed 2026-05-16
-- [x] Phase 23: Condition Engine (2/2 plans) — completed 2026-05-16
-- [x] Phase 24: Action Engine & Lazy Resolution (3/3 plans) — completed 2026-05-16
-  - [x] 24-01-PLAN.md — Core Action Infrastructure
-  - [x] 24-02-PLAN.md — Lazy Resolution & Contextual Entities
-  - [x] 24-03-PLAN.md — Action Execution Pipeline
-
-- [ ] Phase 25: Pipeline Orchestrator (3 plans)
-  - [ ] 25-01-PLAN.md — Core Orchestrator & Step Logic
-  - [ ] 25-02-PLAN.md — Event Loop & Resumability
-  - [ ] 25-03-PLAN.md — Smart Aggregator & Bulk Updates
-
-### Phase Details
-
-**Phase 22: Database Schema & Engine Primitives**
-Goal: Provision the database tables for the new three-layer Autopilot architecture.
-Requirements: DB-01, DB-02, DB-03, DB-04, DB-05
-Success criteria:
-1. Schema defined and ORM models created
-2. Unique hash constraints verified for conditions
-
-**Phase 23: Condition Engine**
-Goal: Implement the entity-agnostic condition evaluation logic, including structural hashing and composability.
-**Plans:** 2 plans
-Requirements: COND-01, COND-02, COND-03, COND-04, COND-05, COND-06
-Plans:
-- [x] 23-01-PLAN.md — Implement core evaluation, hashing, and boolean logic.
-- [x] 23-02-PLAN.md — Implement persistence, structural deduplication, and labeling.
-
-Success criteria:
-1. Entity-agnostic evaluation logic works
-2. Structural hashing deduplicates correctly
-3. AND/OR/NOT composability implemented
-4. Condition naming via labels works
-
-**Phase 24: Action Engine & Lazy Resolution**
-Goal: Build the getter/setter sequence processor with lazy context resolvers for runtime entities.
-**Plans:** 3 plans
-Requirements: ACT-01, ACT-02, ACT-03
-Plans:
-- [x] 24-01-PLAN.md — Core Action Infrastructure
-- [x] 24-02-PLAN.md — Lazy Resolution & Contextual Entities
-- [x] 24-03-PLAN.md — Action Execution Pipeline
-
-Success criteria:
-1. Contexts resolve correctly at runtime (self, parent, etc)
-2. Getter/setter API mutates state securely
-
-**Phase 25: Pipeline Orchestrator**
-Goal: Wire the conditions and actions into strict ordered execution pipelines that halt on condition failures, using a resumable and scalable event-driven architecture.
-**Plans:** 3 plans
-Requirements: PIPE-01, PIPE-02, PIPE-03
-Plans:
-- [ ] 25-01-PLAN.md — Core Orchestrator & Step Logic
-- [ ] 25-02-PLAN.md — Event Loop & Resumability
-- [ ] 25-03-PLAN.md — Smart Aggregator & Bulk Updates
-
-Success criteria:
-1. Pipelines execute sequentially
-2. Halt on condition failure correctly guards action execution
-3. Resumable via Kafka loop
-4. Loop detection prevents infinite recursion
-5. Smart Aggregator optimizes high-throughput updates
+- ✅ **v6.0 Rebuild Autopilot Engine** — Phases 22-25 (shipped 2026-05-16) [.planning/milestones/v6.0-ROADMAP.md]
 
 ## Progress
 
@@ -88,4 +13,4 @@ Success criteria:
 | 22. Database Schema | v6.0 | 1/1 | Complete | 2026-05-16 |
 | 23. Condition Engine | v6.0 | 2/2 | Complete | 2026-05-16 |
 | 24. Action Engine | v6.0 | 3/3 | Complete | 2026-05-16 |
-| 25. Pipeline Orchestrator | v6.0 | 0/3 | In Progress | - |
+| 25. Pipeline Orchestrator | v6.0 | 3/3 | Complete | 2026-05-16 |

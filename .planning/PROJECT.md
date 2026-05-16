@@ -28,6 +28,8 @@ Automate the "busy work" of project management through reliable, transparent, an
 - ✓ [Feature Showcase Upgrade] — Integrate Autopilot Feature Segment into the hook composition (v4.0).
 - ✓ [Legacy Engine Teardown] — Safely removed core logic while preserving UI (v5.0).
 - ✓ [Entity-Agnostic Condition Engine] — Implemented modular, hash-deduplicated evaluation logic (v6.0).
+- ✓ [Lazy-Context Action Engine] — Implemented sequence processor with async resolvers and dirty tracking (v6.0).
+- ✓ [Event-Driven Pipeline Orchestrator] — Implemented resumable sequential engine with bulk-update aggregation (v6.0).
 
 - [ ] [Multi-domain Triggers] — Evaluate events crossing project boundaries.
 - [ ] [Complex Predicates] — Evaluate conditions referencing recursive parent/child states.
@@ -37,17 +39,17 @@ Automate the "busy work" of project management through reliable, transparent, an
 - [Cron-based Triggers] — Reactive/event-driven architecture remains primary focus.
 - [External Service Actions] — Scope confined to internal Taskinator domain mutations.
 
-## Next Milestone Goals (v6.0+)
+## Next Milestone Goals (v7.0)
 
-**Goal:** Re-architect and rebuild the new Autopilot engine to replace the legacy system that was torn down in v5.0. 
+**Goal:** Expand the Autopilot ecosystem to handle cross-project automation and external notifications.
 
 **Target features:**
-- Implement a robust, scalable event-driven execution framework
-- Rebuild condition evaluation with a safer AST or sandboxed approach
-- Ensure backwards compatibility with existing Autopilot definitions in DB
+- Implement multi-domain triggers (actions in Project A triggering rules in Project B)
+- Integrate external service actions (Slack/Discord/Email notifications)
+- Implement complex predicates for cross-entity relationship evaluation
 
-## Current State (Post-v5.0)
-The legacy Autopilot engine has been successfully amputated. The API and UI remain intact (hollowed out), preventing crashes but providing no automated execution until the new engine is built.
+## Current State (Post-v6.0)
+The Autopilot engine has been fully rebuilt. It features entity-agnostic condition evaluation, lazy context resolution, and a resumable, event-driven pipeline execution model. Performance is optimized for 10k RPS via smart aggregation and bulk SQL updates.
 
 ## Key Decisions
 
@@ -62,24 +64,18 @@ The legacy Autopilot engine has been successfully amputated. The API and UI rema
 | Stateless Remotion Primitives | Decouple UI updates from implicit browser/CSS runtimes to achieve 100% frame-accurate render stability. | **Complete (v3.0)** |
 | Dynamic Timeline Orchestrator | Automate cumulative track summation in React to easily adjust scene durations without manual math. | **Complete (v3.0)** |
 | Engine Amputation | Remove broken execution code before rebuilding to stabilize system and provide a clean slate. | **Complete (v5.0)** |
+| Recursive Kafka Loop | Enables resumable execution and prevents long-running DB locks by processing one step per event. | **Complete (v6.0)** |
+| Smart Aggregation (CASE) | Optimizes high-throughput updates by grouping heterogeneous mutations into single SQL roundtrips. | **Complete (v6.0)** |
 
 ## Evolution
 
 This document evolves at phase transitions and milestone boundaries.
 
-**After each phase transition** (via `/gsd-transition`):
-1. Requirements invalidated? → Move to Out of Scope with reason
-2. Requirements validated? → Move to Validated with phase reference
-3. New requirements emerged? → Add to Active
-4. Decisions to log? → Add to Key Decisions
-5. "What This Is" still accurate? → Update if drifted
-
-**After each milestone** (via `/gsd-complete-milestone`):
+**After each milestone** (via `/gsd:complete-milestone`):
 1. Full review of all sections
 2. Core Value check — still the right priority?
 3. Audit Out of Scope — reasons still valid?
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-16 after v5.0 milestone completion*
-
+*Last updated: 2026-05-16 after v6.0 milestone completion*
