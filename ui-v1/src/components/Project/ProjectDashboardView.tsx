@@ -47,7 +47,9 @@ export default function ProjectDashboardView() {
   const links = data?.links ?? [];
   const resolvedProjectId = projectId ?? project?.id;
 
-  if (isLoading) {
+  const isActuallyLoading = isLoading || (!project && !isError);
+
+  if (isActuallyLoading) {
     return (
       <div className="page-frame">
         <LoadingPane title="Loading project workspace" message="Pulling task, team, and member summaries." />
@@ -55,7 +57,7 @@ export default function ProjectDashboardView() {
     );
   }
 
-  if (isError || !project) {
+  if (isError) {
     return (
       <div className="page-frame">
         <EmptyState

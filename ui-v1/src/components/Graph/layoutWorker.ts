@@ -73,8 +73,8 @@ self.onmessage = (e: MessageEvent<WorkerInput>) => {
     changed = false;
     iterations++;
     allEdges.forEach(edge => {
-      const sourceId = typeof edge.source === 'string' ? edge.source : edge.source.id;
-      const targetId = typeof edge.target === 'string' ? edge.target : edge.target.id;
+      const sourceId = edge.sourceTaskId || (typeof edge.source === 'string' ? edge.source : edge.source?.id);
+      const targetId = edge.targetTaskId || (typeof edge.target === 'string' ? edge.target : edge.target?.id);
       
       const s = ranks.get(sourceId);
       const t = ranks.get(targetId);

@@ -7,10 +7,12 @@ import type { GraphEdge, GraphNode, ProjectTask, TaskNeighbourhood } from '../..
 import { EmptyState, PriorityBadge, StatusBadge, SurfaceCardStrong } from '../shared/workspace';
 import { TaskMap } from '../Graph/TaskMap';
 
-export const TaskGraphView: React.FC = () => {
-  const { projectId } = useParams({ from: '/fullscreen-layout/graph/$projectId' });
-  const search = useSearch({ from: '/fullscreen-layout/graph/$projectId' }) as { taskId?: string };
-  const focusedTaskId = search.taskId;
+interface TaskGraphViewProps {
+  projectId: string;
+  focusedTaskId?: string;
+}
+
+export const TaskGraphView: React.FC<TaskGraphViewProps> = ({ projectId, focusedTaskId }) => {
   const { taskApi } = useApi();
 
   const { data, isLoading, fetchNextPage, hasNextPage, isFetchingNextPage } = useInfiniteQuery({
@@ -130,49 +132,14 @@ export const TaskGraphView: React.FC = () => {
   }
 
   return (
-    <div className="page-frame">
-      <SurfaceCardStrong className="p-5 md:p-6">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex flex-wrap items-center gap-3">
-            <Link
-              to="/projects/$projectId/tasks"
-              params={{ projectId }}
-              className="inline-flex items-center gap-2 rounded-full border border-app-line bg-white/80 px-4 py-2 text-sm font-semibold text-app-ink transition hover:border-app-ink/20"
-            >
-              <ArrowLeft size={15} />
-              Back
-            </Link>
-            <h1 className="text-2xl font-semibold tracking-[-0.04em] text-app-ink md:text-3xl">
-              {neighbourhood.focusedTask.title}
-            </h1>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <StatusBadge status={neighbourhood.focusedTask.status} />
-            <PriorityBadge priority={neighbourhood.focusedTask.priority} />
-          </div>
-        </div>
-      </SurfaceCardStrong>
-
-      <SurfaceCardStrong className="mt-6 overflow-hidden p-0">
-        <div className="border-b border-app-line px-5 py-3">
-          <div className="flex flex-wrap items-center justify-between gap-3 text-sm text-app-muted">
-            <span>Task graph</span>
-            <div className="flex flex-wrap gap-3">
-              <span>{neighbourhood.nodes.length} nodes</span>
-              <span>{neighbourhood.edges.length} links</span>
-            </div>
-          </div>
-        </div>
-        <div className="h-[80vh] min-h-[46rem]">
-          <TaskMap
-            projectId={projectId}
-            taskId={focusedTaskId || neighbourhood.focusedTask.id}
-            neighbourhood={neighbourhood}
-            fetchNextPage={hasNextPage ? fetchNextPage : undefined}
-            isFetchingNextPage={isFetchingNextPage}
-          />
-        </div>
-      </SurfaceCardStrong>
+    <div className="flex-1 h-full w-full bg-app-bg">
+      <TaskMap
+        projectId={projectId}
+        taskId={focusedTaskId || neighbourhood.focusedTask.id}
+        neighbourhood={neighbourhood}
+        fetchNextPage={hasNextPage ? fetchNextPage : undefined}
+        isFetchingNextPage={isFetchingNextPage}
+      />
     </div>
   );
 };

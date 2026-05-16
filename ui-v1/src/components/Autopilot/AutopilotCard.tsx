@@ -172,7 +172,7 @@ export const AutopilotCard: React.FC<AutopilotCardProps> = ({ autopilot, onClick
             className="overflow-hidden"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="h-[320px] w-full">
+            <div className="relative h-[320px] w-full mt-2">
               <ConditionBuilderCanvas
                 initialCondition={autopilot.conditions}
                 readOnly

@@ -151,7 +151,7 @@ type TaskLink {
     """
     User who last modified this link.
     """
-    updatedBy: User!
+    updatedBy: User
 
     """
     ISO 8601 last-updated timestamp.

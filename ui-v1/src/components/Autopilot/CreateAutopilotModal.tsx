@@ -105,9 +105,9 @@ export const CreateAutopilotModal: React.FC<CreateAutopilotModalProps> = ({
       onClose={handleClose}
       title="Build New Autopilot"
       description="Automate your workflows with triggers, condition logic, and sequential actions."
-      size="lg"
+      size="full"
     >
-      <div className="flex flex-col h-full min-h-[450px]">
+      <div className="flex flex-col h-full flex-1 overflow-hidden">
         {/* Step Progress Indicator */}
         <div className="flex items-center justify-between px-1 py-4 border-b border-app-line/60">
           {STEPS.map((s, idx) => {
@@ -153,10 +153,10 @@ export const CreateAutopilotModal: React.FC<CreateAutopilotModalProps> = ({
         )}
 
         {/* Step Body */}
-        <div className="flex-1 py-5">
+        <div className="flex-1 flex flex-col py-5 min-h-0 overflow-hidden">
           {/* Step 1: Triggers */}
           {step === 'triggers' && (
-            <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-200">
+            <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-200 overflow-y-auto pr-2 h-full">
               <h4 className="text-xs font-bold uppercase tracking-wider text-app-muted">
                 Select when this rule should fire
               </h4>
@@ -203,8 +203,8 @@ export const CreateAutopilotModal: React.FC<CreateAutopilotModalProps> = ({
 
           {/* Step 2: Conditions */}
           {step === 'conditions' && (
-            <div className="flex flex-col h-full min-h-[380px] animate-in fade-in duration-200">
-              <div className="flex justify-between items-center mb-3">
+            <div className="flex-1 flex flex-col animate-in fade-in duration-200 min-h-0 h-full">
+              <div className="flex justify-between items-center mb-3 shrink-0">
                 <h4 className="text-xs font-bold uppercase tracking-wider text-app-muted">
                   Define criteria (Filters)
                 </h4>
@@ -212,7 +212,7 @@ export const CreateAutopilotModal: React.FC<CreateAutopilotModalProps> = ({
                   Drag handles to link nodes
                 </span>
               </div>
-              <div className="flex-1 h-[320px] w-full rounded-2xl overflow-hidden">
+              <div className="flex-1 relative w-full rounded-2xl overflow-hidden min-h-[350px]">
                 <ConditionBuilderCanvas
                   initialCondition={conditions}
                   onChange={setConditions}
@@ -223,7 +223,7 @@ export const CreateAutopilotModal: React.FC<CreateAutopilotModalProps> = ({
 
           {/* Step 3: Actions */}
           {step === 'actions' && (
-            <div className="space-y-4 animate-in fade-in duration-200 max-h-[400px] overflow-y-auto px-1">
+            <div className="space-y-4 animate-in fade-in duration-200 h-full overflow-y-auto px-1 pr-2">
               <h4 className="text-xs font-bold uppercase tracking-wider text-app-muted mb-2">
                 Build Action Pipeline
               </h4>
@@ -241,7 +241,7 @@ export const CreateAutopilotModal: React.FC<CreateAutopilotModalProps> = ({
 
           {/* Step 4: Review & Create */}
           {step === 'review' && (
-            <div className="space-y-5 animate-in fade-in duration-200">
+            <div className="space-y-5 animate-in fade-in duration-200 h-full overflow-y-auto pr-2">
               <h4 className="text-xs font-bold uppercase tracking-wider text-app-muted">
                 Review Rule Configuration
               </h4>

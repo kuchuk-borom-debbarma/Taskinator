@@ -6,7 +6,7 @@ import {
   lazyRouteComponent,
   redirect
 } from '@tanstack/react-router';
-import { Sidebar } from './components/Layout/Sidebar';
+import { Link } from '@tanstack/react-router';
 import { type AuthContextType } from './context/AuthContext';
 import { AuthScreen } from './components/Auth/AuthScreen';
 import { NotFoundComponent, GlobalErrorComponent } from './components/Layout/RouterFeedback';
@@ -29,12 +29,21 @@ export const rootRoute = createRootRouteWithContext<MyRouterContext>()({
 // --- Layout Routes ---
 
 const AuthenticatedLayout = () => {
-  const { isSidebarCollapsed } = useLayout();
   return (
-    <div className="flex h-screen overflow-hidden bg-bg-notion text-text-notion">
-      <Sidebar />
-      <main className={`flex-1 h-screen overflow-y-auto p-3 transition-all duration-300 ${isSidebarCollapsed ? 'pl-3' : 'pl-0'}`}>
-        <div className="glass-panel rounded-[32px] min-h-full overflow-hidden flex flex-col">
+    <div className="flex flex-col h-screen overflow-hidden bg-bg-notion text-text-notion relative">
+      {/* Top Nav */}
+      <header className="flex h-16 shrink-0 items-center px-6 border-b border-app-line/40 bg-white/40 backdrop-blur-md z-10">
+        <Link to="/" className="flex items-center gap-3 group">
+          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-app-accent/10 text-app-accent transition group-hover:bg-app-accent group-hover:text-white">
+            <span className="font-bold">T</span>
+          </div>
+          <span className="text-lg font-bold tracking-tight text-app-ink">Taskinator</span>
+        </Link>
+      </header>
+
+      {/* Main Content */}
+      <main className="flex-1 overflow-y-auto p-4 md:p-6">
+        <div className="glass-panel rounded-[32px] min-h-full overflow-hidden flex flex-col relative">
           <Outlet />
         </div>
       </main>
@@ -196,7 +205,11 @@ const projectGraphRoute = createRoute({
       outDir: (search.outDir as 'forward' | 'backward') || undefined,
     };
   },
-  component: TaskGraphView,
+  component: () => {
+    const { projectId } = projectGraphRoute.useParams();
+    const search = projectGraphRoute.useSearch();
+    return <TaskGraphView projectId={projectId} focusedTaskId={search.taskId} />;
+  },
 });
 
 type LinkSearch = {

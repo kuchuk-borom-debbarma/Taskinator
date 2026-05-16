@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, ArrowRight, Copy, Loader2, Network, PencilLine, Plus, Save, Trash2, X } from 'lucide-react';
@@ -17,6 +17,7 @@ import {
   formatDate,
 } from '../shared/workspace';
 import { PagingButton } from '../shared/PagingButton';
+import { TaskGraphView } from './TaskGraphView';
 
 interface TaskDetailViewProps {
   taskId: string;
@@ -34,6 +35,22 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
   const [teamIdDraft, setTeamIdDraft] = useState<string | null>(null);
   const [memberIdDraft, setMemberIdDraft] = useState<string | null>(null);
 
+  const [inlineDraft, setInlineDraft] = useState<{
+    status: string;
+    priority: number;
+    teamId: string | null;
+    memberId: string | null;
+  }>({
+    status: '',
+    priority: 0,
+    teamId: null,
+    memberId: null,
+  });
+  const [activeInlineField, setActiveInlineField] = useState<string | null>(null);
+  const [isDebouncing, setIsDebouncing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const inlineUpdateTimeout = useRef<NodeJS.Timeout | null>(null);
+
   const [incomingCursor, setIncomingCursor] = useState<string | undefined>();
   const [incomingDir, setIncomingDir] = useState<'forward' | 'backward'>('forward');
   const [outgoingCursor, setOutgoingCursor] = useState<string | undefined>();
@@ -46,6 +63,7 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
   const [addMode, setAddMode] = useState<'new' | 'existing'>('new');
   const [existingTaskId, setExistingTaskId] = useState('');
   const [editingLink, setEditingLink] = useState<TaskLink | null>(null);
+  const [isGraphModalOpen, setIsGraphModalOpen] = useState(false);
 
   const { data: detail, isLoading: detailLoading } = useQuery({
     queryKey: ['task-detail', taskId],
@@ -58,15 +76,59 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
   const { data: teamsData } = useQuery({
     queryKey: ['project-teams-all', task?.project?.id],
     queryFn: () => teamApi.getTeams(task!.project!.id, { first: 100 }),
-    enabled: !!task?.project?.id && isEditing,
+    enabled: !!task?.project?.id,
   });
 
   // Fetch team members for dropdown
+  const currentTeamId = activeInlineField ? inlineDraft.teamId : (teamIdDraft || task?.team?.id);
   const { data: membersData } = useQuery({
-    queryKey: ['team-members-all', teamIdDraft],
-    queryFn: () => teamApi.getTeamMembers(task!.project!.id, teamIdDraft!, { first: 100 }),
-    enabled: !!task?.project?.id && !!teamIdDraft && isEditing,
+    queryKey: ['team-members-all', currentTeamId],
+    queryFn: () => teamApi.getTeamMembers(task!.project!.id, currentTeamId!, { first: 100 }),
+    enabled: !!task?.project?.id && !!currentTeamId,
   });
+
+  useEffect(() => {
+    if (task) {
+      setInlineDraft({
+        status: task.status,
+        priority: task.priority,
+        teamId: task.team?.id || null,
+        memberId: task.assignedMember?.id || null,
+      });
+    }
+  }, [task]);
+
+  const handleInlineChange = (changes: Partial<typeof inlineDraft>) => {
+    const next = { ...inlineDraft, ...changes };
+    setInlineDraft(next);
+    setActiveInlineField(null);
+    setIsDebouncing(true);
+
+    if (inlineUpdateTimeout.current) clearTimeout(inlineUpdateTimeout.current);
+    
+    inlineUpdateTimeout.current = setTimeout(() => {
+      setIsDebouncing(false);
+      setIsSaving(true);
+      taskApi.updateTask(taskId, {
+        projectId: task!.project!.id,
+        version: task!.version,
+        title: task!.title,
+        description: task!.description,
+        status: next.status,
+        priority: next.priority,
+        teamId: next.teamId,
+        memberId: next.memberId,
+      }).then(() => {
+        queryClient.invalidateQueries({ queryKey: ['task-detail', taskId] });
+        queryClient.invalidateQueries({ queryKey: ['tasks', task!.project?.id] });
+        queryClient.invalidateQueries({ queryKey: ['project-dashboard', task!.project?.id] });
+      }).catch(err => {
+        console.error('Failed to inline update task:', err);
+      }).finally(() => {
+        setIsSaving(false);
+      });
+    }, 5000);
+  };
 
   const handleTeamChange = (newTeamId: string | null) => {
     setTeamIdDraft(newTeamId);
@@ -239,15 +301,13 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
             <ArrowLeft size={15} />
             Back to tasks
           </button>
-          <Link
-            to="/graph/$projectId"
-            params={{ projectId: task.project?.id || '' }}
-            search={{ taskId }}
+          <button
+            onClick={() => setIsGraphModalOpen(true)}
             className="inline-flex items-center gap-2 rounded-full bg-app-ink px-4 py-2 text-sm font-semibold text-white transition hover:bg-app-ink/92"
           >
             <Network size={15} />
             Open flow map
-          </Link>
+          </button>
         </div>
 
         <div className="flex flex-wrap items-start justify-between gap-4">
@@ -261,8 +321,17 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
       <div className="mt-8 grid gap-6 xl:grid-cols-[0.78fr_1.22fr]">
         <SurfaceCard className="p-5">
           <div className="mb-4 flex items-center justify-between">
-            <div>
+            <div className="flex items-center gap-3">
               <h2 className="text-2xl font-semibold tracking-[-0.04em] text-app-ink">Properties</h2>
+              {(isDebouncing || isSaving) && (
+                <div className="flex items-center gap-1.5 rounded-full bg-app-accent/10 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-app-accent">
+                  {isSaving ? (
+                    <><Loader2 size={12} className="animate-spin" /> Saving...</>
+                  ) : (
+                    <><span className="relative flex h-2 w-2"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-app-accent opacity-75"></span><span className="relative inline-flex rounded-full h-2 w-2 bg-app-accent"></span></span> Waiting to save...</>
+                  )}
+                </div>
+              )}
             </div>
             <button
               onClick={() => {
@@ -292,15 +361,95 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
           </div>
           <div className="space-y-3 mt-6">
             <div className="grid grid-cols-2 gap-3">
-              <MetaItem label="Status">
-                <StatusBadge status={task.status} />
+              <MetaItem 
+                label="Status"
+                isEditing={activeInlineField === 'status'}
+                onEditClick={() => setActiveInlineField('status')}
+                editNode={
+                  <CustomSelect
+                    value={inlineDraft.status}
+                    onChange={(val) => handleInlineChange({ status: val })}
+                    onClose={() => setActiveInlineField(null)}
+                    options={[
+                      { label: 'Todo', value: 'TODO' },
+                      { label: 'In Progress', value: 'IN_PROGRESS' },
+                      { label: 'Done', value: 'DONE' },
+                      { label: 'Canceled', value: 'CANCELED' },
+                    ]}
+                  />
+                }
+              >
+                <StatusBadge status={inlineDraft.status || task.status} />
               </MetaItem>
-              <MetaItem label="Priority">
-                <PriorityBadge priority={task.priority} />
+              <MetaItem 
+                label="Priority"
+                isEditing={activeInlineField === 'priority'}
+                onEditClick={() => setActiveInlineField('priority')}
+                editNode={
+                  <CustomSelect
+                    type="number"
+                    value={inlineDraft.priority}
+                    onChange={(val) => handleInlineChange({ priority: val })}
+                    onClose={() => setActiveInlineField(null)}
+                    options={[
+                      { label: 'Urgent (P0)', value: 0 },
+                      { label: 'High (P1)', value: 1 },
+                      { label: 'Medium (P2)', value: 2 },
+                      { label: 'Low (P3)', value: 3 },
+                    ]}
+                  />
+                }
+              >
+                <PriorityBadge priority={inlineDraft.priority ?? task.priority} />
               </MetaItem>
             </div>
-            <MetaItem label="Assignee" value={task.assignedMember?.username || 'Unassigned'} />
-            <MetaItem label="Team" value={task.team?.name || 'No team assigned'} />
+            <MetaItem 
+              label="Assignee" 
+              isEditing={activeInlineField === 'assignee'}
+              onEditClick={() => setActiveInlineField('assignee')}
+              editNode={
+                <select
+                  autoFocus
+                  value={inlineDraft.memberId || ''}
+                  onChange={(e) => handleInlineChange({ memberId: e.target.value || null })}
+                  onBlur={() => setActiveInlineField(null)}
+                  disabled={!inlineDraft.teamId}
+                  className="w-full rounded-xl border border-app-line bg-white/50 px-2 py-1.5 text-sm outline-none shadow-sm cursor-pointer disabled:opacity-50"
+                >
+                  <option value="">Unassigned</option>
+                  {membersData?.members.map(m => (
+                    <option key={m.id} value={m.user?.id}>{m.user?.username || m.user?.id}</option>
+                  ))}
+                </select>
+              }
+            >
+              {inlineDraft.memberId 
+                ? (membersData?.members.find(m => m.user?.id === inlineDraft.memberId)?.user?.username || 'Loading...') 
+                : (task.assignedMember?.username || 'Unassigned')}
+            </MetaItem>
+            <MetaItem 
+              label="Team" 
+              isEditing={activeInlineField === 'team'}
+              onEditClick={() => setActiveInlineField('team')}
+              editNode={
+                <select
+                  autoFocus
+                  value={inlineDraft.teamId || ''}
+                  onChange={(e) => handleInlineChange({ teamId: e.target.value || null, memberId: null })}
+                  onBlur={() => setActiveInlineField(null)}
+                  className="w-full rounded-xl border border-app-line bg-white/50 px-2 py-1.5 text-sm outline-none shadow-sm cursor-pointer"
+                >
+                  <option value="">No team</option>
+                  {teamsData?.teams.map(t => (
+                    <option key={t.id} value={t.id}>{t.name}</option>
+                  ))}
+                </select>
+              }
+            >
+              {inlineDraft.teamId 
+                ? (teamsData?.teams.find(t => t.id === inlineDraft.teamId)?.name || 'Loading...') 
+                : (task.team?.name || 'No team assigned')}
+            </MetaItem>
             <MetaItem label="Project" value={task.project?.name || 'No project'} />
             <div className="grid grid-cols-2 gap-3">
               <MetaItem label="Created" value={formatDate(task.createdAt)} />
@@ -346,6 +495,7 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
             <div className="grid gap-6 lg:grid-cols-2">
               <DependencyCard
                 title="Incoming"
+                projectId={task.project?.id || ''}
                 links={incoming}
                 direction="incoming"
                 description="Tasks that impact this task."
@@ -384,6 +534,7 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
               />
               <DependencyCard
                 title="Outgoing"
+                projectId={task.project?.id || ''}
                 links={outgoing}
                 direction="outgoing"
                 description="Tasks that this task depends on."
@@ -719,15 +870,51 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
           </div>
         </div>
       </AppModal>
+      <AppModal
+        open={isGraphModalOpen}
+        title="Task Graph"
+        onClose={() => setIsGraphModalOpen(false)}
+        size="full"
+      >
+        <div className="flex-1 overflow-hidden relative rounded-2xl bg-white border border-app-line mt-4">
+           {isGraphModalOpen && <TaskGraphView projectId={task.project?.id || ''} focusedTaskId={taskId} />}
+        </div>
+      </AppModal>
     </div>
   );
 };
 
-function MetaItem({ label, value, children }: { label: string; value?: string; children?: React.ReactNode }) {
+function MetaItem({ 
+  label, 
+  value, 
+  children,
+  isEditing,
+  onEditClick,
+  editNode
+}: { 
+  label: string; 
+  value?: string; 
+  children?: React.ReactNode;
+  isEditing?: boolean;
+  onEditClick?: () => void;
+  editNode?: React.ReactNode;
+}) {
   return (
-    <div className="rounded-2xl bg-app-accent/10 px-4 py-4">
-      <p className="text-xs font-semibold uppercase tracking-[0.18em] text-app-accent">{label}</p>
-      <div className="mt-2 text-sm font-medium text-app-ink flex items-center">{value || children}</div>
+    <div className="rounded-2xl bg-app-accent/10 px-4 py-4 group relative transition hover:bg-app-accent/15">
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-app-accent">{label}</p>
+        {onEditClick && !isEditing && (
+          <button 
+            onClick={onEditClick}
+            className="hidden group-hover:flex items-center justify-center rounded-md p-1 text-app-accent hover:bg-app-accent/20 transition-colors"
+          >
+            <PencilLine size={14} />
+          </button>
+        )}
+      </div>
+      <div className="text-sm font-medium text-app-ink flex items-center min-h-[28px]">
+        {isEditing ? editNode : (value || children)}
+      </div>
     </div>
   );
 }
@@ -737,6 +924,7 @@ function DependencyCard({
   links,
   direction,
   description,
+  projectId,
   pageData,
   onAdd,
   onEdit,
@@ -748,6 +936,7 @@ function DependencyCard({
   links: TaskLink[];
   direction: 'incoming' | 'outgoing';
   description: string;
+  projectId: string;
   pageData: { hasNextPage: boolean; hasPreviousPage: boolean };
   onAdd: () => void;
   onEdit: (link: TaskLink) => void;
@@ -785,7 +974,13 @@ function DependencyCard({
                 return (
                   <div key={link.id} className="group relative rounded-[22px] border border-app-line bg-white/75 px-4 py-4 transition hover:border-app-accent/30">
                     <div className="flex flex-wrap items-center justify-between gap-3">
-                      <p className="text-sm font-semibold text-app-ink">{task.title}</p>
+                      <Link 
+                        to="/projects/$projectId/tasks/$taskId"
+                        params={{ projectId: projectId, taskId: task.id }}
+                        className="text-sm font-semibold text-app-ink hover:underline"
+                      >
+                        {task.title}
+                      </Link>
                       <div className="flex items-center gap-2">
                         <StatusBadge status={task.status} />
                         <div className="flex scale-90 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
@@ -798,7 +993,7 @@ function DependencyCard({
                           </button>
                           <button
                             onClick={() => onDelete(link.id)}
-                            className="rounded-lg p-1 text-app-muted hover:bg-red-50 hover:text-red-500"
+                            className="rounded-lg p-1 text-app-muted hover:bg-app-danger/10 hover:text-app-danger"
                             title="Remove link"
                           >
                             <Trash2 size={14} />
@@ -806,7 +1001,6 @@ function DependencyCard({
                         </div>
                       </div>
                     </div>
-                    <p className="mt-2 text-xs text-app-muted">{task.team?.name || 'No team assigned'}</p>
                   </div>
                 );
               })}
@@ -814,16 +1008,83 @@ function DependencyCard({
           ))
         )}
       </div>
-      <div className="mt-6 flex items-center justify-between gap-4 border-t border-app-line pt-6">
-        <PagingButton disabled={!pageData.hasPreviousPage} onClick={onPrev}>
-          <ArrowLeft size={14} />
-          Prev
-        </PagingButton>
-        <PagingButton disabled={!pageData.hasNextPage} onClick={onNext}>
-          Next
-          <ArrowRight size={14} />
-        </PagingButton>
-      </div>
+      {(pageData.hasNextPage || pageData.hasPreviousPage) && (
+        <div className="mt-6 flex items-center justify-center gap-2 border-t border-app-line/60 pt-4">
+          <PagingButton onClick={onPrev} disabled={!pageData.hasPreviousPage} icon={ArrowLeft} />
+          <PagingButton onClick={onNext} disabled={!pageData.hasNextPage} icon={ArrowRight} />
+        </div>
+      )}
     </SurfaceCard>
+  );
+}
+
+function CustomSelect({
+  value,
+  onChange,
+  onClose,
+  options,
+  type = 'text',
+}: {
+  value: string | number;
+  onChange: (v: any) => void;
+  onClose: () => void;
+  options: { label: string; value: string | number }[];
+  type?: 'text' | 'number';
+}) {
+  const isCustom = !options.find((o) => String(o.value) === String(value)) && value !== '';
+  const [mode, setMode] = useState<'select' | 'input'>(isCustom ? 'input' : 'select');
+  const [draft, setDraft] = useState(value);
+
+  const handleInputBlur = () => {
+    const val = type === 'number' ? Number(draft) : draft;
+    onChange(val);
+    onClose();
+  };
+
+  if (mode === 'select') {
+    return (
+      <select
+        autoFocus
+        value={value}
+        onChange={(e) => {
+          if (e.target.value === '__OTHER__') {
+            setMode('input');
+            setDraft('');
+          } else {
+            const val = type === 'number' ? Number(e.target.value) : e.target.value;
+            onChange(val);
+            onClose();
+          }
+        }}
+        onBlur={onClose}
+        className="w-full rounded-xl border border-app-line bg-white/50 px-2 py-1.5 text-sm outline-none shadow-sm cursor-pointer"
+      >
+        {options.map((o) => (
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
+        ))}
+        <option value="__OTHER__">Other (Custom)...</option>
+      </select>
+    );
+  }
+
+  return (
+    <input
+      autoFocus
+      type={type}
+      value={draft}
+      onChange={(e) => setDraft(e.target.value)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') {
+          handleInputBlur();
+        } else if (e.key === 'Escape') {
+          onClose();
+        }
+      }}
+      onBlur={handleInputBlur}
+      placeholder={type === 'number' ? 'Enter a number...' : 'Type custom value...'}
+      className="w-full rounded-xl border border-app-accent bg-white px-2 py-1.5 text-sm outline-none shadow-sm focus:ring-2 focus:ring-app-accent/10"
+    />
   );
 }

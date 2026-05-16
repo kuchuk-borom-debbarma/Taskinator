@@ -21,6 +21,7 @@ interface UpdateTaskInput {
     status?: string;
     teamId?: string;
     memberId?: string;
+    priority?: number;
 }
 
 interface CreateTaskLinkInput {
@@ -344,6 +345,7 @@ export const taskResolvers = {
                 status: input.status,
                 teamId: input.teamId,
                 memberId: input.memberId,
+                priority: input.priority,
             });
         },
         delete: async (

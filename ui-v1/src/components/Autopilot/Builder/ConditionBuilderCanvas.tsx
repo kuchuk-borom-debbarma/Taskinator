@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   ReactFlow,
+  ReactFlowProvider,
   Background,
   Controls,
   useNodesState,
@@ -86,6 +87,15 @@ export const ConditionBuilderCanvas: React.FC<ConditionBuilderCanvasProps> = ({
     [readOnly, setNodes],
   );
 
+  const handleLogicalRemove = useCallback(
+    (nodeId: string) => {
+      if (readOnly) return;
+      setNodes((nds) => nds.filter((n) => n.id !== nodeId));
+      setEdges((eds) => eds.filter((e) => e.source !== nodeId && e.target !== nodeId));
+    },
+    [readOnly, setNodes, setEdges],
+  );
+
   // Inject live callbacks into node data on every render
   const nodesWithCallbacks: Node[] = useMemo(
     () =>
@@ -93,7 +103,11 @@ export const ConditionBuilderCanvas: React.FC<ConditionBuilderCanvasProps> = ({
         if (n.type === 'logicalNode') {
           return {
             ...n,
-            data: { ...(n.data as LogicalNodeData), onTypeChange: readOnly ? undefined : handleLogicalTypeChange },
+            data: { 
+              ...(n.data as LogicalNodeData), 
+              onTypeChange: readOnly ? undefined : handleLogicalTypeChange,
+              onRemove: readOnly ? undefined : handleLogicalRemove,
+            },
           };
         }
         if (n.type === 'predicateNode') {
@@ -185,76 +199,78 @@ export const ConditionBuilderCanvas: React.FC<ConditionBuilderCanvasProps> = ({
     : null;
 
   return (
-    <div className="relative h-full w-full rounded-[16px] overflow-hidden border border-app-line/60 bg-white/40 backdrop-blur-sm">
-      {/* Toolbar */}
-      {!readOnly && (
-        <div className="absolute left-3 top-3 z-10 flex gap-2">
-          <button
-            onClick={() => addLogicalNode('and')}
-            className="inline-flex items-center gap-1.5 rounded-full border border-app-line bg-white/90 px-3 py-1.5 text-xs font-semibold text-app-ink shadow-sm transition hover:bg-white"
-          >
-            <Plus size={11} /> AND
-          </button>
-          <button
-            onClick={() => addLogicalNode('or')}
-            className="inline-flex items-center gap-1.5 rounded-full border border-app-line bg-white/90 px-3 py-1.5 text-xs font-semibold text-app-ink shadow-sm transition hover:bg-white"
-          >
-            <Plus size={11} /> OR
-          </button>
-          <button
-            onClick={() => addLogicalNode('not')}
-            className="inline-flex items-center gap-1.5 rounded-full border border-app-line bg-white/90 px-3 py-1.5 text-xs font-semibold text-app-ink shadow-sm transition hover:bg-white"
-          >
-            <Plus size={11} /> NOT
-          </button>
-          <button
-            onClick={addPredicateNode}
-            className="inline-flex items-center gap-1.5 rounded-full border border-app-accent/30 bg-app-accent-soft px-3 py-1.5 text-xs font-semibold text-app-accent shadow-sm transition hover:bg-app-accent/15"
-          >
-            <Plus size={11} /> Predicate
-          </button>
-        </div>
-      )}
+    <ReactFlowProvider>
+      <div className="absolute inset-0 rounded-[16px] overflow-hidden border border-app-line/60 bg-white/40 backdrop-blur-sm">
+        {/* Toolbar */}
+        {!readOnly && (
+          <div className="absolute left-3 top-3 z-10 flex gap-2">
+            <button
+              onClick={() => addLogicalNode('and')}
+              className="inline-flex items-center gap-1.5 rounded-full border border-app-line bg-white/90 px-3 py-1.5 text-xs font-semibold text-app-ink shadow-sm transition hover:bg-white"
+            >
+              <Plus size={11} /> AND
+            </button>
+            <button
+              onClick={() => addLogicalNode('or')}
+              className="inline-flex items-center gap-1.5 rounded-full border border-app-line bg-white/90 px-3 py-1.5 text-xs font-semibold text-app-ink shadow-sm transition hover:bg-white"
+            >
+              <Plus size={11} /> OR
+            </button>
+            <button
+              onClick={() => addLogicalNode('not')}
+              className="inline-flex items-center gap-1.5 rounded-full border border-app-line bg-white/90 px-3 py-1.5 text-xs font-semibold text-app-ink shadow-sm transition hover:bg-white"
+            >
+              <Plus size={11} /> NOT
+            </button>
+            <button
+              onClick={addPredicateNode}
+              className="inline-flex items-center gap-1.5 rounded-full border border-app-accent/30 bg-app-accent-soft px-3 py-1.5 text-xs font-semibold text-app-accent shadow-sm transition hover:bg-app-accent/15"
+            >
+              <Plus size={11} /> Predicate
+            </button>
+          </div>
+        )}
 
-      {/* Predicate editor panel */}
-      {selectedPredicateId && selectedNode && (
-        <PredicateEditorPanel
-          nodeId={selectedPredicateId}
-          data={selectedNode.data as PredicateNodeData}
-          onUpdate={handlePredicateUpdate}
-          onRemove={handlePredicateRemove}
-          onClose={() => setSelectedPredicateId(null)}
-        />
-      )}
+        {/* Predicate editor panel */}
+        {selectedPredicateId && selectedNode && (
+          <PredicateEditorPanel
+            nodeId={selectedPredicateId}
+            data={selectedNode.data as PredicateNodeData}
+            onUpdate={handlePredicateUpdate}
+            onRemove={handlePredicateRemove}
+            onClose={() => setSelectedPredicateId(null)}
+          />
+        )}
 
-      {/* Canvas */}
-      <ReactFlow
-        nodes={nodesWithCallbacks}
-        edges={edges}
-        onNodesChange={readOnly ? undefined : onNodesChange}
-        onEdgesChange={readOnly ? undefined : onEdgesChange}
-        onConnect={onConnect}
-        nodeTypes={nodeTypes}
-        fitView
-        fitViewOptions={{ padding: 0.3, maxZoom: 1.2 }}
-        nodesDraggable={!readOnly}
-        nodesConnectable={!readOnly}
-        elementsSelectable={!readOnly}
-        panOnDrag
-        zoomOnScroll
-        minZoom={0.3}
-        maxZoom={2}
-      >
-        <Background
-          gap={24}
-          size={1}
-          color="rgba(24, 33, 47, 0.06)"
-        />
-        <Controls
-          showInteractive={false}
-          className="!bottom-3 !left-3 !top-auto !rounded-2xl !border-app-line !bg-white/90 !shadow-soft"
-        />
-      </ReactFlow>
-    </div>
+        {/* Canvas */}
+        <ReactFlow
+          nodes={nodesWithCallbacks}
+          edges={edges}
+          onNodesChange={readOnly ? undefined : onNodesChange}
+          onEdgesChange={readOnly ? undefined : onEdgesChange}
+          onConnect={onConnect}
+          nodeTypes={nodeTypes}
+          fitView
+          fitViewOptions={{ padding: 0.3, maxZoom: 1.2 }}
+          nodesDraggable={!readOnly}
+          nodesConnectable={!readOnly}
+          elementsSelectable={!readOnly}
+          panOnDrag
+          zoomOnScroll
+          minZoom={0.3}
+          maxZoom={2}
+        >
+          <Background
+            gap={24}
+            size={1}
+            color="rgba(24, 33, 47, 0.06)"
+          />
+          <Controls
+            showInteractive={false}
+            className="!bottom-3 !left-3 !top-auto !rounded-2xl !border-app-line !bg-white/90 !shadow-soft"
+          />
+        </ReactFlow>
+      </div>
+    </ReactFlowProvider>
   );
 };
