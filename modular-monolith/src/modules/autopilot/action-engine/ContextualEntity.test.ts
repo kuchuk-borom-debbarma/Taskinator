@@ -1,10 +1,14 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ContextualEntity } from './ContextualEntity';
 
 describe('ContextualEntity', () => {
     const mockRegistry = {
         resolve: vi.fn(),
     } as any;
+
+    beforeEach(() => {
+        vi.clearAllMocks();
+    });
 
     it('should return initial data via .get()', () => {
         const entity = new ContextualEntity(
