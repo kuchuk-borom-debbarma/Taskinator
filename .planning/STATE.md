@@ -1,14 +1,14 @@
 ---
 gsd_state_version: 1.0
-milestone: v5.0
-milestone_name: Revamp Autopilot
-status: Awaiting next milestone
-last_updated: "2026-05-16T03:29:17.332Z"
-last_activity: 2026-05-16 — Milestone v5.0 completed and archived
+milestone: v6.0
+milestone_name: Rebuild Autopilot Engine
+status: planning
+last_updated: "2026-05-16T06:07:38.952Z"
+last_activity: 2026-05-16
 progress:
-  total_phases: 1
+  total_phases: 0
   completed_phases: 0
-  total_plans: 1
+  total_plans: 0
   completed_plans: 0
   percent: 0
 ---
@@ -42,10 +42,10 @@ progress:
 
 ## Current Position
 
-Phase: Milestone v5.0 complete
+Phase: Not started (defining requirements)
 Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-05-16 — Milestone v5.0 completed and archived
+Status: Defining requirements
+Last activity: 2026-05-16 — Milestone v6.0 started
 
 ## Operator Next Steps
 
