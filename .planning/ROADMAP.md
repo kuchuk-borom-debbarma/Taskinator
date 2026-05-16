@@ -1,11 +1,20 @@
-# Roadmap — Milestone v5.0 (Revamp Autopilot)
+# Roadmap: Taskinator Autopilot System
 
-## Phase 21: Legacy Engine Teardown
-**Goal**: Tear down the existing internal Autopilot engine while stubbing API mutations to prevent UI breakage.
-**Requirements**: [AUTO-01, AUTO-02, AUTO-03, AUTO-04, AUTO-05]
+## Milestones
 
-**Success Criteria**:
-1. `ConditionEvaluator`, `ActionHandlers`, `AutopilotDispatcher`, and `AutopilotEngine` files are safely deleted.
-2. GraphQL API boundary remains intact.
-3. Mutations are stubbed to return safe empty data instead of executing legacy logic.
-4. System compiles and runs without the old engine code.
+- ✅ **v5.0 Revamp Autopilot** — Phase 21 (shipped 2026-05-16)
+
+## Phases
+
+<details>
+<summary>✅ v5.0 Revamp Autopilot (Phase 21) — SHIPPED 2026-05-16</summary>
+
+- [x] Phase 21: Legacy Engine Teardown (1/1 plans) — completed 2026-05-16
+
+</details>
+
+## Progress
+
+| Phase             | Milestone | Plans Complete | Status      | Completed  |
+| ----------------- | --------- | -------------- | ----------- | ---------- |
+| 21. Legacy Engine Teardown | v5.0      | 1/1            | Complete    | 2026-05-16 |

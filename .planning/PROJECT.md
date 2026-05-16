@@ -26,11 +26,9 @@ Automate the "busy work" of project management through reliable, transparent, an
 - ✓ [Autopilot Engine Visualization] — Compositions highlighting nested evaluations, fail-fast chains, and loop blockers (v3.0).
 - ✓ [Visual Dashboard Showcase] — Showcase high-fidelity admin dashboard UIs (v3.0).
 - ✓ [Feature Showcase Upgrade] — Integrate Autopilot Feature Segment into the hook composition (v4.0).
-
-
+- ✓ [Legacy Engine Teardown] — Safely removed core logic while preserving UI (v5.0).
 
 - [ ] [Multi-domain Triggers] — Evaluate events crossing project boundaries.
-
 - [ ] [Complex Predicates] — Evaluate conditions referencing recursive parent/child states.
 
 ### Out of Scope
@@ -38,17 +36,17 @@ Automate the "busy work" of project management through reliable, transparent, an
 - [Cron-based Triggers] — Reactive/event-driven architecture remains primary focus.
 - [External Service Actions] — Scope confined to internal Taskinator domain mutations.
 
-## Current Milestone: v5.0 Revamp Autopilot
+## Next Milestone Goals (v6.0+)
 
-**Goal:** Completely rebuild the Autopilot system from the ground up, starting with tearing down the existing internal engine while preserving the GraphQL API boundary.
+**Goal:** Re-architect and rebuild the new Autopilot engine to replace the legacy system that was torn down in v5.0. 
 
 **Target features:**
-- Teardown of existing internal engine (ConditionEvaluator, ActionHandlers, Dispatcher, etc.)
-- Preservation of GraphQL API boundary
-- Re-architecting and rebuilding the new Autopilot engine
+- Implement a robust, scalable event-driven execution framework
+- Rebuild condition evaluation with a safer AST or sandboxed approach
+- Ensure backwards compatibility with existing Autopilot definitions in DB
 
-## Current State (v5.0)
-The legacy Autopilot engine suffered from crash loops and design flaws. We are taking a clean slate approach for the internals while maintaining the external UI/API contract.
+## Current State (Post-v5.0)
+The legacy Autopilot engine has been successfully amputated. The API and UI remain intact (hollowed out), preventing crashes but providing no automated execution until the new engine is built.
 
 ## Key Decisions
 
@@ -62,6 +60,7 @@ The legacy Autopilot engine suffered from crash loops and design flaws. We are t
 | Optimistic Queries | Instantly toggle Active state via TanStack Query to guarantee premium responsive feel. | **Complete (v2.0)** |
 | Stateless Remotion Primitives | Decouple UI updates from implicit browser/CSS runtimes to achieve 100% frame-accurate render stability. | **Complete (v3.0)** |
 | Dynamic Timeline Orchestrator | Automate cumulative track summation in React to easily adjust scene durations without manual math. | **Complete (v3.0)** |
+| Engine Amputation | Remove broken execution code before rebuilding to stabilize system and provide a clean slate. | **Complete (v5.0)** |
 
 ## Evolution
 
@@ -81,5 +80,5 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-16 after v3.0 milestone completion*
+*Last updated: 2026-05-16 after v5.0 milestone completion*
 
