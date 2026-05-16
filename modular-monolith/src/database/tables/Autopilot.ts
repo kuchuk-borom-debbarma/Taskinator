@@ -24,13 +24,16 @@ export type ConditionTree = ConditionNode;
 export interface AutopilotTable {
     id: Generated<string>;
     fk_project_id: string;
-    triggers: string[];
-    conditions: JSONColumnType<ConditionTree>;
+    name: Generated<string>;
+    description: string | null;
+    steps: JSONColumnType<any[]>;
     is_active: Generated<boolean>;
     trace_history_enabled: Generated<boolean>;
     version: Generated<number>;
     created_at: ColumnType<Date, string | undefined, never>;
     updated_at: ColumnType<Date, string | undefined, string | undefined>;
+    created_by: string;
+    updated_by: string;
 }
 
 export type Autopilot = Selectable<AutopilotTable>;

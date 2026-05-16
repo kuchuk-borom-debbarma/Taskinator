@@ -1,7 +1,6 @@
 import { sql } from 'kysely';
 import { v4 as uuidv4 } from 'uuid';
 import { db } from '../../database/index.ts';
-import type { AutopilotAction } from '../../database/tables/AutopilotAction.ts';
 import { autopilotQueryService } from '../../modules/autopilot/index.ts';
 import type { AutopilotWithActions } from '../../modules/autopilot/internal/AutopilotQueryService.ts';
 import type { PaginationParams } from '../../types/pagination.ts';
@@ -28,20 +27,20 @@ export const autopilotResolvers = {
     Autopilot: {
         id: (parent: AutopilotWithActions) => parent.id,
         fk_project_id: (parent: AutopilotWithActions) => parent.fk_project_id,
-        triggers: (parent: AutopilotWithActions) => parent.triggers,
-        conditions: (parent: AutopilotWithActions) => parent.conditions,
+        triggers: () => [],
+        conditions: () => ({}),
         isActive: (parent: AutopilotWithActions) => parent.is_active,
-        actions: (parent: AutopilotWithActions) => parent.actions,
+        actions: () => [],
         createdAt: (parent: AutopilotWithActions) =>
             parent.created_at.toISOString(),
         version: (parent: AutopilotWithActions) => parent.version,
     },
 
     AutopilotAction: {
-        id: (parent: AutopilotAction) => parent.id,
-        type: (parent: AutopilotAction) => parent.type,
-        config: (parent: AutopilotAction) => parent.config,
-        position: (parent: AutopilotAction) => parent.position,
+        id: () => '',
+        type: () => '',
+        config: () => '',
+        position: () => 0,
     },
 
     AutopilotConnection: {
@@ -99,29 +98,16 @@ export const autopilotResolvers = {
                         .values({
                             id: autopilotId,
                             fk_project_id: input.projectId,
-                            triggers: input.triggers,
-                            conditions: JSON.stringify(input.conditions),
+                            name: 'New Autopilot',
+                            description: null,
+                            steps: JSON.stringify([]),
+                            created_by: context.userId as string,
+                            updated_by: context.userId as string,
                             is_active: true,
                             version: 1,
                             trace_history_enabled: false,
                         })
                         .execute();
-
-                    // 2. Insert Actions if any
-                    if (input.actions.length > 0) {
-                        const actionRows = input.actions.map((action) => ({
-                            id: uuidv4(),
-                            fk_autopilot_id: autopilotId,
-                            type: action.type,
-                            config: JSON.stringify(action.config),
-                            position: action.position,
-                        }));
-
-                        await trx
-                            .insertInto('autopilot_action')
-                            .values(actionRows)
-                            .execute();
-                    }
                 });
 
                 const created =

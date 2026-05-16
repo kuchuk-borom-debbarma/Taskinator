@@ -103,19 +103,28 @@ export function AppModal({
   description,
   onClose,
   children,
+  size = 'lg',
 }: PropsWithChildren<{
   open: boolean;
   title: string;
   description?: string;
   onClose: () => void;
+  size?: 'md' | 'lg' | 'xl' | 'full';
 }>) {
   if (!open) return null;
+
+  const sizeClasses = {
+    md: 'max-w-md',
+    lg: 'max-w-lg',
+    xl: 'max-w-4xl',
+    full: 'max-w-[95vw] h-[95vh] flex flex-col',
+  };
 
   return (
     <div className="fixed inset-0 z-[100] flex items-end justify-center bg-[#111827]/40 p-4 backdrop-blur-sm md:items-center">
       <div className="absolute inset-0 cursor-default" aria-hidden="true" onClick={onClose} />
-      <div className="surface-card-strong relative z-[110] w-full max-w-lg rounded-[28px] p-6 shadow-2xl md:p-7">
-        <div className="mb-6 flex items-start justify-between gap-4">
+      <div className={clsx('surface-card-strong relative z-[110] w-full rounded-[28px] p-6 shadow-2xl md:p-7', sizeClasses[size])}>
+        <div className="mb-6 flex items-start justify-between gap-4 shrink-0">
           <div className="min-w-0 flex-1">
             <h2 className="text-2xl font-semibold tracking-[-0.03em] text-app-ink">{title}</h2>
             {description ? <p className="mt-2 text-sm leading-6 text-app-muted">{description}</p> : null}
@@ -278,24 +287,39 @@ function getStatusMeta(status: string) {
         icon: Clock,
         className: 'bg-app-accent-2-soft text-app-accent-2',
       };
-    default:
+    case 'TODO':
       return {
         label: 'To do',
         icon: Circle,
         className: 'bg-app-neutral/15 text-app-neutral',
       };
+    case 'CANCELED':
+      return {
+        label: 'Canceled',
+        icon: X,
+        className: 'bg-app-danger/10 text-app-danger',
+      };
+    default:
+      return {
+        label: status || 'Unknown',
+        icon: Circle,
+        className: 'bg-app-ink/10 text-app-ink',
+      };
   }
 }
 
 function getPriorityMeta(priority: number) {
-  if (priority === 1) {
+  if (priority === 0) {
     return { label: 'Urgent', className: 'bg-app-danger/12 text-app-danger' };
   }
-  if (priority === 2) {
+  if (priority === 1) {
     return { label: 'High', className: 'bg-app-accent/12 text-app-accent' };
   }
-  if (priority === 3) {
+  if (priority === 2) {
     return { label: 'Medium', className: 'bg-app-warning/14 text-app-warning' };
   }
-  return { label: 'Low', className: 'bg-app-neutral/12 text-app-neutral' };
+  if (priority === 3) {
+    return { label: 'Low', className: 'bg-app-neutral/12 text-app-neutral' };
+  }
+  return { label: `Priority ${priority}`, className: 'bg-app-ink/10 text-app-ink' };
 }

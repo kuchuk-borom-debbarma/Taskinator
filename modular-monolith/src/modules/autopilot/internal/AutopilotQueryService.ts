@@ -1,13 +1,10 @@
 import { type Kysely, sql } from 'kysely';
 import type { Database } from '../../../database/index.ts';
 import type { Autopilot } from '../../../database/tables/Autopilot.ts';
-import type { AutopilotAction } from '../../../database/tables/AutopilotAction.ts';
 import type { PaginationParams } from '../../../types/pagination.ts';
 import { decodeCursor, encodeCursor } from '../../../utils/utils.ts';
 
-export interface AutopilotWithActions extends Autopilot {
-    actions: AutopilotAction[];
-}
+export type AutopilotWithActions = Autopilot;
 
 export interface AutopilotPage {
     autopilots: AutopilotWithActions[];
@@ -81,30 +78,7 @@ export class AutopilotQueryService {
                 ? encodeCursor(firstRow.created_at.toISOString(), firstRow.id)
                 : null;
 
-        // 4. Batch-load all actions for these autopilots
-        const autopilotIds = rows.map((a) => a.id);
-        const actions =
-            autopilotIds.length > 0
-                ? await this.db
-                      .selectFrom('autopilot_action')
-                      .selectAll()
-                      .where('fk_autopilot_id', 'in', autopilotIds)
-                      .orderBy('position', 'asc')
-                      .execute()
-                : [];
-
-        // 5. Group actions by autopilot ID
-        const actionsByAutopilotId = new Map<string, AutopilotAction[]>();
-        for (const action of actions) {
-            const list = actionsByAutopilotId.get(action.fk_autopilot_id) ?? [];
-            list.push(action);
-            actionsByAutopilotId.set(action.fk_autopilot_id, list);
-        }
-
-        const autopilots: AutopilotWithActions[] = rows.map((a) => ({
-            ...a,
-            actions: actionsByAutopilotId.get(a.id) ?? [],
-        }));
+        const autopilots: AutopilotWithActions[] = rows;
 
         return { autopilots, totalCount, nextCursor, prevCursor };
     }
@@ -118,16 +92,6 @@ export class AutopilotQueryService {
 
         if (!autopilot) return null;
 
-        const actions = await this.db
-            .selectFrom('autopilot_action')
-            .selectAll()
-            .where('fk_autopilot_id', '=', id)
-            .orderBy('position', 'asc')
-            .execute();
-
-        return {
-            ...autopilot,
-            actions,
-        };
+        return autopilot;
     }
 }

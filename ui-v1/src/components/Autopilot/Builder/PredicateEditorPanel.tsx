@@ -142,7 +142,7 @@ export const PredicateEditorPanel: React.FC<PredicateEditorPanelProps> = ({
   };
 
   return (
-    <div className="surface-card-strong absolute right-3 top-3 z-10 w-72 rounded-[20px] p-5 shadow-float">
+    <div className="surface-card-strong absolute right-3 top-3 z-10 w-72 max-h-[calc(100%-24px)] overflow-y-auto rounded-[20px] p-5 shadow-float">
       <div className="mb-4 flex items-center justify-between">
         <h3 className="text-sm font-semibold text-app-ink">Edit Predicate</h3>
         <button

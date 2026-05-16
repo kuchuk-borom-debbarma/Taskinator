@@ -65,8 +65,8 @@ const RelationshipTooltip: React.FC<{ edgeId: string; mapData: { nodes: MapNode[
   const edge = mapData.allEdges.find((entry) => entry.id === edgeId);
   if (!edge) return null;
 
-  const sourceId = typeof edge.source === 'string' ? edge.source : edge.source.id;
-  const targetId = typeof edge.target === 'string' ? edge.target : edge.target.id;
+  const sourceId = edge.sourceTaskId || (typeof edge.source === 'string' ? edge.source : edge.source?.id);
+  const targetId = edge.targetTaskId || (typeof edge.target === 'string' ? edge.target : edge.target?.id);
   const source = mapData.nodes.find((node) => node.task.id === sourceId);
   const target = mapData.nodes.find((node) => node.task.id === targetId);
   if (!source || !target) return null;
@@ -189,8 +189,8 @@ export const TaskMap: React.FC<TaskMapProps> = ({
     if (hoveredNodeId) {
       value.add(hoveredNodeId);
       mapData.allEdges.forEach((edge: any) => {
-        const sourceId = typeof edge.source === 'string' ? edge.source : edge.source.id;
-        const targetId = typeof edge.target === 'string' ? edge.target : edge.target.id;
+        const sourceId = edge.sourceTaskId || (typeof edge.source === 'string' ? edge.source : edge.source?.id);
+        const targetId = edge.targetTaskId || (typeof edge.target === 'string' ? edge.target : edge.target?.id);
         if (sourceId === hoveredNodeId) value.add(targetId);
         if (targetId === hoveredNodeId) value.add(sourceId);
       });
@@ -229,8 +229,8 @@ export const TaskMap: React.FC<TaskMapProps> = ({
       >
         <svg className="absolute inset-0 h-full w-full pointer-events-none overflow-visible">
           {mapData.allEdges.map((edge: any) => {
-            const sourceId = typeof edge.source === 'string' ? edge.source : edge.source.id;
-            const targetId = typeof edge.target === 'string' ? edge.target : edge.target.id;
+            const sourceId = edge.sourceTaskId || (typeof edge.source === 'string' ? edge.source : edge.source?.id);
+            const targetId = edge.targetTaskId || (typeof edge.target === 'string' ? edge.target : edge.target?.id);
             const source = mapData.nodes.find((node) => node.task.id === sourceId);
             const target = mapData.nodes.find((node) => node.task.id === targetId);
             if (!source || !target) return null;

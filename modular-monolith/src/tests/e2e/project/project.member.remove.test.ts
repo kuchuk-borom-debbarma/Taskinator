@@ -228,6 +228,6 @@ describe('Project Member Remove E2E', () => {
             .where('fk_project_id', '=', projectId)
             .execute();
         expect(members.length).toBe(1);
-        expect(members[0].fk_user_id).toBe(u2.id);
+        expect(members[0]!.fk_user_id).toBe(u2.id);
     });
 });

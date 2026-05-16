@@ -18,7 +18,7 @@ const LOGICAL_LABELS: Record<string, string> = {
 };
 
 export const LogicalNode: React.FC<NodeProps> = memo(({ id, data, selected }) => {
-  const { logicalType, onTypeChange } = data as LogicalNodeData;
+  const { logicalType, onTypeChange, onRemove } = data as LogicalNodeData;
 
   const handleClick = useCallback(() => {
     if (!onTypeChange) return;
@@ -26,8 +26,16 @@ export const LogicalNode: React.FC<NodeProps> = memo(({ id, data, selected }) =>
     onTypeChange(id, next!);
   }, [id, logicalType, onTypeChange]);
 
+  const handleRemove = useCallback(
+    (e: React.MouseEvent) => {
+      e.stopPropagation();
+      onRemove?.(id);
+    },
+    [id, onRemove]
+  );
+
   return (
-    <div className="relative flex flex-col items-center">
+    <div className="group relative flex flex-col items-center">
       <Handle
         type="target"
         position={Position.Left}
@@ -47,6 +55,16 @@ export const LogicalNode: React.FC<NodeProps> = memo(({ id, data, selected }) =>
       >
         {LOGICAL_LABELS[logicalType]}
       </button>
+
+      {onRemove && (
+        <button
+          onClick={handleRemove}
+          className="absolute -right-2 -top-2 hidden h-5 w-5 items-center justify-center rounded-full border border-app-line bg-white text-[10px] text-app-muted shadow-sm transition hover:text-app-danger group-hover:flex"
+          title="Remove"
+        >
+          ✕
+        </button>
+      )}
 
       <Handle
         type="source"

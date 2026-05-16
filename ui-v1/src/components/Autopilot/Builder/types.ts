@@ -5,6 +5,7 @@ import type { Node, Edge } from '@xyflow/react';
 export interface LogicalNodeData extends Record<string, unknown> {
   logicalType: 'and' | 'or' | 'not';
   onTypeChange?: (id: string, next: 'and' | 'or' | 'not') => void;
+  onRemove?: (id: string) => void;
 }
 
 export interface PredicateNodeData extends Record<string, unknown> {

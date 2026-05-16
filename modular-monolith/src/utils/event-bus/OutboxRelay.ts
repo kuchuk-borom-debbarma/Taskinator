@@ -25,7 +25,8 @@ const fetchPendingEvents = async (trx: Transaction<Database>) => {
 
 const dispatchToEventBus = async (
     events: {
-        id: string;
+        id: number;
+        event_id: string;
         kafka_topic: string;
         kafka_key: string | null;
         payload: any;
@@ -69,7 +70,7 @@ const dispatchToEventBus = async (
 
 const clearProcessedEvents = async (
     trx: Transaction<Database>,
-    eventIds: string[],
+    eventIds: number[],
 ) => {
     await trx.deleteFrom('outbox_events').where('id', 'in', eventIds).execute();
 };

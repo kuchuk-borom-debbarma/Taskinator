@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { Link, useNavigate } from '@tanstack/react-router';
+import { Link, useNavigate, useSearch } from '@tanstack/react-router';
 import { ArrowLeft, ArrowRight, FolderPlus, FolderSearch, Loader2 } from 'lucide-react';
 import { PagingButton } from '../shared/PagingButton';
 import { useApi } from '../../hooks/useApi';
@@ -15,8 +15,9 @@ export function ProjectDashboard() {
   const { projectApi } = useApi();
   const { setCreateProjectModalOpen } = useLayout();
 
-  const [cursor, setCursor] = useState<string | undefined>(undefined);
-  const [direction, setDirection] = useState<'forward' | 'backward' | undefined>(undefined);
+  const searchParams = useSearch({ strict: false }) as any;
+  const cursor = searchParams.cursor;
+  const direction = searchParams.direction;
 
   const { data, isLoading } = useQuery({
     queryKey: ['workspace-projects-list', cursor, direction],
@@ -37,15 +38,13 @@ export function ProjectDashboard() {
 
   const handleNext = () => {
     if (pageInfo?.hasNextPage) {
-      setCursor(pageInfo.endCursor ?? undefined);
-      setDirection('forward');
+      navigate({ search: { cursor: pageInfo.endCursor, direction: 'forward' } });
     }
   };
 
   const handlePrev = () => {
     if (pageInfo?.hasPreviousPage) {
-      setCursor(pageInfo.startCursor ?? undefined);
-      setDirection('backward');
+      navigate({ search: { cursor: pageInfo.startCursor, direction: 'backward' } });
     }
   };
 
@@ -65,15 +64,6 @@ export function ProjectDashboard() {
                 <FolderPlus size={16} />
                 New project
               </button>
-              {projects[0] ? (
-                <button
-                  onClick={() => navigate({ to: '/projects/$projectId', params: { projectId: projects[0].id } })}
-                  className="inline-flex items-center gap-2 rounded-full border border-app-line bg-white/80 px-5 py-3 text-sm font-semibold text-app-ink transition hover:border-app-ink/20"
-                >
-                  Resume latest
-                  <ArrowRight size={16} />
-                </button>
-              ) : null}
             </>
           }
         />

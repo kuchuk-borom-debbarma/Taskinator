@@ -1,37 +1,36 @@
 ---
 gsd_state_version: 1.0
-milestone: v4.0
-milestone_name: Autopilot Integrated Hook
-status: planning
-last_updated: "2026-05-16T01:00:00.000Z"
-last_activity: 2026-05-16 -- Milestone v4.0 initialized
+milestone: v6.0
+milestone_name: Rebuild Autopilot Engine
+status: SHIPPED
+last_updated: "2026-05-16T12:00:00.000Z"
+last_activity: 2026-05-16 — Milestone v6.0 Audit Complete (PASS)
 progress:
-  total_phases: 1
-  completed_phases: 0
-  total_plans: 0
-  completed_plans: 0
-  percent: 0
+  total_phases: 4
+  completed_phases: 4
+  total_plans: 9
+  completed_plans: 9
+  percent: 100
 ---
 
-# Project State - Milestone v4.0 (Autopilot Integrated Hook)
+# Project State - Milestone v6.0 (Rebuild Autopilot Engine)
 
-## Current Phase: [NONE]
+## Active Phase: Phase 25 - Pipeline Orchestrator (Completed)
 
-**Goal:** Integrate the Autopilot highlight segment into our premier introductory hook composition.
-
-## Active Phase: Phase 20 - Autopilot Hook Integration
-
-- [x] **FEATURE-401**: Create the `AutopilotNode` primitive with custom glowing glow pulses inside `remotion/src/components/Nodes.tsx`.
-- [x] **FEATURE-402**: Re-engineer `FeatureShowcase.tsx` layout to extend simulation segment timing and map the dynamic Autopilot activation pulse.
-- [x] **FEATURE-403**: Program downstream `TaskNode` emerald completions representing programmatic automated fulfillment.
-- [x] **FEATURE-404**: Register updated expanded frame durations across `Root.tsx` and audit dynamic transition alignment.
+- [x] **PIPE-01**: Autopilot rules as ordered sequences of saved Conditions/Actions.
+- [x] **PIPE-02**: Support arbitrary pipeline shapes.
+- [x] **PIPE-03**: Enforce strict execution semantics (halt on false condition).
+- [x] **Loop Detection**: Multi-level loop prevention using TraceID + Depth.
+- [x] **Smart Aggregation**: Group actions for optimized bulk database updates.
 
 ## Progress
 
-- [x] Milestone v3.0 Packaging (Completed)
-- [x] Milestone v4.0 Initialization (Completed)
-- [x] Phase 20 Context Gathered (Completed)
-- [x] Phase 20 Planning & Execution (Completed)
+- [x] Phase 21 Planning & Execution (Completed)
+- [x] Phase 22 Planning & Execution (Completed)
+- [x] Phase 23 Planning & Execution (Completed)
+- [x] Phase 24 Planning & Execution (Completed)
+- [x] Phase 25 Planning & Execution (Completed)
+- [x] Milestone v5.0 Audit (Completed)
 
 ## Blockers
 
@@ -39,13 +38,15 @@ progress:
 
 ## Next Step
 
-- Run `/gsd-complete-milestone` to audit and archive Milestone v4.0!
+- Run `/gsd-complete-milestone` to archive Milestone v5.0 and prepare for the next phase of development!
 
 ## Current Position
 
-Phase: 20 (Autopilot Hook Integration) — COMPLETED
-Plan: 1 of 1
-Status: Phase 20 fully delivered
-Last activity: 2026-05-16 -- Phase 20 verified and delivered
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-05-16 — Milestone v6.0 started
 
+## Operator Next Steps
 
+- Start the next milestone with /gsd-new-milestone

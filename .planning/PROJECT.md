@@ -26,11 +26,12 @@ Automate the "busy work" of project management through reliable, transparent, an
 - ✓ [Autopilot Engine Visualization] — Compositions highlighting nested evaluations, fail-fast chains, and loop blockers (v3.0).
 - ✓ [Visual Dashboard Showcase] — Showcase high-fidelity admin dashboard UIs (v3.0).
 - ✓ [Feature Showcase Upgrade] — Integrate Autopilot Feature Segment into the hook composition (v4.0).
-
-
+- ✓ [Legacy Engine Teardown] — Safely removed core logic while preserving UI (v5.0).
+- ✓ [Entity-Agnostic Condition Engine] — Implemented modular, hash-deduplicated evaluation logic (v6.0).
+- ✓ [Lazy-Context Action Engine] — Implemented sequence processor with async resolvers and dirty tracking (v6.0).
+- ✓ [Event-Driven Pipeline Orchestrator] — Implemented resumable sequential engine with bulk-update aggregation (v6.0).
 
 - [ ] [Multi-domain Triggers] — Evaluate events crossing project boundaries.
-
 - [ ] [Complex Predicates] — Evaluate conditions referencing recursive parent/child states.
 
 ### Out of Scope
@@ -38,12 +39,17 @@ Automate the "busy work" of project management through reliable, transparent, an
 - [Cron-based Triggers] — Reactive/event-driven architecture remains primary focus.
 - [External Service Actions] — Scope confined to internal Taskinator domain mutations.
 
-## Current Milestone: Milestone v4.0 🎯
+## Next Milestone Goals (v7.0)
 
-**Goal:** Autopilot Integrated Hook. Evolve the premier `FeatureShowcase` introductory hook composition to visually feature our ultimate core capability—the Project Autopilot System.
+**Goal:** Expand the Autopilot ecosystem to handle cross-project automation and external notifications.
 
-## Current State (v4.0)
-Following the delivery of the cinema-grade architecture simulator suite in v3.0, our repository documentation and core engine are pristine. We are now integrating the Autopilot highlight directly into the opening video scene to reflect the actual capabilities of our current platform.
+**Target features:**
+- Implement multi-domain triggers (actions in Project A triggering rules in Project B)
+- Integrate external service actions (Slack/Discord/Email notifications)
+- Implement complex predicates for cross-entity relationship evaluation
+
+## Current State (Post-v6.0)
+The Autopilot engine has been fully rebuilt. It features entity-agnostic condition evaluation, lazy context resolution, and a resumable, event-driven pipeline execution model. Performance is optimized for 10k RPS via smart aggregation and bulk SQL updates.
 
 ## Key Decisions
 
@@ -57,24 +63,19 @@ Following the delivery of the cinema-grade architecture simulator suite in v3.0,
 | Optimistic Queries | Instantly toggle Active state via TanStack Query to guarantee premium responsive feel. | **Complete (v2.0)** |
 | Stateless Remotion Primitives | Decouple UI updates from implicit browser/CSS runtimes to achieve 100% frame-accurate render stability. | **Complete (v3.0)** |
 | Dynamic Timeline Orchestrator | Automate cumulative track summation in React to easily adjust scene durations without manual math. | **Complete (v3.0)** |
+| Engine Amputation | Remove broken execution code before rebuilding to stabilize system and provide a clean slate. | **Complete (v5.0)** |
+| Recursive Kafka Loop | Enables resumable execution and prevents long-running DB locks by processing one step per event. | **Complete (v6.0)** |
+| Smart Aggregation (CASE) | Optimizes high-throughput updates by grouping heterogeneous mutations into single SQL roundtrips. | **Complete (v6.0)** |
 
 ## Evolution
 
 This document evolves at phase transitions and milestone boundaries.
 
-**After each phase transition** (via `/gsd-transition`):
-1. Requirements invalidated? → Move to Out of Scope with reason
-2. Requirements validated? → Move to Validated with phase reference
-3. New requirements emerged? → Add to Active
-4. Decisions to log? → Add to Key Decisions
-5. "What This Is" still accurate? → Update if drifted
-
-**After each milestone** (via `/gsd-complete-milestone`):
+**After each milestone** (via `/gsd:complete-milestone`):
 1. Full review of all sections
 2. Core Value check — still the right priority?
 3. Audit Out of Scope — reasons still valid?
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-16 after v3.0 milestone completion*
-
+*Last updated: 2026-05-16 after v6.0 milestone completion*
