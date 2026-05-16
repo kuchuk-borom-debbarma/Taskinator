@@ -18,12 +18,15 @@
 
 - [x] Phase 22: Database Schema & Engine Primitives (1/1 plans) — completed 2026-05-16
 - [x] Phase 23: Condition Engine (2/2 plans) — completed 2026-05-16
-- [ ] Phase 24: Action Engine & Lazy Resolution (0/3 plans)
-  - [ ] 24-01-PLAN.md — Core Action Infrastructure
-  - [ ] 24-02-PLAN.md — Lazy Resolution & Contextual Entities
-  - [ ] 24-03-PLAN.md — Action Execution Pipeline
+- [x] Phase 24: Action Engine & Lazy Resolution (3/3 plans) — completed 2026-05-16
+  - [x] 24-01-PLAN.md — Core Action Infrastructure
+  - [x] 24-02-PLAN.md — Lazy Resolution & Contextual Entities
+  - [x] 24-03-PLAN.md — Action Execution Pipeline
 
-- [ ] Phase 25: Pipeline Orchestrator (1 plan)
+- [ ] Phase 25: Pipeline Orchestrator (3 plans)
+  - [ ] 25-01-PLAN.md — Core Orchestrator & Step Logic
+  - [ ] 25-02-PLAN.md — Event Loop & Resumability
+  - [ ] 25-03-PLAN.md — Smart Aggregator & Bulk Updates
 
 ### Phase Details
 
@@ -53,20 +56,29 @@ Goal: Build the getter/setter sequence processor with lazy context resolvers for
 **Plans:** 3 plans
 Requirements: ACT-01, ACT-02, ACT-03
 Plans:
-- [ ] 24-01-PLAN.md — Core Action Infrastructure
-- [ ] 24-02-PLAN.md — Lazy Resolution & Contextual Entities
-- [ ] 24-03-PLAN.md — Action Execution Pipeline
+- [x] 24-01-PLAN.md — Core Action Infrastructure
+- [x] 24-02-PLAN.md — Lazy Resolution & Contextual Entities
+- [x] 24-03-PLAN.md — Action Execution Pipeline
 
 Success criteria:
 1. Contexts resolve correctly at runtime (self, parent, etc)
 2. Getter/setter API mutates state securely
 
 **Phase 25: Pipeline Orchestrator**
-Goal: Wire the conditions and actions into strict ordered execution pipelines that halt on condition failures.
+Goal: Wire the conditions and actions into strict ordered execution pipelines that halt on condition failures, using a resumable and scalable event-driven architecture.
+**Plans:** 3 plans
 Requirements: PIPE-01, PIPE-02, PIPE-03
+Plans:
+- [ ] 25-01-PLAN.md — Core Orchestrator & Step Logic
+- [ ] 25-02-PLAN.md — Event Loop & Resumability
+- [ ] 25-03-PLAN.md — Smart Aggregator & Bulk Updates
+
 Success criteria:
 1. Pipelines execute sequentially
 2. Halt on condition failure correctly guards action execution
+3. Resumable via Kafka loop
+4. Loop detection prevents infinite recursion
+5. Smart Aggregator optimizes high-throughput updates
 
 ## Progress
 
@@ -75,6 +87,5 @@ Success criteria:
 | 21. Legacy Engine Teardown | v5.0      | 1/1            | Complete    | 2026-05-16 |
 | 22. Database Schema | v6.0 | 1/1 | Complete | 2026-05-16 |
 | 23. Condition Engine | v6.0 | 2/2 | Complete | 2026-05-16 |
-| 24. Action Engine | v6.0 | 0/3 | Not started | - |
-
-| 25. Pipeline Orchestrator | v6.0 | 0/1 | Not started | - |
+| 24. Action Engine | v6.0 | 3/3 | Complete | 2026-05-16 |
+| 25. Pipeline Orchestrator | v6.0 | 0/3 | In Progress | - |

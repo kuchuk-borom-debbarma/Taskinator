@@ -58,7 +58,7 @@ describe('ContextBuilder', () => {
 
         expect(context.is.title).toBe('Initial Title');
         expect(context.is.status).toBe('TODO');
-        expect(context.was.title).toBe('Old Title');
+        expect(context.was!.title).toBe('Old Title');
     });
 
     it('should reflect live updates in "is" state', async () => {
@@ -86,7 +86,7 @@ describe('ContextBuilder', () => {
         });
 
         expect(context.is).toEqual({});
-        expect(context.was.status).toBe('NONE');
+        expect(context.was!.status).toBe('NONE');
     });
 
     it('should support project entities', async () => {

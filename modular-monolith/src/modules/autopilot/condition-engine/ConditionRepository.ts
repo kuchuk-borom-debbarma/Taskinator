@@ -58,7 +58,7 @@ export class ConditionRepository {
                 oc.columns(['project_id', 'name']).doUpdateSet({
                     condition_hash: hash,
                     updated_by: userId,
-                    updated_at: new Date(),
+                    updated_at: new Date().toISOString() as any,
                 }),
             )
             .execute();

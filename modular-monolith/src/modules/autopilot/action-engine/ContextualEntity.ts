@@ -55,6 +55,10 @@ export class ContextualEntity {
     public async resolve(
         target: ActionTarget | string,
     ): Promise<ContextualEntity> {
+        if (target === 'self') {
+            return this;
+        }
+
         if (this.resolvedTargets.has(target)) {
             return this.resolvedTargets.get(target)!;
         }

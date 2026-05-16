@@ -1,13 +1,13 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, mock } from 'bun:test';
 import { ContextualEntity } from './ContextualEntity';
 
 describe('ContextualEntity', () => {
     const mockRegistry = {
-        resolve: vi.fn(),
+        resolve: mock(() => {}),
     } as any;
 
     beforeEach(() => {
-        vi.clearAllMocks();
+        mockRegistry.resolve.mockClear();
     });
 
     it('should return initial data via .get()', () => {
@@ -69,7 +69,7 @@ describe('ContextualEntity', () => {
             { name: 'Parent Task' },
             mockRegistry,
         );
-        mockRegistry.resolve.mockResolvedValue(parentEntity);
+        mockRegistry.resolve.mockReturnValue(Promise.resolve(parentEntity));
 
         const entity = new ContextualEntity(
             'project_task',
@@ -90,7 +90,7 @@ describe('ContextualEntity', () => {
             { name: 'Parent Task' },
             mockRegistry,
         );
-        mockRegistry.resolve.mockResolvedValue(parentEntity);
+        mockRegistry.resolve.mockReturnValue(Promise.resolve(parentEntity));
 
         const entity = new ContextualEntity(
             'project_task',
