@@ -195,6 +195,7 @@ CREATE TABLE autopilot (
     fk_project_id UUID NOT NULL,
     name TEXT NOT NULL DEFAULT 'Untitled Autopilot',
     description TEXT,
+    triggers JSONB NOT NULL DEFAULT '[]',
     steps JSONB NOT NULL DEFAULT '[]',
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     trace_history_enabled BOOLEAN NOT NULL DEFAULT FALSE,
