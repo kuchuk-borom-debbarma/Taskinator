@@ -110,7 +110,7 @@ export const autopilotResolvers = {
     Autopilot: {
         id: (parent: AutopilotWithActions) => parent.id,
         fk_project_id: (parent: AutopilotWithActions) => parent.fk_project_id,
-        triggers: () => [], // Triggers not yet persisted in dedicated column
+        triggers: (parent: AutopilotWithActions) => parent.triggers || [],
         isActive: (parent: AutopilotWithActions) => parent.is_active,
         pipeline: async (parent: AutopilotWithActions) => {
             const steps = parent.steps || [];
@@ -296,6 +296,7 @@ export const autopilotResolvers = {
                         id: autopilotId,
                         fk_project_id: input.projectId,
                         name: 'Untitled Autopilot',
+                        triggers: JSON.stringify(input.triggers || []) as any,
                         steps: JSON.stringify(steps) as any,
                         created_by: context.userId as string,
                         updated_by: context.userId as string,
@@ -373,6 +374,9 @@ export const autopilotResolvers = {
                         input.isActive !== undefined
                             ? input.isActive
                             : existing.is_active,
+                    triggers: input.triggers
+                        ? (JSON.stringify(input.triggers) as any)
+                        : existing.triggers,
                     steps: input.pipeline
                         ? (JSON.stringify(steps) as any)
                         : existing.steps,

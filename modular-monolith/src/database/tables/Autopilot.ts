@@ -26,6 +26,7 @@ export interface AutopilotTable {
     fk_project_id: string;
     name: Generated<string>;
     description: string | null;
+    triggers: JSONColumnType<any[]>;
     steps: JSONColumnType<any[]>;
     is_active: Generated<boolean>;
     trace_history_enabled: Generated<boolean>;
