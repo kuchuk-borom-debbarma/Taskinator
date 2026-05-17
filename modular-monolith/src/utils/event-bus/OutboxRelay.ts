@@ -59,8 +59,9 @@ const dispatchToEventBus = async (
     }
 
     const publishPromises = Array.from(groups.values()).map((group) => {
-        logger.debug(
-            `Relaying ${group.payloads.length} events of type "${group.type}" to topic "${group.topic}"`,
+        logger.info(
+            `[OutboxRelay] Relaying ${group.payloads.length} events of type "${group.type}" to topic "${group.topic}"` +
+                ` (eventIds: [${group.payloads.map((p) => p.id).join(', ')}])`,
         );
         return eventBus.publish(group.topic, group.type, group.payloads);
     });
@@ -82,7 +83,8 @@ export const processOutboxBatch = async () => {
         if (events.length === 0) return;
 
         logger.info(
-            `Outbox Relay: Processing batch of ${events.length} events`,
+            `[OutboxRelay] Processing batch of ${events.length} events: ` +
+                `[${events.map((e) => `id=${e.id}, topic=${e.kafka_topic}, type=${e.payload.type}`).join('; ')}]`,
         );
 
         // 1. Push to Kafka (At-Least-Once)

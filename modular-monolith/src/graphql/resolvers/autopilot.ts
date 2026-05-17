@@ -1,6 +1,7 @@
 import { sql } from 'kysely';
 import { v4 as uuidv4 } from 'uuid';
 import { db } from '../../database/index.ts';
+import { logger } from '../../logger/index.ts';
 import type {
     ActionOperation,
     ActionStep,
@@ -247,11 +248,19 @@ export const autopilotResolvers = {
         ) => {
             if (!context.userId) throw new UnauthorizedError();
 
+            logger.info(
+                `[GraphQL] Query autopilots: Fetching rules for projectId=${projectId} (userId=${context.userId})`,
+            );
+
             const { autopilots, totalCount, nextCursor, prevCursor } =
                 await autopilotQueryService.getAutopilotsByProject(
                     projectId,
                     paginationArgs,
                 );
+
+            logger.debug(
+                `[GraphQL] Query autopilots: Found ${autopilots.length} rules, totalCount=${totalCount}`,
+            );
 
             return {
                 edges: autopilots.map((a: AutopilotWithActions) => ({
@@ -272,6 +281,9 @@ export const autopilotResolvers = {
             _parent: any,
             { entityType }: { entityType: string },
         ) => {
+            logger.info(
+                `[GraphQL] Query autopilotMetadata: Fetching metadata schema for entityType=${entityType}`,
+            );
             // Reflecting v6.0 ModularOperatorRegistry and Action primitives
             return {
                 entities: [
@@ -325,6 +337,11 @@ export const autopilotResolvers = {
         ): Promise<AutopilotWithActions> => {
             if (!context.userId) throw new UnauthorizedError();
 
+            logger.info(
+                `[GraphQL] Mutation createAutopilot: Creating new rule for projectId=${input.projectId} (userId=${context.userId})`,
+                { triggers: input.triggers },
+            );
+
             const autopilotId = uuidv4();
             const steps: any[] = [];
 
@@ -338,6 +355,9 @@ export const autopilotResolvers = {
                             input.projectId,
                             context.userId,
                         );
+                        logger.debug(
+                            `[GraphQL] Mutation createAutopilot: Saved condition "${stepInput.condition.name}" with hash=${hash}`,
+                        );
                         steps.push({
                             type: 'condition',
                             refId: hash,
@@ -349,6 +369,9 @@ export const autopilotResolvers = {
                             [mapInputToASTAction(stepInput.action)],
                             input.projectId,
                             context.userId,
+                        );
+                        logger.debug(
+                            `[GraphQL] Mutation createAutopilot: Saved action with hash=${hash}`,
                         );
                         steps.push({ type: 'action', refId: hash });
                     }
@@ -371,6 +394,10 @@ export const autopilotResolvers = {
                     })
                     .execute();
 
+                logger.debug(
+                    `[GraphQL] Mutation createAutopilot: Persisted main record autopilotId=${autopilotId}`,
+                );
+
                 const created =
                     await autopilotQueryService.getAutopilotById(autopilotId);
                 if (!created) {
@@ -378,8 +405,16 @@ export const autopilotResolvers = {
                         'Autopilot created but failed to retrieve',
                     );
                 }
+
+                logger.info(
+                    `[GraphQL] Mutation createAutopilot: Success. Created autopilotId=${autopilotId}, stepsCount=${steps.length}`,
+                );
                 return created;
             } catch (error: any) {
+                logger.error(
+                    `[GraphQL] Mutation createAutopilot: Failed. Error=${error.message}`,
+                    { stack: error.stack },
+                );
                 throw new MutationFailedError(error.message);
             }
         },
@@ -391,8 +426,15 @@ export const autopilotResolvers = {
         ): Promise<AutopilotWithActions> => {
             if (!context.userId) throw new UnauthorizedError();
 
+            logger.info(
+                `[GraphQL] Mutation updateAutopilot: Updating rule autopilotId=${id} (userId=${context.userId})`,
+            );
+
             const existing = await autopilotQueryService.getAutopilotById(id);
             if (!existing) {
+                logger.warn(
+                    `[GraphQL] Mutation updateAutopilot: Autopilot rule ${id} not found`,
+                );
                 throw new NotFoundError(`Autopilot with ID ${id} not found`);
             }
 
@@ -406,6 +448,9 @@ export const autopilotResolvers = {
                             existing.fk_project_id,
                             context.userId,
                         );
+                        logger.debug(
+                            `[GraphQL] Mutation updateAutopilot: Saved condition "${stepInput.condition.name}" with hash=${hash}`,
+                        );
                         steps.push({
                             type: 'condition',
                             refId: hash,
@@ -417,6 +462,9 @@ export const autopilotResolvers = {
                             [mapInputToASTAction(stepInput.action)],
                             existing.fk_project_id,
                             context.userId,
+                        );
+                        logger.debug(
+                            `[GraphQL] Mutation updateAutopilot: Saved action with hash=${hash}`,
                         );
                         steps.push({ type: 'action', refId: hash });
                     }
@@ -445,10 +493,17 @@ export const autopilotResolvers = {
 
             const updated = await autopilotQueryService.getAutopilotById(id);
             if (!updated) {
+                logger.error(
+                    `[GraphQL] Mutation updateAutopilot: Failed to retrieve updated rule ${id}`,
+                );
                 throw new NotFoundError(
                     `Failed to retrieve updated Autopilot ${id}`,
                 );
             }
+
+            logger.info(
+                `[GraphQL] Mutation updateAutopilot: Success. Updated autopilotId=${id}, newVersion=${updated.version}`,
+            );
             return updated;
         },
 
@@ -458,6 +513,10 @@ export const autopilotResolvers = {
             context: GraphQLContext,
         ): Promise<AutopilotWithActions> => {
             if (!context.userId) throw new UnauthorizedError();
+
+            logger.info(
+                `[GraphQL] Mutation toggleAutopilot: Setting isActive=${isActive} for autopilotId=${id} (userId=${context.userId})`,
+            );
 
             const result = await db
                 .updateTable('autopilot')
@@ -472,9 +531,15 @@ export const autopilotResolvers = {
                 .executeTakeFirst();
 
             if (!result) {
+                logger.warn(
+                    `[GraphQL] Mutation toggleAutopilot: Autopilot rule ${id} not found for toggle`,
+                );
                 throw new NotFoundError(`Autopilot with ID ${id} not found`);
             }
 
+            logger.info(
+                `[GraphQL] Mutation toggleAutopilot: Success. autopilotId=${id}, isActive=${result.is_active}, newVersion=${result.version}`,
+            );
             return result;
         },
 
@@ -485,12 +550,21 @@ export const autopilotResolvers = {
         ): Promise<boolean> => {
             if (!context.userId) throw new UnauthorizedError();
 
+            logger.info(
+                `[GraphQL] Mutation deleteAutopilot: Deleting autopilotId=${id} (userId=${context.userId})`,
+            );
+
             const result = await db
                 .deleteFrom('autopilot')
                 .where('id', '=', id)
                 .executeTakeFirst();
 
-            return !!result.numDeletedRows && result.numDeletedRows > 0n;
+            const success =
+                !!result.numDeletedRows && result.numDeletedRows > 0n;
+            logger.info(
+                `[GraphQL] Mutation deleteAutopilot: Completed. autopilotId=${id}, success=${success}`,
+            );
+            return success;
         },
     },
 };

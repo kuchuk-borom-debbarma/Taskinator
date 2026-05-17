@@ -80,12 +80,18 @@ export class SmartAggregator {
         if (existing) {
             // Merge changes for the same entity to avoid redundant updates
             // The latest traceId is kept for the bulk operation
+            logger.debug(
+                `[SmartAggregator] Merging buffered changes for ${entityType}:${entityId} (traceId: ${traceId})`,
+            );
             typeBuffer.set(entityId, {
                 ...existing,
                 changes: { ...existing.changes, ...changes },
                 traceId,
             });
         } else {
+            logger.debug(
+                `[SmartAggregator] Buffering new changes for ${entityType}:${entityId} (traceId: ${traceId})`,
+            );
             typeBuffer.set(entityId, { entityId, changes, traceId });
         }
 
@@ -151,7 +157,8 @@ export class SmartAggregator {
 
         try {
             logger.info(
-                `[SmartAggregator] Bulk updating ${items.length} rows for ${entityType}`,
+                `[SmartAggregator] Bulk updating ${items.length} rows for ${entityType} ` +
+                    `(ids: [${items.map((i) => i.entityId).join(', ')}], firstTraceId: ${items[0]?.traceId})`,
             );
 
             await this.executeBulkUpdate(entityType, items);
@@ -193,6 +200,10 @@ export class SmartAggregator {
 
         const fields = Array.from(allFields);
         const ids = items.map((i) => i.entityId);
+
+        logger.debug(
+            `[SmartAggregator] executing bulk update for table="${entityType}": columns=[${fields.join(', ')}], ids=[${ids.join(', ')}]`,
+        );
 
         // 2. Construct the SET clauses using SQL CASE statements
         const setClauses: any[] = [];

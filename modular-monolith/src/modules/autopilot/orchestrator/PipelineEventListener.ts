@@ -50,11 +50,19 @@ export class PipelineEventListener {
     private async onTrigger(events: DomainEvent<any>[]) {
         if (events.length === 0) return;
 
+        logger.info(
+            `[PipelineEventListener] [onTrigger] Received batch of ${events.length} trigger events`,
+        );
+
         await db.transaction().execute(async (trx) => {
             const unprocessed = await claimEventsAtomic(
                 trx,
                 events,
                 'pipeline-orchestrator-group',
+            );
+
+            logger.info(
+                `[PipelineEventListener] [onTrigger] Filtered unprocessed triggers: ${unprocessed.length}/${events.length}`,
             );
 
             for (const event of unprocessed) {
@@ -84,6 +92,9 @@ export class PipelineEventListener {
                     snapshot,
                 };
 
+                logger.info(
+                    `[PipelineEventListener] [onTrigger] Spawning traceId=${state.traceId} for autopilotId=${autopilotId}, entityType=${entityType}, entityId=${entityId}, depth=${state.depth}`,
+                );
                 await this.processStep(autopilotId, state, trx);
             }
         });
@@ -96,6 +107,10 @@ export class PipelineEventListener {
     private async onContinue(events: DomainEvent<any>[]) {
         if (events.length === 0) return;
 
+        logger.info(
+            `[PipelineEventListener] [onContinue] Received batch of ${events.length} continue events`,
+        );
+
         await db.transaction().execute(async (trx) => {
             const unprocessed = await claimEventsAtomic(
                 trx,
@@ -103,9 +118,16 @@ export class PipelineEventListener {
                 'pipeline-orchestrator-group',
             );
 
+            logger.info(
+                `[PipelineEventListener] [onContinue] Filtered unprocessed continue events: ${unprocessed.length}/${events.length}`,
+            );
+
             for (const event of unprocessed) {
                 const payload = event.data?.data ?? event.data;
                 const { autopilotId, state } = payload;
+                logger.info(
+                    `[PipelineEventListener] [onContinue] Resuming traceId=${state.traceId} at stepIndex=${state.stepIndex} for autopilotId=${autopilotId}`,
+                );
                 await this.processStep(autopilotId, state, trx);
             }
         });
@@ -131,8 +153,17 @@ export class PipelineEventListener {
 
             if (result.status === 'SUCCESS') {
                 // Task 3: Push mutations to SmartAggregator
-                if (result.mutatedEntities) {
+                if (
+                    result.mutatedEntities &&
+                    result.mutatedEntities.length > 0
+                ) {
+                    logger.info(
+                        `[PipelineEventListener] Step succeeded: Mutated ${result.mutatedEntities.length} entities. Pushing to SmartAggregator.`,
+                    );
                     for (const entity of result.mutatedEntities) {
+                        logger.debug(
+                            `[PipelineEventListener] Push changes for ${entity.type}:${entity.id}: ${JSON.stringify(entity.getChanges())}`,
+                        );
                         this.aggregator.push(
                             entity.type,
                             entity.id,
@@ -144,6 +175,9 @@ export class PipelineEventListener {
 
                 if (result.nextIndex !== undefined) {
                     // Emit continuation event to outbox
+                    logger.info(
+                        `[PipelineEventListener] Scheduling next stepIndex=${result.nextIndex} for autopilotId=${autopilotId} (traceId: ${state.traceId})`,
+                    );
                     await appendEventsToOutbox(trx, [
                         {
                             kafka_topic: KAFKA_TOPICS.AUTOPILOT,
@@ -160,23 +194,26 @@ export class PipelineEventListener {
                         },
                     ]);
                 } else {
+                    logger.info(
+                        `[PipelineEventListener] Final step completed. Flushing all buffered aggregations for traceId: ${state.traceId}`,
+                    );
                     await this.aggregator.flushAll();
                     logger.info(
-                        `[PipelineEventListener] Pipeline completed for autopilot ${autopilotId} (traceId: ${state.traceId})`,
+                        `[PipelineEventListener] Pipeline completed successfully for autopilot ${autopilotId} (traceId: ${state.traceId})`,
                     );
                 }
             } else if (result.status === 'HALTED') {
                 logger.info(
-                    `[PipelineEventListener] Pipeline halted for autopilot ${autopilotId}: ${result.reason}`,
+                    `[PipelineEventListener] Pipeline halted for autopilot ${autopilotId} (traceId: ${state.traceId}): ${result.reason}`,
                 );
             } else {
                 logger.error(
-                    `[PipelineEventListener] Pipeline error for autopilot ${autopilotId}: ${result.reason}`,
+                    `[PipelineEventListener] Pipeline error for autopilot ${autopilotId} (traceId: ${state.traceId}): ${result.reason}`,
                 );
             }
         } catch (error: any) {
             logger.error(
-                `[PipelineEventListener] Critical error in pipeline ${autopilotId}: ${error.message}`,
+                `[PipelineEventListener] Critical error in pipeline ${autopilotId} (traceId: ${state.traceId}): ${error.message}`,
                 { stack: error.stack },
             );
         }

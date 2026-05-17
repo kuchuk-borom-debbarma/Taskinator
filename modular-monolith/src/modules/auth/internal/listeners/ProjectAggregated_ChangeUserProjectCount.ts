@@ -44,9 +44,23 @@ export class ProjectAggregated_ChangeUserProjectCount {
 
             if (unprocessed.length === 0) return;
 
+            const UUID_REGEX =
+                /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+            const validUnprocessed = unprocessed.filter(
+                (event) =>
+                    event.data.userId && UUID_REGEX.test(event.data.userId),
+            );
+
+            if (validUnprocessed.length === 0) {
+                logger.debug(
+                    `[Auth Listener] All ${unprocessed.length} events skipped (no valid UUID userIds found)`,
+                );
+                return;
+            }
+
             // [2] Consolidate multiple events for the same user into a single delta
             const consolidates = new Map<string, number>();
-            for (const event of unprocessed) {
+            for (const event of validUnprocessed) {
                 const { userId, delta } = event.data;
                 logger.debug(
                     `[Auth Listener] Aggregating count for user ${userId}: delta ${delta}`,
@@ -59,7 +73,7 @@ export class ProjectAggregated_ChangeUserProjectCount {
 
             const entries = Array.from(consolidates.entries());
             logger.info(
-                `[Auth Listener] Performing bulk projects_count update for ${entries.length} users (from ${unprocessed.length} events)`,
+                `[Auth Listener] Performing bulk projects_count update for ${entries.length} users (from ${validUnprocessed.length} events)`,
             );
 
             await updateUserProjectCountsBulk(consolidates, trx);

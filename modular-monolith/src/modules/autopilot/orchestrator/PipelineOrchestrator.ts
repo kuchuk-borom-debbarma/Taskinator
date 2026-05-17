@@ -11,7 +11,10 @@ import type { ActionExecutor } from '../action-engine/ActionExecutor.js';
 import type { ActionRepository } from '../action-engine/ActionRepository.js';
 import type { AsyncResolverRegistry } from '../action-engine/AsyncResolverRegistry.js';
 import { ContextualEntity } from '../action-engine/ContextualEntity.js';
-import { evaluateCondition } from '../condition-engine/ConditionEvaluator.js';
+import {
+    evaluateCondition,
+    toNaturalLanguage,
+} from '../condition-engine/ConditionEvaluator.js';
 import type { ConditionRepository } from '../condition-engine/ConditionRepository.js';
 import type {
     ContextBuilder,
@@ -230,18 +233,25 @@ export class PipelineOrchestrator {
         );
         const passed = evaluateCondition(ast, context);
 
+        let conditionText = 'Unknown logic';
+        try {
+            conditionText = toNaturalLanguage(ast);
+        } catch (e) {
+            // Ignore NL generation errors
+        }
+
         if (!passed) {
             logger.info(
-                `[PipelineOrchestrator] [ConditionStep] Condition evaluation FAILED/HALTED for refId: ${step.refId}`,
+                `[PipelineOrchestrator] [ConditionStep] Condition evaluation FAILED/HALTED for refId: ${step.refId} ("${conditionText}")`,
             );
             return {
                 status: 'HALTED',
-                reason: `Condition ${step.refId} failed`,
+                reason: `Condition "${conditionText}" failed`,
             };
         }
 
         logger.info(
-            `[PipelineOrchestrator] [ConditionStep] Condition evaluation PASSED for refId: ${step.refId}`,
+            `[PipelineOrchestrator] [ConditionStep] Condition evaluation PASSED for refId: ${step.refId} ("${conditionText}")`,
         );
         return { status: 'SUCCESS' };
     }
@@ -290,7 +300,8 @@ export class PipelineOrchestrator {
         );
 
         logger.info(
-            `[PipelineOrchestrator] [ActionStep] Successfully completed execution of action refId: ${step.refId}. Mutated ${mutatedEntities.length} entities.`,
+            `[PipelineOrchestrator] [ActionStep] Successfully completed execution of action refId: ${step.refId}. Mutated ${mutatedEntities.length} entities: ` +
+                `[${mutatedEntities.map((e) => `${e.type}:${e.id} (changes: ${JSON.stringify(e.getChanges())})`).join('; ')}]`,
         );
         return { status: 'SUCCESS', mutatedEntities };
     }

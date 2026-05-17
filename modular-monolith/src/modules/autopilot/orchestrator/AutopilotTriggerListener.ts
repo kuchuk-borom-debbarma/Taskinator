@@ -37,6 +37,10 @@ export class AutopilotTriggerListener {
     private async handleTaskEvents(events: DomainEvent<TaskEventPayload>[]) {
         if (events.length === 0) return;
 
+        logger.info(
+            `[AutopilotTriggerListener] Received batch of ${events.length} task events`,
+        );
+
         await db.transaction().execute(async (trx) => {
             const unprocessed = await claimEventsAtomic(
                 trx,
@@ -44,6 +48,9 @@ export class AutopilotTriggerListener {
                 'autopilot-trigger-router-group',
             );
 
+            logger.info(
+                `[AutopilotTriggerListener] Filtered unprocessed events count: ${unprocessed.length}/${events.length}`,
+            );
             if (unprocessed.length === 0) return;
 
             const outboxEntries: Array<{
@@ -54,25 +61,52 @@ export class AutopilotTriggerListener {
 
             for (const event of unprocessed) {
                 const payload = event.data;
-                if (!payload.projectId || !payload.taskId) continue;
+                logger.info(
+                    `[AutopilotTriggerListener] Processing task event: id=${event.id}, type=${event.type}, taskId=${payload.taskId}, projectId=${payload.projectId}`,
+                );
+                if (!payload.projectId || !payload.taskId) {
+                    logger.warn(
+                        `[AutopilotTriggerListener] Event skipped: missing projectId or taskId`,
+                    );
+                    continue;
+                }
                 const triggerTypes = getTaskTriggerTypes(event);
+                logger.debug(
+                    `[AutopilotTriggerListener] Resolved trigger types for event: [${Array.from(triggerTypes).join(', ')}]`,
+                );
 
                 const rules = await trx
                     .selectFrom('autopilot')
-                    .select(['id', 'triggers'])
+                    .select(['id', 'triggers', 'name'])
                     .where('fk_project_id', '=', payload.projectId)
                     .where('is_active', '=', true)
                     .execute();
+
+                logger.info(
+                    `[AutopilotTriggerListener] Found ${rules.length} active autopilot rules for projectId=${payload.projectId}`,
+                );
 
                 for (const rule of rules) {
                     const triggers = Array.isArray(rule.triggers)
                         ? rule.triggers
                         : [];
-                    if (
-                        !triggers.some((trigger) => triggerTypes.has(trigger))
-                    ) {
+                    logger.debug(
+                        `[AutopilotTriggerListener] Evaluating rule "${rule.name}" (${rule.id}) with triggers: [${triggers.join(', ')}]`,
+                    );
+
+                    const matches = triggers.filter((trigger) =>
+                        triggerTypes.has(trigger),
+                    );
+                    if (matches.length === 0) {
+                        logger.debug(
+                            `[AutopilotTriggerListener] Rule "${rule.name}" (${rule.id}) triggers did not match event trigger types. Skipped.`,
+                        );
                         continue;
                     }
+
+                    logger.info(
+                        `[AutopilotTriggerListener] MATCH! Rule "${rule.name}" (${rule.id}) triggered by task trigger types: [${matches.join(', ')}]`,
+                    );
 
                     outboxEntries.push({
                         kafka_topic: KAFKA_TOPICS.AUTOPILOT,
@@ -92,7 +126,16 @@ export class AutopilotTriggerListener {
                 }
             }
 
-            await appendEventsToOutbox(trx, outboxEntries);
+            if (outboxEntries.length > 0) {
+                logger.info(
+                    `[AutopilotTriggerListener] Appending ${outboxEntries.length} pipeline.trigger events to the outbox`,
+                );
+                await appendEventsToOutbox(trx, outboxEntries);
+            } else {
+                logger.debug(
+                    `[AutopilotTriggerListener] No matching autopilot rules triggered for this batch`,
+                );
+            }
         });
     }
 }
