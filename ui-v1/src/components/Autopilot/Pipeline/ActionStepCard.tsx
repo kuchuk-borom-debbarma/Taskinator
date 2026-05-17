@@ -1,10 +1,15 @@
 import React from 'react';
 import { GripVertical } from 'lucide-react';
-import type { AutopilotAction } from '../../../api/interfaces/AutopilotAPI';
 import { getActionDefinition, summariseConfig, normalizeAction } from './actionTypes';
 
 interface ActionStepCardProps {
-  action: AutopilotAction;
+  action: {
+    id: string;
+    type: string;
+    config?: Record<string, any>;
+    params?: any;
+    position?: number;
+  };
   index: number;
   readOnly?: boolean;
   onEdit?: (index: number) => void;

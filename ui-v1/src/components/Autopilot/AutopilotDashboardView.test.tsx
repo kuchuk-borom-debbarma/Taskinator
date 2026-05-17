@@ -2,7 +2,6 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { AutopilotDashboardView } from './AutopilotDashboardView';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import React from 'react';
 
 // Mock the dependencies
 vi.mock('@tanstack/react-router', () => ({

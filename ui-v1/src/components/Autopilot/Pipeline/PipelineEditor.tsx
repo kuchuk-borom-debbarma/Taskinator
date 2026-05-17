@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { Play, Plus, ArrowDown, Hexagon } from 'lucide-react';
-import { Reorder, useDragControls } from 'framer-motion';
+import { Play, Plus, Hexagon } from 'lucide-react';
+import { Reorder } from 'framer-motion';
 import type { PipelineStep, AutopilotAction, AutopilotCondition } from '../../../gql/graphql';
 import { ActionStepCard } from './ActionStepCard';
 import { ConditionStepCard } from '../Builder/ConditionStepCard';
@@ -45,7 +45,7 @@ export const PipelineEditor: React.FC<PipelineEditorProps> = ({
   };
 
   const handleAddAction = (incoming: { type: string; config: Record<string, any>; position: number }) => {
-    const newAction: AutopilotAction = {
+    const newAction: any = {
       __typename: 'AutopilotAction',
       id: `draft-action-${Date.now()}`,
       type: incoming.type,
@@ -105,7 +105,7 @@ export const PipelineEditor: React.FC<PipelineEditorProps> = ({
       )}
 
       {/* Edit Action Modal */}
-      {!readOnly && editActionIndex !== null && editAction && editDefinition && (
+      {!readOnly && editActionIndex !== null && normalizedEditAction && editDefinition && (
         <AppModal
           open
           onClose={() => setEditActionIndex(null)}
@@ -113,7 +113,7 @@ export const PipelineEditor: React.FC<PipelineEditorProps> = ({
         >
           <ActionConfigForm
             definition={editDefinition}
-            initialConfig={editAction.config as Record<string, any>}
+            initialConfig={normalizedEditAction.config as Record<string, any>}
             onSubmit={handleEditActionSave}
             submitLabel="Save Changes"
           />
@@ -178,7 +178,7 @@ export const PipelineEditor: React.FC<PipelineEditorProps> = ({
                 >
                   {item.__typename === 'AutopilotAction' ? (
                     <ActionStepCard
-                      action={item as AutopilotAction}
+                      action={item as any}
                       index={index}
                       readOnly={readOnly}
                       onEdit={setEditActionIndex}

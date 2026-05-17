@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Zap, GitBranch, ListChecks, FileText, ArrowLeft, PlusCircle, AlertTriangle } from 'lucide-react';
+import { Zap, GitBranch, FileText, ArrowLeft, PlusCircle, AlertTriangle } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { AppModal } from '../shared/workspace';
 import { PipelineEditor } from './Pipeline/PipelineEditor';
@@ -7,7 +7,7 @@ import { useGraphQLClient } from '../../hooks/useGraphQLClient';
 import { graphql } from '../../gql';
 import { AutopilotTriggerProvider, useAutopilotTrigger } from './AutopilotTriggerContext';
 import { AutopilotMetadataProvider } from './AutopilotMetadataContext';
-import type { PipelineStep, AutopilotAction, AutopilotCondition } from '../../gql/graphql';
+import type { PipelineStep, AutopilotCondition } from '../../gql/graphql';
 
 interface CreateAutopilotModalProps {
   open: boolean;

@@ -44,7 +44,7 @@ export const ConditionBuilderCanvas: React.FC<ConditionBuilderCanvasProps> = ({
   readOnly = false,
 }) => {
   const { nodes: initNodes, edges: initEdges, rootId } = useMemo(
-    () => conditionTreeToGraph(initialCondition),
+    () => conditionTreeToGraph(initialCondition as any),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [],
   );
@@ -59,7 +59,7 @@ export const ConditionBuilderCanvas: React.FC<ConditionBuilderCanvasProps> = ({
     if (readOnly || !onChange) return;
     try {
       const tree = graphToConditionTree(nodes, edges, rootIdVal);
-      onChange(tree);
+      onChange(tree as any);
     } catch (err) {
       console.warn('ConditionBuilderCanvas: Failed to reconstruct tree', err);
     }

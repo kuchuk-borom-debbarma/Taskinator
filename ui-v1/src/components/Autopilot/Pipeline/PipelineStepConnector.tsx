@@ -9,7 +9,7 @@ interface PipelineStepConnectorProps {
 
 export const PipelineStepConnector: React.FC<PipelineStepConnectorProps> = ({
   previousStep,
-  nextStep,
+  nextStep: _nextStep,
 }) => {
   const isHaltOnFalse = previousStep.__typename === 'AutopilotCondition';
 

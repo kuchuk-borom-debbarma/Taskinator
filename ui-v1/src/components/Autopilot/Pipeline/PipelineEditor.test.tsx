@@ -15,7 +15,7 @@ describe('PipelineEditor', () => {
       type: 'task.update_status',
       config: { status: 'DONE' },
       position: 1,
-    },
+    } as any,
     {
       __typename: 'AutopilotCondition',
       id: 'cond-1',
@@ -58,10 +58,9 @@ describe('PipelineEditor', () => {
   });
 
   it('renders reorderable components', () => {
-    const { container } = render(<PipelineEditor pipeline={mockPipeline} onChange={vi.fn()} />);
+    render(<PipelineEditor pipeline={mockPipeline} onChange={vi.fn()} />);
     
     // Check for framer-motion reorder items (they usually have style/transform)
-    const items = container.querySelectorAll('li'); // Reorder.Item defaults to li
     // Actually framer-motion Reorder.Item doesn't necessarily use <li> by default if we don't specify, 
     // but in many versions it does. Let's check what it renders.
     // In our case I didn't specify 'as', so let's see.
@@ -86,7 +85,7 @@ describe('PipelineEditor', () => {
         type: 'task.update_status',
         config: { status: 'DONE' },
         position: 2,
-      },
+      } as any,
     ];
 
     render(<PipelineEditor pipeline={pipeline} onChange={vi.fn()} />);
