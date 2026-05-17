@@ -2,7 +2,7 @@ import React, { createContext, useContext, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useGraphQLClient } from '../../hooks/useGraphQLClient';
 import { graphql } from '../../gql';
-import { AutopilotMetadata, AutopilotMetadataEntity } from '../../gql/graphql';
+import { AutopilotMetadata, AutopilotEntityMetadata } from '../../gql/graphql';
 
 // ─── GraphQL Operations ──────────────────────────────────────────────────────
 
@@ -31,8 +31,8 @@ interface MetadataState {
   metadata: AutopilotMetadata | null;
   isLoading: boolean;
   error: Error | null;
-  getFieldsForEntity: (type: string) => AutopilotMetadataEntity['fields'];
-  getActionsForEntity: (type: string) => AutopilotMetadataEntity['actions'];
+  getFieldsForEntity: (type: string) => AutopilotEntityMetadata['fields'];
+  getActionsForEntity: (type: string) => AutopilotEntityMetadata['actions'];
 }
 
 const AutopilotMetadataContext = createContext<MetadataState | undefined>(undefined);
