@@ -1,39 +1,36 @@
 ---
 gsd_state_version: 1.0
-milestone: v7.0
-milestone_name: milestone
-status: Awaiting next milestone
-last_updated: "2026-05-17T06:35:38.697Z"
-last_activity: 2026-05-17 — Milestone v7.0 completed and archived
+milestone: v8.0
+milestone_name: High-Performance CTE & Depth Guards
+status: In Progress
+last_updated: "2026-05-17T21:05:00.000Z"
+last_activity: 2026-05-17 — Milestone v8.0 started
 progress:
-  total_phases: 7
-  completed_phases: 3
-  total_plans: 16
-  completed_plans: 10
-  percent: 43
+  total_phases: 2
+  completed_phases: 0
+  total_plans: 4
+  completed_plans: 0
+  percent: 0
 ---
 
-# Project State - Milestone v7.0 (UI Alignment)
+# Project State - Milestone v8.0 (CTE & Depth Guards)
 
-## Completed Phase: Phase 26 - GraphQL Sync & Codegen
+## Active Phase: Phase 29 - CTE Bulk Outbox Writes
 
-- [x] **GQL-01**: Backend GraphQL schema and resolvers aligned with v6.0 engine.
-- [x] **GQL-02**: UI synchronized via `codegen` with updated components and fragments.
+- [ ] **CTE-01**: Define Kysely dynamic CTE bulk updates with old_state select.
+- [ ] **CTE-02**: Execute single transaction CTE flushing to database and inserting outbox events.
+- [ ] **CTE-03**: Verify CTE query pattern with `SmartAggregator` unit tests.
 
-## Active Phase: Phase 27 - Builder & Canvas Alignment
+## Pending Phase: Phase 30 - Asynchronous Depth Guards
 
-- [ ] **UI-CTX-01**: Implement `AutopilotMetadataContext` for global entity-field discovery.
-- [ ] **UI-CTX-02**: Predicate dropdowns filter fields based on trigger entity type.
-- [x] **UI-CTX-03**: Support "Condition Logic Blocks" interleaved in the sequence.
-- [x] **UI-PIPE-01**: Mixed Pipeline support in `PipelineEditor`.
-- [x] **UI-PIPE-02**: Pipeline Step Reordering (DND).
-- [x] **UI-PIPE-03**: Sequential Semantics (Visual Flow).
+- [ ] **LGP-01**: Match `actorId` and capture `depth` in `AutopilotTriggerListener.ts`.
+- [ ] **LGP-02**: Process and increment depth recursive payloads in `PipelineEventListener.ts`.
+- [ ] **LGP-03**: Enforce strict loop depth boundaries (max 50 hops) in `PipelineOrchestrator.ts`.
 
 ## Progress
 
-- [x] Phase 26 Planning & Execution (Completed)
-- [/] Phase 27 Planning & Execution (In Progress)
-- [ ] Phase 28 Planning & Execution (Pending)
+- [ ] Phase 29 Planning & Execution (Active)
+- [ ] Phase 30 Planning & Execution (Pending)
 
 ## Blockers
 
@@ -41,15 +38,4 @@ progress:
 
 ## Next Step
 
-- Run Plan 27-03 to implement condition editing in the pipeline.
-
-## Current Position
-
-Phase: Milestone v7.0 complete
-Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-05-17 — Milestone v7.0 completed and archived
-
-## Operator Next Steps
-
-- Start the next milestone with /gsd-new-milestone
+- Propose implementation plan for Phase 29.

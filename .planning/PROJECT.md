@@ -33,6 +33,8 @@ Automate the "busy work" of project management through reliable, transparent, an
 - ✓ [UI-v1 Dynamic Context] — Support dynamic trigger entity selection and lazy-context field lookups (v7.0) — Validated in Phase 27: Builder & Canvas Alignment.
 - ✓ [UI-v1 Sequential Pipeline] — Update Pipeline Editor to align with v6.0 sequential payload schema (v7.0) — Validated in Phase 27: Builder & Canvas Alignment.
 
+- [ ] [High-Performance CTE Outbox Writes] — Single-query bulk updates + outbox insertion in SmartAggregator (v8.0).
+- [ ] [Asynchronous Depth Guards] — TraceId + depth propagation across async Kafka loops to enforce recursion limits (v8.0).
 - [ ] [Multi-domain Triggers] — Evaluate events crossing project boundaries.
 - [ ] [Complex Predicates] — Evaluate conditions referencing recursive parent/child states.
 
@@ -41,14 +43,13 @@ Automate the "busy work" of project management through reliable, transparent, an
 - [Cron-based Triggers] — Reactive/event-driven architecture remains primary focus.
 - [External Service Actions] — Scope confined to internal Taskinator domain mutations.
 
-## Next Milestone Goals (v8.0)
+## Next Milestone Goals (v9.0)
 
-**Goal:** Establish advanced monitoring, cross-project event evaluation, and high-performance throughput optimizations for Autopilot execution.
+**Goal:** Establish advanced monitoring and cross-project event evaluation for Autopilot execution.
 
 **Target features:**
 - Implement Multi-domain Triggers to evaluate events crossing project boundaries.
 - Integrate Complex Predicates to evaluate conditions referencing recursive parent/child states.
-- Set up real-time SSE execution tracing dashboards in `ui-v1`.
 
 ## Current State (Post-v7.0)
 The Autopilot engine has been fully rebuilt (v6.0) and the frontend application `ui-v1` has been completely synchronized (v7.0) to support recursive ast condition evaluation, lazy context resolution, sequential pipelines with drag-and-drop reordering, and frame-accurate visual flows. All components are fully verified with a 100% test passing rate.

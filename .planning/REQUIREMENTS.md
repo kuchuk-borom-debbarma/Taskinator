@@ -1,0 +1,37 @@
+# Requirements Specifications - Milestone v8.0 (Transactional CTE & Depth Guards)
+
+## 1. High-Performance CTE Bulk Outbox Writes
+To support the 10k RPS target, the `SmartAggregator` must update the database and write downstream notification outbox events in exactly **one single round-trip database query**.
+
+### Requirements:
+- **CTE-01**: The `SmartAggregator.executeBulkUpdate` query must compile into a single PostgreSQL Common Table Expression (CTE).
+- **CTE-02**: The CTE query must contain:
+  1. `old_state`: A select query fetching the old values (`fk_team_id`, `fk_member_id`, `title`, `status`) of all entities being updated.
+  2. `updated_entity`: A bulk case-statement update query applying field mutations across the matching rows and returning updated fields.
+  3. `inserted_outbox`: An `INSERT INTO outbox_events` query that joins `updated_entity` and `old_state` to populate transactional outbox events with complete change records.
+- **CTE-03**: This must support dynamic columns, table/entity types, and ids.
+
+---
+
+## 2. Event Payload Schema & Loop Parameter Propagation
+When writing to the outbox via the bulk query, the generated event payload must contain tracking metadata for cycle safety.
+
+### Requirements:
+- **PAY-01**: Outbox events spawned by Autopilot updates must set the `actorId` attribute strictly to `'system:autopilot'`.
+- **PAY-02**: Outbox events must contain the `traceId` correlation identifier from the execution state.
+- **PAY-03**: Outbox events must propagate the active loop `depth` integer from the execution state.
+
+---
+
+## 3. Asynchronous Depth Guards & Loop Safety
+The trigger system must track and limit recursive automation cascades to prevent infinite execution cycles.
+
+### Requirements:
+- **LGP-01**: `AutopilotTriggerListener.ts` must inspect task event payloads:
+  - If `actorId === 'system:autopilot'`, set `isRecursiveTrigger: true` and pass down the event's `depth`.
+  - If `actorId` is any other value, set `isRecursiveTrigger: false` and `depth: 0`.
+- **LGP-02**: `PipelineEventListener.ts` must consume trigger events:
+  - If the trigger has `isRecursiveTrigger === true`, the spawned state `depth` must be `parentDepth + 1`.
+  - Else, the spawned state `depth` must be `0`.
+- **LGP-03**: `PipelineOrchestrator` must validate depth limits before executing any pipeline step:
+  - If `depth > 50`, halt execution immediately, record a critical diagnostic log, and abort the write loop to block infinite recursion.
