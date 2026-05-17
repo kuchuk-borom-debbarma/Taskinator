@@ -41,17 +41,17 @@ Automate the "busy work" of project management through reliable, transparent, an
 - [Cron-based Triggers] — Reactive/event-driven architecture remains primary focus.
 - [External Service Actions] — Scope confined to internal Taskinator domain mutations.
 
-## Next Milestone Goals (v7.0)
+## Next Milestone Goals (v8.0)
 
-**Goal:** Update the `ui-v1` Autopilot components to support the v6.0 backend changes.
+**Goal:** Establish advanced monitoring, cross-project event evaluation, and high-performance throughput optimizations for Autopilot execution.
 
 **Target features:**
-- Implement Dynamic Entity Selector for triggers and conditions.
-- Integrate Lazy-Context fields for action property forms.
-- Update Pipeline Editor to support ordered sequences of Conditions and Actions in a single array.
+- Implement Multi-domain Triggers to evaluate events crossing project boundaries.
+- Integrate Complex Predicates to evaluate conditions referencing recursive parent/child states.
+- Set up real-time SSE execution tracing dashboards in `ui-v1`.
 
-## Current State (Post-v6.0)
-The Autopilot engine has been fully rebuilt (v6.0). It features entity-agnostic condition evaluation, lazy context resolution, and a resumable, event-driven pipeline execution model. Performance is optimized for 10k RPS via smart aggregation and bulk SQL updates. The `ui-v1` is currently being updated to align with these changes.
+## Current State (Post-v7.0)
+The Autopilot engine has been fully rebuilt (v6.0) and the frontend application `ui-v1` has been completely synchronized (v7.0) to support recursive ast condition evaluation, lazy context resolution, sequential pipelines with drag-and-drop reordering, and frame-accurate visual flows. All components are fully verified with a 100% test passing rate.
 
 ## Key Decisions
 
@@ -80,4 +80,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-05-16 after Phase 27 completion*
+*Last updated: 2026-05-17 after v7.0 milestone completion*

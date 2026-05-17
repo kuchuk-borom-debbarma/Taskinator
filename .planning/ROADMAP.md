@@ -4,7 +4,7 @@
 
 - ✅ **v5.0 Revamp Autopilot** — Phase 21 (shipped 2026-05-16)
 - ✅ **v6.0 Rebuild Autopilot Engine** — Phases 22-25 (shipped 2026-05-16) [.planning/milestones/v6.0-ROADMAP.md]
-- 🔄 **v7.0 UI Alignment** — Phases 26-28 (Started 2026-05-16) [.planning/milestones/v7.0-ROADMAP.md]
+- ✅ **v7.0 UI Alignment** — Phases 26-28 (shipped 2026-05-17) [.planning/milestones/v7.0-ROADMAP.md]
 
 ## Progress
 
