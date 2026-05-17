@@ -158,6 +158,8 @@ export class PipelineOrchestrator {
             return { status: 'ERROR', reason: 'Step index out of bounds' };
         }
 
+        let mutatedEntities: any[] | undefined;
+
         if (step.type === 'condition') {
             const conditionResult = await this.handleConditionStep(step, state);
             if (conditionResult.status !== 'SUCCESS') {
@@ -168,6 +170,7 @@ export class PipelineOrchestrator {
             if (actionResult.status !== 'SUCCESS') {
                 return actionResult;
             }
+            mutatedEntities = actionResult.mutatedEntities;
         } else {
             return {
                 status: 'ERROR',
@@ -179,6 +182,7 @@ export class PipelineOrchestrator {
         return {
             status: 'SUCCESS',
             nextIndex: nextIndex < resolvedSteps.length ? nextIndex : undefined,
+            mutatedEntities,
         };
     }
 
