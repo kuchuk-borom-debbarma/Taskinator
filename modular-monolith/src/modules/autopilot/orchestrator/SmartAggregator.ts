@@ -204,7 +204,7 @@ export class SmartAggregator {
             for (const item of items) {
                 if (item.changes[field] !== undefined) {
                     // WHEN 'some-id' THEN 'some-value'
-                    caseSql = sql`${caseSql} WHEN ${item.entityId} THEN ${item.changes[field]}`;
+                    caseSql = sql`${caseSql} WHEN ${item.entityId}::uuid THEN ${item.changes[field]}`;
                 }
             }
 
@@ -221,7 +221,7 @@ export class SmartAggregator {
             UPDATE ${sql.table(entityType)}
             SET ${sql.join(setClauses, sql`, `)}
             WHERE id IN (${sql.join(
-                ids.map((id) => sql.val(id)),
+                ids.map((id) => sql`${id}::uuid`),
                 sql`, `,
             )})
         `.execute(db);

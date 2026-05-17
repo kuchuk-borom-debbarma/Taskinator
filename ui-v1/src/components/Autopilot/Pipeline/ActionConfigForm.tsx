@@ -1,6 +1,4 @@
 import React, { useState } from 'react';
-import { useAutopilotTrigger } from '../AutopilotTriggerContext';
-import { useAutopilotMetadata } from '../AutopilotMetadataContext';
 import type { ActionTypeDefinition } from './actionTypes';
 import { TASK_STATUS_OPTIONS, TASK_PRIORITY_OPTIONS } from '../Builder/types';
 
@@ -9,12 +7,12 @@ import { TASK_STATUS_OPTIONS, TASK_PRIORITY_OPTIONS } from '../Builder/types';
 const OTHER_VALUE = '__OTHER__';
 
 interface SmartConfigInputProps {
-  inputType: 'text' | 'status-select' | 'priority-select' | 'none';
+  inputType: 'text' | 'target-select' | 'field-select' | 'dynamic-value' | 'none';
   label: string;
   value: string;
   placeholder?: string;
   onChange: (val: string) => void;
-  entityType?: string;
+  currentField?: string;
 }
 
 const SmartConfigInput: React.FC<SmartConfigInputProps> = ({
@@ -23,46 +21,163 @@ const SmartConfigInput: React.FC<SmartConfigInputProps> = ({
   value,
   placeholder,
   onChange,
-  entityType,
+  currentField,
 }) => {
-  // In a fully dynamic version, presets could come from AutopilotMetadataContext.
-  // For now, we restrict status/priority to 'task' entity type as a safeguard.
-  let presets = null;
-  if (entityType === 'task') {
-    if (inputType === 'status-select') presets = TASK_STATUS_OPTIONS;
-    else if (inputType === 'priority-select') presets = TASK_PRIORITY_OPTIONS;
+  const [useCustomField, setUseCustomField] = useState(false);
+  const [useCustomValue, setUseCustomValue] = useState(false);
+
+  // 1. Target Entity Selector
+  if (inputType === 'target-select') {
+    const TARGET_OPTIONS = [
+      { value: 'self', label: 'Self (Triggering Entity)' },
+      { value: 'parent', label: 'Parent Entity' },
+      { value: 'project', label: 'Project' },
+      { value: 'team', label: 'Team' },
+      { value: 'teamMember', label: 'Team Member' },
+    ];
+    return (
+      <label className="block">
+        <span className="mb-1.5 block text-xs font-medium text-app-muted">{label}</span>
+        <select
+          value={value || 'self'}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-full rounded-xl border border-app-line bg-white/85 px-3 py-2.5 text-sm text-app-ink outline-none transition focus:border-app-accent focus:ring-2 focus:ring-app-accent/10 bg-no-repeat"
+        >
+          {TARGET_OPTIONS.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+        </select>
+      </label>
+    );
   }
 
-  const [useCustom, setUseCustom] = useState(
-    presets != null && value !== '' && !presets.some((p) => p.value === value),
-  );
+  // 2. Field Name Selector with custom input fallback
+  if (inputType === 'field-select') {
+    const FIELD_OPTIONS = [
+      { value: 'status', label: 'Status (status)' },
+      { value: 'priority', label: 'Priority (priority)' },
+      { value: 'title', label: 'Title (title)' },
+      { value: 'description', label: 'Description (description)' },
+      { value: 'fk_team_id', label: 'Assigned Team ID (fk_team_id)' },
+      { value: 'fk_member_id', label: 'Assigned Member ID (fk_member_id)' },
+    ];
+    const isCustom = value !== '' && !FIELD_OPTIONS.some((f) => f.value === value);
 
-  return (
-    <label className="block">
-      <span className="mb-1.5 block text-xs font-medium text-app-muted">{label}</span>
+    if (useCustomField || isCustom) {
+      return (
+        <label className="block">
+          <span className="mb-1.5 block text-xs font-medium text-app-muted">{label}</span>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={value}
+              onChange={(e) => onChange(e.target.value)}
+              placeholder="Custom field name…"
+              autoFocus
+              className="flex-1 rounded-xl border border-app-line bg-white/85 px-3 py-2.5 text-sm text-app-ink outline-none transition focus:border-app-accent focus:ring-2 focus:ring-app-accent/10"
+            />
+            <button
+              type="button"
+              onClick={() => {
+                setUseCustomField(false);
+                onChange('status');
+              }}
+              className="rounded-xl border border-app-line bg-white/80 px-3 py-2 text-xs font-semibold text-app-muted transition hover:text-app-ink hover:bg-white"
+            >
+              Presets
+            </button>
+          </div>
+        </label>
+      );
+    }
 
-      {inputType === 'none' && (
-        <p className="rounded-xl border border-dashed border-app-line px-3 py-2.5 text-sm italic text-app-muted">
-          No configuration required
-        </p>
-      )}
-
-      {(!presets && inputType !== 'none') && (
-        <input
-          type="text"
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          placeholder={placeholder ?? 'Enter value…'}
-          className="w-full rounded-xl border border-app-line bg-white/85 px-3 py-2.5 text-sm text-app-ink outline-none transition focus:border-app-accent focus:ring-2 focus:ring-app-accent/10"
-        />
-      )}
-
-      {presets && !useCustom && (
+    return (
+      <label className="block">
+        <span className="mb-1.5 block text-xs font-medium text-app-muted">{label}</span>
         <select
-          value={value || presets[0]?.value}
+          value={value || 'status'}
+          onChange={(e) => {
+            if (e.target.value === '__CUSTOM__') {
+              setUseCustomField(true);
+              onChange('');
+            } else {
+              onChange(e.target.value);
+            }
+          }}
+          className="w-full rounded-xl border border-app-line bg-white/85 px-3 py-2.5 text-sm text-app-ink outline-none transition focus:border-app-accent focus:ring-2 focus:ring-app-accent/10"
+        >
+          {FIELD_OPTIONS.map((opt) => (
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
+          ))}
+          <option value="__CUSTOM__">Other (Custom Field Name)…</option>
+        </select>
+      </label>
+    );
+  }
+
+  // 3. Dynamic Value Selector (Status presets, Priority presets, or free-text)
+  if (inputType === 'dynamic-value') {
+    let presets = null;
+    if (currentField === 'status') presets = TASK_STATUS_OPTIONS;
+    else if (currentField === 'priority') presets = TASK_PRIORITY_OPTIONS;
+
+    const isCustomVal = presets != null && value !== '' && !presets.some((p) => String(p.value) === String(value));
+
+    if (!presets) {
+      return (
+        <label className="block">
+          <span className="mb-1.5 block text-xs font-medium text-app-muted">{label}</span>
+          <input
+            type="text"
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            placeholder={placeholder ?? 'Enter field value…'}
+            className="w-full rounded-xl border border-app-line bg-white/85 px-3 py-2.5 text-sm text-app-ink outline-none transition focus:border-app-accent focus:ring-2 focus:ring-app-accent/10"
+          />
+        </label>
+      );
+    }
+
+    if (useCustomValue || isCustomVal) {
+      return (
+        <label className="block">
+          <span className="mb-1.5 block text-xs font-medium text-app-muted">{label}</span>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={value}
+              onChange={(e) => onChange(e.target.value)}
+              placeholder="Custom value…"
+              autoFocus
+              className="flex-1 rounded-xl border border-app-line bg-white/85 px-3 py-2.5 text-sm text-app-ink outline-none transition focus:border-app-accent focus:ring-2 focus:ring-app-accent/10"
+            />
+            <button
+              type="button"
+              onClick={() => {
+                setUseCustomValue(false);
+                onChange(presets ? String(presets[0]?.value) : '');
+              }}
+              className="rounded-xl border border-app-line bg-white/80 px-3 py-2 text-xs font-semibold text-app-muted transition hover:text-app-ink hover:bg-white"
+            >
+              Presets
+            </button>
+          </div>
+        </label>
+      );
+    }
+
+    return (
+      <label className="block">
+        <span className="mb-1.5 block text-xs font-medium text-app-muted">{label}</span>
+        <select
+          value={value || String(presets[0]?.value)}
           onChange={(e) => {
             if (e.target.value === OTHER_VALUE) {
-              setUseCustom(true);
+              setUseCustomValue(true);
               onChange('');
             } else {
               onChange(e.target.value);
@@ -71,36 +186,22 @@ const SmartConfigInput: React.FC<SmartConfigInputProps> = ({
           className="w-full rounded-xl border border-app-line bg-white/85 px-3 py-2.5 text-sm text-app-ink outline-none transition focus:border-app-accent focus:ring-2 focus:ring-app-accent/10"
         >
           {presets.map((opt) => (
-            <option key={opt.value} value={opt.value}>
+            <option key={opt.value} value={String(opt.value)}>
               {opt.label}
             </option>
           ))}
-          <option value={OTHER_VALUE}>Other…</option>
+          <option value={OTHER_VALUE}>Other (Custom value)…</option>
         </select>
-      )}
+      </label>
+    );
+  }
 
-      {presets && useCustom && (
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            placeholder="Custom value…"
-            autoFocus
-            className="flex-1 rounded-xl border border-app-line bg-white/85 px-3 py-2.5 text-sm text-app-ink outline-none transition focus:border-app-accent focus:ring-2 focus:ring-app-accent/10"
-          />
-          <button
-            type="button"
-            onClick={() => {
-              setUseCustom(false);
-              onChange(presets[0]?.value ?? '');
-            }}
-            className="rounded-xl border border-app-line bg-white/80 px-3 py-2 text-xs font-semibold text-app-muted transition hover:text-app-ink"
-          >
-            Presets
-          </button>
-        </div>
-      )}
+  return (
+    <label className="block">
+      <span className="mb-1.5 block text-xs font-medium text-app-muted">{label}</span>
+      <p className="rounded-xl border border-dashed border-app-line px-3 py-2.5 text-sm italic text-app-muted bg-white/40">
+        No configuration required
+      </p>
     </label>
   );
 };
@@ -120,16 +221,13 @@ export const ActionConfigForm: React.FC<ActionConfigFormProps> = ({
   onSubmit,
   submitLabel = 'Apply',
 }) => {
-  const { selectedEntityType } = useAutopilotTrigger();
-  const { getActionsForEntity } = useAutopilotMetadata();
-
   const [config, setConfig] = useState<Record<string, any>>(() => {
-    // Seed defaults
     const seed: Record<string, any> = { ...initialConfig };
     for (const field of definition.configFields) {
       if (seed[field.key] === undefined) {
-        if (field.inputType === 'status-select') seed[field.key] = 'TODO';
-        else if (field.inputType === 'priority-select') seed[field.key] = '3';
+        if (field.key === 'target') seed[field.key] = 'self';
+        else if (field.key === 'field') seed[field.key] = 'status';
+        else if (field.key === 'value') seed[field.key] = seed.field === 'priority' ? '2' : 'TODO';
         else seed[field.key] = '';
       }
     }
@@ -138,27 +236,27 @@ export const ActionConfigForm: React.FC<ActionConfigFormProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(config);
-  };
+    
+    // Typecast priority to a number if it is priority
+    const finalConfig = { ...config };
+    if (finalConfig.field === 'priority' && finalConfig.value !== undefined && finalConfig.value !== '') {
+      const num = Number(finalConfig.value);
+      if (!isNaN(num)) {
+        finalConfig.value = num;
+      }
+    }
 
-  const validActions = getActionsForEntity(selectedEntityType);
-  const isValidForEntity = validActions.some(a => a.type === definition.key) || validActions.length === 0; // Fallback if metadata not loaded
+    onSubmit(finalConfig);
+  };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      {!isValidForEntity && (
-        <div className="p-3 text-xs text-app-warning bg-app-warning/10 rounded-lg border border-app-warning/20">
-          Note: This action might not be applicable for {selectedEntityType} triggers.
-        </div>
-      )}
-
       {definition.configFields.length === 0 ? (
         <SmartConfigInput
           inputType="none"
           label="Configuration"
           value=""
           onChange={() => {}}
-          entityType={selectedEntityType}
         />
       ) : (
         definition.configFields.map((field) => (
@@ -168,8 +266,17 @@ export const ActionConfigForm: React.FC<ActionConfigFormProps> = ({
             label={field.label}
             placeholder={field.placeholder}
             value={String(config[field.key] ?? '')}
-            onChange={(val) => setConfig((prev) => ({ ...prev, [field.key]: val }))}
-            entityType={selectedEntityType}
+            onChange={(val) => setConfig((prev) => {
+              if (field.key === 'field') {
+                return {
+                  ...prev,
+                  field: val,
+                  value: val === 'priority' ? '2' : val === 'status' ? 'TODO' : '',
+                };
+              }
+              return { ...prev, [field.key]: val };
+            })}
+            currentField={config.field}
           />
         ))
       )}

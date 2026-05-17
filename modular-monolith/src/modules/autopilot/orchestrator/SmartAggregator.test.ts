@@ -1,20 +1,9 @@
-import { beforeEach, describe, expect, it, mock } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, it, mock } from 'bun:test';
+import { db } from '../../../database/index.js';
 
-// Mock database and logger BEFORE importing the module under test
-const executeSpy = mock(async () => ({ rows: [] }));
-
-mock.module('../../../database/index.js', () => ({
-    db: {
-        executor: {
-            executeQuery: executeSpy,
-            adapter: {
-                supportsReturning: () => true,
-            },
-        },
-    },
-}));
-
-mock.module('../../../logger/index.js', () => ({
+// Mock logger
+const loggerPathJs = import.meta.resolve('../../../logger/index.js');
+mock.module(loggerPathJs, () => ({
     logger: {
         info: mock(() => {}),
         error: mock(() => {}),
@@ -22,17 +11,25 @@ mock.module('../../../logger/index.js', () => ({
     },
 }));
 
-// Now import the module under test
 import { SmartAggregator } from './SmartAggregator.js';
 
+const executeSpy = mock(async () => ({ rows: [] }));
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 describe('SmartAggregator', () => {
     let aggregator: SmartAggregator;
+    let originalExecuteQuery: any;
 
     beforeEach(() => {
         executeSpy.mockClear();
+        const executor = db.getExecutor();
+        originalExecuteQuery = executor.executeQuery;
+        executor.executeQuery = executeSpy;
         aggregator = new SmartAggregator();
+    });
+
+    afterEach(() => {
+        db.getExecutor().executeQuery = originalExecuteQuery;
     });
 
     it('should buffer multiple updates and flush them after the interval', async () => {
@@ -58,10 +55,10 @@ describe('SmartAggregator', () => {
 
         expect(sqlString).toContain('UPDATE "project_task"');
         expect(sqlString).toContain('CASE id');
-        expect(sqlString).toContain('WHEN ? THEN ?');
+        expect(sqlString).toContain('WHEN $1::uuid THEN $2');
         expect(sqlString).toContain('ELSE "status" END');
         expect(sqlString).toContain('ELSE "priority" END');
-        expect(sqlString).toContain('WHERE id IN (?, ?)');
+        expect(sqlString).toContain('WHERE id IN ($5::uuid, $6::uuid)');
     });
 
     it('should merge multiple updates for the same entity before flushing', async () => {

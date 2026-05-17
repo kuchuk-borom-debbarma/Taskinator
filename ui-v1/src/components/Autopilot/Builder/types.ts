@@ -35,11 +35,18 @@ export const DOMAIN_FIELDS: Record<string, { label: string; value: string }[]> =
 };
 
 export const OPERATORS = [
-  { value: '==', label: 'Equals (==)' },
-  { value: '!=', label: 'Not equals (!=)' },
-  { value: '>', label: 'Greater than (>)' },
-  { value: '<', label: 'Less than (<)' },
+  { value: 'eq', label: 'Equals' },
+  { value: 'neq', label: 'Not equals' },
+  { value: 'gt', label: 'Greater than' },
+  { value: 'lt', label: 'Less than' },
+  { value: 'gte', label: 'Greater than or equal' },
+  { value: 'lte', label: 'Less than or equal' },
   { value: 'contains', label: 'Contains' },
+  { value: 'exists', label: 'Exists' },
+  { value: 'empty', label: 'Empty' },
+  { value: 'changed', label: 'Changed' },
+  { value: 'changedTo', label: 'Changed to' },
+  { value: 'changedFrom', label: 'Changed from' },
 ];
 
 export const TASK_STATUS_OPTIONS = [
@@ -49,8 +56,8 @@ export const TASK_STATUS_OPTIONS = [
 ];
 
 export const TASK_PRIORITY_OPTIONS = [
-  { value: '1', label: '1 — Urgent' },
-  { value: '2', label: '2 — High' },
-  { value: '3', label: '3 — Medium' },
-  { value: '4', label: '4 — Low' },
+  { value: '0', label: 'Urgent' },
+  { value: '1', label: 'High' },
+  { value: '2', label: 'Medium' },
+  { value: '3', label: 'Low' },
 ];

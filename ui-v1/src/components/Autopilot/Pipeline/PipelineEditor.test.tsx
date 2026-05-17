@@ -33,7 +33,7 @@ describe('PipelineEditor', () => {
   it('renders both actions and conditions', () => {
     render(<PipelineEditor pipeline={mockPipeline} onChange={vi.fn()} />);
     
-    expect(screen.getByText('Update Status')).toBeInTheDocument();
+    expect(screen.getByText('Set Field Value')).toBeInTheDocument();
     expect(screen.getByText('Check Priority')).toBeInTheDocument();
   });
 
@@ -61,12 +61,8 @@ describe('PipelineEditor', () => {
     render(<PipelineEditor pipeline={mockPipeline} onChange={vi.fn()} />);
     
     // Check for framer-motion reorder items (they usually have style/transform)
-    // Actually framer-motion Reorder.Item doesn't necessarily use <li> by default if we don't specify, 
-    // but in many versions it does. Let's check what it renders.
-    // In our case I didn't specify 'as', so let's see.
-    
     // Alternatively, check for the presence of the cards within the container
-    expect(screen.getByText('Update Status')).toBeInTheDocument();
+    expect(screen.getByText('Set Field Value')).toBeInTheDocument();
     expect(screen.getByText('Check Priority')).toBeInTheDocument();
   });
 

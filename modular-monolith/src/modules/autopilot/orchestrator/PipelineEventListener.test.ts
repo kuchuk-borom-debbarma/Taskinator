@@ -1,28 +1,14 @@
-import { beforeEach, describe, expect, it, mock } from 'bun:test';
+import { afterEach, beforeEach, describe, expect, it, mock } from 'bun:test';
+import { db } from '../../../database/index.js';
 import { KAFKA_EVENTS, KAFKA_TOPICS } from '../../../utils/event-bus/index.js';
 import { appendEventsToOutbox } from '../../../utils/event-bus/OutboxQueries.js';
 import { PipelineEventListener } from './PipelineEventListener.js';
-
-// Mock dependencies
-mock.module('../../../database/index.js', () => ({
-    db: {
-        transaction: () => ({
-            execute: (callback: any) =>
-                callback({
-                    insertInto: () => ({
-                        values: () => ({ execute: async () => {} }),
-                    }),
-                    values: () => ({ execute: async () => {} }),
-                    execute: async () => {},
-                }),
-        }),
-    },
-}));
 
 mock.module('../../../logger/index.js', () => ({
     logger: {
         info: mock(() => {}),
         error: mock(() => {}),
+        debug: mock(() => {}),
     },
 }));
 
@@ -44,19 +30,37 @@ describe('PipelineEventListener', () => {
     let listener: PipelineEventListener;
     let mockOrchestrator: any;
     let mockAggregator: any;
+    let originalTransaction: any;
 
     beforeEach(() => {
+        originalTransaction = db.transaction;
+        (db as any).transaction = () => ({
+            execute: (callback: any) =>
+                callback({
+                    insertInto: () => ({
+                        values: () => ({ execute: async () => {} }),
+                    }),
+                    values: () => ({ execute: async () => {} }),
+                    execute: async () => {},
+                }),
+        });
+
         mockOrchestrator = {
             executeStep: mock(async () => ({ status: 'SUCCESS' })),
         };
         mockAggregator = {
             push: mock(() => {}),
+            flushAll: mock(async () => {}),
         };
 
         // Clear module mocks
         (appendEventsToOutbox as any).mockClear();
 
         listener = new PipelineEventListener(mockOrchestrator, mockAggregator);
+    });
+
+    afterEach(() => {
+        (db as any).transaction = originalTransaction;
     });
 
     it('should process TRIGGER event and execute first step', async () => {

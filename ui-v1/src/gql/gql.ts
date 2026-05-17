@@ -27,8 +27,10 @@ type Documents = {
     "\n  fragment AutopilotCardFragment on Autopilot {\n    id\n    fk_project_id\n    triggers\n    isActive\n    createdAt\n    version\n    pipeline {\n      __typename\n      ... on AutopilotCondition {\n        id\n        name\n        definition {\n          __typename\n          ... on PredicateNode {\n            domain\n            field\n            operator\n            value\n          }\n          ... on AndNode {\n            children {\n              __typename\n            }\n          }\n          ... on OrNode {\n            children {\n              __typename\n            }\n          }\n          ... on NotNode {\n            child {\n              __typename\n            }\n          }\n        }\n      }\n      ... on AutopilotAction {\n        id\n        type\n        params\n      }\n    }\n  }\n": typeof types.AutopilotCardFragmentFragmentDoc,
     "\n  query GetProjectAutopilots($projectId: ID!, $first: Int) {\n    autopilots(projectId: $projectId, first: $first) {\n      edges {\n        node {\n          id\n          isActive\n          ...AutopilotCardFragment\n        }\n      }\n      totalCount\n    }\n  }\n": typeof types.GetProjectAutopilotsDocument,
     "\n  mutation ToggleAutopilot($id: ID!, $isActive: Boolean!) {\n    toggleAutopilot(id: $id, isActive: $isActive) {\n      id\n      isActive\n      version\n    }\n  }\n": typeof types.ToggleAutopilotDocument,
+    "\n  mutation DeleteAutopilot($id: ID!) {\n    deleteAutopilot(id: $id)\n  }\n": typeof types.DeleteAutopilotDocument,
     "\n  query GetAutopilotMetadata($entityType: String!) {\n    autopilotMetadata(entityType: $entityType) {\n      entities {\n        type\n        fields {\n          name\n          type\n          operators\n        }\n        actions {\n          type\n          parameters\n        }\n      }\n    }\n  }\n": typeof types.GetAutopilotMetadataDocument,
     "\n  mutation CreateAutopilot($input: CreateAutopilotInput!) {\n    createAutopilot(input: $input) {\n      id\n      isActive\n      triggers\n      ...AutopilotCardFragment\n    }\n  }\n": typeof types.CreateAutopilotDocument,
+    "\n  mutation UpdateAutopilot($id: ID!, $input: UpdateAutopilotInput!) {\n    updateAutopilot(id: $id, input: $input) {\n      id\n      isActive\n      triggers\n      ...AutopilotCardFragment\n    }\n  }\n": typeof types.UpdateAutopilotDocument,
 };
 const documents: Documents = {
     "\n      query GetMyProjects($first: Int, $after: String, $last: Int, $before: String) {\n        me {\n          projects(first: $first, after: $after, last: $last, before: $before) {\n            edges {\n              node {\n                id\n                name\n                description\n                createdAt\n                updatedAt\n                version\n                projectMembersCount\n                tasksCount\n                teamsCount\n                creator { id username }\n              }\n            }\n            pageInfo {\n              hasNextPage\n              hasPreviousPage\n              startCursor\n              endCursor\n            }\n            totalCount\n          }\n        }\n      }\n    ": types.GetMyProjectsDocument,
@@ -44,8 +46,10 @@ const documents: Documents = {
     "\n  fragment AutopilotCardFragment on Autopilot {\n    id\n    fk_project_id\n    triggers\n    isActive\n    createdAt\n    version\n    pipeline {\n      __typename\n      ... on AutopilotCondition {\n        id\n        name\n        definition {\n          __typename\n          ... on PredicateNode {\n            domain\n            field\n            operator\n            value\n          }\n          ... on AndNode {\n            children {\n              __typename\n            }\n          }\n          ... on OrNode {\n            children {\n              __typename\n            }\n          }\n          ... on NotNode {\n            child {\n              __typename\n            }\n          }\n        }\n      }\n      ... on AutopilotAction {\n        id\n        type\n        params\n      }\n    }\n  }\n": types.AutopilotCardFragmentFragmentDoc,
     "\n  query GetProjectAutopilots($projectId: ID!, $first: Int) {\n    autopilots(projectId: $projectId, first: $first) {\n      edges {\n        node {\n          id\n          isActive\n          ...AutopilotCardFragment\n        }\n      }\n      totalCount\n    }\n  }\n": types.GetProjectAutopilotsDocument,
     "\n  mutation ToggleAutopilot($id: ID!, $isActive: Boolean!) {\n    toggleAutopilot(id: $id, isActive: $isActive) {\n      id\n      isActive\n      version\n    }\n  }\n": types.ToggleAutopilotDocument,
+    "\n  mutation DeleteAutopilot($id: ID!) {\n    deleteAutopilot(id: $id)\n  }\n": types.DeleteAutopilotDocument,
     "\n  query GetAutopilotMetadata($entityType: String!) {\n    autopilotMetadata(entityType: $entityType) {\n      entities {\n        type\n        fields {\n          name\n          type\n          operators\n        }\n        actions {\n          type\n          parameters\n        }\n      }\n    }\n  }\n": types.GetAutopilotMetadataDocument,
     "\n  mutation CreateAutopilot($input: CreateAutopilotInput!) {\n    createAutopilot(input: $input) {\n      id\n      isActive\n      triggers\n      ...AutopilotCardFragment\n    }\n  }\n": types.CreateAutopilotDocument,
+    "\n  mutation UpdateAutopilot($id: ID!, $input: UpdateAutopilotInput!) {\n    updateAutopilot(id: $id, input: $input) {\n      id\n      isActive\n      triggers\n      ...AutopilotCardFragment\n    }\n  }\n": types.UpdateAutopilotDocument,
 };
 
 /**
@@ -117,11 +121,19 @@ export function graphql(source: "\n  mutation ToggleAutopilot($id: ID!, $isActiv
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
+export function graphql(source: "\n  mutation DeleteAutopilot($id: ID!) {\n    deleteAutopilot(id: $id)\n  }\n"): (typeof documents)["\n  mutation DeleteAutopilot($id: ID!) {\n    deleteAutopilot(id: $id)\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
 export function graphql(source: "\n  query GetAutopilotMetadata($entityType: String!) {\n    autopilotMetadata(entityType: $entityType) {\n      entities {\n        type\n        fields {\n          name\n          type\n          operators\n        }\n        actions {\n          type\n          parameters\n        }\n      }\n    }\n  }\n"): (typeof documents)["\n  query GetAutopilotMetadata($entityType: String!) {\n    autopilotMetadata(entityType: $entityType) {\n      entities {\n        type\n        fields {\n          name\n          type\n          operators\n        }\n        actions {\n          type\n          parameters\n        }\n      }\n    }\n  }\n"];
 /**
  * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
 export function graphql(source: "\n  mutation CreateAutopilot($input: CreateAutopilotInput!) {\n    createAutopilot(input: $input) {\n      id\n      isActive\n      triggers\n      ...AutopilotCardFragment\n    }\n  }\n"): (typeof documents)["\n  mutation CreateAutopilot($input: CreateAutopilotInput!) {\n    createAutopilot(input: $input) {\n      id\n      isActive\n      triggers\n      ...AutopilotCardFragment\n    }\n  }\n"];
+/**
+ * The graphql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function graphql(source: "\n  mutation UpdateAutopilot($id: ID!, $input: UpdateAutopilotInput!) {\n    updateAutopilot(id: $id, input: $input) {\n      id\n      isActive\n      triggers\n      ...AutopilotCardFragment\n    }\n  }\n"): (typeof documents)["\n  mutation UpdateAutopilot($id: ID!, $input: UpdateAutopilotInput!) {\n    updateAutopilot(id: $id, input: $input) {\n      id\n      isActive\n      triggers\n      ...AutopilotCardFragment\n    }\n  }\n"];
 
 export function graphql(source: string) {
   return (documents as any)[source] ?? {};

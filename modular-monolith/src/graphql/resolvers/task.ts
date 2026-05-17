@@ -11,6 +11,7 @@ interface CreateTaskInput {
     title: string;
     description?: string;
     status?: string;
+    priority?: number;
 }
 
 interface UpdateTaskInput {
@@ -335,6 +336,7 @@ export const taskResolvers = {
                 title: input.title,
                 description: input.description,
                 status: input.status,
+                priority: input.priority,
             });
         },
         update: async (

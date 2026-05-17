@@ -7,6 +7,8 @@ interface AutopilotListProps {
   autopilots: (FragmentType<typeof AutopilotCardFragment> & { id: string })[];
   onCardClick?: (autopilot: any) => void;
   onToggle?: (id: string, isActive: boolean) => void;
+  onEdit?: (autopilot: any) => void;
+  onDelete?: (id: string) => void;
 }
 
 // ─── Animation Variants ───────────────────────────────────────────────────────
@@ -40,6 +42,8 @@ export const AutopilotList: React.FC<AutopilotListProps> = ({
   autopilots,
   onCardClick,
   onToggle,
+  onEdit,
+  onDelete,
 }) => {
   return (
     <motion.div
@@ -54,6 +58,8 @@ export const AutopilotList: React.FC<AutopilotListProps> = ({
             autopilot={autopilot}
             onClick={() => onCardClick?.(autopilot)}
             onToggle={onToggle}
+            onEdit={onEdit}
+            onDelete={onDelete}
           />
         </motion.div>
       ))}

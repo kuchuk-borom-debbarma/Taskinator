@@ -6,6 +6,7 @@
  * @mandate PIPE-01, PIPE-02, PIPE-03
  */
 
+import { logger } from '../../../logger/index.js';
 import type { ActionExecutor } from '../action-engine/ActionExecutor.js';
 import type { ActionRepository } from '../action-engine/ActionRepository.js';
 import type { AsyncResolverRegistry } from '../action-engine/AsyncResolverRegistry.js';
@@ -49,6 +50,10 @@ export class PipelineOrchestrator {
         autopilotId: string,
         state: ExecutionState,
     ): Promise<PipelineExecutionResult> {
+        logger.info(
+            `[PipelineOrchestrator] Starting execution of autopilot rule ${autopilotId} for ${state.entityType} ${state.entityId} (depth: ${state.depth}, traceId: ${state.traceId})`,
+        );
+
         // 1. Check loop safety (Task 3)
         this.checkLoopSafety(state);
 
@@ -56,6 +61,9 @@ export class PipelineOrchestrator {
         const autopilot =
             await this.autopilotQueryService.getAutopilotById(autopilotId);
         if (!autopilot) {
+            logger.error(
+                `[PipelineOrchestrator] Autopilot rule ${autopilotId} not found`,
+            );
             return {
                 status: 'ERROR',
                 finalState: state,
@@ -64,11 +72,17 @@ export class PipelineOrchestrator {
         }
 
         const steps = (autopilot.steps as unknown as PipelineStep[]) || [];
+        logger.info(
+            `[PipelineOrchestrator] Loaded ${steps.length} sequential step(s) for autopilot rule ${autopilotId}`,
+        );
 
         // 3. Sequential Execution Loop
         let currentState = { ...state };
 
         while (currentState.stepIndex < steps.length) {
+            logger.info(
+                `[PipelineOrchestrator] Executing step ${currentState.stepIndex + 1}/${steps.length} in autopilot rule ${autopilotId}`,
+            );
             const stepResult = await this.executeStep(
                 autopilotId,
                 currentState,
@@ -76,6 +90,9 @@ export class PipelineOrchestrator {
             );
 
             if (stepResult.status === 'HALTED') {
+                logger.info(
+                    `[PipelineOrchestrator] Autopilot rule ${autopilotId} halted at step ${currentState.stepIndex + 1} (reason: ${stepResult.reason})`,
+                );
                 return {
                     status: 'HALTED',
                     finalState: currentState,
@@ -84,6 +101,9 @@ export class PipelineOrchestrator {
             }
 
             if (stepResult.status === 'ERROR') {
+                logger.error(
+                    `[PipelineOrchestrator] Autopilot rule ${autopilotId} failed at step ${currentState.stepIndex + 1} (error: ${stepResult.reason})`,
+                );
                 return {
                     status: 'ERROR',
                     finalState: currentState,
@@ -98,6 +118,9 @@ export class PipelineOrchestrator {
             };
         }
 
+        logger.info(
+            `[PipelineOrchestrator] Successfully completed all steps for autopilot rule ${autopilotId}`,
+        );
         return {
             status: 'COMPLETED',
             finalState: currentState,
@@ -162,7 +185,10 @@ export class PipelineOrchestrator {
         const autopilot =
             await this.autopilotQueryService.getAutopilotById(autopilotId);
         return autopilot
-            ? (autopilot.steps as unknown as PipelineStep[])
+            ? ((autopilot.steps as unknown as any[]) || []).map((step) => ({
+                  ...step,
+                  refId: step.refId ?? step.hash,
+              }))
             : null;
     }
 
@@ -174,31 +200,49 @@ export class PipelineOrchestrator {
         step: PipelineStep,
         state: ExecutionState,
     ): Promise<StepResult> {
+        logger.info(
+            `[PipelineOrchestrator] [ConditionStep] Fetching condition definition for refId: ${step.refId}`,
+        );
         const ast = await this.conditionRepository.getConditionByHash(
             step.refId,
         );
         if (!ast) {
+            logger.error(
+                `[PipelineOrchestrator] [ConditionStep] Condition definition with refId: ${step.refId} was not found`,
+            );
             return {
                 status: 'ERROR',
                 reason: `Condition ${step.refId} not found`,
             };
         }
 
+        logger.info(
+            `[PipelineOrchestrator] [ConditionStep] Building runtime context for entity ${state.entityType} ${state.entityId}`,
+        );
         const context = await this.contextBuilder.buildContext(
             state.entityType as EntityType,
             state.entityId,
             state.snapshot || {},
         );
 
+        logger.info(
+            `[PipelineOrchestrator] [ConditionStep] Evaluating AST condition for refId: ${step.refId} against context`,
+        );
         const passed = evaluateCondition(ast, context);
 
         if (!passed) {
+            logger.info(
+                `[PipelineOrchestrator] [ConditionStep] Condition evaluation FAILED/HALTED for refId: ${step.refId}`,
+            );
             return {
                 status: 'HALTED',
                 reason: `Condition ${step.refId} failed`,
             };
         }
 
+        logger.info(
+            `[PipelineOrchestrator] [ConditionStep] Condition evaluation PASSED for refId: ${step.refId}`,
+        );
         return { status: 'SUCCESS' };
     }
 
@@ -209,14 +253,23 @@ export class PipelineOrchestrator {
         step: PipelineStep,
         state: ExecutionState,
     ): Promise<StepResult> {
+        logger.info(
+            `[PipelineOrchestrator] [ActionStep] Fetching action definition for refId: ${step.refId}`,
+        );
         const ast = await this.actionRepository.getActionByHash(step.refId);
         if (!ast) {
+            logger.error(
+                `[PipelineOrchestrator] [ActionStep] Action definition with refId: ${step.refId} was not found`,
+            );
             return {
                 status: 'ERROR',
                 reason: `Action ${step.refId} not found`,
             };
         }
 
+        logger.info(
+            `[PipelineOrchestrator] [ActionStep] Preparing ContextualEntity and starting execution of action refId: ${step.refId}`,
+        );
         // We need the triggering entity as a ContextualEntity
         const context = await this.contextBuilder.buildContext(
             state.entityType as EntityType,
@@ -236,6 +289,9 @@ export class PipelineOrchestrator {
             selfEntity,
         );
 
+        logger.info(
+            `[PipelineOrchestrator] [ActionStep] Successfully completed execution of action refId: ${step.refId}. Mutated ${mutatedEntities.length} entities.`,
+        );
         return { status: 'SUCCESS', mutatedEntities };
     }
 

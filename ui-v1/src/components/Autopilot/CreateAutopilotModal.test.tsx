@@ -112,11 +112,12 @@ describe('CreateAutopilotModal', () => {
                 condition: {
                   name: 'Main Filter',
                   definition: {
-                    __typename: 'PredicateNode',
-                    domain: 'task',
-                    field: 'status',
-                    operator: '==',
-                    value: 'TODO',
+                    predicate: {
+                      domain: 'task',
+                      field: 'status',
+                      operator: 'eq',
+                      value: 'TODO',
+                    },
                   }
                 }
               }
@@ -127,4 +128,3 @@ describe('CreateAutopilotModal', () => {
     });
   });
 });
-

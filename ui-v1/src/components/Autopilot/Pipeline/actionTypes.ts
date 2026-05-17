@@ -1,6 +1,6 @@
 // ─── Config field types ───────────────────────────────────────────────────────
 
-export type ActionInputType = 'text' | 'status-select' | 'priority-select' | 'none';
+export type ActionInputType = 'text' | 'target-select' | 'field-select' | 'dynamic-value' | 'none';
 
 export interface ActionConfigField {
   key: string;
@@ -21,54 +21,25 @@ export interface ActionTypeDefinition {
 
 export const ACTION_TYPE_REGISTRY: ActionTypeDefinition[] = [
   {
-    key: 'task.update_status',
-    label: 'Update Status',
-    description: 'Change the task status to a specified value.',
+    key: 'set',
+    label: 'Set Field Value',
+    description: 'Set a specific field on a target entity to a value.',
     icon: 'CheckCircle2',
     configFields: [
-      { key: 'status', label: 'New Status', inputType: 'status-select' },
+      { key: 'target', label: 'Target Entity', inputType: 'target-select' },
+      { key: 'field', label: 'Field Name', inputType: 'field-select' },
+      { key: 'value', label: 'Value', inputType: 'dynamic-value' },
     ],
   },
   {
-    key: 'task.update_priority',
-    label: 'Update Priority',
-    description: 'Change the task priority level.',
-    icon: 'AlertTriangle',
-    configFields: [
-      { key: 'priority', label: 'New Priority', inputType: 'priority-select' },
-    ],
-  },
-  {
-    key: 'task.assign_team',
-    label: 'Assign Team',
-    description: 'Assign the task to a specific team by ID.',
-    icon: 'Users',
-    configFields: [
-      { key: 'teamId', label: 'Team ID', inputType: 'text', placeholder: 'Enter team UUID…' },
-    ],
-  },
-  {
-    key: 'task.assign_member',
-    label: 'Assign Member',
-    description: 'Assign the task to a specific member by ID.',
-    icon: 'UserCheck',
-    configFields: [
-      { key: 'memberId', label: 'Member ID', inputType: 'text', placeholder: 'Enter member UUID…' },
-    ],
-  },
-  {
-    key: 'task.unassign_team',
-    label: 'Unassign Team',
-    description: 'Remove the currently assigned team from the task.',
-    icon: 'UserMinus',
-    configFields: [], // no config required
-  },
-  {
-    key: 'task.unassign_member',
-    label: 'Unassign Member',
-    description: 'Remove the currently assigned member from the task.',
+    key: 'unset',
+    label: 'Clear Field Value',
+    description: 'Remove/clear a field value on a target entity.',
     icon: 'UserX',
-    configFields: [], // no config required
+    configFields: [
+      { key: 'target', label: 'Target Entity', inputType: 'target-select' },
+      { key: 'field', label: 'Field Name', inputType: 'field-select' },
+    ],
   },
 ];
 
@@ -83,9 +54,13 @@ export function getActionDefinition(key: string): ActionTypeDefinition | undefin
 // ─── Config summary ───────────────────────────────────────────────────────────
 
 export function summariseConfig(config: Record<string, any>): string {
-  const entries = Object.entries(config || {}).filter(([, v]) => v !== undefined && v !== null);
-  if (entries.length === 0) return '—';
-  return entries.map(([k, v]) => `${k} = ${String(v)}`).join(', ');
+  const target = config.target || 'self';
+  const field = config.field || '—';
+  const value = config.value !== undefined ? String(config.value) : '';
+  if (value) {
+    return `${target}.${field} = "${value}"`;
+  }
+  return `Clear ${target}.${field}`;
 }
 
 // ─── Normalize Action ─────────────────────────────────────────────────────────
@@ -99,38 +74,57 @@ export function normalizeAction(action: { type: string; params?: any; config?: a
   const type = action.type;
   const params = action.params || action.config || {};
 
-  // If it's already a high-level action type (from frontend draft)
-  if (type.startsWith('task.')) {
-    return { type, config: params };
+  // If it's already generic set/unset
+  if (type === 'set' || type === 'unset') {
+    return {
+      type,
+      config: {
+        target: params.target || 'self',
+        field: params.field || '',
+        value: params.value !== undefined ? params.value : '',
+      }
+    };
   }
 
-  // If it's a backend primitive action ('set' / 'unset')
-  const field = params.field;
-  const value = params.value;
-
-  if (type === 'set') {
-    if (field === 'status') {
-      return { type: 'task.update_status', config: { status: value } };
-    }
-    if (field === 'priority') {
-      return { type: 'task.update_priority', config: { priority: value } };
-    }
-    if (field === 'fk_team_id') {
-      return { type: 'task.assign_team', config: { teamId: value } };
-    }
-    if (field === 'fk_member_id') {
-      return { type: 'task.assign_member', config: { memberId: value } };
-    }
-  } else if (type === 'unset') {
-    if (field === 'fk_team_id') {
-      return { type: 'task.unassign_team', config: {} };
-    }
-    if (field === 'fk_member_id') {
-      return { type: 'task.unassign_member', config: {} };
-    }
+  // Fallback / legacy format normalization
+  // If it's e.g. task.update_status, map it back to set status
+  if (type === 'task.update_status') {
+    return {
+      type: 'set',
+      config: { target: 'self', field: 'status', value: params.status || '' }
+    };
+  }
+  if (type === 'task.update_priority') {
+    return {
+      type: 'set',
+      config: { target: 'self', field: 'priority', value: params.priority || '' }
+    };
+  }
+  if (type === 'task.assign_team') {
+    return {
+      type: 'set',
+      config: { target: 'self', field: 'fk_team_id', value: params.teamId || '' }
+    };
+  }
+  if (type === 'task.assign_member') {
+    return {
+      type: 'set',
+      config: { target: 'self', field: 'fk_member_id', value: params.memberId || '' }
+    };
+  }
+  if (type === 'task.unassign_team') {
+    return {
+      type: 'unset',
+      config: { target: 'self', field: 'fk_team_id', value: '' }
+    };
+  }
+  if (type === 'task.unassign_member') {
+    return {
+      type: 'unset',
+      config: { target: 'self', field: 'fk_member_id', value: '' }
+    };
   }
 
-  // Fallback
   return { type, config: params };
 }
 

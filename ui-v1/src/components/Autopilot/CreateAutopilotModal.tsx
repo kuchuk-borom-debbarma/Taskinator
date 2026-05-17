@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Zap, GitBranch, FileText, ArrowLeft, PlusCircle, AlertTriangle } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { AppModal } from '../shared/workspace';
@@ -8,12 +8,14 @@ import { graphql } from '../../gql';
 import { AutopilotTriggerProvider, useAutopilotTrigger } from './AutopilotTriggerContext';
 import { AutopilotMetadataProvider } from './AutopilotMetadataContext';
 import type { PipelineStep, AutopilotCondition } from '../../gql/graphql';
+import { normalizeAction } from './Pipeline/actionTypes';
 
 interface CreateAutopilotModalProps {
   open: boolean;
   onClose: () => void;
   projectId: string;
   onSave?: () => void;
+  autopilot?: any;
 }
 
 const STEPS = [
@@ -38,17 +40,84 @@ const INITIAL_PIPELINE: PipelineStep[] = [
       __typename: 'PredicateNode',
       domain: 'task',
       field: 'status',
-      operator: '==',
+      operator: 'eq',
       value: 'TODO',
     } as any,
   },
 ];
+
+const OPERATOR_MAP: Record<string, string> = {
+  '==': 'eq',
+  '!=': 'neq',
+  '>': 'gt',
+  '<': 'lt',
+  '>=': 'gte',
+  '<=': 'lte',
+};
+
+function normalizeConditionValue(field: string, value: unknown) {
+  if (field === 'priority' && value !== '' && value !== null && value !== undefined) {
+    const numericValue = Number(value);
+    return Number.isNaN(numericValue) ? value : numericValue;
+  }
+  return value;
+}
+
+function toConditionNodeInput(node: any): any {
+  if (!node) {
+    return {
+      predicate: {
+        domain: 'task',
+        field: 'status',
+        operator: 'eq',
+        value: 'TODO',
+      },
+    };
+  }
+
+  if (node.__typename === 'AndNode' || node.and) {
+    const children = node.children ?? node.and?.children ?? [];
+    return { and: { children: children.map(toConditionNodeInput) } };
+  }
+
+  if (node.__typename === 'OrNode' || node.or) {
+    const children = node.children ?? node.or?.children ?? [];
+    return { or: { children: children.map(toConditionNodeInput) } };
+  }
+
+  if (node.__typename === 'NotNode' || node.not) {
+    const child = node.child ?? node.not?.child;
+    return { not: { child: toConditionNodeInput(child) } };
+  }
+
+  const predicate = node.predicate ?? node;
+  const field = predicate.field ?? 'status';
+  return {
+    predicate: {
+      domain: predicate.domain ?? 'task',
+      field,
+      operator: OPERATOR_MAP[predicate.operator] ?? predicate.operator ?? 'eq',
+      value: normalizeConditionValue(field, predicate.value),
+    },
+  };
+}
 
 // ─── GraphQL Mutation ────────────────────────────────────────────────────────
 
 const CREATE_AUTOPILOT = graphql(`
   mutation CreateAutopilot($input: CreateAutopilotInput!) {
     createAutopilot(input: $input) {
+      id
+      isActive
+      triggers
+      ...AutopilotCardFragment
+    }
+  }
+`);
+
+const UPDATE_AUTOPILOT = graphql(`
+  mutation UpdateAutopilot($id: ID!, $input: UpdateAutopilotInput!) {
+    updateAutopilot(id: $id, input: $input) {
       id
       isActive
       triggers
@@ -73,6 +142,7 @@ const CreateAutopilotModalContent: React.FC<CreateAutopilotModalProps> = ({
   onClose,
   projectId,
   onSave,
+  autopilot,
 }) => {
   const queryClient = useQueryClient();
   const { request } = useGraphQLClient();
@@ -87,6 +157,28 @@ const CreateAutopilotModalContent: React.FC<CreateAutopilotModalProps> = ({
 
   const step = STEPS[currentStepIdx]?.id;
 
+  useEffect(() => {
+    if (open) {
+      if (autopilot) {
+        setTriggers(autopilot.triggers || []);
+        const mappedPipeline = (autopilot.pipeline || []).map((stepItem: any) => {
+          if (stepItem.__typename === 'AutopilotAction') {
+            return {
+              ...stepItem,
+              config: stepItem.config || stepItem.params || {},
+            };
+          }
+          return stepItem;
+        });
+        setPipeline(mappedPipeline);
+      } else {
+        setTriggers([]);
+        setPipeline(INITIAL_PIPELINE);
+      }
+      setError(null);
+      setCurrentStepIdx(0);
+    }
+  }, [open, autopilot]);
 
   const mutation = useMutation({
     mutationFn: (input: any) => request(CREATE_AUTOPILOT, { input }),
@@ -100,8 +192,20 @@ const CreateAutopilotModalContent: React.FC<CreateAutopilotModalProps> = ({
     }
   });
 
+  const updateMutation = useMutation({
+    mutationFn: ({ id, input }: { id: string; input: any }) => request(UPDATE_AUTOPILOT, { id, input }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['project-autopilots', projectId] });
+      handleClose();
+      onSave?.();
+    },
+    onError: (err: any) => {
+      setError(err.message || 'Failed to update autopilot.');
+    }
+  });
+
   const handleClose = () => {
-    if (mutation.isPending) return;
+    if (mutation.isPending || updateMutation.isPending) return;
     setCurrentStepIdx(0);
     setTriggers([]);
     setPipeline(INITIAL_PIPELINE);
@@ -134,11 +238,11 @@ const CreateAutopilotModalContent: React.FC<CreateAutopilotModalProps> = ({
   const handleCreate = async () => {
     const pipelineInput = pipeline.map(item => {
       if (item.__typename === 'AutopilotAction') {
-        const action = item as any;
+        const action = normalizeAction(item as any);
         return {
           action: {
             type: action.type,
-            params: action.params || action.config || {}
+            params: action.config
           }
         };
       } else {
@@ -146,28 +250,37 @@ const CreateAutopilotModalContent: React.FC<CreateAutopilotModalProps> = ({
         return {
           condition: {
             name: condition.name || 'Logic Block',
-            definition: condition.definition
+            definition: toConditionNodeInput(condition.definition)
           }
         };
       }
     });
 
-    mutation.mutate({
-      projectId,
-      triggers,
-      pipeline: pipelineInput
-    });
+    if (autopilot) {
+      updateMutation.mutate({
+        id: autopilot.id,
+        input: {
+          triggers,
+          pipeline: pipelineInput
+        }
+      });
+    } else {
+      mutation.mutate({
+        projectId,
+        triggers,
+        pipeline: pipelineInput
+      });
+    }
   };
 
-
-  const submitting = mutation.isPending;
+  const submitting = mutation.isPending || updateMutation.isPending;
 
   return (
     <AppModal
       open={open}
       onClose={handleClose}
-      title="Build New Autopilot"
-      description="Automate your workflows with triggers, condition logic, and sequential actions."
+      title={autopilot ? "Modify Autopilot" : "Build New Autopilot"}
+      description={autopilot ? "Modify triggers, condition logic, and sequential actions for this rule." : "Automate your workflows with triggers, condition logic, and sequential actions."}
       size="full"
     >
       <div className="flex flex-col h-full flex-1 overflow-hidden">
@@ -362,11 +475,11 @@ const CreateAutopilotModalContent: React.FC<CreateAutopilotModalProps> = ({
             >
 
               {submitting ? (
-                <>Creating rule...</>
+                autopilot ? <>Saving changes...</> : <>Creating rule...</>
               ) : (
                 <>
                   <PlusCircle size={16} />
-                  Activate Autopilot
+                  {autopilot ? 'Save Changes' : 'Activate Autopilot'}
                 </>
               )}
             </button>

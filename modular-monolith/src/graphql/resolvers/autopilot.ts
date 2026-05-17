@@ -1,6 +1,11 @@
 import { sql } from 'kysely';
 import { v4 as uuidv4 } from 'uuid';
 import { db } from '../../database/index.ts';
+import type {
+    ActionOperation,
+    ActionStep,
+    ActionTarget,
+} from '../../modules/autopilot/action-engine/types.ts';
 import {
     type ConditionAST,
     isConditionBranch,
@@ -106,6 +111,76 @@ function mapInputToAST(input: any): ConditionAST {
     throw new Error('Invalid ConditionNodeInput');
 }
 
+function mapInputToASTAction(actionInput: any): ActionStep {
+    const type = actionInput.type;
+    const params = actionInput.params || {};
+    const target = (params.target || 'self') as ActionTarget;
+
+    // If it's already a primitive set/unset (for backwards compatibility/robustness)
+    if (type === 'set' || type === 'unset') {
+        return {
+            target,
+            operation: type as ActionOperation,
+            field: params.field,
+            value: params.value,
+        };
+    }
+
+    switch (type) {
+        case 'task.update_status':
+            return {
+                target,
+                operation: 'set',
+                field: 'status',
+                value: params.status,
+            };
+        case 'task.update_priority':
+            return {
+                target,
+                operation: 'set',
+                field: 'priority',
+                value: params.priority,
+            };
+        case 'task.assign_team':
+            return {
+                target,
+                operation: 'set',
+                field: 'fk_team_id',
+                value: params.teamId,
+            };
+        case 'task.assign_member':
+            return {
+                target,
+                operation: 'set',
+                field: 'fk_member_id',
+                value: params.memberId,
+            };
+        case 'task.unassign_team':
+            return {
+                target,
+                operation: 'unset',
+                field: 'fk_team_id',
+            };
+        case 'task.unassign_member':
+            return {
+                target,
+                operation: 'unset',
+                field: 'fk_member_id',
+            };
+        default:
+            return {
+                target,
+                operation: type as ActionOperation,
+                field: params.field,
+                value: params.value,
+            };
+    }
+}
+
+function getStepRef(step: any): string {
+    return step.refId ?? step.hash;
+}
+
 export const autopilotResolvers = {
     Autopilot: {
         id: (parent: AutopilotWithActions) => parent.id,
@@ -118,28 +193,27 @@ export const autopilotResolvers = {
 
             for (const step of steps) {
                 if (step.type === 'condition') {
-                    const ast = await conditionRepository.getConditionByHash(
-                        step.hash,
-                    );
+                    const refId = getStepRef(step);
+                    const ast =
+                        await conditionRepository.getConditionByHash(refId);
                     if (ast) {
                         result.push({
                             __typename: 'AutopilotCondition',
-                            id: step.hash,
+                            id: refId,
                             name: step.name || 'Condition',
                             definition: resolveConditionNode(ast),
                         });
                     }
                 } else if (step.type === 'action') {
-                    const ast = await actionRepository.getActionByHash(
-                        step.hash,
-                    );
+                    const refId = getStepRef(step);
+                    const ast = await actionRepository.getActionByHash(refId);
                     if (ast) {
                         // ActionAST is ActionStep[]
                         // We map each ActionStep to an AutopilotAction for sequential visibility
                         ast.forEach((actionStep, index) => {
                             result.push({
                                 __typename: 'AutopilotAction',
-                                id: `${step.hash}-${index}`,
+                                id: `${refId}-${index}`,
                                 type: actionStep.operation,
                                 params: {
                                     target: actionStep.target,
@@ -266,26 +340,17 @@ export const autopilotResolvers = {
                         );
                         steps.push({
                             type: 'condition',
-                            hash,
+                            refId: hash,
                             name: stepInput.condition.name,
                         });
                     } else if (stepInput.action) {
                         const hash = await actionRepository.saveAction(
                             'Action',
-                            [
-                                {
-                                    target:
-                                        stepInput.action.params.target ||
-                                        'self',
-                                    field: stepInput.action.params.field,
-                                    operation: stepInput.action.type,
-                                    value: stepInput.action.params.value,
-                                },
-                            ],
+                            [mapInputToASTAction(stepInput.action)],
                             input.projectId,
                             context.userId,
                         );
-                        steps.push({ type: 'action', hash });
+                        steps.push({ type: 'action', refId: hash });
                     }
                 }
 
@@ -343,26 +408,17 @@ export const autopilotResolvers = {
                         );
                         steps.push({
                             type: 'condition',
-                            hash,
+                            refId: hash,
                             name: stepInput.condition.name,
                         });
                     } else if (stepInput.action) {
                         const hash = await actionRepository.saveAction(
                             'Action',
-                            [
-                                {
-                                    target:
-                                        stepInput.action.params.target ||
-                                        'self',
-                                    field: stepInput.action.params.field,
-                                    operation: stepInput.action.type,
-                                    value: stepInput.action.params.value,
-                                },
-                            ],
+                            [mapInputToASTAction(stepInput.action)],
                             existing.fk_project_id,
                             context.userId,
                         );
-                        steps.push({ type: 'action', hash });
+                        steps.push({ type: 'action', refId: hash });
                     }
                 }
             }

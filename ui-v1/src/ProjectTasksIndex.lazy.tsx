@@ -35,7 +35,7 @@ export default function ProjectTasksIndex() {
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState<'TODO' | 'IN_PROGRESS' | 'DONE'>('TODO');
-  const [priority, setPriority] = useState(3);
+  const [priority, setPriority] = useState(2);
 
   const { data, isLoading } = useQuery({
     queryKey: ['tasks', projectId, cursor, direction],
@@ -65,11 +65,16 @@ export default function ProjectTasksIndex() {
       queryClient.invalidateQueries({ queryKey: ['tasks', projectId] });
       queryClient.invalidateQueries({ queryKey: ['project-dashboard', projectId] });
       queryClient.setQueryData(['task', task.id], task);
+      window.setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['task-detail', task.id] });
+        queryClient.invalidateQueries({ queryKey: ['tasks', projectId] });
+        queryClient.invalidateQueries({ queryKey: ['project-dashboard', projectId] });
+      }, 750);
       setShowCreate(false);
       setTitle('');
       setDescription('');
       setStatus('TODO');
-      setPriority(3);
+      setPriority(2);
       navigate({ to: '/projects/$projectId/tasks/$taskId', params: { projectId: projectId!, taskId: task.id } });
     },
   });
@@ -253,10 +258,10 @@ export default function ProjectTasksIndex() {
                 onChange={(event) => setPriority(Number(event.target.value))}
                 className="w-full rounded-2xl border border-app-line bg-white/85 px-4 py-3 text-sm text-app-ink outline-none transition focus:border-app-accent focus:ring-4 focus:ring-app-accent/10"
               >
-                <option value={1}>Urgent</option>
-                <option value={2}>High</option>
-                <option value={3}>Medium</option>
-                <option value={0}>Low</option>
+                <option value={0}>Urgent</option>
+                <option value={1}>High</option>
+                <option value={2}>Medium</option>
+                <option value={3}>Low</option>
               </select>
             </label>
           </div>
@@ -314,4 +319,3 @@ function TaskRow({ task, projectId }: { task: ProjectTask; projectId: string }) 
     </Link>
   );
 }
-

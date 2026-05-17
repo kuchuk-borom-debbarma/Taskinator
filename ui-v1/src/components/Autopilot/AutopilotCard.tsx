@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ToggleLeft, ToggleRight, Zap, ListChecks, ChevronDown, GitBranch } from 'lucide-react';
+import { ToggleLeft, ToggleRight, Zap, ListChecks, ChevronDown, GitBranch, Edit2, Trash2 } from 'lucide-react';
 import { graphql, useFragment } from '../../gql';
 import type { FragmentType } from '../../gql';
 import { ConditionBuilderCanvas } from './Builder/ConditionBuilderCanvas';
@@ -57,6 +57,8 @@ interface AutopilotCardProps {
   autopilot: FragmentType<typeof AutopilotCardFragment>;
   onClick?: () => void;
   onToggle?: (id: string, isActive: boolean) => void;
+  onEdit?: (autopilot: any) => void;
+  onDelete?: (id: string) => void;
 }
 
 /**
@@ -84,7 +86,7 @@ function extractConditionSummary(node: any): string {
   return 'Condition';
 }
 
-export const AutopilotCard: React.FC<AutopilotCardProps> = ({ autopilot: fragmentProp, onClick, onToggle }) => {
+export const AutopilotCard: React.FC<AutopilotCardProps> = ({ autopilot: fragmentProp, onClick, onToggle, onEdit, onDelete }) => {
   const autopilot = useFragment(AutopilotCardFragment, fragmentProp);
   const [expanded, setExpanded] = useState(false);
   const [pipelineExpanded, setPipelineExpanded] = useState(false);
@@ -142,22 +144,52 @@ export const AutopilotCard: React.FC<AutopilotCardProps> = ({ autopilot: fragmen
           </span>
         </div>
 
-        {/* Active toggle (interactive) */}
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggle?.(autopilot.id, !isActive);
-          }}
-          className="shrink-0 text-app-muted transition hover:text-app-ink focus:outline-none"
-          title={isActive ? 'Deactivate rule' : 'Activate rule'}
-        >
-          {isActive ? (
-            <ToggleRight size={22} className="text-app-success transition-colors" />
-          ) : (
-            <ToggleLeft size={22} className="transition-colors" />
-          )}
-        </button>
+        <div className="flex items-center gap-1.5">
+          {/* Edit Button */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit?.(autopilot);
+            }}
+            className="rounded-full p-1.5 text-app-muted transition hover:bg-app-line/60 hover:text-app-ink focus:outline-none"
+            title="Edit autopilot rule"
+          >
+            <Edit2 size={14} />
+          </button>
+
+          {/* Delete Button */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (confirm('Are you sure you want to delete this Autopilot rule? This cannot be undone.')) {
+                onDelete?.(autopilot.id);
+              }
+            }}
+            className="rounded-full p-1.5 text-app-muted transition hover:bg-app-danger/10 hover:text-app-danger focus:outline-none"
+            title="Delete autopilot rule"
+          >
+            <Trash2 size={14} />
+          </button>
+
+          {/* Active toggle (interactive) */}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggle?.(autopilot.id, !isActive);
+            }}
+            className="shrink-0 text-app-muted transition hover:text-app-ink focus:outline-none"
+            title={isActive ? 'Deactivate rule' : 'Activate rule'}
+          >
+            {isActive ? (
+              <ToggleRight size={22} className="text-app-success transition-colors" />
+            ) : (
+              <ToggleLeft size={22} className="transition-colors" />
+            )}
+          </button>
+        </div>
       </div>
 
       {/* Trigger badges */}

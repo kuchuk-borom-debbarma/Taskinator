@@ -16,6 +16,7 @@ describe('Autopilot Table Integration', () => {
             fk_project_id: projectId,
             name: 'Test Autopilot',
             description: 'Integration test autopilot',
+            triggers: JSON.stringify([]),
             steps: JSON.stringify([
                 { type: 'condition', id: 'hash1' },
                 { type: 'action', id: 'hash2' },

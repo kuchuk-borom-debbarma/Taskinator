@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Play, Plus, Hexagon } from 'lucide-react';
 import { Reorder } from 'framer-motion';
 import type { PipelineStep, AutopilotAction, AutopilotCondition } from '../../../gql/graphql';
@@ -31,6 +31,12 @@ export const PipelineEditor: React.FC<PipelineEditorProps> = ({
   const normalizedEditAction = editAction ? normalizeAction(editAction) : null;
   const editDefinition = normalizedEditAction ? getActionDefinition(normalizedEditAction.type) : null;
   const editCondition = editConditionIndex !== null ? (draft[editConditionIndex] as AutopilotCondition) : null;
+
+  useEffect(() => {
+    setDraft(pipeline);
+    setEditActionIndex(null);
+    setEditConditionIndex(null);
+  }, [pipeline]);
 
   const notify = (updated: PipelineStep[]) => {
     // Re-calculate positions for actions after any change (add/remove/reorder)

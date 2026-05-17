@@ -38,6 +38,12 @@ const TOGGLE_AUTOPILOT = graphql(`
   }
 `);
 
+const DELETE_AUTOPILOT = graphql(`
+  mutation DeleteAutopilot($id: ID!) {
+    deleteAutopilot(id: $id)
+  }
+`);
+
 // ─── Skeleton Loader ──────────────────────────────────────────────────────────
 
 const AutopilotCardSkeleton: React.FC = () => (
@@ -87,6 +93,7 @@ export const AutopilotDashboardView: React.FC = () => {
   const queryClient = useQueryClient();
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [editingAutopilot, setEditingAutopilot] = useState<any>(null);
 
   const queryKey = ['project-autopilots', projectId];
 
@@ -135,13 +142,43 @@ export const AutopilotDashboardView: React.FC = () => {
     },
   });
 
+  // 3. Mutation: Delete Autopilot (Optimistic Updates)
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => request(DELETE_AUTOPILOT, { id }),
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey });
+      const previousData = queryClient.getQueryData<any>(queryKey);
+
+      queryClient.setQueryData<any>(queryKey, (old: any) => {
+        if (!old) return old;
+        return {
+          ...old,
+          autopilots: {
+            ...old.autopilots,
+            edges: old.autopilots.edges.filter((e: any) => e.node.id !== id),
+            totalCount: Math.max(0, old.autopilots.totalCount - 1),
+          }
+        };
+      });
+
+      return { previousData };
+    },
+    onError: (err, _vars, context) => {
+      if (context?.previousData) {
+        queryClient.setQueryData(queryKey, context.previousData);
+      }
+      console.error('Autopilot deletion failed:', err);
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey });
+    },
+  });
+
   const handleToggleActive = (id: string, isActive: boolean) => {
     toggleMutation.mutate({ id, isActive });
   };
 
   const handleSaveAutopilot = async () => {
-    // This will be handled inside CreateAutopilotModal for now, 
-    // or we pass the mutation down.
     queryClient.invalidateQueries({ queryKey });
   };
 
@@ -152,9 +189,13 @@ export const AutopilotDashboardView: React.FC = () => {
           {/* ── Create Autopilot Wizard Modal ── */}
           <CreateAutopilotModal
             open={isCreateOpen}
-            onClose={() => setIsCreateOpen(false)}
+            onClose={() => {
+              setIsCreateOpen(false);
+              setEditingAutopilot(null);
+            }}
             projectId={projectId}
             onSave={handleSaveAutopilot}
+            autopilot={editingAutopilot}
           />
 
           {/* ── Header ── */}
@@ -227,6 +268,11 @@ export const AutopilotDashboardView: React.FC = () => {
               <AutopilotList
                 autopilots={autopilots}
                 onToggle={handleToggleActive}
+                onEdit={(ap) => {
+                  setEditingAutopilot(ap);
+                  setIsCreateOpen(true);
+                }}
+                onDelete={(id) => deleteMutation.mutate(id)}
               />
             )}
           </div>

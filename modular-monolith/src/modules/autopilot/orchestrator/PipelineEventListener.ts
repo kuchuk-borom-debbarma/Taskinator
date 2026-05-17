@@ -58,6 +58,7 @@ export class PipelineEventListener {
             );
 
             for (const event of unprocessed) {
+                const payload = event.data?.data ?? event.data;
                 const {
                     autopilotId,
                     entityType,
@@ -65,7 +66,7 @@ export class PipelineEventListener {
                     snapshot,
                     isRecursiveTrigger,
                     depth: parentDepth,
-                } = event.data;
+                } = payload;
 
                 // Task 3: Increment depth only on recursive triggers
                 let depth = parentDepth || 0;
@@ -103,7 +104,8 @@ export class PipelineEventListener {
             );
 
             for (const event of unprocessed) {
-                const { autopilotId, state } = event.data;
+                const payload = event.data?.data ?? event.data;
+                const { autopilotId, state } = payload;
                 await this.processStep(autopilotId, state, trx);
             }
         });
@@ -158,6 +160,7 @@ export class PipelineEventListener {
                         },
                     ]);
                 } else {
+                    await this.aggregator.flushAll();
                     logger.info(
                         `[PipelineEventListener] Pipeline completed for autopilot ${autopilotId} (traceId: ${state.traceId})`,
                     );
