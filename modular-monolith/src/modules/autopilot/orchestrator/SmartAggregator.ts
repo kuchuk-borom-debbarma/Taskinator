@@ -11,6 +11,59 @@ import { sql } from 'kysely';
 import { db } from '../../../database/index.js';
 import { logger } from '../../../logger/index.js';
 
+interface EntityConfig {
+    topic: string;
+    eventType: string;
+    selectFields: string[];
+    keyField: string;
+    idField: string;
+    payloadFields: Record<string, string>;
+}
+
+const ENTITY_CONFIGS: Record<string, EntityConfig> = {
+    project_task: {
+        topic: 'task-events',
+        eventType: 'task.updated',
+        selectFields: [
+            'id',
+            'fk_project_id',
+            'fk_team_id',
+            'fk_member_id',
+            'title',
+            'status',
+        ],
+        keyField: 'fk_project_id',
+        idField: 'taskId',
+        payloadFields: {
+            teamId: 'fk_team_id',
+            memberId: 'fk_member_id',
+            title: 'title',
+            status: 'status',
+        },
+    },
+    project_team: {
+        topic: 'team-events',
+        eventType: 'team.updated',
+        selectFields: ['id', 'fk_project_id', 'name'],
+        keyField: 'fk_project_id',
+        idField: 'teamId',
+        payloadFields: {
+            name: 'name',
+        },
+    },
+    project: {
+        topic: 'project-events',
+        eventType: 'project.updated',
+        selectFields: ['id', 'name', 'description'],
+        keyField: 'id',
+        idField: 'projectId',
+        payloadFields: {
+            name: 'name',
+            description: 'description',
+        },
+    },
+};
+
 /**
  * Represents a set of changes for a specific entity.
  */
@@ -74,6 +127,27 @@ export class SmartAggregator {
         traceId: string,
         depth: number = 0,
     ): void {
+        if (!traceId) {
+            logger.error(
+                `[SmartAggregator] Pushing to buffer failed: Missing traceId for ${entityType}:${entityId}`,
+            );
+            throw new Error(
+                `Missing traceId for entity mutation (${entityType}:${entityId})`,
+            );
+        }
+        if (
+            depth === undefined ||
+            depth === null ||
+            typeof depth !== 'number'
+        ) {
+            logger.error(
+                `[SmartAggregator] Pushing to buffer failed: Missing or invalid depth for ${entityType}:${entityId}`,
+            );
+            throw new Error(
+                `Missing or invalid depth header for entity mutation (${entityType}:${entityId})`,
+            );
+        }
+
         // Initialize buffer for the entity type if it doesn't exist
         if (!this.buffer.has(entityType)) {
             this.buffer.set(entityType, new Map());
@@ -91,8 +165,8 @@ export class SmartAggregator {
             typeBuffer.set(entityId, {
                 ...existing,
                 changes: { ...existing.changes, ...changes },
-                traceId,
-                depth,
+                traceId: existing.traceId,
+                depth: existing.depth,
             });
         } else {
             logger.debug(
@@ -188,8 +262,8 @@ export class SmartAggregator {
                     currentBuffer.set(item.entityId, {
                         ...item,
                         changes: { ...item.changes, ...existing.changes },
-                        traceId: existing.traceId,
-                        depth: existing.depth,
+                        traceId: item.traceId,
+                        depth: item.depth,
                     });
                 }
             }
@@ -247,8 +321,9 @@ export class SmartAggregator {
             setClauses.push(sql`${sql.ref(field)} = ${caseSql}`);
         }
 
-        // 3. Execute the single bulk UPDATE query
-        if (entityType === 'project_task') {
+        // 3. Execute the single bulk UPDATE query or transactional outbox CTE
+        const config = ENTITY_CONFIGS[entityType];
+        if (config) {
             // Construct the CASE statements for traceId and depth maps to pass them into outbox CTE
             let traceIdCase = sql`CASE id`;
             let depthCase = sql`CASE id`;
@@ -259,51 +334,66 @@ export class SmartAggregator {
             traceIdCase = sql`${traceIdCase} END`;
             depthCase = sql`${depthCase} END`;
 
-            // We use sql.table and sql.ref for identifier safety.
+            const oldPairs: any[] = [];
+            const newPairs: any[] = [];
+            for (const [jsonKey, dbCol] of Object.entries(
+                config.payloadFields,
+            )) {
+                oldPairs.push(sql.raw(`'${jsonKey}'`));
+                oldPairs.push(sql`o.${sql.ref(dbCol)}`);
+                newPairs.push(sql.raw(`'${jsonKey}'`));
+                newPairs.push(sql`u.${sql.ref(dbCol)}`);
+            }
+            const oldBuild = sql`jsonb_build_object(${sql.join(oldPairs, sql`, `)})`;
+            const newBuild = sql`jsonb_build_object(${sql.join(newPairs, sql`, `)})`;
+
+            const payloadPairs: any[] = [
+                sql.raw(`'type'`),
+                sql.raw(`'${config.eventType}'`),
+                sql.raw(`'${config.idField}'`),
+                sql`u.id`,
+            ];
+            if (config.keyField === 'fk_project_id') {
+                payloadPairs.push(sql.raw(`'projectId'`));
+                payloadPairs.push(sql`u.fk_project_id`);
+            }
+            payloadPairs.push(sql.raw(`'old'`), oldBuild);
+            payloadPairs.push(sql.raw(`'new'`), newBuild);
+            payloadPairs.push(
+                sql.raw(`'actorId'`),
+                sql.raw(`'system:autopilot'`),
+            );
+            payloadPairs.push(sql.raw(`'traceId'`), traceIdCase);
+            payloadPairs.push(sql.raw(`'depth'`), depthCase);
+
+            const selectCols = sql.join(
+                config.selectFields.map((f) => sql.ref(f)),
+                sql`, `,
+            );
+            const idsList = sql.join(
+                ids.map((id) => sql`${id}::uuid`),
+                sql`, `,
+            );
+
             await sql`
                 WITH old_state AS (
-                    SELECT id, fk_team_id, fk_member_id, title, status 
-                    FROM project_task 
-                    WHERE id IN (${sql.join(
-                        ids.map((id) => sql`${id}::uuid`),
-                        sql`, `,
-                    )})
+                    SELECT ${selectCols} 
+                    FROM ${sql.table(entityType)} 
+                    WHERE id IN (${idsList})
                 ),
-                updated_task AS (
-                    UPDATE project_task
+                updated_entity AS (
+                    UPDATE ${sql.table(entityType)}
                     SET ${sql.join(setClauses, sql`, `)}
-                    WHERE id IN (${sql.join(
-                        ids.map((id) => sql`${id}::uuid`),
-                        sql`, `,
-                    )})
-                    RETURNING id, fk_project_id, fk_team_id, fk_member_id, title, status
+                    WHERE id IN (${idsList})
+                    RETURNING ${selectCols}
                 ),
                 inserted_outbox AS (
                     INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
                     SELECT 
-                        'task-events',
-                        u.fk_project_id::text,
-                        jsonb_build_object(
-                            'type', 'task.updated',
-                            'taskId', u.id,
-                            'projectId', u.fk_project_id,
-                            'old', jsonb_build_object(
-                                'teamId', o.fk_team_id,
-                                'memberId', o.fk_member_id,
-                                'title', o.title,
-                                'status', o.status
-                            ),
-                            'new', jsonb_build_object(
-                                'teamId', u.fk_team_id,
-                                'memberId', u.fk_member_id,
-                                'title', u.title,
-                                'status', u.status
-                            ),
-                            'actorId', 'system:autopilot',
-                            'traceId', ${traceIdCase},
-                            'depth', ${depthCase}
-                        )
-                    FROM updated_task u
+                        ${sql.raw(`'${config.topic}'`)},
+                        u.${sql.ref(config.keyField)}::text,
+                        jsonb_build_object(${sql.join(payloadPairs, sql`, `)})
+                    FROM updated_entity u
                     JOIN old_state o ON u.id = o.id
                 )
                 SELECT 1

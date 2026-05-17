@@ -53,7 +53,8 @@ describe('SmartAggregator', () => {
         const executedQuery = (executeSpy as any).mock.calls[0][0];
         const sqlString = executedQuery.sql;
 
-        expect(sqlString).toContain('UPDATE project_task');
+        expect(sqlString).toContain('UPDATE');
+        expect(sqlString).toContain('"project_task"');
         expect(sqlString).toContain('INSERT INTO outbox_events');
         expect(sqlString).toContain('CASE id');
         expect(sqlString).toContain('ELSE "status" END');
@@ -115,5 +116,99 @@ describe('SmartAggregator', () => {
 
         // Two separate updates for two different tables
         expect(executeSpy).toHaveBeenCalledTimes(2);
+    });
+
+    it('should throw error if traceId is missing in push', () => {
+        expect(() => {
+            aggregator.push('project_task', 'task-1', { status: 'DONE' }, '');
+        }).toThrow('Missing traceId for entity mutation');
+    });
+
+    it('should throw error if depth is missing or invalid in push', () => {
+        expect(() => {
+            aggregator.push(
+                'project_task',
+                'task-1',
+                { status: 'DONE' },
+                'trace-1',
+                null as any,
+            );
+        }).toThrow('Missing or invalid depth header for entity mutation');
+    });
+
+    it('should keep the oldest traceId and depth during failed buffer recovery merge', async () => {
+        // Mock executeBulkUpdate to throw an error
+        const originalExecuteBulkUpdate = (aggregator as any).executeBulkUpdate;
+        (aggregator as any).executeBulkUpdate = mock(async () => {
+            throw new Error('Database error');
+        });
+
+        aggregator.push(
+            'project_task',
+            'task-1',
+            { status: 'DONE' },
+            'trace-1',
+            5,
+        );
+
+        // Trigger flush (which will fail and restore buffer)
+        try {
+            await (aggregator as any).flush('project_task');
+        } catch (e) {
+            // ignore
+        }
+
+        // Now push a new change to the same entity with a new traceId/depth
+        aggregator.push(
+            'project_task',
+            'task-1',
+            { priority: 2 },
+            'trace-2',
+            10,
+        );
+
+        // Verify that the buffered item has the oldest traceId/depth (trace-1 and 5)
+        const bufferedItem = (aggregator as any).buffer
+            .get('project_task')
+            ?.get('task-1');
+        expect(bufferedItem).toBeDefined();
+        expect(bufferedItem?.traceId).toBe('trace-1');
+        expect(bufferedItem?.depth).toBe(5);
+        expect(bufferedItem?.changes).toEqual({ status: 'DONE', priority: 2 });
+    });
+
+    it('should compile CTE queries for project_team and project correctly', async () => {
+        // Push project_team changes
+        aggregator.push(
+            'project_team',
+            'team-1',
+            { name: 'Engineering Team' },
+            'trace-1',
+            2,
+        );
+        await sleep(250);
+
+        const teamQuery = (executeSpy as any).mock.calls[0][0].sql;
+        expect(teamQuery).toContain('UPDATE "project_team"');
+        expect(teamQuery).toContain('team-events');
+        expect(teamQuery).toContain('team.updated');
+        expect(teamQuery).toContain('teamId');
+
+        // Push project changes
+        executeSpy.mockClear();
+        aggregator.push(
+            'project',
+            'project-1',
+            { name: 'Main Project' },
+            'trace-2',
+            3,
+        );
+        await sleep(250);
+
+        const projectQuery = (executeSpy as any).mock.calls[0][0].sql;
+        expect(projectQuery).toContain('UPDATE "project"');
+        expect(projectQuery).toContain('project-events');
+        expect(projectQuery).toContain('project.updated');
+        expect(projectQuery).toContain('projectId');
     });
 });
