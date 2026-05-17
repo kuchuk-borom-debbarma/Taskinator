@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { GripVertical } from 'lucide-react';
 import type { AutopilotAction } from '../../../api/interfaces/AutopilotAPI';
 import { getActionDefinition, summariseConfig } from './actionTypes';

@@ -49,7 +49,7 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
   const [activeInlineField, setActiveInlineField] = useState<string | null>(null);
   const [isDebouncing, setIsDebouncing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  const inlineUpdateTimeout = useRef<NodeJS.Timeout | null>(null);
+  const inlineUpdateTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [incomingCursor, setIncomingCursor] = useState<string | undefined>();
   const [incomingDir, setIncomingDir] = useState<'forward' | 'backward'>('forward');
@@ -1010,8 +1010,14 @@ function DependencyCard({
       </div>
       {(pageData.hasNextPage || pageData.hasPreviousPage) && (
         <div className="mt-6 flex items-center justify-center gap-2 border-t border-app-line/60 pt-4">
-          <PagingButton onClick={onPrev} disabled={!pageData.hasPreviousPage} icon={ArrowLeft} />
-          <PagingButton onClick={onNext} disabled={!pageData.hasNextPage} icon={ArrowRight} />
+          <PagingButton onClick={onPrev} disabled={!pageData.hasPreviousPage}>
+            <ArrowLeft size={14} />
+            Prev
+          </PagingButton>
+          <PagingButton onClick={onNext} disabled={!pageData.hasNextPage}>
+            Next
+            <ArrowRight size={14} />
+          </PagingButton>
         </div>
       )}
     </SurfaceCard>

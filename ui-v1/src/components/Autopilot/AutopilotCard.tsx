@@ -1,12 +1,60 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ToggleLeft, ToggleRight, Zap, ListChecks, ChevronDown, GitBranch } from 'lucide-react';
-import type { AutopilotItem, AutopilotConditionNode } from '../../api/interfaces/AutopilotAPI';
+import { graphql, useFragment } from '../../gql';
+import type { FragmentType } from '../../gql';
 import { ConditionBuilderCanvas } from './Builder/ConditionBuilderCanvas';
-import { ActionPipelineEditor } from './Pipeline/ActionPipelineEditor';
+import { PipelineEditor } from './Pipeline/PipelineEditor';
+
+export const AutopilotCardFragment = graphql(`
+  fragment AutopilotCardFragment on Autopilot {
+    id
+    fk_project_id
+    triggers
+    isActive
+    createdAt
+    version
+    pipeline {
+      __typename
+      ... on AutopilotCondition {
+        id
+        name
+        definition {
+          __typename
+          ... on PredicateNode {
+            domain
+            field
+            operator
+            value
+          }
+          ... on AndNode {
+            children {
+              __typename
+            }
+          }
+          ... on OrNode {
+            children {
+              __typename
+            }
+          }
+          ... on NotNode {
+            child {
+              __typename
+            }
+          }
+        }
+      }
+      ... on AutopilotAction {
+        id
+        type
+        params
+      }
+    }
+  }
+`);
 
 interface AutopilotCardProps {
-  autopilot: AutopilotItem;
+  autopilot: FragmentType<typeof AutopilotCardFragment>;
   onClick?: () => void;
   onToggle?: (id: string, isActive: boolean) => void;
 }
@@ -14,30 +62,52 @@ interface AutopilotCardProps {
 /**
  * Extracts a human-readable summary from the first predicate leaf in the condition tree.
  */
-function extractConditionSummary(node: AutopilotConditionNode | null | undefined): string {
+function extractConditionSummary(node: any): string {
   if (!node) return '—';
 
-  if (node.type === 'predicate') {
+  if (node.__typename === 'PredicateNode') {
     const field = node.field ?? 'field';
     const op = node.operator ?? '==';
     const val = String(node.value ?? '…');
     return `${field} ${op} ${val}`;
   }
 
-  if (node.children && node.children.length > 0) {
-    return extractConditionSummary(node.children[0]);
-  }
-  if (node.child) {
-    return extractConditionSummary(node.child);
+  // Handle nested nodes if needed, but for summary we usually just look at top level or first child
+  if (node.__typename === 'AndNode' || node.__typename === 'OrNode') {
+    return node.__typename === 'AndNode' ? 'ALL OF...' : 'ANY OF...';
   }
 
-  return node.type.toUpperCase();
+  if (node.__typename === 'NotNode') {
+    return 'NOT...';
+  }
+
+  return 'Condition';
 }
 
-export const AutopilotCard: React.FC<AutopilotCardProps> = ({ autopilot, onClick, onToggle }) => {
+export const AutopilotCard: React.FC<AutopilotCardProps> = ({ autopilot: fragmentProp, onClick, onToggle }) => {
+  const autopilot = useFragment(AutopilotCardFragment, fragmentProp);
   const [expanded, setExpanded] = useState(false);
   const [pipelineExpanded, setPipelineExpanded] = useState(false);
-  const conditionSummary = extractConditionSummary(autopilot.conditions);
+
+  // Extract first condition and actions from pipeline
+  const conditions = autopilot.pipeline
+    .filter((step): step is any => step.__typename === 'AutopilotCondition')
+    .map(step => step);
+  
+  const actions = autopilot.pipeline
+    .filter((step): step is any => step.__typename === 'AutopilotAction')
+    .map(step => ({
+      id: step.id,
+      type: step.type,
+      config: step.params,
+      position: 0 // Will be handled by index in editor
+    }));
+
+  const firstCondition = conditions[0];
+  const conditionSummary = firstCondition 
+    ? extractConditionSummary(firstCondition.definition) 
+    : 'No conditions';
+    
   const isActive = autopilot.isActive;
 
   const handleExpandToggle = (e: React.MouseEvent) => {
@@ -114,25 +184,27 @@ export const AutopilotCard: React.FC<AutopilotCardProps> = ({ autopilot, onClick
       <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-app-muted">
         <span className="inline-flex items-center gap-1.5">
           <ListChecks size={13} />
-          {autopilot.actions.length} action{autopilot.actions.length !== 1 ? 's' : ''}
+          {actions.length} action{actions.length !== 1 ? 's' : ''}
         </span>
 
         <div className="flex items-center gap-2">
           {/* View Conditions toggle */}
-          <button
-            onClick={handleExpandToggle}
-            className="inline-flex items-center gap-1 rounded-full border border-app-line bg-white/60 px-2.5 py-1 text-[11px] font-semibold text-app-muted transition hover:bg-white hover:text-app-ink"
-          >
-            <GitBranch size={11} />
-            {expanded ? 'Hide' : 'Conditions'}
-            <motion.span
-              animate={{ rotate: expanded ? 180 : 0 }}
-              transition={{ duration: 0.2 }}
-              className="inline-flex"
+          {conditions.length > 0 && (
+            <button
+              onClick={handleExpandToggle}
+              className="inline-flex items-center gap-1 rounded-full border border-app-line bg-white/60 px-2.5 py-1 text-[11px] font-semibold text-app-muted transition hover:bg-white hover:text-app-ink"
             >
-              <ChevronDown size={12} />
-            </motion.span>
-          </button>
+              <GitBranch size={11} />
+              {expanded ? 'Hide' : 'Conditions'}
+              <motion.span
+                animate={{ rotate: expanded ? 180 : 0 }}
+                transition={{ duration: 0.2 }}
+                className="inline-flex"
+              >
+                <ChevronDown size={12} />
+              </motion.span>
+            </button>
+          )}
 
           {/* View Pipeline toggle */}
           <button
@@ -162,7 +234,7 @@ export const AutopilotCard: React.FC<AutopilotCardProps> = ({ autopilot, onClick
 
       {/* Expanded: Condition Builder Canvas (read-only) */}
       <AnimatePresence>
-        {expanded && (
+        {expanded && firstCondition && (
           <motion.div
             key="canvas"
             initial={{ opacity: 0, height: 0 }}
@@ -174,7 +246,7 @@ export const AutopilotCard: React.FC<AutopilotCardProps> = ({ autopilot, onClick
           >
             <div className="relative h-[320px] w-full mt-2">
               <ConditionBuilderCanvas
-                initialCondition={autopilot.conditions}
+                initialCondition={firstCondition.definition as any}
                 readOnly
               />
             </div>
@@ -195,8 +267,8 @@ export const AutopilotCard: React.FC<AutopilotCardProps> = ({ autopilot, onClick
             onClick={(e) => e.stopPropagation()}
           >
             <div className="pt-1">
-              <ActionPipelineEditor
-                actions={autopilot.actions}
+              <PipelineEditor
+                pipeline={actions as any}
                 readOnly
               />
             </div>
@@ -206,3 +278,4 @@ export const AutopilotCard: React.FC<AutopilotCardProps> = ({ autopilot, onClick
     </motion.div>
   );
 };
+

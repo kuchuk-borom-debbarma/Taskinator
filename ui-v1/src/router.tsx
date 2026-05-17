@@ -12,7 +12,7 @@ import { AuthScreen } from './components/Auth/AuthScreen';
 import { NotFoundComponent, GlobalErrorComponent } from './components/Layout/RouterFeedback';
 import { RootComponent } from './components/Layout/RootComponent';
 import { ProjectDashboard } from './components/Dashboard/ProjectDashboard';
-import { LayoutProvider, useLayout } from './context/LayoutContext';
+import { LayoutProvider } from './context/LayoutContext';
 import { CreateProjectModal } from './components/Project/CreateProjectModal';
 
 interface MyRouterContext {

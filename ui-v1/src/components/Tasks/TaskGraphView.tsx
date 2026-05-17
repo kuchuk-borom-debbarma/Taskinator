@@ -1,10 +1,9 @@
 import { useMemo } from 'react';
-import { Link, useParams, useSearch } from '@tanstack/react-router';
 import { useInfiniteQuery } from '@tanstack/react-query';
-import { ArrowLeft, Loader2, Network } from 'lucide-react';
+import { Loader2, Network } from 'lucide-react';
 import { useApi } from '../../hooks/useApi';
 import type { GraphEdge, GraphNode, ProjectTask, TaskNeighbourhood } from '../../api/types';
-import { EmptyState, PriorityBadge, StatusBadge, SurfaceCardStrong } from '../shared/workspace';
+import { EmptyState } from '../shared/workspace';
 import { TaskMap } from '../Graph/TaskMap';
 
 interface TaskGraphViewProps {

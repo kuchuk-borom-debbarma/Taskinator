@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
 import { ArrowLeft, ArrowRight, FolderPlus, FolderSearch, Loader2 } from 'lucide-react';
@@ -38,13 +37,13 @@ export function ProjectDashboard() {
 
   const handleNext = () => {
     if (pageInfo?.hasNextPage) {
-      navigate({ search: { cursor: pageInfo.endCursor, direction: 'forward' } });
+      navigate({ search: { cursor: pageInfo.endCursor, direction: 'forward' } as any });
     }
   };
 
   const handlePrev = () => {
     if (pageInfo?.hasPreviousPage) {
-      navigate({ search: { cursor: pageInfo.startCursor, direction: 'backward' } });
+      navigate({ search: { cursor: pageInfo.startCursor, direction: 'backward' } as any });
     }
   };
 

@@ -1,4 +1,6 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useAutopilotTrigger } from '../AutopilotTriggerContext';
+import { useAutopilotMetadata } from '../AutopilotMetadataContext';
 import {
   DOMAIN_FIELDS,
   OPERATORS,
@@ -104,11 +106,6 @@ interface PredicateEditorPanelProps {
   onClose: () => void;
 }
 
-const domains = [
-  { value: 'task', label: 'Task' },
-  { value: 'project', label: 'Project' },
-];
-
 export const PredicateEditorPanel: React.FC<PredicateEditorPanelProps> = ({
   nodeId,
   data,
@@ -116,15 +113,33 @@ export const PredicateEditorPanel: React.FC<PredicateEditorPanelProps> = ({
   onRemove,
   onClose,
 }) => {
-  const [draft, setDraft] = useState<PredicateNodeData>({ ...data });
-  const fieldsForDomain = DOMAIN_FIELDS[draft.domain] ?? [];
+  const { selectedEntityType } = useAutopilotTrigger();
+  const { getFieldsForEntity, isLoading } = useAutopilotMetadata();
+  const [draft, setDraft] = useState<PredicateNodeData>({ ...data, domain: selectedEntityType });
+
+  const metadataFields = getFieldsForEntity(selectedEntityType);
+  
+  // Use metadata fields if available, otherwise fallback to local definitions
+  const fieldsForDomain = metadataFields.length > 0 
+    ? metadataFields.map(f => ({ value: f.name, label: f.name.charAt(0).toUpperCase() + f.name.slice(1) }))
+    : DOMAIN_FIELDS[selectedEntityType] ?? [];
+
+  useEffect(() => {
+    if (draft.domain !== selectedEntityType) {
+      setDraft(prev => ({
+        ...prev,
+        domain: selectedEntityType,
+        field: fieldsForDomain[0]?.value ?? '',
+        value: ''
+      }));
+    }
+  }, [selectedEntityType, fieldsForDomain]);
 
   const set = (key: keyof PredicateNodeData, val: string) => {
     setDraft((prev) => {
       const next = { ...prev, [key]: val };
-      // Reset field when domain changes
       if (key === 'domain') {
-        next.field = DOMAIN_FIELDS[val]?.[0]?.value ?? '';
+        next.field = fieldsForDomain[0]?.value ?? '';
         next.value = '';
       }
       return next;
@@ -154,18 +169,12 @@ export const PredicateEditorPanel: React.FC<PredicateEditorPanelProps> = ({
       </div>
 
       <div className="space-y-3">
-        {/* Domain */}
+        {/* Domain - Locked to Context */}
         <label className="block">
           <span className="mb-1 block text-xs font-medium text-app-muted">Domain</span>
-          <select
-            value={draft.domain}
-            onChange={(e) => set('domain', e.target.value)}
-            className="w-full rounded-xl border border-app-line bg-white/85 px-3 py-2 text-sm text-app-ink outline-none focus:border-app-accent focus:ring-2 focus:ring-app-accent/10"
-          >
-            {domains.map((d) => (
-              <option key={d.value} value={d.value}>{d.label}</option>
-            ))}
-          </select>
+          <div className="w-full rounded-xl border border-app-line bg-app-line/20 px-3 py-2 text-sm text-app-muted capitalize cursor-not-allowed">
+            {selectedEntityType}
+          </div>
         </label>
 
         {/* Field */}
@@ -174,7 +183,8 @@ export const PredicateEditorPanel: React.FC<PredicateEditorPanelProps> = ({
           <select
             value={draft.field}
             onChange={(e) => set('field', e.target.value)}
-            className="w-full rounded-xl border border-app-line bg-white/85 px-3 py-2 text-sm text-app-ink outline-none focus:border-app-accent focus:ring-2 focus:ring-app-accent/10"
+            disabled={isLoading}
+            className="w-full rounded-xl border border-app-line bg-white/85 px-3 py-2 text-sm text-app-ink outline-none focus:border-app-accent focus:ring-2 focus:ring-app-accent/10 disabled:opacity-50"
           >
             {fieldsForDomain.map((f) => (
               <option key={f.value} value={f.value}>{f.label}</option>

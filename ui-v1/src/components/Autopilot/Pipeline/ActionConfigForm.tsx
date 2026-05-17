@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { useAutopilotTrigger } from '../AutopilotTriggerContext';
+import { useAutopilotMetadata } from '../AutopilotMetadataContext';
 import type { ActionTypeDefinition } from './actionTypes';
 import { TASK_STATUS_OPTIONS, TASK_PRIORITY_OPTIONS } from '../Builder/types';
 
@@ -12,6 +14,7 @@ interface SmartConfigInputProps {
   value: string;
   placeholder?: string;
   onChange: (val: string) => void;
+  entityType?: string;
 }
 
 const SmartConfigInput: React.FC<SmartConfigInputProps> = ({
@@ -20,13 +23,15 @@ const SmartConfigInput: React.FC<SmartConfigInputProps> = ({
   value,
   placeholder,
   onChange,
+  entityType,
 }) => {
-  const presets =
-    inputType === 'status-select'
-      ? TASK_STATUS_OPTIONS
-      : inputType === 'priority-select'
-        ? TASK_PRIORITY_OPTIONS
-        : null;
+  // In a fully dynamic version, presets could come from AutopilotMetadataContext.
+  // For now, we restrict status/priority to 'task' entity type as a safeguard.
+  let presets = null;
+  if (entityType === 'task') {
+    if (inputType === 'status-select') presets = TASK_STATUS_OPTIONS;
+    else if (inputType === 'priority-select') presets = TASK_PRIORITY_OPTIONS;
+  }
 
   const [useCustom, setUseCustom] = useState(
     presets != null && value !== '' && !presets.some((p) => p.value === value),
@@ -42,7 +47,7 @@ const SmartConfigInput: React.FC<SmartConfigInputProps> = ({
         </p>
       )}
 
-      {inputType === 'text' && (
+      {(!presets && inputType !== 'none') && (
         <input
           type="text"
           value={value}
@@ -115,6 +120,9 @@ export const ActionConfigForm: React.FC<ActionConfigFormProps> = ({
   onSubmit,
   submitLabel = 'Apply',
 }) => {
+  const { selectedEntityType } = useAutopilotTrigger();
+  const { getActionsForEntity } = useAutopilotMetadata();
+
   const [config, setConfig] = useState<Record<string, any>>(() => {
     // Seed defaults
     const seed: Record<string, any> = { ...initialConfig };
@@ -133,14 +141,24 @@ export const ActionConfigForm: React.FC<ActionConfigFormProps> = ({
     onSubmit(config);
   };
 
+  const validActions = getActionsForEntity(selectedEntityType);
+  const isValidForEntity = validActions.some(a => a.type === definition.key) || validActions.length === 0; // Fallback if metadata not loaded
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {!isValidForEntity && (
+        <div className="p-3 text-xs text-app-warning bg-app-warning/10 rounded-lg border border-app-warning/20">
+          Note: This action might not be applicable for {selectedEntityType} triggers.
+        </div>
+      )}
+
       {definition.configFields.length === 0 ? (
         <SmartConfigInput
           inputType="none"
           label="Configuration"
           value=""
           onChange={() => {}}
+          entityType={selectedEntityType}
         />
       ) : (
         definition.configFields.map((field) => (
@@ -151,6 +169,7 @@ export const ActionConfigForm: React.FC<ActionConfigFormProps> = ({
             placeholder={field.placeholder}
             value={String(config[field.key] ?? '')}
             onChange={(val) => setConfig((prev) => ({ ...prev, [field.key]: val }))}
+            entityType={selectedEntityType}
           />
         ))
       )}

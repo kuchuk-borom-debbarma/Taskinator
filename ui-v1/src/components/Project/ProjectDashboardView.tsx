@@ -72,8 +72,8 @@ export default function ProjectDashboardView() {
   return (
     <div className="page-frame !pt-2">
       <div className="grid gap-4 md:grid-cols-2">
-        <StatCard label="Tasks" value={project.tasksCount} hint="Total tasks in this project." />
-        <StatCard label="Teams" value={project.teamsCount} hint="Groups attached to this project." />
+        <StatCard label="Tasks" value={project?.tasksCount ?? 0} hint="Total tasks in this project." />
+        <StatCard label="Teams" value={project?.teamsCount ?? 0} hint="Groups attached to this project." />
       </div>
 
       <div className="mt-8 space-y-6">

@@ -1,17 +1,17 @@
 import React from 'react';
-import { motion } from 'framer-motion';
-import type { AutopilotItem } from '../../api/interfaces/AutopilotAPI';
-import { AutopilotCard } from './AutopilotCard';
+import { motion, type Variants } from 'framer-motion';
+import type { FragmentType } from '../../gql';
+import { AutopilotCard, AutopilotCardFragment } from './AutopilotCard';
 
 interface AutopilotListProps {
-  autopilots: AutopilotItem[];
-  onCardClick?: (autopilot: AutopilotItem) => void;
+  autopilots: (FragmentType<typeof AutopilotCardFragment> & { id: string })[];
+  onCardClick?: (autopilot: any) => void;
   onToggle?: (id: string, isActive: boolean) => void;
 }
 
 // ─── Animation Variants ───────────────────────────────────────────────────────
 
-const containerVariants = {
+const containerVariants: Variants = {
   hidden: { opacity: 0 },
   show: {
     opacity: 1,
@@ -22,7 +22,7 @@ const containerVariants = {
   },
 };
 
-const itemVariants = {
+const itemVariants: Variants = {
   hidden: { opacity: 0, y: 15, scale: 0.97 },
   show: {
     opacity: 1,
@@ -32,7 +32,7 @@ const itemVariants = {
       type: 'spring',
       damping: 15,
       stiffness: 100,
-    },
+    } as any, // Cast to any to avoid strict transition type mismatch in v12
   },
 };
 
