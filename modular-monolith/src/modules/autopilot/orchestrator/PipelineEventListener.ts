@@ -54,50 +54,51 @@ export class PipelineEventListener {
             `[PipelineEventListener] [onTrigger] Received batch of ${events.length} trigger events`,
         );
 
+        let unprocessed: DomainEvent<any>[] = [];
         await db.transaction().execute(async (trx) => {
-            const unprocessed = await claimEventsAtomic(
+            unprocessed = await claimEventsAtomic(
                 trx,
                 events,
                 'pipeline-orchestrator-group',
             );
+        });
+
+        logger.info(
+            `[PipelineEventListener] [onTrigger] Filtered unprocessed triggers: ${unprocessed.length}/${events.length}`,
+        );
+
+        for (const event of unprocessed) {
+            const payload = event.data?.data ?? event.data;
+            const {
+                autopilotId,
+                entityType,
+                entityId,
+                snapshot,
+                isRecursiveTrigger,
+                depth: parentDepth,
+            } = payload;
+
+            // Task 3: Increment depth only on recursive triggers
+            let depth = parentDepth || 0;
+            if (isRecursiveTrigger) {
+                depth += 1;
+            }
+
+            const state: ExecutionState = {
+                traceId: uuidv4(),
+                entityType,
+                entityId,
+                depth,
+                stepIndex: 0,
+                wasSnapshot: !!snapshot,
+                snapshot,
+            };
 
             logger.info(
-                `[PipelineEventListener] [onTrigger] Filtered unprocessed triggers: ${unprocessed.length}/${events.length}`,
+                `[PipelineEventListener] [onTrigger] Spawning traceId=${state.traceId} for autopilotId=${autopilotId}, entityType=${entityType}, entityId=${entityId}, depth=${state.depth}`,
             );
-
-            for (const event of unprocessed) {
-                const payload = event.data?.data ?? event.data;
-                const {
-                    autopilotId,
-                    entityType,
-                    entityId,
-                    snapshot,
-                    isRecursiveTrigger,
-                    depth: parentDepth,
-                } = payload;
-
-                // Task 3: Increment depth only on recursive triggers
-                let depth = parentDepth || 0;
-                if (isRecursiveTrigger) {
-                    depth += 1;
-                }
-
-                const state: ExecutionState = {
-                    traceId: uuidv4(),
-                    entityType,
-                    entityId,
-                    depth,
-                    stepIndex: 0,
-                    wasSnapshot: !!snapshot,
-                    snapshot,
-                };
-
-                logger.info(
-                    `[PipelineEventListener] [onTrigger] Spawning traceId=${state.traceId} for autopilotId=${autopilotId}, entityType=${entityType}, entityId=${entityId}, depth=${state.depth}`,
-                );
-                await this.processStep(autopilotId, state, trx);
-            }
-        });
+            await this.processStep(autopilotId, state, db);
+        }
     }
 
     /**
@@ -111,26 +112,27 @@ export class PipelineEventListener {
             `[PipelineEventListener] [onContinue] Received batch of ${events.length} continue events`,
         );
 
+        let unprocessed: DomainEvent<any>[] = [];
         await db.transaction().execute(async (trx) => {
-            const unprocessed = await claimEventsAtomic(
+            unprocessed = await claimEventsAtomic(
                 trx,
                 events,
                 'pipeline-orchestrator-group',
             );
-
-            logger.info(
-                `[PipelineEventListener] [onContinue] Filtered unprocessed continue events: ${unprocessed.length}/${events.length}`,
-            );
-
-            for (const event of unprocessed) {
-                const payload = event.data?.data ?? event.data;
-                const { autopilotId, state } = payload;
-                logger.info(
-                    `[PipelineEventListener] [onContinue] Resuming traceId=${state.traceId} at stepIndex=${state.stepIndex} for autopilotId=${autopilotId}`,
-                );
-                await this.processStep(autopilotId, state, trx);
-            }
         });
+
+        logger.info(
+            `[PipelineEventListener] [onContinue] Filtered unprocessed continue events: ${unprocessed.length}/${events.length}`,
+        );
+
+        for (const event of unprocessed) {
+            const payload = event.data?.data ?? event.data;
+            const { autopilotId, state } = payload;
+            logger.info(
+                `[PipelineEventListener] [onContinue] Resuming traceId=${state.traceId} at stepIndex=${state.stepIndex} for autopilotId=${autopilotId}`,
+            );
+            await this.processStep(autopilotId, state, db);
+        }
     }
 
     /**
@@ -139,7 +141,7 @@ export class PipelineEventListener {
     private async processStep(
         autopilotId: string,
         state: ExecutionState,
-        trx: any,
+        queryClient: any = db,
     ) {
         logger.info(
             `[PipelineEventListener] Executing step ${state.stepIndex} for autopilot ${autopilotId} (traceId: ${state.traceId})`,
@@ -169,6 +171,7 @@ export class PipelineEventListener {
                             entity.id,
                             entity.getChanges(),
                             state.traceId,
+                            state.depth,
                         );
                     }
                 }
@@ -178,7 +181,7 @@ export class PipelineEventListener {
                     logger.info(
                         `[PipelineEventListener] Scheduling next stepIndex=${result.nextIndex} for autopilotId=${autopilotId} (traceId: ${state.traceId})`,
                     );
-                    await appendEventsToOutbox(trx, [
+                    await appendEventsToOutbox(queryClient, [
                         {
                             kafka_topic: KAFKA_TOPICS.AUTOPILOT,
                             payload: {

@@ -27,6 +27,10 @@ export interface AggregationItem {
      * Trace ID for observability throughout the bulk operation.
      */
     traceId: string;
+    /**
+     * Loop recursion depth.
+     */
+    depth: number;
 }
 
 /**
@@ -68,6 +72,7 @@ export class SmartAggregator {
         entityId: string,
         changes: Record<string, any>,
         traceId: string,
+        depth: number = 0,
     ): void {
         // Initialize buffer for the entity type if it doesn't exist
         if (!this.buffer.has(entityType)) {
@@ -79,20 +84,21 @@ export class SmartAggregator {
 
         if (existing) {
             // Merge changes for the same entity to avoid redundant updates
-            // The latest traceId is kept for the bulk operation
+            // The latest traceId and depth are kept for the bulk operation
             logger.debug(
-                `[SmartAggregator] Merging buffered changes for ${entityType}:${entityId} (traceId: ${traceId})`,
+                `[SmartAggregator] Merging buffered changes for ${entityType}:${entityId} (traceId: ${traceId}, depth: ${depth})`,
             );
             typeBuffer.set(entityId, {
                 ...existing,
                 changes: { ...existing.changes, ...changes },
                 traceId,
+                depth,
             });
         } else {
             logger.debug(
-                `[SmartAggregator] Buffering new changes for ${entityType}:${entityId} (traceId: ${traceId})`,
+                `[SmartAggregator] Buffering new changes for ${entityType}:${entityId} (traceId: ${traceId}, depth: ${depth})`,
             );
-            typeBuffer.set(entityId, { entityId, changes, traceId });
+            typeBuffer.set(entityId, { entityId, changes, traceId, depth });
         }
 
         // Ensure a flush is scheduled if not already
@@ -164,15 +170,30 @@ export class SmartAggregator {
             await this.executeBulkUpdate(entityType, items);
         } catch (error: any) {
             logger.error(
-                `[SmartAggregator] Bulk update failed for ${entityType}: ${error.message}`,
+                `[SmartAggregator] Bulk update failed for ${entityType}: ${error.message}. Restoring buffer...`,
                 {
                     entityType,
                     itemCount: items.length,
                     firstTraceId: items[0]?.traceId,
                 },
             );
-            // In a high-reliability system, we would move these back to buffer or to a retry queue.
-            // For now, we log the failure.
+            // Restore failed items back to the buffer to prevent data loss.
+            const currentBuffer = this.buffer.get(entityType) || new Map();
+            for (const item of items) {
+                if (!currentBuffer.has(item.entityId)) {
+                    currentBuffer.set(item.entityId, item);
+                } else {
+                    // Merge older changes with newer modifications that arrived in the meantime
+                    const existing = currentBuffer.get(item.entityId)!;
+                    currentBuffer.set(item.entityId, {
+                        ...item,
+                        changes: { ...item.changes, ...existing.changes },
+                        traceId: existing.traceId,
+                        depth: existing.depth,
+                    });
+                }
+            }
+            this.buffer.set(entityType, currentBuffer);
             throw error;
         }
     }
@@ -227,15 +248,77 @@ export class SmartAggregator {
         }
 
         // 3. Execute the single bulk UPDATE query
-        // We use sql.table and sql.ref for identifier safety.
-        await sql`
-            UPDATE ${sql.table(entityType)}
-            SET ${sql.join(setClauses, sql`, `)}
-            WHERE id IN (${sql.join(
-                ids.map((id) => sql`${id}::uuid`),
-                sql`, `,
-            )})
-        `.execute(db);
+        if (entityType === 'project_task') {
+            // Construct the CASE statements for traceId and depth maps to pass them into outbox CTE
+            let traceIdCase = sql`CASE id`;
+            let depthCase = sql`CASE id`;
+            for (const item of items) {
+                traceIdCase = sql`${traceIdCase} WHEN ${item.entityId}::uuid THEN ${item.traceId}`;
+                depthCase = sql`${depthCase} WHEN ${item.entityId}::uuid THEN ${item.depth}::integer`;
+            }
+            traceIdCase = sql`${traceIdCase} END`;
+            depthCase = sql`${depthCase} END`;
+
+            // We use sql.table and sql.ref for identifier safety.
+            await sql`
+                WITH old_state AS (
+                    SELECT id, fk_team_id, fk_member_id, title, status 
+                    FROM project_task 
+                    WHERE id IN (${sql.join(
+                        ids.map((id) => sql`${id}::uuid`),
+                        sql`, `,
+                    )})
+                ),
+                updated_task AS (
+                    UPDATE project_task
+                    SET ${sql.join(setClauses, sql`, `)}
+                    WHERE id IN (${sql.join(
+                        ids.map((id) => sql`${id}::uuid`),
+                        sql`, `,
+                    )})
+                    RETURNING id, fk_project_id, fk_team_id, fk_member_id, title, status
+                ),
+                inserted_outbox AS (
+                    INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
+                    SELECT 
+                        'task-events',
+                        u.fk_project_id::text,
+                        jsonb_build_object(
+                            'type', 'task.updated',
+                            'taskId', u.id,
+                            'projectId', u.fk_project_id,
+                            'old', jsonb_build_object(
+                                'teamId', o.fk_team_id,
+                                'memberId', o.fk_member_id,
+                                'title', o.title,
+                                'status', o.status
+                            ),
+                            'new', jsonb_build_object(
+                                'teamId', u.fk_team_id,
+                                'memberId', u.fk_member_id,
+                                'title', u.title,
+                                'status', u.status
+                            ),
+                            'actorId', 'system:autopilot',
+                            'traceId', ${traceIdCase},
+                            'depth', ${depthCase}
+                        )
+                    FROM updated_task u
+                    JOIN old_state o ON u.id = o.id
+                )
+                SELECT 1
+            `.execute(db);
+        } else {
+            // Fallback simple update
+            await sql`
+                UPDATE ${sql.table(entityType)}
+                SET ${sql.join(setClauses, sql`, `)}
+                WHERE id IN (${sql.join(
+                    ids.map((id) => sql`${id}::uuid`),
+                    sql`, `,
+                )})
+            `.execute(db);
+        }
     }
 }
 

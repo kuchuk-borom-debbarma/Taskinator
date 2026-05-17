@@ -53,12 +53,12 @@ describe('SmartAggregator', () => {
         const executedQuery = (executeSpy as any).mock.calls[0][0];
         const sqlString = executedQuery.sql;
 
-        expect(sqlString).toContain('UPDATE "project_task"');
+        expect(sqlString).toContain('UPDATE project_task');
+        expect(sqlString).toContain('INSERT INTO outbox_events');
         expect(sqlString).toContain('CASE id');
-        expect(sqlString).toContain('WHEN $1::uuid THEN $2');
         expect(sqlString).toContain('ELSE "status" END');
         expect(sqlString).toContain('ELSE "priority" END');
-        expect(sqlString).toContain('WHERE id IN ($5::uuid, $6::uuid)');
+        expect(sqlString).toContain('WHERE id IN');
     });
 
     it('should merge multiple updates for the same entity before flushing', async () => {

@@ -17,6 +17,9 @@ type TaskEventPayload = {
     projectId?: string;
     old?: Record<string, any>;
     new?: Record<string, any>;
+    actorId?: string;
+    traceId?: string;
+    depth?: number;
 };
 
 export class AutopilotTriggerListener {
@@ -108,6 +111,10 @@ export class AutopilotTriggerListener {
                         `[AutopilotTriggerListener] MATCH! Rule "${rule.name}" (${rule.id}) triggered by task trigger types: [${matches.join(', ')}]`,
                     );
 
+                    const isRecursiveTrigger =
+                        payload.actorId === 'system:autopilot';
+                    const depth = payload.depth || 0;
+
                     outboxEntries.push({
                         kafka_topic: KAFKA_TOPICS.AUTOPILOT,
                         kafka_key: rule.id,
@@ -118,8 +125,8 @@ export class AutopilotTriggerListener {
                                 entityType: 'project_task',
                                 entityId: payload.taskId,
                                 snapshot: payload.old,
-                                isRecursiveTrigger: false,
-                                depth: 0,
+                                isRecursiveTrigger,
+                                depth,
                             },
                         },
                     });
