@@ -3,6 +3,10 @@ import { describe, it, expect, vi } from 'vitest';
 import { PipelineEditor } from './PipelineEditor';
 import type { PipelineStep } from '../../../gql/graphql';
 
+vi.mock('../Builder/ConditionBuilderCanvas', () => ({
+  ConditionBuilderCanvas: () => <div data-testid="condition-builder-canvas" />,
+}));
+
 describe('PipelineEditor', () => {
   const mockPipeline: PipelineStep[] = [
     {
@@ -88,5 +92,17 @@ describe('PipelineEditor', () => {
     render(<PipelineEditor pipeline={pipeline} onChange={vi.fn()} />);
     
     expect(screen.getByText(/halt if false/i)).toBeInTheDocument();
+  });
+
+  it('opens edit condition modal when Edit is clicked on a condition step', () => {
+    render(<PipelineEditor pipeline={mockPipeline} onChange={vi.fn()} />);
+
+    const editButtons = screen.getAllByRole('button', { name: /edit/i });
+    // editButtons[0] is for the first step (Action)
+    // editButtons[1] is for the second step (Condition)
+    fireEvent.click(editButtons[1]);
+
+    expect(screen.getByText('Edit: Check Priority')).toBeInTheDocument();
+    expect(screen.getByTestId('condition-builder-canvas')).toBeInTheDocument();
   });
 });

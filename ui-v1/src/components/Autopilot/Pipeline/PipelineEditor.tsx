@@ -4,6 +4,7 @@ import { Reorder, useDragControls } from 'framer-motion';
 import type { PipelineStep, AutopilotAction, AutopilotCondition } from '../../../gql/graphql';
 import { ActionStepCard } from './ActionStepCard';
 import { ConditionStepCard } from '../Builder/ConditionStepCard';
+import { ConditionBuilderCanvas } from '../Builder/ConditionBuilderCanvas';
 import { PipelineStepConnector } from './PipelineStepConnector';
 import { AddActionModal } from './AddActionModal';
 import { ActionConfigForm } from './ActionConfigForm';
@@ -24,9 +25,11 @@ export const PipelineEditor: React.FC<PipelineEditorProps> = ({
   const [draft, setDraft] = useState<PipelineStep[]>(pipeline);
   const [addActionOpen, setAddActionOpen] = useState(false);
   const [editActionIndex, setEditActionIndex] = useState<number | null>(null);
+  const [editConditionIndex, setEditConditionIndex] = useState<number | null>(null);
 
   const editAction = editActionIndex !== null ? (draft[editActionIndex] as AutopilotAction) : null;
   const editDefinition = editAction ? getActionDefinition(editAction.type) : null;
+  const editCondition = editConditionIndex !== null ? (draft[editConditionIndex] as AutopilotCondition) : null;
 
   const notify = (updated: PipelineStep[]) => {
     // Re-calculate positions for actions after any change (add/remove/reorder)
@@ -78,6 +81,14 @@ export const PipelineEditor: React.FC<PipelineEditorProps> = ({
     setEditActionIndex(null);
   };
 
+  const handleEditConditionSave = (definition: any) => {
+    if (editConditionIndex === null) return;
+    const updated = draft.map((item, i) =>
+      i === editConditionIndex ? { ...item, definition } : item,
+    );
+    notify(updated as PipelineStep[]);
+  };
+
   const displayPipeline = readOnly ? pipeline : draft;
 
   return (
@@ -107,7 +118,33 @@ export const PipelineEditor: React.FC<PipelineEditorProps> = ({
           />
         </AppModal>
       )}
-
+      {/* Edit Condition Modal */}
+      {!readOnly && editConditionIndex !== null && editCondition && (
+        <AppModal
+          open
+          onClose={() => setEditConditionIndex(null)}
+          title={`Edit: ${editCondition.name || 'Logic Block'}`}
+          size="xl"
+        >
+          <div className="relative h-[480px] w-full mt-2 flex flex-col gap-4">
+            <div className="flex-1 relative border border-app-line rounded-[20px] overflow-hidden bg-app-slate-soft">
+              <ConditionBuilderCanvas
+                initialCondition={editCondition.definition as any}
+                onChange={handleEditConditionSave}
+              />
+            </div>
+            <div className="flex justify-end gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => setEditConditionIndex(null)}
+                className="inline-flex items-center justify-center gap-2 rounded-full border border-app-line bg-white/60 px-5 py-2.5 text-sm font-semibold text-app-muted transition hover:bg-white hover:text-app-ink"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </AppModal>
+      )}
       {/* Pipeline */}
       <div className="flex flex-col">
         {displayPipeline.length === 0 ? (
@@ -151,7 +188,7 @@ export const PipelineEditor: React.FC<PipelineEditorProps> = ({
                       condition={item as AutopilotCondition}
                       index={index}
                       readOnly={readOnly}
-                      onEdit={() => {}} // TODO: Handle condition editing
+                      onEdit={setEditConditionIndex}
                       onRemove={handleRemove}
                     />
                   )}
