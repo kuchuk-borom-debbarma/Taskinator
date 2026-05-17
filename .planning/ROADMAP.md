@@ -19,5 +19,5 @@
 | 26. GraphQL Sync | v7.0 | 2/2 | Complete | 2026-05-16 |
 | 27. Builder & Canvas Alignment | v7.0 | 4/4 | Complete    | 2026-05-16 |
 | 28. [Merged into Phase 27] | v7.0 | 0/0 | Merged | — |
-| 29. CTE Bulk Outbox Writes | v8.0 | 0/2 | Active | — |
-| 30. Asynchronous Depth Guards | v8.0 | 0/2 | Pending | — |
+| 29. CTE Bulk Outbox Writes | v8.0 | 2/2 | Complete | 2026-05-17 |
+| 30. Asynchronous Depth Guards | v8.0 | 2/2 | Complete | 2026-05-17 |
