@@ -83,7 +83,54 @@ export function getActionDefinition(key: string): ActionTypeDefinition | undefin
 // ─── Config summary ───────────────────────────────────────────────────────────
 
 export function summariseConfig(config: Record<string, any>): string {
-  const entries = Object.entries(config).filter(([, v]) => v !== undefined && v !== null);
+  const entries = Object.entries(config || {}).filter(([, v]) => v !== undefined && v !== null);
   if (entries.length === 0) return '—';
   return entries.map(([k, v]) => `${k} = ${String(v)}`).join(', ');
 }
+
+// ─── Normalize Action ─────────────────────────────────────────────────────────
+
+export interface NormalizedAction {
+  type: string;
+  config: Record<string, any>;
+}
+
+export function normalizeAction(action: { type: string; params?: any; config?: any }): NormalizedAction {
+  const type = action.type;
+  const params = action.params || action.config || {};
+
+  // If it's already a high-level action type (from frontend draft)
+  if (type.startsWith('task.')) {
+    return { type, config: params };
+  }
+
+  // If it's a backend primitive action ('set' / 'unset')
+  const field = params.field;
+  const value = params.value;
+
+  if (type === 'set') {
+    if (field === 'status') {
+      return { type: 'task.update_status', config: { status: value } };
+    }
+    if (field === 'priority') {
+      return { type: 'task.update_priority', config: { priority: value } };
+    }
+    if (field === 'fk_team_id') {
+      return { type: 'task.assign_team', config: { teamId: value } };
+    }
+    if (field === 'fk_member_id') {
+      return { type: 'task.assign_member', config: { memberId: value } };
+    }
+  } else if (type === 'unset') {
+    if (field === 'fk_team_id') {
+      return { type: 'task.unassign_team', config: {} };
+    }
+    if (field === 'fk_member_id') {
+      return { type: 'task.unassign_member', config: {} };
+    }
+  }
+
+  // Fallback
+  return { type, config: params };
+}
+

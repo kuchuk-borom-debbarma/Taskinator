@@ -1,7 +1,7 @@
 import React from 'react';
 import { GripVertical } from 'lucide-react';
 import type { AutopilotAction } from '../../../api/interfaces/AutopilotAPI';
-import { getActionDefinition, summariseConfig } from './actionTypes';
+import { getActionDefinition, summariseConfig, normalizeAction } from './actionTypes';
 
 interface ActionStepCardProps {
   action: AutopilotAction;
@@ -25,10 +25,12 @@ export const ActionStepCard: React.FC<ActionStepCardProps> = ({
   onEdit,
   onRemove,
 }) => {
-  const definition = getActionDefinition(action.type);
-  const label = definition?.label ?? action.type;
-  const configSummary = summariseConfig(action.config as Record<string, any>);
+  const normalized = normalizeAction(action);
+  const definition = getActionDefinition(normalized.type);
+  const label = definition?.label ?? normalized.type;
+  const configSummary = summariseConfig(normalized.config);
   const positionColor = POSITION_COLORS[index % POSITION_COLORS.length] ?? POSITION_COLORS[0];
+
 
   return (
     <div className="surface-card flex items-center gap-3 rounded-[14px] px-4 py-3 border-l-4 border-app-accent/30">

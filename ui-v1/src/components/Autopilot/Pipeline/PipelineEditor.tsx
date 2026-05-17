@@ -8,7 +8,7 @@ import { ConditionBuilderCanvas } from '../Builder/ConditionBuilderCanvas';
 import { PipelineStepConnector } from './PipelineStepConnector';
 import { AddActionModal } from './AddActionModal';
 import { ActionConfigForm } from './ActionConfigForm';
-import { getActionDefinition } from './actionTypes';
+import { getActionDefinition, normalizeAction } from './actionTypes';
 import { AppModal } from '../../shared/workspace';
 
 interface PipelineEditorProps {
@@ -28,7 +28,8 @@ export const PipelineEditor: React.FC<PipelineEditorProps> = ({
   const [editConditionIndex, setEditConditionIndex] = useState<number | null>(null);
 
   const editAction = editActionIndex !== null ? (draft[editActionIndex] as AutopilotAction) : null;
-  const editDefinition = editAction ? getActionDefinition(editAction.type) : null;
+  const normalizedEditAction = editAction ? normalizeAction(editAction) : null;
+  const editDefinition = normalizedEditAction ? getActionDefinition(normalizedEditAction.type) : null;
   const editCondition = editConditionIndex !== null ? (draft[editConditionIndex] as AutopilotCondition) : null;
 
   const notify = (updated: PipelineStep[]) => {
@@ -162,12 +163,12 @@ export const PipelineEditor: React.FC<PipelineEditorProps> = ({
             className="flex flex-col"
           >
             {displayPipeline.map((item, index) => {
-              const itemId = item.__typename === 'AutopilotAction' 
-                ? (item as AutopilotAction).id 
+              const itemId = item.__typename === 'AutopilotAction'
+                ? (item as AutopilotAction).id
                 : (item as AutopilotCondition).id;
-              
+
               const nextStep = displayPipeline[index + 1];
-              
+
               return (
                 <Reorder.Item
                   key={itemId}
