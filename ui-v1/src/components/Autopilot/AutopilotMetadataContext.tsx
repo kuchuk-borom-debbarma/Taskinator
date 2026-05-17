@@ -2,7 +2,7 @@ import React, { createContext, useContext, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useGraphQLClient } from '../../hooks/useGraphQLClient';
 import { graphql } from '../../gql';
-import { AutopilotMetadata, AutopilotEntityMetadata } from '../../gql/graphql';
+import type { AutopilotMetadata, AutopilotEntityMetadata } from '../../gql/graphql';
 
 // ─── GraphQL Operations ──────────────────────────────────────────────────────
 
