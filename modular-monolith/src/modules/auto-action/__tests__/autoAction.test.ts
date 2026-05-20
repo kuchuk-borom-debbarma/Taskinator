@@ -16,6 +16,7 @@ import {
     actionRegistry,
     conditionNodeSchema,
     conditionRegistry,
+    contextResolverRegistry,
     EntityScope,
     evaluateCondition,
     executeAction,
@@ -39,6 +40,7 @@ describe('Auto Action Module - Isolated Engines', () => {
         // Reset registries before each test to start with a fresh registration
         conditionRegistry.clear();
         actionRegistry.clear();
+        contextResolverRegistry.clear();
         await init();
     });
 

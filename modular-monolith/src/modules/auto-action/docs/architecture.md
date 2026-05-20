@@ -6,17 +6,20 @@ This document details the high-performance design patterns, structural choices, 
 
 ## 1. Architectural Blueprint
 
-The modular automation engine is structured around decoupled components that interact statelessly:
+The modular automation engine is structured around decoupled components that interact statelessly, mediated by a centralized Context Engine that builds type-safe snapshots:
 
 ```mermaid
 graph TD
-    Event[Domain Event e.g., task.updated] -->|Triggers| Engine[Auto-Action Engine]
-    Engine -->|Query| Registry[AutoActionRegistry]
-    Registry -->|Fetch| Triggers[Triggers & Actions]
-    Engine -->|Fresh Read| DB_Read[(Database: SELECT Fresh State)]
-    DB_Read -->|Context + Entity| Evaluator[AST Evaluator]
+    Event[Domain Event e.g., task.updated + wasSnapshot] -->|Trigger Engine| Engine[Auto-Action Engine]
+    Engine -->|Query Registered Rules| Registry[AutoActionRegistry]
+    Engine -->|Build State Snapshot| ContextEngine[🗃️ Context Engine]
+    ContextEngine -->|SQL SELECT| DB_Read[(Database: SELECT Current State)]
+    ContextEngine -->|Merge & Zod Validate| Context[Validated EntityContext]
+    Context -->|Input Context| Evaluator[🔍 AST Condition Evaluator]
     Evaluator -->|Evaluate AST| Logic[Logical Nodes & Predicates]
-    Logic -->|True| Executor[Action Executor]
+    Logic -->|True| Executor[🚀 Action Executor]
+    Executor -->|SQL Fresh SELECT| DB_Fresh[(Database: SELECT Fresh State)]
+    DB_Fresh -->|Fresh Entity State| Executor
     Executor -->|Zod Validate & Apply| DB_Write[(Database: UPDATE with Version Check)]
 ```
 
@@ -27,7 +30,8 @@ graph TD
 ### 2.1 Stateless, Pure-Context Condition Evaluation
 To achieve sub-millisecond execution times and eliminate database roundtrips during logic checks, the condition evaluation engine operates as a **pure-functional** component:
 * **No Database Operations**: There are **zero** database queries or asynchronous calls inside `evaluator.ts` or any `ConditionDefinition.evaluate()` implementation.
-* **Context Snapshots**: Trigger contexts (e.g. `TaskContext`) carry both `prev_` and `current_` properties for evaluated fields. The engine performs simple, inline comparisons on these values (e.g., `prevValue !== currentValue` or `currentValue === to`).
+* **Context Reconstruction by Context Engine**: Prior to evaluation, the **Context Engine** dynamically resolves the target entity from the database, normalizes it, overlays historical transition data from `wasSnapshot` payloads onto `prev_` columns, and validates the entire payload against strict Zod schemas (e.g., `TaskContext`).
+* **Context Snapshots**: The resulting validated context (e.g. `TaskContext`) carries both `prev_` and `current_` properties for all fields. The evaluation engine performs simple, inline comparisons on these values (e.g., `prevValue !== currentValue` or `currentValue === to`).
 * **Sub-Millisecond Speed**: Because evaluations are simple, local comparisons, checking complex, nested logical rules takes under `1ms` and avoids database connection pool exhaustion.
 
 ### 2.2 Fresh-Fetching in Actions

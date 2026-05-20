@@ -14,6 +14,7 @@ export interface ProjectTaskTable {
     title: string;
     description: Generated<string>;
     status: Generated<string>;
+    priority: Generated<number | null>;
     version: Generated<number>;
     created_by: string;
     updated_by: string;

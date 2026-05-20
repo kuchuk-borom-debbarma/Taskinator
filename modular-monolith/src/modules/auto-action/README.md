@@ -18,12 +18,13 @@ The `auto-action` module makes this possible by receiving events, evaluating nes
 
 ## 🧭 How Everything Works: A User's Perspective
 
-To understand the engine, it helps to look at the three foundational concepts that make up any automation rule: **Triggers**, **Conditions**, and **Actions**. Together, they form the **Rule Lifecycle**:
+To understand the engine, it helps to look at the four foundational concepts that make up any automation rule: **Triggers**, **Context Engine**, **Conditions**, and **Actions**. Together, they form the **Rule Lifecycle**:
 
 ```mermaid
 flowchart LR
-    Trigger[⚡ 1. Trigger\n'Something happens'] --> Condition[🔍 2. Condition\n'Check if criteria matches']
-    Condition -->|Matches| Action[🚀 3. Action\n'Make changes automatically']
+    Trigger[⚡ 1. Trigger\n'Something happens'] --> Context[🗃️ 2. Context Engine\n'Fetch & Validate DB Context']
+    Context --> Condition[🔍 3. Condition\n'Check if criteria matches']
+    Condition -->|Matches| Action[🚀 4. Action\n'Make changes automatically']
     Condition -->|No Match| Stop[🛑 Stop]
 ```
 
@@ -32,7 +33,13 @@ A **Trigger** is the event or "hook" that kicks off the automation process. It r
 * **Task Created (`task.created`)**: Fires immediately when a new task is created.
 * **Task Updated (`task.updated`)**: Fires whenever any field, team, or assignee changes on an existing task.
 
-### 🔍 2. Conditions
+### 🗃️ 2. Context Engine
+The **Context Engine** is the centralized, extensible system responsible for building a unified, type-safe state snapshot representing the target entity at the time of the event. It acts as the single source of truth that feeds conditions and actions:
+* **Live-Fetch Database Resolvers**: Resolves fresh, up-to-date values directly from the database columns (e.g. `title`, `status`, `version` from `project_task`).
+* **Snapshot State Merging**: Gracefully overlays the incoming event's previous state snapshot (the `was` state) onto the database current state (the `is` state), producing standardized pairs like `prev_status` and `current_status`.
+* **Runtime Schema Verification**: Leverages scope-specific Zod schemas (such as `taskContextSchema`) to guarantee 100% data contract safety before any downstream component evaluates it.
+
+### 🔍 3. Conditions
 A **Condition** is the logical filter that determines whether the action should actually run. Conditions can be combined to build simple or highly complex filters using logic blocks:
 * **`AND`**: All nested conditions must be true.
 * **`OR`**: At least one nested condition must be true.
@@ -46,7 +53,7 @@ Inside these blocks, you define the actual field checks. Unlike rigid static fil
 * **`TaskTeamAssigned` / `TaskMemberAssigned`**: Detects assignment of teams or members.
 * **`TaskTeamUnassigned` / `TaskMemberUnassigned`**: Detects when a team or member is unassigned.
 
-### 🚀 3. Actions
+### 🚀 4. Actions
 An **Action** is the operation executed automatically when all conditions are satisfied.
 * **Set Fields (`SetFields`)**: Updates standard fields (such as `status`, `priority`, `title`, or `description`), assigns/unassigns teams, or modifies assigned members.
   > [!NOTE]
@@ -131,11 +138,15 @@ src/modules/auto-action/
 ├── types.ts                  # Scope-agnostic AST and core registry types
 ├── registry.ts               # Central singleton registry for triggers, actions, conditions
 ├── evaluator.ts              # Stateless recursive logical AST evaluator
+├── contextEngine.ts          # [NEW] Isolated ContextResolverRegistry and fetchContext()
+├── actionEngine.ts           # Isolated ActionExecutorRegistry and executeAction()
+├── conditionEngine.ts        # Isolated ConditionPredicateRegistry and evaluateCondition()
 ├── template.ts               # Dynamic Zod-to-JSON-Schema converter
 ├── scopes/
 │   └── task/                 # Scoped implementations isolated for TASK
 │       ├── index.ts          # Task scope bridge and bootstrappers
 │       ├── types.ts          # TaskContext & TaskPredicate leaf Zod schemas
+│       ├── context.ts        # [NEW] TASK scope database resolver mapping and schema checks
 │       ├── conditions.ts     # Task predicate evaluator bridge
 │       ├── conditions/       # Modular split of individual task leaf conditions
 │       └── actions/
@@ -154,19 +165,23 @@ If you are a developer extending the engine, building new actions/conditions, or
 * **Fresh-Fetch Pattern**: How actions read the latest database state before committing updates to prevent stale mutations.
 * **Optimistic Concurrency Control**: How the system utilizes the `version` column to handle 10k+ RPS concurrent modifications safely via `ConcurrentUpdateException`.
 
-### 🎛️ [2. Triggers & Context Resolution](docs/triggers.md)
-* **Dynamic Trigger Registration**: Bootstrapping hook types.
-* **Lightweight Contexts**: Detailed walkthrough of the `TaskContext` payload comparing pre-event and post-event changes (`prev_` and `current_` properties).
+### 🗃️ [2. Context Engine & Resolvers](docs/context.md)
+* **Decoupled Database Resolvers**: How scope resolvers retrieve, normalize, and construct state snapshots.
+* **Snapshot State Merging**: Rules mapping incoming event payloads onto DB columns (`prev_` and `current_` properties).
+* **Zod Data Verification**: Ensuring 100% type safety and runtime checks.
 
-### 🔍 [3. Condition AST & Evaluation](docs/conditions.md)
+### 🎛️ [3. Triggers & Event Hooks](docs/triggers.md)
+* **Dynamic Trigger Registration**: Bootstrapping hook types.
+
+### 🔍 [4. Condition AST & Evaluation](docs/conditions.md)
 * **AST Logical Nodes**: Recursive `AND`, `OR`, and `NOT` compilation with Zod's `z.lazy()`.
 * **Modular Predicates**: The modular design split of individual leaf conditions and shared extraction helpers.
 
-### 🚀 [4. Action Executors & Lifecycle](docs/actions.md)
+### 🚀 [5. Action Executors & Lifecycle](docs/actions.md)
 * **Action Registration**: Schema requirements and input Zod shapes.
 * **Execution Flow**: Step-by-step transaction walkthrough, cascading assignment calculations, and lock-checking updates.
 
-### 🗃️ [5. Central Registry & Templates](docs/registry.md)
+### 🗃️ [6. Central Registry & Templates](docs/registry.md)
 * **Registry Store**: Singleton container decoupling rules from execution.
 * **Dynamic Serialization**: How the Zod-to-JSON-Schema transformer compiles schemas to automatically feed dynamic front-end form builders.
 
@@ -177,6 +192,11 @@ If you are a developer extending the engine, building new actions/conditions, or
 To run the automated suite verifying the scoped conditions and actions:
 ```bash
 bun test src/modules/auto-action/__tests__/autoAction.test.ts
+```
+
+To run the new Context Engine test suite:
+```bash
+bun test src/modules/auto-action/__tests__/contextEngine.test.ts
 ```
 
 To run the TypeScript compiler and typecheck the module:

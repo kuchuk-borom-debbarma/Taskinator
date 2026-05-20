@@ -3,6 +3,7 @@ import { initTaskScope } from './scopes/task/index.js';
 
 export * from './actionEngine.js';
 export * from './conditionEngine.js';
+export * from './contextEngine.js';
 export * from './scopes/task/index.js';
 export * from './types.js';
 
