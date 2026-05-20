@@ -1,10 +1,10 @@
 import { autoActionRegistry } from '../../registry.js';
 import { registerSetFields } from './actions/setFields.js';
-import { taskConditions } from './conditions.js';
+import { taskConditions } from './conditions/index.js';
 import { registerTriggers } from './triggers.js';
 
 export * from './actions/setFields.js';
-export * from './conditions.js';
+export * from './conditions/index.js';
 export * from './triggers.js';
 export * from './types.js';
 
