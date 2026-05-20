@@ -13,11 +13,12 @@ mock.module(loggerPathJs, () => ({
 
 import type { ConditionNode } from '../index.js';
 import {
-    autoActionRegistry,
+    actionRegistry,
     conditionNodeSchema,
+    conditionRegistry,
     EntityScope,
     evaluateCondition,
-    getTemplateForScope,
+    executeAction,
     init,
     setFieldsAction,
 } from '../index.js';
@@ -26,7 +27,7 @@ const executeSpy = mock(
     async (query?: any): Promise<any> => ({ rows: [] as any[] }),
 );
 
-describe('Auto Action Module', () => {
+describe('Auto Action Module - Isolated Engines', () => {
     let originalExecuteQuery: any;
 
     beforeEach(async () => {
@@ -35,8 +36,9 @@ describe('Auto Action Module', () => {
         originalExecuteQuery = executor.executeQuery;
         executor.executeQuery = executeSpy;
 
-        // Reset the registry before each test to start with a fresh registration
-        autoActionRegistry.clear();
+        // Reset registries before each test to start with a fresh registration
+        conditionRegistry.clear();
+        actionRegistry.clear();
         await init();
     });
 
@@ -44,65 +46,112 @@ describe('Auto Action Module', () => {
         db.getExecutor().executeQuery = originalExecuteQuery;
     });
 
-    describe('Registry & Template Generation', () => {
-        it('should correctly register triggers and actions on initialization', () => {
-            const triggers = autoActionRegistry.getAllTriggers();
-            const actions = autoActionRegistry.getAllActions();
-
-            expect(triggers.map((t) => t.id)).toContain('task.created');
-            expect(triggers.map((t) => t.id)).toContain('task.updated');
+    describe('Registries Isolation', () => {
+        it('should correctly register actions in ActionRegistry on initialization', () => {
+            const actions = actionRegistry.getAllActions();
             expect(actions.map((a) => a.id)).toContain('set-fields');
         });
 
-        it('should return a rich metadata template for the TASK scope with conditionTypes', () => {
-            const template = getTemplateForScope(EntityScope.TASK);
+        it('should correctly register task conditions in ConditionRegistry on initialization', () => {
+            const conditions = conditionRegistry.getAllConditions();
+            const conditionTypes = conditions.map((c) => c.type);
 
-            expect(template.scope).toBe(EntityScope.TASK);
-            expect(template.triggers.map((t) => t.id)).toContain(
-                'task.created',
-            );
-            expect(template.triggers.map((t) => t.id)).toContain(
-                'task.updated',
-            );
-
-            const setFieldsMetadata = template.actions.find(
-                (a) => a.id === 'set-fields',
-            );
-            expect(setFieldsMetadata).toBeDefined();
-            expect(setFieldsMetadata?.inputs.status).toEqual({
-                type: 'string',
-                required: false,
-            });
-
-            expect(template.contextFields).toContain('taskId');
-            expect(template.contextFields).toContain('prev_status');
-            expect(template.contextFields).toContain('current_status');
-
-            // Assert that new condition types are output instead of comparison operators
-            const conditionNames = template.conditionTypes.map((c) => c.type);
-            expect(conditionNames).toContain('TaskFieldChanged');
-            expect(conditionNames).toContain('TaskFieldChangedTo');
-            expect(conditionNames).toContain('TaskTeamAssigned');
-            expect(conditionNames).toContain('TaskMemberUnassigned');
-            expect(conditionNames).not.toContain('eq');
-            expect(conditionNames).not.toContain('gt');
-
-            // Assert that all condition types have the isAsync: false property
-            for (const c of template.conditionTypes) {
-                expect(c.isAsync).toBe(false);
-            }
+            expect(conditionTypes).toContain('TaskFieldChanged');
+            expect(conditionTypes).toContain('TaskFieldChangedTo');
+            expect(conditionTypes).toContain('TaskFieldChangedFrom');
+            expect(conditionTypes).toContain('TaskFieldChangedFromTo');
+            expect(conditionTypes).toContain('TaskTeamChanged');
+            expect(conditionTypes).toContain('TaskTeamAssigned');
+            expect(conditionTypes).toContain('TaskTeamUnassigned');
+            expect(conditionTypes).toContain('TaskMemberChanged');
+            expect(conditionTypes).toContain('TaskMemberAssigned');
+            expect(conditionTypes).toContain('TaskMemberUnassigned');
         });
 
-        it('should print the dynamic scope template for easy visualization', () => {
-            const template = getTemplateForScope(EntityScope.TASK);
-            console.log('\n--- SCOPED AUTOMATION TEMPLATE ---');
-            console.log(JSON.stringify(template, null, 2));
-            console.log('----------------------------------\n');
-            expect(template).toBeDefined();
+        it('should throw error when registering a duplicate condition', () => {
+            const firstCondition = conditionRegistry.getAllConditions()[0];
+            expect(firstCondition).toBeDefined();
+            expect(() => {
+                conditionRegistry.registerCondition(firstCondition!);
+            }).toThrow(/already registered/);
+        });
+
+        it('should throw error when registering a duplicate action', () => {
+            const firstAction = actionRegistry.getAllActions()[0];
+            expect(firstAction).toBeDefined();
+            expect(() => {
+                actionRegistry.registerAction(firstAction!);
+            }).toThrow(/already registered/);
         });
     });
 
-    describe('SetFields Action', () => {
+    describe('executeAction helper', () => {
+        const ctx = {
+            traceId: 'trace-123',
+            scope: EntityScope.TASK as const,
+            actorId: 'user-1',
+            taskId: 'task-uuid-1',
+            projectId: 'project-1',
+        };
+
+        it('should execute action via executeAction with correct input validation', async () => {
+            executeSpy.mockImplementation(async (query: any) => {
+                const sql = query.sql;
+                if (sql.includes('select') || sql.includes('SELECT')) {
+                    return {
+                        rows: [
+                            {
+                                id: 'task-uuid-1',
+                                version: 3,
+                                status: 'TODO',
+                                fk_team_id: null,
+                                fk_member_id: null,
+                            },
+                        ],
+                    };
+                }
+                if (sql.includes('update') || sql.includes('UPDATE')) {
+                    return {
+                        numUpdatedRows: 1n,
+                        numAffectedRows: 1n,
+                        rows: [],
+                    };
+                }
+                return { rows: [] };
+            });
+
+            await executeAction('set-fields', ctx, {
+                status: 'IN_PROGRESS',
+                teamId: 'team-456',
+            });
+
+            const updateCall = executeSpy.mock.calls.find(
+                (call) =>
+                    call[0].sql.includes('update') ||
+                    call[0].sql.includes('UPDATE'),
+            );
+            expect(updateCall).toBeDefined();
+            expect(updateCall?.[0].parameters).toContain('IN_PROGRESS');
+            expect(updateCall?.[0].parameters).toContain('team-456');
+        });
+
+        it('should fail validation for invalid inputs', async () => {
+            // teamId is expected to be string/null/undefined, passing a number should fail Zod validation
+            await expect(
+                executeAction('set-fields', ctx, {
+                    teamId: 12345 as any,
+                }),
+            ).rejects.toThrow();
+        });
+
+        it('should throw error if attempting to execute unregistered action', async () => {
+            await expect(
+                executeAction('non-existent-action', ctx, {}),
+            ).rejects.toThrow(/is not registered/);
+        });
+    });
+
+    describe('SetFields Action Handler', () => {
         it('should fetch fresh task, update multiple fields and version using optimistic locking', async () => {
             executeSpy.mockImplementation(async (query: any) => {
                 const sql = query.sql;
@@ -545,6 +594,15 @@ describe('Auto Action Module', () => {
                 };
 
                 expect(evaluateCondition(complexAST, dummyContext)).toBe(true);
+            });
+
+            it('should throw error when unrecognized condition predicate type is encountered', () => {
+                expect(() => {
+                    evaluateCondition(
+                        { type: 'UnrecognizedCondition' as any },
+                        dummyContext,
+                    );
+                }).toThrow(/Unrecognized condition predicate type/);
             });
         });
 

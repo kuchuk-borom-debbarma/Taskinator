@@ -18,15 +18,6 @@ export type { TaskContext } from './scopes/task/types.js';
 export { taskContextSchema };
 
 /**
- * Definition metadata representing a trigger type.
- */
-export interface TriggerDefinition {
-    readonly id: string;
-    readonly name: string;
-    readonly scope: EntityScope;
-}
-
-/**
  * Blueprint definition representing a reusable automation action.
  */
 export interface ActionDefinition<I extends z.ZodObject<any>> {

@@ -1,40 +1,31 @@
 ---
 gsd_state_version: 1.0
-milestone: v9.0
-milestone_name: Auto-Action Condition Component
-status: Completed
-last_updated: "2026-05-21T04:10:00.000Z"
-last_activity: 2026-05-21 — Milestone v9.0 fully implemented and verified
+milestone: v10.0
+milestone_name: Action & Condition Engine Isolation
+status: In Progress
+last_updated: "2026-05-21T04:26:00.000Z"
+last_activity: 2026-05-21 — Initiating Milestone v10.0 to separate engines
 progress:
-  total_phases: 3
-  completed_phases: 3
-  total_plans: 3
-  completed_plans: 3
-  percent: 100
+  total_phases: 1
+  completed_phases: 0
+  total_plans: 1
+  completed_plans: 0
+  percent: 0
 ---
 
-# Project State - Milestone v9.0 (Auto-Action Condition Component)
+# Project State - Milestone v10.0 (Action & Condition Engine Isolation)
 
-## Completed Phase: Phase 31 - Condition AST Schema & Types
+## Active Phase: Phase 34 - Action & Condition Engine Isolation
 
-- [x] **AST-01**: Define a recursive Zod schema `conditionNodeSchema` validating Logical and Predicate structures.
-- [x] **AST-02**: Export derived TypeScript types `ConditionNode`, `LogicalNode`, and `PredicateNode`.
-
-## Completed Phase: Phase 32 - Condition Evaluation Engine
-
-- [x] **EVL-01**: Build `evaluateCondition(node, ctx)` implementing logic operator and predicate evaluation.
-- [x] **EVL-02**: Support snapshot field comparison and change-based operators (eq, gt, changedTo, etc.).
-
-## Completed Phase: Phase 33 - Registry & E2E Validation
-
-- [x] **REG-01**: Synchronize `getTemplateForScope` with condition operators and field mappings.
-- [x] **TST-01**: Write high-fidelity Bun tests covering nested condition trees and edge cases.
+- [ ] **ISO-01**: Remove evaluator, global registries, and trigger setups from `auto-action`.
+- [ ] **ISO-02**: Implement isolated `conditionEngine` with pure AST evaluation.
+- [ ] **ISO-03**: Implement isolated `actionEngine` with Zod validation, fresh-fetching, and optimistic locking.
+- [ ] **ISO-04**: Adapt and split scope registers (`scopes/task/`) to register independently.
+- [ ] **ISO-05**: Rewrite `autoAction.test.ts` to verify independent engines and resolve all compilation/lint checks.
 
 ## Progress
 
-- [x] Phase 31 (Completed)
-- [x] Phase 32 (Completed)
-- [x] Phase 33 (Completed)
+- [ ] Phase 34 (In Progress)
 
 ## Blockers
 
@@ -42,4 +33,4 @@ progress:
 
 ## Next Step
 
-- Start planning for next integration milestone (e.g. project scope triggers/actions).
+- Create the implementation plan and obtain user approval.

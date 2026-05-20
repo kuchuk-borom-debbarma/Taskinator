@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { db } from '../../../../../database/index.js';
-import { autoActionRegistry } from '../../../registry.js';
+import { actionRegistry } from '../../../actionEngine.js';
 import type { ActionDefinition } from '../../../types.js';
 import { EntityScope } from '../../../types.js';
 import type { TaskContext } from '../types.js';
@@ -95,5 +95,5 @@ export const setFieldsAction: ActionDefinition<typeof inputSchema> = {
  * Registers the action in the global registry.
  */
 export function registerSetFields(): void {
-    autoActionRegistry.registerAction(setFieldsAction);
+    actionRegistry.registerAction(setFieldsAction);
 }

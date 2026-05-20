@@ -38,6 +38,7 @@ Automate the "busy work" of project management through reliable, transparent, an
 - ✓ [Auto-Action Condition AST Schema] — Define structural AST types for logical (AND/OR/NOT) and predicate operations under TASK scope (v9.0).
 - ✓ [Fresh-Fetch Condition Evaluator] — Implement dynamic, optimistic-safe recursive evaluator using current/previous states (v9.0).
 - ✓ [Dynamic Scope & Template Sync] — Integrate condition variables and schemas in registry template and metadata output (v9.0).
+- ✓ [Action & Condition Engine Isolation] — Decouple and isolate execution engines independently without tied triggers or tied flows (v10.0).
 - [ ] [Multi-domain Triggers] — Evaluate events crossing project boundaries.
 - [ ] [Complex Predicates] — Evaluate conditions referencing recursive parent/child states.
 
@@ -46,12 +47,12 @@ Automate the "busy work" of project management through reliable, transparent, an
 - [Cron-based Triggers] — Reactive/event-driven architecture remains primary focus.
 - [External Service Actions] — Scope confined to internal Taskinator domain mutations.
 
-## Next Milestone Goals (v10.0 - Project & Multi-domain Triggers)
+## Next Milestone Goals (v10.0 - Action & Condition Engine Isolation)
 
-**Goal:** Expand the auto-action scope beyond Tasks to support Project triggers, actions, and complex cross-boundary conditions.
+**Goal:** Decouple and isolate execution engines. Remove the evaluator and auto-action trigger-to-condition-to-action engine orchestrator. Instead, introduce isolated, independent `actionEngine` and `conditionEngine` modules that are responsible for actions and conditions independently. Nothing is going to be tied together in this milestone.
 
 ## Current State (Post-v9.0)
-The transactional CTE outbox engine (v8.0), loop depth safety mechanisms, and the newly decoupled, transition-focused Condition Evaluation Engine (v9.0) are fully operational and verified under Bun. The frontend application `ui-v1` remains synchronized. We are ready to define subsequent cross-boundary triggers.
+The transactional CTE outbox engine (v8.0), loop depth safety mechanisms, and the newly decoupled, transition-focused Condition Evaluation Engine (v9.0) are fully operational and verified under Bun. Now, we are embarking on Milestone v10.0 to separate the action and condition engines completely, ensuring modularity before re-integrating them in subsequent milestones.
 
 ## Key Decisions
 
@@ -70,10 +71,11 @@ The transactional CTE outbox engine (v8.0), loop depth safety mechanisms, and th
 | Smart Aggregation (CASE) | Optimizes high-throughput updates by grouping heterogeneous mutations into single SQL roundtrips. | **Complete (v6.0)** |
 | Single-Query CTE Writes | Reduces PostgreSQL round-trips to exactly 1 query for high-throughput outbox event emission. | **Complete (v8.0)** |
 | Strict depth hop ceiling | Prevent resource exhaustion by halting recursive events exceeding a depth of 50. | **Complete (v8.0)** |
+| Isolated Engines | Introduce completely standalone actionEngine and conditionEngine for high modularity. | **In Progress (v10.0)** |
 
 ## Evolution
 
 This document evolves at phase transitions and milestone boundaries.
 
 ---
-*Last updated: 2026-05-21 after v8.0 milestone completion*
+*Last updated: 2026-05-21 after v9.0 milestone completion*
