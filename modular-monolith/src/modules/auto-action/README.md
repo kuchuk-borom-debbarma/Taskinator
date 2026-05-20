@@ -1,196 +1,185 @@
 # Scoped Automation Engine (`auto-action` Module)
 
-The `auto-action` module is a high-performance, modular, and loosely coupled automation engine designed to execute triggers, evaluate nested logical conditions, and execute actions. It allows users to define custom automation rules (e.g., *"When a task's status changes to `IN_PROGRESS`, set its priority and assign it to a team"* or *"When a task is updated and priority becomes high, trigger an action"*) via a unified, type-safe, and stateless framework.
+Welcome to the **Scoped Automation Engine** (`auto-action` module)! This module is a powerful, high-performance, and loosely coupled event-driven automation framework. It allows users, integrators, and developers to define and execute automated rules that keep their workspaces organized, synchronized, and highly productive without requiring manual intervention.
 
 ---
 
-## 🏗️ High-Level Architecture
+## 🌟 What is the `auto-action` Module?
 
-The automation engine is built around **Entity Scopes** (currently restricted strictly to `TASK`). Instead of carrying heavy, fully-hydrated database records across events, the system utilizes a **lightweight, fresh-fetch, and optimistic locking design**:
+At its core, the `auto-action` module is responsible for **automating workflows** within specific entity scopes (currently focused on `TASK`). 
+
+Imagine a user wanting to enforce rules like:
+* *"When a task's status changes to `IN_PROGRESS`, set its priority to `High` and assign it to the Engineering team."*
+* *"When a task is updated and its priority is elevated, automatically add a description template."*
+
+The `auto-action` module makes this possible by receiving events, evaluating nested logical rules, and executing corresponding changes safely, rapidly, and concurrently.
+
+---
+
+## 🧭 How Everything Works: A User's Perspective
+
+To understand the engine, it helps to look at the three foundational concepts that make up any automation rule: **Triggers**, **Conditions**, and **Actions**. Together, they form the **Rule Lifecycle**:
 
 ```mermaid
-sequence-chart
-Title: Scoped TASK Automation Lifecycle
-Domain Event -> Auto-Action Engine: Triggers event (e.g., task.updated)
-Auto-Action Engine -> Registry: Fetches registered actions & Zod inputs
-Auto-Action Engine -> Database: SELECT fresh task state by ID (always-fresh)
-Database -> Auto-Action Engine: Returns current task and version
-Auto-Action Engine -> Auto-Action Engine: Evaluates Condition AST (Stateless & Scoped)
-Auto-Action Engine -> Auto-Action Engine: Validates Action Zod inputs & state constraints
-Auto-Action Engine -> Database: UPDATE task SET status = X, version = version + 1 WHERE version = current
-Database -> Auto-Action Engine: Update Result (Optimistic Lock check)
-Note over Auto-Action Engine: Throws "Optimistic Lock Failure" if 0 rows updated
+flowchart LR
+    Trigger[⚡ 1. Trigger\n'Something happens'] --> Condition[🔍 2. Condition\n'Check if criteria matches']
+    Condition -->|Matches| Action[🚀 3. Action\n'Make changes automatically']
+    Condition -->|No Match| Stop[🛑 Stop]
 ```
 
-### Core Design Principles
+### ⚡ 1. Triggers
+A **Trigger** is the event or "hook" that kicks off the automation process. It represents something happening in the workspace.
+* **Task Created (`task.created`)**: Fires immediately when a new task is created.
+* **Task Updated (`task.updated`)**: Fires whenever any field, team, or assignee changes on an existing task.
 
-1. **Scope-Organized Boundaries**: All triggers, actions, and condition predicates are organized by their entity scope inside `scopes/` (e.g., `scopes/task/`), isolating domain logic completely.
-2. **Lightweight Contexts**: Trigger-time contexts (`TaskContext`) carry minimum identifiers (`taskId`, `projectId`, `actorId`) along with state comparison snapshots (`prev_` and `current_` properties) instead of heavy loaded objects.
-3. **Pure Context-Based Stateless Evaluation**: The Condition Evaluation Component operates entirely on the provided trigger context snapshots. There are no lazy database fetches inside the evaluator, guaranteeing sub-millisecond, highly-optimized stateless execution.
-4. **Always-Fresh Reads**: Actions fetch the latest state of the entity from the database using the unique `taskId`, ensuring they apply changes to the most recent record.
-5. **Optimistic Concurrency Control**: All database updates enforce strict optimistic locking using the task's `version` column to prevent overwriting concurrent updates.
+### 🔍 2. Conditions
+A **Condition** is the logical filter that determines whether the action should actually run. Conditions can be combined to build simple or highly complex filters using logic blocks:
+* **`AND`**: All nested conditions must be true.
+* **`OR`**: At least one nested condition must be true.
+* **`NOT`**: The nested condition must not be true.
 
----
+Inside these blocks, you define the actual field checks. Unlike rigid static filters, this engine is optimized for **transitions** (detecting changes between the "before" and "after" states):
+* **`TaskFieldChanged`**: Detects if a field (like `status` or `priority`) was modified.
+* **`TaskFieldChangedTo`**: Detects when a field transition matches a specific target (e.g., status changes to `IN_PROGRESS`).
+* **`TaskFieldChangedFrom`**: Detects when a field changes away from a starting value.
+* **`TaskFieldChangedFromTo`**: Checks if a field transitioned from a specific old value to a specific new value.
+* **`TaskTeamAssigned` / `TaskMemberAssigned`**: Detects assignment of teams or members.
+* **`TaskTeamUnassigned` / `TaskMemberUnassigned`**: Detects when a team or member is unassigned.
 
-## 📁 Codebase Directory Structure
-
-The code is strictly organized based on scope:
-
-```
-src/modules/auto-action/
-├── README.md                 # Updated documentation mapping the scoped layout
-├── index.ts                  # Root exports and scope initialization
-├── types.ts                  # Root scope-agnostic types (Logical AST schemas, registry definitions)
-├── registry.ts               # Unified triggers/actions registry and JSON-schema parser
-├── evaluator.ts              # Root evaluator (logical recursion & scope delegation)
-├── scopes/
-│   └── task/
-│       ├── index.ts          # Task scope bootstrapper
-│       ├── types.ts          # TaskContext Zod schema and TaskPredicate discriminated union
-│       ├── conditions.ts     # Task-specific predicate evaluation logic
-│       ├── triggers.ts       # Task-specific triggers (task.created, task.updated)
-│       └── actions/
-│           └── setFields.ts  # Task-specific field updates action
-└── __tests__/
-    └── autoAction.test.ts    # Refactored tests verifying scoped conditions and actions
-```
+### 🚀 3. Actions
+An **Action** is the operation executed automatically when all conditions are satisfied.
+* **Set Fields (`SetFields`)**: Updates standard fields (such as `status`, `priority`, `title`, or `description`), assigns/unassigns teams, or modifies assigned members.
+  > [!NOTE]
+  > **Cascading Behavior**: Setting or changing a task's assignee to a team or member respects natural cascade rules. For example, unassigning a team will automatically unassign any members of that team from the task to keep the data clean.
 
 ---
 
-## 🧩 Component Deep-Dive
+## 🛠️ Concrete Examples: Automation Rule Payloads
 
-### 1. Root Types & Common AST (`types.ts`)
-Defines the core logical AST tree structure. Grouping nodes (`AND`, `OR`, `NOT`) are defined recursively. The root `conditionNodeSchema` parses logical nodes recursively and spreads the scope-specific predicate schemas under a single Zod discriminated union.
+Below are example configurations demonstrating how rules are represented as JSON payloads in the system.
 
-### 2. Task Scope Definitions (`scopes/task/types.ts`)
-Defines `taskContextSchema` and the hardcoded, transition-focused condition predicate union (`taskPredicateNodeSchema`). All general-purpose mathematical comparison operators (`eq`, `neq`, `gt`, `in`, etc.) are completely excluded. Instead, strictly transition-based hardcoded nodes are supported:
+### Example A: Status Transition & Assignment Rule
+**Rule Description:** *When a task's status changes to `IN_PROGRESS`, set the priority to `3` (Medium) and assign it to `team-456`.*
 
-#### Standard Task Fields
-Standard task fields (`status`, `priority`, `title`, `version`) are verified using the following transition predicates:
-
-* **`TaskFieldChanged`**: Checks if the field was modified.
-* **`TaskFieldChangedTo`**: Detects transition to a target value.
-* **`TaskFieldChangedFrom`**: Detects transition away from a target value.
-* **`TaskFieldChangedFromTo`**: Detects transition from a target value to another target value.
-
-#### Specialized Team & Member Fields
-Due to their special cascading assignment behaviors (e.g. removing a team automatically removes a member), team and member assignments are isolated from standard field changes:
-
-* **Team Assignments**:
-  * `TaskTeamChanged`: Detects team changes.
-  * `TaskTeamAssigned`: Detects assignment to a team (optionally matching a specific `teamId`, or generic assignment).
-  * `TaskTeamUnassigned`: Detects clearing of team assignment.
-* **Member Assignments**:
-  * `TaskMemberChanged`: Detects member assignment changes.
-  * `TaskMemberAssigned`: Detects assignment to a member (optionally matching a specific `memberId`).
-  * `TaskMemberUnassigned`: Detects clearing of member assignment.
-
----
-
-### 3. Task Condition Evaluator (`scopes/task/conditions.ts`)
-Implements `evaluateTaskPredicate(node: TaskPredicateNode, ctx: TaskContext): boolean`.
-* Employs helper `getTaskFieldValues` to cleanly resolve standard task fields (`status`, `priority`, `title`, `version`) to their historical `prev_` and `current_` variables.
-* Implements clean transition and assignment checks for Team and Member fields.
-
-### 4. Root Evaluator (`evaluator.ts`)
-Recursively processes logical nodes (`AND`, `OR`, `NOT`). When encountering a leaf predicate, it routes the node dynamically to the scope-specific predicate evaluator based on the context's scope (e.g. `ctx.scope === 'TASK'`).
-
----
-
-### 5. Registry & Schema Serialization (`registry.ts`)
-The `AutoActionRegistry` is a thread-safe singleton.
-* **Dynamic Template Generation (`getTemplateForScope`)**: Builds a metadata catalog exposing compatible triggers, available actions, current context fields, and a dynamic list of allowed condition type names (**`conditionTypes`**) derived directly from the Zod union schema.
-
----
-
-## 💻 Technical Usage & Examples
-
-### 1. Structure of a Condition AST
-Below is a complete JSON representation of a nested logical filter utilizing hardcoded transition conditions:
 ```json
 {
-  "type": "logical",
-  "operator": "AND",
-  "children": [
-    {
-      "type": "logical",
-      "operator": "OR",
-      "children": [
-        {
-          "type": "TaskFieldChangedTo",
-          "field": "status",
-          "to": "IN_PROGRESS"
-        },
-        {
-          "type": "TaskTeamAssigned",
-          "teamId": "team-456"
-        }
-      ]
-    },
-    {
-      "type": "logical",
-      "operator": "NOT",
-      "children": [
-        {
-          "type": "TaskFieldChangedTo",
-          "field": "priority",
-          "to": 5
-        }
-      ]
+  "trigger": "task.updated",
+  "condition": {
+    "type": "TaskFieldChangedTo",
+    "field": "status",
+    "to": "IN_PROGRESS"
+  },
+  "action": {
+    "type": "SetFields",
+    "config": {
+      "priority": 3,
+      "teamId": "team-456"
     }
-  ]
+  }
 }
 ```
 
-### 2. Executing Condition Evaluations in TypeScript
-Here is how to parse, validate, and evaluate AST conditions dynamically in your code:
+### Example B: Multi-Condition Logical Rule
+**Rule Description:** *When a task's priority is increased to `5` (Critical) AND it is assigned to `team-123`, BUT it is not yet set to `DONE`.*
 
-```typescript
-import { conditionNodeSchema, evaluateCondition } from './index.js';
-import type { ConditionNode, TaskContext } from './index.js';
-
-// 1. Receive JSON string from frontend/API
-const jsonString = `{
-  "type": "TaskFieldChangedTo",
-  "field": "status",
-  "to": "IN_PROGRESS"
-}`;
-
-// 2. Validate AST against strict Zod Schema
-const parsedAST: ConditionNode = conditionNodeSchema.parse(JSON.parse(jsonString));
-
-// 3. Construct the lightweight context
-const context: TaskContext = {
-  traceId: "trace-999",
-  scope: "TASK",
-  actorId: "user-uuid",
-  taskId: "task-uuid",
-  projectId: "project-uuid",
-  prev_status: "TODO",
-  current_status: "IN_PROGRESS",
-  prev_priority: 1,
-  current_priority: 1,
-  prev_version: 3,
-  current_version: 4
-};
-
-// 4. Run stateless evaluation
-const shouldExecute = evaluateCondition(parsedAST, context);
-console.log(`Condition match result: ${shouldExecute}`); // outputs: true
+```json
+{
+  "trigger": "task.updated",
+  "condition": {
+    "type": "logical",
+    "operator": "AND",
+    "children": [
+      {
+        "type": "TaskFieldChangedTo",
+        "field": "priority",
+        "to": 5
+      },
+      {
+        "type": "TaskTeamAssigned",
+        "teamId": "team-123"
+      },
+      {
+        "type": "logical",
+        "operator": "NOT",
+        "children": [
+          {
+            "type": "TaskFieldChangedTo",
+            "field": "status",
+            "to": "DONE"
+          }
+        ]
+      }
+    ]
+  },
+  "action": {
+    "type": "SetFields",
+    "config": {
+      "description": "[CRITICAL AUTOMATION] Priority raised to 5. Please triage immediately."
+    }
+  }
+}
 ```
+
+---
+
+## 📁 Module Directory Structure
+
+```
+src/modules/auto-action/
+├── README.md                 # User-facing guide (This file)
+├── index.ts                  # Root module entrypoint and bootstrappers
+├── types.ts                  # Scope-agnostic AST and core registry types
+├── registry.ts               # Central singleton registry for triggers, actions, conditions
+├── evaluator.ts              # Stateless recursive logical AST evaluator
+├── template.ts               # Dynamic Zod-to-JSON-Schema converter
+├── scopes/
+│   └── task/                 # Scoped implementations isolated for TASK
+│       ├── index.ts          # Task scope bridge and bootstrappers
+│       ├── types.ts          # TaskContext & TaskPredicate leaf Zod schemas
+│       ├── conditions.ts     # Task predicate evaluator bridge
+│       ├── conditions/       # Modular split of individual task leaf conditions
+│       └── actions/
+│           └── setFields.ts  # Task field assignment action
+└── docs/                     # Internal implementation and architecture guides
+```
+
+---
+
+## 📖 Deep-Dive Developer Documentation
+
+If you are a developer extending the engine, building new actions/conditions, or auditing the performance and scaling guarantees, please read our comprehensive internal documentation guides:
+
+### ⚡ [1. High-Performance Architecture](docs/architecture.md)
+* **Pure Stateless Evaluations**: Why evaluations take `<1ms` and run with zero database roundtrips.
+* **Fresh-Fetch Pattern**: How actions read the latest database state before committing updates to prevent stale mutations.
+* **Optimistic Concurrency Control**: How the system utilizes the `version` column to handle 10k+ RPS concurrent modifications safely via `ConcurrentUpdateException`.
+
+### 🎛️ [2. Triggers & Context Resolution](docs/triggers.md)
+* **Dynamic Trigger Registration**: Bootstrapping hook types.
+* **Lightweight Contexts**: Detailed walkthrough of the `TaskContext` payload comparing pre-event and post-event changes (`prev_` and `current_` properties).
+
+### 🔍 [3. Condition AST & Evaluation](docs/conditions.md)
+* **AST Logical Nodes**: Recursive `AND`, `OR`, and `NOT` compilation with Zod's `z.lazy()`.
+* **Modular Predicates**: The modular design split of individual leaf conditions and shared extraction helpers.
+
+### 🚀 [4. Action Executors & Lifecycle](docs/actions.md)
+* **Action Registration**: Schema requirements and input Zod shapes.
+* **Execution Flow**: Step-by-step transaction walkthrough, cascading assignment calculations, and lock-checking updates.
+
+### 🗃️ [5. Central Registry & Templates](docs/registry.md)
+* **Registry Store**: Singleton container decoupling rules from execution.
+* **Dynamic Serialization**: How the Zod-to-JSON-Schema transformer compiles schemas to automatically feed dynamic front-end form builders.
 
 ---
 
 ## 🧪 Verification & Testing
 
-### Execution Commands
-
-To execute the test suite:
+To run the automated suite verifying the scoped conditions and actions:
 ```bash
 bun test src/modules/auto-action/__tests__/autoAction.test.ts
 ```
 
-To run TypeScript compiler typechecking:
+To run the TypeScript compiler and typecheck the module:
 ```bash
 bun x tsc --noEmit
 ```
