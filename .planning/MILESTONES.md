@@ -1,5 +1,16 @@
 # Milestones
 
+## v10.0 Action & Condition Engine Isolation (Shipped: 2026-05-21)
+
+**Phases completed:** 1 phase, 1 plan, 7 tasks
+
+**Key accomplishments:**
+- **Decoupled Engines Implementation**: Created `conditionEngine.ts` and `actionEngine.ts` to manage stateless AST evaluation and validation-backed action execution completely independently.
+- **Optimistic Concurrency & OCC**: Integrated fresh-fetching and optimistic concurrency locking guarantees inside action execution flows.
+- **Decoupled Testing**: Rewrote the entire module unit tests to fully assert separate engines independently, with 23/23 tests passing.
+
+---
+
 ## v9.0 Auto-Action Condition Component (Shipped: 2026-05-21)
 
 **Phases completed:** 3 phases, 3 plans, 3 tasks
