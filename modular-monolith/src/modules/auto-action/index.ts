@@ -1,10 +1,8 @@
 import { logger } from '../../logger/index.ts';
-import { registerSendInternalNotification } from './actions/sendInternalNotification.js';
-import { registerSetTaskStatus } from './actions/setTaskStatus.js';
+import { registerSetFields } from './actions/setFields.js';
 import { registerTriggers } from './triggers.js';
 
-export * from './actions/sendInternalNotification.js';
-export * from './actions/setTaskStatus.js';
+export * from './actions/setFields.js';
 export * from './registry.js';
 export * from './triggers.js';
 export * from './types.js';
@@ -19,8 +17,7 @@ export async function init(): Promise<void> {
     registerTriggers();
 
     // Register actions
-    registerSetTaskStatus();
-    registerSendInternalNotification();
+    registerSetFields();
 
     logger.info(
         '[AutoAction] Automation engine successfully initialized and registered.',

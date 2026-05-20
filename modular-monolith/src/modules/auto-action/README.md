@@ -41,8 +41,7 @@ src/modules/auto-action/
 ├── registry.ts             # Global in-memory trigger/action registry
 ├── triggers.ts             # Trigger definitions (e.g., task.created)
 ├── actions/                # Folder containing concrete actions
-│   ├── setTaskStatus.ts             # Sets task status using optimistic locking
-│   └── sendInternalNotification.ts  # Sends in-app notifications
+│   └── setFields.ts        # Updates multiple task fields using optimistic locking
 └── __tests__/              # Unit and integration test suite
     └── autoAction.test.ts  # Tests for registry, triggers, and actions
 ```
@@ -63,7 +62,7 @@ The `AutoActionRegistry` is a thread-safe singleton that holds active triggers a
 * **Schema Serialization**: Features a robust `serializeZodSchema()` helper which unwraps complex nested Zod schemas (such as `ZodOptional` and `ZodNullable`) and maps them to a simplified JSON format:
   ```json
   {
-    "newStatus": { "type": "string", "required": true }
+    "status": { "type": "string", "required": false }
   }
   ```
 * **Template Generation**: Exposes `getTemplateForScope()`, giving the frontend a complete menu of compatible triggers, actions, and available context variables for UI builder dropdowns.
@@ -74,18 +73,18 @@ Registers starter events that kickstart automation rules:
 * `task.updated`: Fired when properties on a task are changed.
 
 ### 4. Actions (`actions/*`)
-* **`setTaskStatus.ts`**:
+* **`setFields.ts`**:
+  * Exposes input schemas for `status`, `title`, `description`, `teamId`, and `memberId`.
   * Fetches the latest database record of the task before performing operations.
+  * Maps `teamId` and `memberId` to the proper database columns (`fk_team_id` and `fk_member_id` respectively).
   * Asserts optimistic locking:
     ```typescript
     const result = await db.updateTable('project_task')
-        .set({ status: newStatus, version: currentVersion + 1 })
+        .set({ ...fields, version: currentVersion + 1 })
         .where('id', '=', taskId)
         .where('version', '=', currentVersion)
         .executeTakeFirst();
     ```
-* **`sendInternalNotification.ts`**:
-  * Dispatches standard in-app notifications carrying telemetry payload (`traceId`, `taskId`) for tracing and user notification feeds.
 
 ### 5. Module Entry Point (`index.ts`)
 Coordinates the bootstrapping lifecycle. When `init()` is called, it registers the concrete actions and triggers into the global singleton registry.
@@ -101,7 +100,8 @@ The module maintains high-quality standards with a robust test suite in `__tests
   1. Fresh select queries are invoked with correct task IDs.
   2. Optimistic locking queries increment versions correctly.
   3. Concurrent modification errors are successfully raised when `numAffectedRows === 0n`.
-  4. In-app notifications carry correct JSON metadata structures.
+  4. Multi-field updates correctly map object properties to the database schema.
+  5. Updates with zero specified fields are safely ignored as no-ops.
 
 To execute tests:
 ```bash

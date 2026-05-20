@@ -15,8 +15,7 @@ import {
     autoActionRegistry,
     EntityScope,
     init,
-    sendInternalNotificationAction,
-    setTaskStatusAction,
+    setFieldsAction,
 } from '../index.js';
 
 const executeSpy = mock(
@@ -48,8 +47,9 @@ describe('Auto Action Module', () => {
 
             expect(triggers.map((t) => t.id)).toContain('task.created');
             expect(triggers.map((t) => t.id)).toContain('task.updated');
-            expect(actions.map((a) => a.id)).toContain('set-task-status');
-            expect(actions.map((a) => a.id)).toContain(
+            expect(actions.map((a) => a.id)).toContain('set-fields');
+            expect(actions.map((a) => a.id)).not.toContain('set-task-status');
+            expect(actions.map((a) => a.id)).not.toContain(
                 'send-internal-notification',
             );
         });
@@ -67,22 +67,29 @@ describe('Auto Action Module', () => {
                 'task.updated',
             );
 
-            const setStatusMetadata = template.actions.find(
-                (a) => a.id === 'set-task-status',
+            const setFieldsMetadata = template.actions.find(
+                (a) => a.id === 'set-fields',
             );
-            expect(setStatusMetadata).toBeDefined();
-            expect(setStatusMetadata?.inputs.newStatus).toEqual({
+            expect(setFieldsMetadata).toBeDefined();
+            expect(setFieldsMetadata?.inputs.status).toEqual({
                 type: 'string',
-                required: true,
+                required: false,
             });
-
-            const sendNotificationMetadata = template.actions.find(
-                (a) => a.id === 'send-internal-notification',
-            );
-            expect(sendNotificationMetadata).toBeDefined();
-            expect(sendNotificationMetadata?.inputs.userId).toEqual({
+            expect(setFieldsMetadata?.inputs.title).toEqual({
                 type: 'string',
-                required: true,
+                required: false,
+            });
+            expect(setFieldsMetadata?.inputs.description).toEqual({
+                type: 'string',
+                required: false,
+            });
+            expect(setFieldsMetadata?.inputs.teamId).toEqual({
+                type: 'string',
+                required: false,
+            });
+            expect(setFieldsMetadata?.inputs.memberId).toEqual({
+                type: 'string',
+                required: false,
             });
 
             expect(template.contextFields).toContain('taskId');
@@ -91,8 +98,8 @@ describe('Auto Action Module', () => {
         });
     });
 
-    describe('SetTaskStatus Action', () => {
-        it('should fetch fresh task, update status and version using optimistic locking', async () => {
+    describe('SetFields Action', () => {
+        it('should fetch fresh task, update multiple fields and version using optimistic locking', async () => {
             // Mock DB response for select query (fetching fresh task) and update query
             executeSpy.mockImplementation(async (query: any) => {
                 const sql = query.sql;
@@ -103,6 +110,8 @@ describe('Auto Action Module', () => {
                                 id: 'task-uuid-1',
                                 version: 3,
                                 status: 'TODO',
+                                fk_team_id: null,
+                                fk_member_id: null,
                             },
                         ],
                     };
@@ -125,8 +134,10 @@ describe('Auto Action Module', () => {
                 projectId: 'project-1',
             };
 
-            await setTaskStatusAction.handler(ctx, {
-                newStatus: 'IN_PROGRESS',
+            await setFieldsAction.handler(ctx, {
+                status: 'IN_PROGRESS',
+                teamId: 'team-456',
+                memberId: 'user-789',
             });
 
             // Check if select query was called with correct parameters
@@ -146,6 +157,8 @@ describe('Auto Action Module', () => {
             );
             expect(updateCall).toBeDefined();
             expect(updateCall?.[0].parameters).toContain('IN_PROGRESS');
+            expect(updateCall?.[0].parameters).toContain('team-456');
+            expect(updateCall?.[0].parameters).toContain('user-789');
             expect(updateCall?.[0].parameters).toContain(4); // New version
             expect(updateCall?.[0].parameters).toContain(3); // Old version in WHERE clause
         });
@@ -183,56 +196,44 @@ describe('Auto Action Module', () => {
             };
 
             expect(
-                setTaskStatusAction.handler(ctx, { newStatus: 'IN_PROGRESS' }),
+                setFieldsAction.handler(ctx, { status: 'IN_PROGRESS' }),
             ).rejects.toThrow('Optimistic lock failure');
         });
-    });
 
-    describe('SendInternalNotification Action', () => {
-        it('should correctly insert a notification record into the database', async () => {
-            executeSpy.mockImplementation(async () => {
-                return {
-                    numUpdatedRows: 1n,
-                    numAffectedRows: 1n,
-                    rows: [],
-                };
+        it('should do nothing if update is called with no fields specified', async () => {
+            executeSpy.mockImplementation(async (query: any) => {
+                const sql = query.sql;
+                if (sql.includes('select') || sql.includes('SELECT')) {
+                    return {
+                        rows: [
+                            {
+                                id: 'task-uuid-1',
+                                version: 3,
+                                status: 'TODO',
+                            },
+                        ],
+                    };
+                }
+                return { rows: [] };
             });
 
             const ctx = {
-                traceId: 'trace-456',
+                traceId: 'trace-123',
                 scope: EntityScope.TASK as const,
                 actorId: 'user-1',
                 taskId: 'task-uuid-1',
                 projectId: 'project-1',
             };
 
-            await sendInternalNotificationAction.handler(ctx, {
-                userId: 'user-2',
-                title: 'Automation Triggered',
-                message: 'Your task has been updated.',
-            });
+            await setFieldsAction.handler(ctx, {});
 
-            const insertCall = executeSpy.mock.calls.find(
+            // Check that no update query was run
+            const updateCall = executeSpy.mock.calls.find(
                 (call) =>
-                    call[0].sql.includes('insert') ||
-                    call[0].sql.includes('INSERT'),
+                    call[0].sql.includes('update') ||
+                    call[0].sql.includes('UPDATE'),
             );
-            expect(insertCall).toBeDefined();
-
-            const params = insertCall?.[0].parameters;
-            expect(params).toContain('user-2');
-            expect(params).toContain('Automation Triggered');
-            expect(params).toContain('Your task has been updated.');
-            expect(params).toContain('AUTOMATION');
-
-            // Verifying JSON metadata carries traceId and taskId
-            const metadataStr = params.find(
-                (p: any) => typeof p === 'string' && p.includes('trace-456'),
-            );
-            expect(metadataStr).toBeDefined();
-            const parsedMeta = JSON.parse(metadataStr);
-            expect(parsedMeta.traceId).toBe('trace-456');
-            expect(parsedMeta.triggeringTaskId).toBe('task-uuid-1');
+            expect(updateCall).toBeUndefined();
         });
     });
 });
