@@ -1,5 +1,15 @@
 # Milestones
 
+## v8.0 High-Performance CTE & Depth Guards (Shipped: 2026-05-17)
+
+**Phases completed:** 2 phases, 4 plans, 6 tasks
+
+**Key accomplishments:**
+- **CTE Bulk Outbox Writes**: Enabled single-query heterogeneous updates and outbox writing inside a single database transaction, optimized for 10k RPS.
+- **Asynchronous Depth Guards**: Integrated TraceId + depth propagation across recursive event flows and Kafka listeners, blocking loop execution with a strict maximum boundary of 50 depth hops.
+
+---
+
 ## v7.0 v7.0 (Shipped: 2026-05-17)
 
 **Phases completed:** 7 phases, 16 plans, 3 tasks

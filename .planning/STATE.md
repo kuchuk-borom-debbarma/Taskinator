@@ -1,36 +1,40 @@
 ---
 gsd_state_version: 1.0
-milestone: v8.0
-milestone_name: High-Performance CTE & Depth Guards
-status: Complete
-last_updated: "2026-05-17T21:20:00.000Z"
-last_activity: 2026-05-17 — Milestone completed
+milestone: v9.0
+milestone_name: Auto-Action Condition Component
+status: In_Progress
+last_updated: "2026-05-21T03:45:00.000Z"
+last_activity: 2026-05-21 — Milestone v9.0 started and planned
 progress:
-  total_phases: 2
-  completed_phases: 2
-  total_plans: 4
-  completed_plans: 4
-  percent: 100
+  total_phases: 3
+  completed_phases: 0
+  total_plans: 3
+  completed_plans: 0
+  percent: 0
 ---
 
-# Project State - Milestone v8.0 (CTE & Depth Guards)
+# Project State - Milestone v9.0 (Auto-Action Condition Component)
 
-## Completed Phase: Phase 29 - CTE Bulk Outbox Writes
+## Active Phase: Phase 31 - Condition AST Schema & Types
 
-- [x] **CTE-01**: Define Kysely dynamic CTE bulk updates with old_state select.
-- [x] **CTE-02**: Execute single transaction CTE flushing to database and inserting outbox events.
-- [x] **CTE-03**: Verify CTE query pattern with `SmartAggregator` unit tests.
+- [ ] **AST-01**: Define a recursive Zod schema `conditionNodeSchema` validating Logical and Predicate structures.
+- [ ] **AST-02**: Export derived TypeScript types `ConditionNode`, `LogicalNode`, and `PredicateNode`.
 
-## Completed Phase: Phase 30 - Asynchronous Depth Guards
+## Planned Phase: Phase 32 - Condition Evaluation Engine
 
-- [x] **LGP-01**: Match `actorId` and capture `depth` in `AutopilotTriggerListener.ts`.
-- [x] **LGP-02**: Process and increment depth recursive payloads in `PipelineEventListener.ts`.
-- [x] **LGP-03**: Enforce strict loop depth boundaries (max 50 hops) in `PipelineOrchestrator.ts`.
+- [ ] **EVL-01**: Build `evaluateCondition(node, ctx)` implementing logic operator and predicate evaluation.
+- [ ] **EVL-02**: Support snapshot field comparison and change-based operators (eq, gt, changedTo, etc.).
+
+## Planned Phase: Phase 33 - Registry & E2E Validation
+
+- [ ] **REG-01**: Synchronize `getTemplateForScope` with condition operators and field mappings.
+- [ ] **TST-01**: Write high-fidelity Bun tests covering nested condition trees and edge cases.
 
 ## Progress
 
-- [x] Phase 29 Planning & Execution (Completed)
-- [x] Phase 30 Planning & Execution (Completed)
+- [/] Phase 31 Planning & Setup (Active)
+- [ ] Phase 32 (Planned)
+- [ ] Phase 33 (Planned)
 
 ## Blockers
 
@@ -38,4 +42,4 @@ progress:
 
 ## Next Step
 
-- Present Milestone v8.0 audit and completion summary to the user.
+- Initiate Phase 31 design, create the implementation plan, and acquire user approval.

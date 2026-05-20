@@ -32,9 +32,12 @@ Automate the "busy work" of project management through reliable, transparent, an
 - ✓ [Event-Driven Pipeline Orchestrator] — Implemented resumable sequential engine with bulk-update aggregation (v6.0).
 - ✓ [UI-v1 Dynamic Context] — Support dynamic trigger entity selection and lazy-context field lookups (v7.0) — Validated in Phase 27: Builder & Canvas Alignment.
 - ✓ [UI-v1 Sequential Pipeline] — Update Pipeline Editor to align with v6.0 sequential payload schema (v7.0) — Validated in Phase 27: Builder & Canvas Alignment.
+- ✓ [High-Performance CTE Outbox Writes] — Single-query bulk updates + outbox insertion in SmartAggregator (v8.0).
+- ✓ [Asynchronous Depth Guards] — TraceId + depth propagation across async Kafka loops to enforce recursion limits (v8.0).
 
-- [ ] [High-Performance CTE Outbox Writes] — Single-query bulk updates + outbox insertion in SmartAggregator (v8.0).
-- [ ] [Asynchronous Depth Guards] — TraceId + depth propagation across async Kafka loops to enforce recursion limits (v8.0).
+- [ ] [Auto-Action Condition AST Schema] — Define structural AST types for logical (AND/OR/NOT) and predicate operations under TASK scope (v9.0).
+- [ ] [Fresh-Fetch Condition Evaluator] — Implement dynamic, optimistic-safe recursive evaluator using current/previous states (v9.0).
+- [ ] [Dynamic Scope & Template Sync] — Integrate condition variables and schemas in registry template and metadata output (v9.0).
 - [ ] [Multi-domain Triggers] — Evaluate events crossing project boundaries.
 - [ ] [Complex Predicates] — Evaluate conditions referencing recursive parent/child states.
 
@@ -43,16 +46,17 @@ Automate the "busy work" of project management through reliable, transparent, an
 - [Cron-based Triggers] — Reactive/event-driven architecture remains primary focus.
 - [External Service Actions] — Scope confined to internal Taskinator domain mutations.
 
-## Next Milestone Goals (v9.0)
+## Next Milestone Goals (v9.0 - Auto-Action Condition Component)
 
-**Goal:** Establish advanced monitoring and cross-project event evaluation for Autopilot execution.
+**Goal:** Establish a robust, high-performance condition evaluation component for the scoped `auto-action` automation module.
 
 **Target features:**
-- Implement Multi-domain Triggers to evaluate events crossing project boundaries.
-- Integrate Complex Predicates to evaluate conditions referencing recursive parent/child states.
+- Define structured Condition AST types for logical (AND/OR/NOT) and leaf predicate operations under TASK scope.
+- Implement an optimistic-safe recursive Condition Evaluator that resolves variables against trigger-time snapshots.
+- Sync the `AutoActionRegistry` template serialization so the frontend receives a complete catalog of supported predicates, operators, and fields.
 
-## Current State (Post-v7.0)
-The Autopilot engine has been fully rebuilt (v6.0) and the frontend application `ui-v1` has been completely synchronized (v7.0) to support recursive ast condition evaluation, lazy context resolution, sequential pipelines with drag-and-drop reordering, and frame-accurate visual flows. All components are fully verified with a 100% test passing rate.
+## Current State (Post-v8.0)
+The transactional CTE outbox engine (v8.0) and loop depth safety mechanisms are fully operational. The frontend application `ui-v1` remains synchronized. We are now bootstrapping the scoped `auto-action` module's Condition Component (v9.0) to bring robust logical filters to the new high-performance automation lifecycle.
 
 ## Key Decisions
 
@@ -69,16 +73,12 @@ The Autopilot engine has been fully rebuilt (v6.0) and the frontend application 
 | Engine Amputation | Remove broken execution code before rebuilding to stabilize system and provide a clean slate. | **Complete (v5.0)** |
 | Recursive Kafka Loop | Enables resumable execution and prevents long-running DB locks by processing one step per event. | **Complete (v6.0)** |
 | Smart Aggregation (CASE) | Optimizes high-throughput updates by grouping heterogeneous mutations into single SQL roundtrips. | **Complete (v6.0)** |
+| Single-Query CTE Writes | Reduces PostgreSQL round-trips to exactly 1 query for high-throughput outbox event emission. | **Complete (v8.0)** |
+| Strict depth hop ceiling | Prevent resource exhaustion by halting recursive events exceeding a depth of 50. | **Complete (v8.0)** |
 
 ## Evolution
 
 This document evolves at phase transitions and milestone boundaries.
 
-**After each milestone** (via `/gsd:complete-milestone`):
-1. Full review of all sections
-2. Core Value check — still the right priority?
-3. Audit Out of Scope — reasons still valid?
-4. Update Context with current state
-
 ---
-*Last updated: 2026-05-17 after v7.0 milestone completion*
+*Last updated: 2026-05-21 after v8.0 milestone completion*

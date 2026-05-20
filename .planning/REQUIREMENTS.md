@@ -1,37 +1,50 @@
-# Requirements Specifications - Milestone v8.0 (Transactional CTE & Depth Guards)
+# Requirements Specifications - Milestone v9.0 (Auto-Action Condition Component)
 
-## 1. High-Performance CTE Bulk Outbox Writes
-To support the 10k RPS target, the `SmartAggregator` must update the database and write downstream notification outbox events in exactly **one single round-trip database query**.
+## 1. Structured Condition AST Definition
+To enable users to build complex filtering rules for automations, the `auto-action` system must define and validate a standard recursive Condition Abstract Syntax Tree (AST).
 
 ### Requirements:
-- **CTE-01**: The `SmartAggregator.executeBulkUpdate` query must compile into a single PostgreSQL Common Table Expression (CTE).
-- **CTE-02**: The CTE query must contain:
-  1. `old_state`: A select query fetching the old values (`fk_team_id`, `fk_member_id`, `title`, `status`) of all entities being updated.
-  2. `updated_entity`: A bulk case-statement update query applying field mutations across the matching rows and returning updated fields.
-  3. `inserted_outbox`: An `INSERT INTO outbox_events` query that joins `updated_entity` and `old_state` to populate transactional outbox events with complete change records.
-- **CTE-03**: This must support dynamic columns, table/entity types, and ids.
+- **AST-01**: Define a recursive Zod schema `conditionNodeSchema` in `types.ts` that validates Condition Nodes:
+  - **Logical Branch Node**:
+    - `type === 'logical'`
+    - `operator` is one of: `'AND' | 'OR' | 'NOT'`
+    - `children` is an array of `ConditionNode` (except `NOT` which must contain exactly one `child` or a single-item array `children`).
+  - **Predicate Leaf Node**:
+    - `type === 'predicate'`
+    - `field` represents a valid context field (e.g., `'status'`, `'priority'`, `'title'`, `'teamId'`, `'memberId'`).
+    - `operator` is one of: `'eq' | 'neq' | 'gt' | 'lt' | 'gte' | 'lte' | 'in' | 'contains' | 'empty' | 'exists' | 'changed' | 'changedTo' | 'changedFrom'`.
+    - `value` is any JSON-serializable value (number, string, boolean, array, null).
+- **AST-02**: Export standard TypeScript types derived from Zod: `ConditionNode`, `LogicalNode`, `PredicateNode`.
 
 ---
 
-## 2. Event Payload Schema & Loop Parameter Propagation
-When writing to the outbox via the bulk query, the generated event payload must contain tracking metadata for cycle safety.
+## 2. Fresh-Fetch & Snapshot Condition Evaluator
+The condition component must evaluate the Condition AST against a given `TaskContext`. It should support trigger-time context comparisons (using snapshot variables) and fresh database lookups.
 
 ### Requirements:
-- **PAY-01**: Outbox events spawned by Autopilot updates must set the `actorId` attribute strictly to `'system:autopilot'`.
-- **PAY-02**: Outbox events must contain the `traceId` correlation identifier from the execution state.
-- **PAY-03**: Outbox events must propagate the active loop `depth` integer from the execution state.
+- **EVL-01**: Implement `evaluateCondition(node: ConditionNode, ctx: TaskContext): boolean` in `modular-monolith/src/modules/auto-action/evaluator.ts`.
+- **EVL-02**: Support **Logical Nodes**:
+  - `AND`: Evaluates to `true` if and only if all child nodes evaluate to `true`.
+  - `OR`: Evaluates to `true` if any child node evaluates to `true`.
+  - `NOT`: Negates the evaluation of its child node.
+- **EVL-03**: Support **Predicate Nodes** evaluating against:
+  - **Snapshot properties**: Look up `prev_[field]` and `current_[field]` values directly from the `TaskContext` (e.g., `prev_status === 'TODO'` and `current_status === 'IN_PROGRESS'`).
+  - **Operator Logic**:
+    - `eq` / `neq`: Simple equality checks.
+    - `gt` / `lt` / `gte` / `lte`: Numeric range comparisons.
+    - `in` / `contains`: Array membership and collection checks.
+    - `empty` / `exists`: Nullability, falsiness, and existence checks.
+    - `changed`: True if `prev_[field] !== current_[field]`.
+    - `changedTo`: True if `current_[field] === expected` and `prev_[field] !== expected`.
+    - `changedFrom`: True if `prev_[field] === expected` and `current_[field] !== expected`.
 
 ---
 
-## 3. Asynchronous Depth Guards & Loop Safety
-The trigger system must track and limit recursive automation cascades to prevent infinite execution cycles.
+## 3. Registry Metadata & Template Synchronization
+The global `AutoActionRegistry` must expose the supported fields and operator details to the frontend to allow accurate UI rendering in the condition builder.
 
 ### Requirements:
-- **LGP-01**: `AutopilotTriggerListener.ts` must inspect task event payloads:
-  - If `actorId === 'system:autopilot'`, set `isRecursiveTrigger: true` and pass down the event's `depth`.
-  - If `actorId` is any other value, set `isRecursiveTrigger: false` and `depth: 0`.
-- **LGP-02**: `PipelineEventListener.ts` must consume trigger events:
-  - If the trigger has `isRecursiveTrigger === true`, the spawned state `depth` must be `parentDepth + 1`.
-  - Else, the spawned state `depth` must be `0`.
-- **LGP-03**: `PipelineOrchestrator` must validate depth limits before executing any pipeline step:
-  - If `depth > 50`, halt execution immediately, record a critical diagnostic log, and abort the write loop to block infinite recursion.
+- **REG-01**: Sync `getTemplateForScope(EntityScope.TASK)` to expose supported condition configuration:
+  - Supported predicate fields (mapped from `TaskContext` snapshot schemas).
+  - Supported comparison operators.
+  - JSON-serializable schema templates for condition nodes.

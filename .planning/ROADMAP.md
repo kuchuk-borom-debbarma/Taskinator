@@ -2,22 +2,16 @@
 
 ## Milestones
 
-- ✅ **v5.0 Revamp Autopilot** — Phase 21 (shipped 2026-05-16)
+- ✅ **v5.0 Revamp Autopilot** — Phase 21 (shipped 2026-05-16) [.planning/milestones/v5.0-ROADMAP.md]
 - ✅ **v6.0 Rebuild Autopilot Engine** — Phases 22-25 (shipped 2026-05-16) [.planning/milestones/v6.0-ROADMAP.md]
 - ✅ **v7.0 UI Alignment** — Phases 26-28 (shipped 2026-05-17) [.planning/milestones/v7.0-ROADMAP.md]
-- 🔄 **v8.0 High-Performance CTE & Depth Guards** — Phases 29-30 (Active)
+- ✅ **v8.0 High-Performance CTE & Depth Guards** — Phases 29-30 (shipped 2026-05-17) [.planning/milestones/v8.0-ROADMAP.md]
+- 🔄 **v9.0 Auto-Action Condition Component** — Phases 31-33 (Active)
 
 ## Progress
 
 | Phase             | Milestone | Plans Complete | Status      | Completed  |
 | ----------------- | --------- | -------------- | ----------- | ---------- |
-| 21. Legacy Engine Teardown | v5.0      | 1/1            | Complete    | 2026-05-16 |
-| 22. Database Schema | v6.0 | 1/1 | Complete | 2026-05-16 |
-| 23. Condition Engine | v6.0 | 2/2 | Complete | 2026-05-16 |
-| 24. Action Engine | v6.0 | 3/3 | Complete | 2026-05-16 |
-| 25. Pipeline Orchestrator | v6.0 | 3/3 | Complete | 2026-05-16 |
-| 26. GraphQL Sync | v7.0 | 2/2 | Complete | 2026-05-16 |
-| 27. Builder & Canvas Alignment | v7.0 | 4/4 | Complete    | 2026-05-16 |
-| 28. [Merged into Phase 27] | v7.0 | 0/0 | Merged | — |
-| 29. CTE Bulk Outbox Writes | v8.0 | 2/2 | Complete | 2026-05-17 |
-| 30. Asynchronous Depth Guards | v8.0 | 2/2 | Complete | 2026-05-17 |
+| 31. Condition AST Schema & Types | v9.0 | 0/1 | Active | — |
+| 32. Condition Evaluation Engine | v9.0 | 0/1 | Planned | — |
+| 33. Registry & E2E Validation | v9.0 | 0/1 | Planned | — |
