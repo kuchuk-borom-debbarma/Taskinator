@@ -2,39 +2,39 @@
 gsd_state_version: 1.0
 milestone: v9.0
 milestone_name: Auto-Action Condition Component
-status: In_Progress
-last_updated: "2026-05-21T03:45:00.000Z"
-last_activity: 2026-05-21 — Milestone v9.0 started and planned
+status: Completed
+last_updated: "2026-05-21T04:10:00.000Z"
+last_activity: 2026-05-21 — Milestone v9.0 fully implemented and verified
 progress:
   total_phases: 3
-  completed_phases: 0
+  completed_phases: 3
   total_plans: 3
-  completed_plans: 0
-  percent: 0
+  completed_plans: 3
+  percent: 100
 ---
 
 # Project State - Milestone v9.0 (Auto-Action Condition Component)
 
-## Active Phase: Phase 31 - Condition AST Schema & Types
+## Completed Phase: Phase 31 - Condition AST Schema & Types
 
-- [ ] **AST-01**: Define a recursive Zod schema `conditionNodeSchema` validating Logical and Predicate structures.
-- [ ] **AST-02**: Export derived TypeScript types `ConditionNode`, `LogicalNode`, and `PredicateNode`.
+- [x] **AST-01**: Define a recursive Zod schema `conditionNodeSchema` validating Logical and Predicate structures.
+- [x] **AST-02**: Export derived TypeScript types `ConditionNode`, `LogicalNode`, and `PredicateNode`.
 
-## Planned Phase: Phase 32 - Condition Evaluation Engine
+## Completed Phase: Phase 32 - Condition Evaluation Engine
 
-- [ ] **EVL-01**: Build `evaluateCondition(node, ctx)` implementing logic operator and predicate evaluation.
-- [ ] **EVL-02**: Support snapshot field comparison and change-based operators (eq, gt, changedTo, etc.).
+- [x] **EVL-01**: Build `evaluateCondition(node, ctx)` implementing logic operator and predicate evaluation.
+- [x] **EVL-02**: Support snapshot field comparison and change-based operators (eq, gt, changedTo, etc.).
 
-## Planned Phase: Phase 33 - Registry & E2E Validation
+## Completed Phase: Phase 33 - Registry & E2E Validation
 
-- [ ] **REG-01**: Synchronize `getTemplateForScope` with condition operators and field mappings.
-- [ ] **TST-01**: Write high-fidelity Bun tests covering nested condition trees and edge cases.
+- [x] **REG-01**: Synchronize `getTemplateForScope` with condition operators and field mappings.
+- [x] **TST-01**: Write high-fidelity Bun tests covering nested condition trees and edge cases.
 
 ## Progress
 
-- [/] Phase 31 Planning & Setup (Active)
-- [ ] Phase 32 (Planned)
-- [ ] Phase 33 (Planned)
+- [x] Phase 31 (Completed)
+- [x] Phase 32 (Completed)
+- [x] Phase 33 (Completed)
 
 ## Blockers
 
@@ -42,4 +42,4 @@ progress:
 
 ## Next Step
 
-- Initiate Phase 31 design, create the implementation plan, and acquire user approval.
+- Start planning for next integration milestone (e.g. project scope triggers/actions).

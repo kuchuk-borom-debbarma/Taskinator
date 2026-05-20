@@ -1,45 +1,24 @@
 import { z } from 'zod';
+import {
+    taskContextSchema,
+    taskPredicateNodeSchema,
+} from './scopes/task/types.js';
 
 /**
  * Supported Entity Scopes for Automations.
- * Currently restricted strictly to TASK scope.
  */
 export enum EntityScope {
     TASK = 'TASK',
 }
 
+export type { TaskContext } from './scopes/task/types.js';
 /**
- * Zod Schema representing the lightweight, ID-based context for TASK scope events.
- * It contains essential keys and state deltas (prev_ and current_ fields) captured at trigger time.
+ * Re-export scope-specific contexts for root convenience.
  */
-export const taskContextSchema = z.object({
-    traceId: z.string(),
-    scope: z.literal(EntityScope.TASK),
-    actorId: z.string(),
-
-    // Core Entity IDs
-    taskId: z.string(),
-    projectId: z.string(),
-
-    // Previous state properties (trigger-time snapshots)
-    prev_status: z.string().nullable().optional(),
-    prev_priority: z.number().nullable().optional(),
-    prev_title: z.string().nullable().optional(),
-    prev_team_id: z.string().nullable().optional(),
-    prev_member_id: z.string().nullable().optional(),
-
-    // Current state properties (trigger-time snapshots)
-    current_status: z.string().nullable().optional(),
-    current_priority: z.number().nullable().optional(),
-    current_title: z.string().nullable().optional(),
-    current_team_id: z.string().nullable().optional(),
-    current_member_id: z.string().nullable().optional(),
-});
-
-export type TaskContext = z.infer<typeof taskContextSchema>;
+export { taskContextSchema };
 
 /**
- * Definition metadata representing a trigger type within a specific scope.
+ * Definition metadata representing a trigger type.
  */
 export interface TriggerDefinition {
     readonly id: string;
@@ -49,14 +28,75 @@ export interface TriggerDefinition {
 
 /**
  * Blueprint definition representing a reusable automation action.
- * Decouples static action metadata and validation from runtime execution.
  */
 export interface ActionDefinition<I extends z.ZodObject<any>> {
     readonly id: string;
     readonly name: string;
     readonly description: string;
     readonly isAsync: boolean;
-    readonly scope: EntityScope.TASK;
+    readonly scope: EntityScope;
     readonly inputSchema: I;
-    handler(ctx: TaskContext, inputs: z.infer<I>): Promise<unknown>;
+    handler(ctx: any, inputs: z.infer<I>): Promise<unknown>;
+}
+
+/**
+ * Definition representing a registerable, transition-focused condition predicate.
+ */
+export interface ConditionDefinition<
+    NodeSchema extends z.ZodObject<any> = z.ZodObject<any>,
+> {
+    readonly type: string;
+    readonly name: string;
+    readonly description?: string;
+    readonly isAsync: boolean;
+    readonly scope: EntityScope;
+    readonly schema: NodeSchema;
+    evaluate(ctx: any, node: z.infer<NodeSchema>): boolean;
+}
+
+/**
+ * Supported logical operators for nesting condition evaluations.
+ */
+export const logicalOperatorSchema = z.enum(['AND', 'OR', 'NOT']);
+export type LogicalOperator = z.infer<typeof logicalOperatorSchema>;
+
+/**
+ * Unified Predicate Node schema across all scopes.
+ */
+export const predicateNodeSchema = taskPredicateNodeSchema;
+export type PredicateNode = z.infer<typeof predicateNodeSchema>;
+
+/**
+ * Recursive union type representing a unified Condition AST Node.
+ */
+export type ConditionNode =
+    | {
+          type: 'logical';
+          operator: LogicalOperator;
+          children: ConditionNode[];
+      }
+    | PredicateNode;
+
+/**
+ * Recursive Zod schema for validating the full Condition AST.
+ */
+export const conditionNodeSchema: z.ZodType<ConditionNode> = z.lazy(() =>
+    z.discriminatedUnion('type', [
+        z.object({
+            type: z.literal('logical'),
+            operator: logicalOperatorSchema,
+            children: z.array(conditionNodeSchema),
+        }),
+        // Spread all options from our task discriminated union schema
+        ...taskPredicateNodeSchema.options,
+    ]),
+);
+
+/**
+ * Specific typed interface representing logical branch nodes.
+ */
+export interface LogicalNode {
+    type: 'logical';
+    operator: LogicalOperator;
+    children: ConditionNode[];
 }

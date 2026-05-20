@@ -1,21 +1,24 @@
-import { z } from 'zod';
-import type { ActionDefinition, TriggerDefinition } from './types.js';
-import { EntityScope, taskContextSchema } from './types.js';
+import type {
+    ActionDefinition,
+    ConditionDefinition,
+    TriggerDefinition,
+} from './types.js';
 
 /**
- * Registry containing all available triggers and actions.
- * Generates frontend-friendly metadata templates dynamically.
+ * Registry containing all available triggers, actions, and conditions.
  */
 export class AutoActionRegistry {
     private readonly triggers = new Map<string, TriggerDefinition>();
     private readonly actions = new Map<string, ActionDefinition<any>>();
+    private readonly conditions = new Map<string, ConditionDefinition<any>>();
 
     /**
-     * Clears all registered triggers and actions (primarily for testing purposes).
+     * Clears all registered triggers, actions, and conditions (primarily for testing purposes).
      */
     public clear(): void {
         this.triggers.clear();
         this.actions.clear();
+        this.conditions.clear();
     }
 
     /**
@@ -40,6 +43,32 @@ export class AutoActionRegistry {
             );
         }
         this.actions.set(action.id, action);
+    }
+
+    /**
+     * Registers a condition definition.
+     */
+    public registerCondition(condition: ConditionDefinition<any>): void {
+        if (this.conditions.has(condition.type)) {
+            throw new Error(
+                `Condition with type "${condition.type}" is already registered.`,
+            );
+        }
+        this.conditions.set(condition.type, condition);
+    }
+
+    /**
+     * Retrieves a registered condition by its type.
+     */
+    public getCondition(type: string): ConditionDefinition<any> | undefined {
+        return this.conditions.get(type);
+    }
+
+    /**
+     * Lists all registered conditions.
+     */
+    public getAllConditions(): ConditionDefinition<any>[] {
+        return Array.from(this.conditions.values());
     }
 
     /**
@@ -68,90 +97,6 @@ export class AutoActionRegistry {
      */
     public getAllActions(): ActionDefinition<any>[] {
         return Array.from(this.actions.values());
-    }
-
-    /**
-     * Dynamically builds a rich automation template for a given entity scope.
-     * Exposes schema structures and compatible actions to the frontend.
-     */
-    public getTemplateForScope(scope: EntityScope) {
-        if (scope !== EntityScope.TASK) {
-            throw new Error(`Unsupported scope: ${scope}`);
-        }
-
-        // Get triggers matching the active scope
-        const scopeTriggers = Array.from(this.triggers.values())
-            .filter((t) => t.scope === scope)
-            .map((t) => ({
-                id: t.id,
-                name: t.name,
-            }));
-
-        // Get actions matching the active scope
-        const scopeActions = Array.from(this.actions.values())
-            .filter((a) => a.scope === scope)
-            .map((a) => ({
-                id: a.id,
-                name: a.name,
-                description: a.description,
-                isAsync: a.isAsync,
-                inputs: this.serializeZodSchema(a.inputSchema),
-            }));
-
-        // Dynamically extract available fields from the Zod taskContextSchema
-        const contextFields = Object.keys(taskContextSchema.shape);
-
-        return {
-            scope,
-            triggers: scopeTriggers,
-            actions: scopeActions,
-            contextFields,
-        };
-    }
-
-    /**
-     * Internal helper to convert a Zod object schema into a simple JSON-serializable schema.
-     */
-    private serializeZodSchema(
-        schema: z.ZodObject<any>,
-    ): Record<string, { type: string; required: boolean }> {
-        const result: Record<string, { type: string; required: boolean }> = {};
-        const shape = schema.shape;
-
-        for (const [key, value] of Object.entries(shape)) {
-            let isRequired = true;
-            let currentType = 'unknown';
-
-            let currentZodType: z.ZodTypeAny = value as z.ZodTypeAny;
-
-            // Unwrap optional or nullable types
-            while (
-                currentZodType instanceof z.ZodOptional ||
-                currentZodType instanceof z.ZodNullable
-            ) {
-                if (currentZodType instanceof z.ZodOptional) {
-                    isRequired = false;
-                }
-                currentZodType = (currentZodType as any)._def.innerType;
-            }
-
-            if (currentZodType instanceof z.ZodString) {
-                currentType = 'string';
-            } else if (currentZodType instanceof z.ZodNumber) {
-                currentType = 'number';
-            } else if (currentZodType instanceof z.ZodBoolean) {
-                currentType = 'boolean';
-            } else if (currentZodType instanceof z.ZodEnum) {
-                currentType = 'enum';
-            }
-
-            result[key] = {
-                type: currentType,
-                required: isRequired,
-            };
-        }
-
-        return result;
     }
 }
 

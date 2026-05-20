@@ -1,8 +1,9 @@
 import { z } from 'zod';
-import { db } from '../../../database/index.ts';
-import { autoActionRegistry } from '../registry.js';
-import type { ActionDefinition, TaskContext } from '../types.js';
-import { EntityScope } from '../types.js';
+import { db } from '../../../../../database/index.js';
+import { autoActionRegistry } from '../../../registry.js';
+import type { ActionDefinition } from '../../../types.js';
+import { EntityScope } from '../../../types.js';
+import type { TaskContext } from '../types.js';
 
 const inputSchema = z.object({
     status: z.string().optional(),

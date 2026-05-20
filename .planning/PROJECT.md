@@ -35,9 +35,9 @@ Automate the "busy work" of project management through reliable, transparent, an
 - ✓ [High-Performance CTE Outbox Writes] — Single-query bulk updates + outbox insertion in SmartAggregator (v8.0).
 - ✓ [Asynchronous Depth Guards] — TraceId + depth propagation across async Kafka loops to enforce recursion limits (v8.0).
 
-- [ ] [Auto-Action Condition AST Schema] — Define structural AST types for logical (AND/OR/NOT) and predicate operations under TASK scope (v9.0).
-- [ ] [Fresh-Fetch Condition Evaluator] — Implement dynamic, optimistic-safe recursive evaluator using current/previous states (v9.0).
-- [ ] [Dynamic Scope & Template Sync] — Integrate condition variables and schemas in registry template and metadata output (v9.0).
+- ✓ [Auto-Action Condition AST Schema] — Define structural AST types for logical (AND/OR/NOT) and predicate operations under TASK scope (v9.0).
+- ✓ [Fresh-Fetch Condition Evaluator] — Implement dynamic, optimistic-safe recursive evaluator using current/previous states (v9.0).
+- ✓ [Dynamic Scope & Template Sync] — Integrate condition variables and schemas in registry template and metadata output (v9.0).
 - [ ] [Multi-domain Triggers] — Evaluate events crossing project boundaries.
 - [ ] [Complex Predicates] — Evaluate conditions referencing recursive parent/child states.
 
@@ -46,17 +46,12 @@ Automate the "busy work" of project management through reliable, transparent, an
 - [Cron-based Triggers] — Reactive/event-driven architecture remains primary focus.
 - [External Service Actions] — Scope confined to internal Taskinator domain mutations.
 
-## Next Milestone Goals (v9.0 - Auto-Action Condition Component)
+## Next Milestone Goals (v10.0 - Project & Multi-domain Triggers)
 
-**Goal:** Establish a robust, high-performance condition evaluation component for the scoped `auto-action` automation module.
+**Goal:** Expand the auto-action scope beyond Tasks to support Project triggers, actions, and complex cross-boundary conditions.
 
-**Target features:**
-- Define structured Condition AST types for logical (AND/OR/NOT) and leaf predicate operations under TASK scope.
-- Implement an optimistic-safe recursive Condition Evaluator that resolves variables against trigger-time snapshots.
-- Sync the `AutoActionRegistry` template serialization so the frontend receives a complete catalog of supported predicates, operators, and fields.
-
-## Current State (Post-v8.0)
-The transactional CTE outbox engine (v8.0) and loop depth safety mechanisms are fully operational. The frontend application `ui-v1` remains synchronized. We are now bootstrapping the scoped `auto-action` module's Condition Component (v9.0) to bring robust logical filters to the new high-performance automation lifecycle.
+## Current State (Post-v9.0)
+The transactional CTE outbox engine (v8.0), loop depth safety mechanisms, and the newly decoupled, transition-focused Condition Evaluation Engine (v9.0) are fully operational and verified under Bun. The frontend application `ui-v1` remains synchronized. We are ready to define subsequent cross-boundary triggers.
 
 ## Key Decisions
 

@@ -1,6 +1,6 @@
-import { autoActionRegistry } from './registry.js';
-import type { TriggerDefinition } from './types.js';
-import { EntityScope } from './types.js';
+import { autoActionRegistry } from '../../registry.js';
+import type { TriggerDefinition } from '../../types.js';
+import { EntityScope } from '../../types.js';
 
 export const taskCreatedTrigger: TriggerDefinition = {
     id: 'task.created',
@@ -15,7 +15,7 @@ export const taskUpdatedTrigger: TriggerDefinition = {
 };
 
 /**
- * Registers all starter triggers into the global registry.
+ * Registers all task-scoped triggers into the global registry.
  */
 export function registerTriggers(): void {
     autoActionRegistry.registerTrigger(taskCreatedTrigger);

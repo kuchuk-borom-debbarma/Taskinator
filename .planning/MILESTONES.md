@@ -1,5 +1,16 @@
 # Milestones
 
+## v9.0 Auto-Action Condition Component (Shipped: 2026-05-21)
+
+**Phases completed:** 3 phases, 3 plans, 3 tasks
+
+**Key accomplishments:**
+- **Transition-Focused Condition Nodes**: Replaced generic comparison operators with 10 strict, transition-focused predicates (`TaskFieldChangedTo`, `TaskTeamAssigned`, etc.) ensuring robust event trigger checking.
+- **Dynamic Condition Registry**: Created a registerable `ConditionDefinition` interface to support dynamic, multi-scope trigger, action, and condition registration.
+- **Decoupled Template Serialization**: Extracted all frontend template compilation into an isolated `template.ts` module, completely eliminating circular dependencies between the global registry and task schemas.
+
+---
+
 ## v8.0 High-Performance CTE & Depth Guards (Shipped: 2026-05-17)
 
 **Phases completed:** 2 phases, 4 plans, 6 tasks
