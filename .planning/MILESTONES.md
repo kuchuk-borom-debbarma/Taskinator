@@ -1,5 +1,17 @@
 # Milestones
 
+## v11.0 Context Engine (Shipped: 2026-05-21)
+
+**Phases completed:** 1 phase, 1 plan, 7 tasks
+
+**Key accomplishments:**
+- **Dynamic Database Context Resolver Registry**: Designed a generic resolver structure to fetch database entities for any scope and built the central `ContextResolverRegistry`.
+- **Advanced Snapshot Merging**: Implemented dynamic wasSnapshot overlays in `scopes/task/context.ts` mapping and normalizing snake_case, camelCase GraphQL aliases, and explicit keys.
+- **Strict Zod Type-Safety**: Leveraged schema validation checks via Zod to enforce runtime type compliance prior to AST condition check evaluation.
+- **Robust Test Coverage**: Wrote 10 comprehensive tests in `__tests__/contextEngine.test.ts` achieving 100% pass rate.
+
+---
+
 ## v10.0 Action & Condition Engine Isolation (Shipped: 2026-05-21)
 
 **Phases completed:** 1 phase, 1 plan, 7 tasks

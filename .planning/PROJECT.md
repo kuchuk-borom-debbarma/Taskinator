@@ -38,7 +38,8 @@ Automate the "busy work" of project management through reliable, transparent, an
 - ✓ [Fresh-Fetch Condition Evaluator] — Implement dynamic, optimistic-safe recursive evaluator using current/previous states (v9.0).
 - ✓ [Dynamic Scope & Template Sync] — Integrate condition variables and schemas in registry template and metadata output (v9.0).
 - ✓ [Action & Condition Engine Isolation] — Decouple and isolate execution engines independently without tied triggers or tied flows (v10.0).
-- [ ] [Tied Rule Orchestration] — Tie independent triggers, conditions, and actions together into unified execution rules (v11.0).
+- ✓ [Context Engine] — Centrally resolve, merge snapshots, and validate type-safe entity contexts via registries and database resolvers (v11.0).
+- [ ] [Tied Rule Orchestration] — Tie independent triggers, conditions, actions, and context resolvers together into unified execution rules (v12.0).
 - [ ] [Multi-domain Triggers] — Evaluate events crossing project boundaries.
 - [ ] [Complex Predicates] — Evaluate conditions referencing recursive parent/child states.
 
@@ -47,12 +48,12 @@ Automate the "busy work" of project management through reliable, transparent, an
 - [Cron-based Triggers] — Reactive/event-driven architecture remains primary focus.
 - [External Service Actions] — Scope confined to internal Taskinator domain mutations.
 
-## Next Milestone Goals (v11.0 - Tied Rule Orchestration)
+## Next Milestone Goals (v12.0 - Tied Rule Orchestration)
 
-**Goal:** Integrate the newly isolated action and condition engines together with event triggers into a unified automation rule engine, enabling end-to-end execution workflows.
+**Goal:** Integrate the newly isolated action, condition, and context engines together with event triggers into a unified automation rule engine, enabling end-to-end execution workflows.
 
-## Current State (Post-v10.0)
-The standalone `conditionEngine` and `actionEngine` are fully operational, tested, and isolated from triggers and orchestration flows. This provides a highly clean, decoupled foundation, ready for integration in the next milestone.
+## Current State (Post-v11.0)
+The standalone `conditionEngine`, `actionEngine`, and `contextEngine` are fully operational, tested, and decoupled from triggers and orchestration flows. This provides a highly clean, modular foundation, ready for integration in the next milestone.
 
 ## Key Decisions
 
@@ -72,10 +73,11 @@ The standalone `conditionEngine` and `actionEngine` are fully operational, teste
 | Single-Query CTE Writes | Reduces PostgreSQL round-trips to exactly 1 query for high-throughput outbox event emission. | **Complete (v8.0)** |
 | Strict depth hop ceiling | Prevent resource exhaustion by halting recursive events exceeding a depth of 50. | **Complete (v8.0)** |
 | Isolated Engines | Introduce completely standalone actionEngine and conditionEngine for high modularity. | **Complete (v10.0)** |
+| Context Engine | Centrally resolve, merge snapshots, and validate type-safe entity contexts via registries and database resolvers. | **Complete (v11.0)** |
 
 ## Evolution
 
 This document evolves at phase transitions and milestone boundaries.
 
 ---
-*Last updated: 2026-05-21 after v10.0 milestone completion*
+*Last updated: 2026-05-21 after v11.0 milestone completion*
