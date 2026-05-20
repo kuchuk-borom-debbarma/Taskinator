@@ -96,6 +96,16 @@ describe('Auto Action Module', () => {
             expect(template.contextFields).toContain('prev_status');
             expect(template.contextFields).toContain('current_status');
         });
+
+        it('should print the dynamic scope template for easy visualization', () => {
+            const template = autoActionRegistry.getTemplateForScope(
+                EntityScope.TASK,
+            );
+            console.log('\n--- DYNAMIC TEMPLATE JSON ---');
+            console.log(JSON.stringify(template, null, 2));
+            console.log('-----------------------------\n');
+            expect(template).toBeDefined();
+        });
     });
 
     describe('SetFields Action', () => {
