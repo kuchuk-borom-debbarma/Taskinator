@@ -65,7 +65,7 @@ export class AutopilotTriggerListener {
             for (const event of unprocessed) {
                 const payload = event.data;
                 logger.info(
-                    `[AutopilotTriggerListener] Processing task event: id=${event.id}, type=${event.type}, taskId=${payload.taskId}, projectId=${payload.projectId}`,
+                    `[AutopilotTriggerListener] Processing task event: id=${event.eventId}, type=${event.type}, taskId=${payload.taskId}, projectId=${payload.projectId}`,
                 );
                 if (!payload.projectId || !payload.taskId) {
                     logger.warn(
