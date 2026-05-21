@@ -3,13 +3,13 @@ gsd_state_version: 1.0
 milestone: v15.0
 milestone_name: Service Layer Isolation
 status: in_progress
-last_updated: "2026-05-21T19:44:34.000Z"
+last_updated: "2026-05-21T19:48:38.000Z"
 progress:
   total_phases: 1
   completed_phases: 0
   total_plans: 7
-  completed_plans: 5
-  percent: 71
+  completed_plans: 6
+  percent: 86
 ---
 
 # Project State
@@ -28,11 +28,12 @@ progress:
 - Completed Phase 39 Plan 39-03: Auth Module Isolation.
 - Completed Phase 39 Plan 39-04: Project Module Isolation.
 - Completed Phase 39 Plan 39-05: Team Module Isolation.
+- Completed Phase 39 Plan 39-06: Task Module - Reachability & Graph.
 
 ## Known Issues
 
-- Remaining Task module Kafka listeners still use direct database access (`db`).
+- Remaining Task module assignment and project-deletion Kafka listeners still use direct database access (`db`).
 
 ## Next Steps
 
-- Continue Phase 39 Wave 2 with plan 39-06.
+- Continue Phase 39 Wave 3 with plan 39-07.
