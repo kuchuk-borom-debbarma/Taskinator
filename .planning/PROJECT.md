@@ -51,9 +51,9 @@ Automate the "busy work" of project management through reliable, transparent, an
 - [Cron-based Triggers] — Reactive/event-driven architecture remains primary focus.
 - [External Service Actions] — Scope confined to internal Taskinator domain mutations.
 
-## Current State (Post-v14.0)
+## Current State (Post-Phase 39)
 
-The Auto Action module structure has been simplified (v14.0). All internal implementation details (engines, executor, template) are now hidden behind the `AutoActionService` public interface. The `internal/` directory is strictly organized into functional sub-folders (`engines/`, `execution/`, `service/`, `queries/`). All 48 existing tests are passing.
+Phase 39 of v15.0 is complete. Smart aggregators and aggregated Kafka listener write paths now delegate transaction, idempotency, and domain write orchestration to module service layers. Focused service-isolation tests cover aggregator lifecycle, auth/project/team batch sync, task graph cleanup, and task assignment/project cleanup flows.
 
 ## Key Decisions
 
@@ -77,11 +77,11 @@ The Auto Action module structure has been simplified (v14.0). All internal imple
 | Tied Rule Orchestration | Sequential pipeline executor binding context, conditions, and actions; persistent prev_ columns for concurrent-safe transition state; condition splitting for future async chunking. | **Complete (v12.0)** |
 | Auto Action Re-sectoring | Service interface + internal Queries/ServiceImpl pattern; task scope goes through taskService not bare db. | **Complete (v13.0)** |
 | Internal Engine Hiding | Organize internal/ into functional sub-folders and hide all execution engines behind the service layer. | **Complete (v14.0)** |
-| Service Layer Isolation | Decouple DB access from listeners/aggregators; enforce delegation to service interfaces or module-internal queries. | **In Progress (v15.0)** |
+| Service Layer Isolation | Decouple DB access from listeners/aggregators; enforce delegation to service interfaces or module-internal queries. | **Phase 39 Complete (v15.0)** |
 
 ## Evolution
 
 This document evolves at phase transitions and milestone boundaries.
 
 ---
-*Last updated: 2026-05-21 — v15.0 in planning*
+*Last updated: 2026-05-22 — Phase 39 complete; v15.0 continues with Phases 40-41*
