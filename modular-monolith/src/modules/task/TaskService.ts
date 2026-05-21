@@ -197,6 +197,30 @@ export interface TaskService extends BaseService {
     handleDeleteTaskReachability(
         events: DomainEvent<{ taskIds: string[] }>[],
     ): Promise<void>;
+
+    handleUnassignProjectTaskMember(
+        events: DomainEvent<{ projectId: string; userIds: string[] }>[],
+    ): Promise<void>;
+
+    handleDeleteProjectTask(
+        events: DomainEvent<{ projectIds: string[] }>[],
+    ): Promise<void>;
+
+    handleDeleteProjectTaskLink(
+        events: DomainEvent<{ projectIds: string[] }>[],
+    ): Promise<void>;
+
+    handleDeleteProjectReachability(
+        events: DomainEvent<{ projectIds: string[] }>[],
+    ): Promise<void>;
+
+    handleOrphanTeamTasks(
+        events: DomainEvent<{ teamIds: string[] }>[],
+    ): Promise<void>;
+
+    handleUnassignMemberFromTeamTasks(
+        events: DomainEvent<{ teamId: string; userIds: string[] }>[],
+    ): Promise<void>;
 }
 
 // ─── Neighbourhood (Radial Graph View) ──────────────────────────────────────

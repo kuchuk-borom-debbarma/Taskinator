@@ -48,6 +48,9 @@ jest.unstable_mockModule(
 jest.unstable_mockModule('../TaskQueries.ts', () => ({
     BULK_DELETE_CHUNK_SIZE: 2000,
     contractTaskReachability: mockContractTaskReachability,
+    deleteProjectTaskLinksChunk: jest.fn(),
+    deleteProjectTaskReachabilityChunk: jest.fn(),
+    deleteProjectTasksChunk: jest.fn(),
     deleteTask: jest.fn(),
     deleteTaskLink: jest.fn(),
     deleteTaskLinksByTaskIds: mockDeleteTaskLinksByTaskIds,
@@ -62,8 +65,11 @@ jest.unstable_mockModule('../TaskQueries.ts', () => ({
     getTasksPage: jest.fn(),
     insertTask: jest.fn(),
     insertTaskLink: jest.fn(),
+    orphanTasksByTeamIdsBatch: jest.fn(),
     repairTaskReachabilityForProjects: mockRepairTaskReachabilityForProjects,
     syncTaskGraphCounters: mockSyncTaskGraphCounters,
+    unassignMembersFromTeamTasksBatch: jest.fn(),
+    unassignProjectTaskMembersBatch: jest.fn(),
     updateTask: jest.fn(),
     updateTaskLink: jest.fn(),
 }));

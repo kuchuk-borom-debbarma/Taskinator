@@ -1,13 +1,11 @@
-import { db } from '../../../../database';
 import { logger } from '../../../../logger';
 import eventBus from '../../../../utils/EventBus.ts';
 import {
     KAFKA_EVENTS,
     KAFKA_TOPICS,
 } from '../../../../utils/event-bus/constants.ts';
-import { claimEventsAtomic } from '../../../../utils/event-bus/idempotency.ts';
 import type { DomainEvent } from '../../../../utils/event-bus/types.ts';
-import { unassignMembersFromTeamTasksBatch } from '../TaskQueries.ts';
+import { taskService } from '../../index.ts';
 
 /**
  * Execution Listener: Unassign Member From Team Tasks
@@ -34,30 +32,6 @@ export class TeamAggregated_UnassignMemberFromTeamTasksListener {
     private async handleUnassignMemberFromTeamTasks(
         events: DomainEvent<{ teamId: string; userIds: string[] }>[],
     ) {
-        if (events.length === 0) return;
-
-        await db.transaction().execute(async (trx) => {
-            // [1] Explicit Idempotency Claim
-            const unprocessed = await claimEventsAtomic(
-                trx,
-                events,
-                'team-task-unassignment-group',
-            );
-
-            if (unprocessed.length === 0) return;
-
-            // [2] Process each event (since they might target different teams)
-            // Note: We could group by teamId for more efficiency, but since
-            // the aggregator already groups, these are usually distinct.
-            for (const event of unprocessed) {
-                const { teamId, userIds } = event.data;
-
-                logger.info(
-                    `[TeamAggregated -> Task] Unassigning ${userIds.length} users from tasks in team ${teamId}`,
-                );
-
-                await unassignMembersFromTeamTasksBatch(teamId, userIds, trx);
-            }
-        });
+        await taskService.handleUnassignMemberFromTeamTasks(events);
     }
 }

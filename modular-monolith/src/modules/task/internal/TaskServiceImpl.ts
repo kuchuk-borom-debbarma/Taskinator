@@ -23,6 +23,9 @@ import type {
 import {
     BULK_DELETE_CHUNK_SIZE,
     contractTaskReachability,
+    deleteProjectTaskLinksChunk,
+    deleteProjectTaskReachabilityChunk,
+    deleteProjectTasksChunk,
     deleteTask,
     deleteTaskLink,
     deleteTaskLinksByTaskIds,
@@ -37,8 +40,11 @@ import {
     getTasksPage,
     insertTask,
     insertTaskLink,
+    orphanTasksByTeamIdsBatch,
     repairTaskReachabilityForProjects,
     syncTaskGraphCounters,
+    unassignMembersFromTeamTasksBatch,
+    unassignProjectTaskMembersBatch,
     updateTask,
     updateTaskLink,
 } from './TaskQueries.ts';
@@ -355,12 +361,277 @@ export class TaskServiceImpl implements TaskService {
         });
     }
 
+    async handleUnassignProjectTaskMember(
+        events: DomainEvent<{ projectId: string; userIds: string[] }>[],
+    ): Promise<void> {
+        if (events.length === 0) return;
+
+        await db.transaction().execute(async (trx) => {
+            const unprocessed = await claimEventsAtomic(
+                trx,
+                events,
+                'task-member-unassignment-group',
+            );
+
+            if (unprocessed.length === 0) return;
+
+            const deltas = this.consolidateProjectUserDeltas(unprocessed);
+
+            logger.info(
+                `[ProjectAggregated -> Task] Executing batch unassignment of task members for ${deltas.length} projects (from ${unprocessed.length} events)`,
+            );
+
+            const { affectedCount } = await unassignProjectTaskMembersBatch(
+                deltas,
+                trx,
+            );
+
+            logger.info(
+                `[ProjectAggregated -> Task] Successfully unassigned members from ${affectedCount} tasks across ${deltas.length} projects`,
+            );
+        });
+    }
+
+    async handleDeleteProjectTask(
+        events: DomainEvent<{ projectIds: string[] }>[],
+    ): Promise<void> {
+        if (events.length === 0) return;
+
+        await db.transaction().execute(async (trx) => {
+            const unprocessed = await claimEventsAtomic(
+                trx,
+                events,
+                'task-decommissioning-group',
+            );
+
+            if (unprocessed.length === 0) return;
+
+            const projectIds = this.collectProjectIds(unprocessed);
+            const { affectedCount } = await deleteProjectTasksChunk(
+                projectIds,
+                trx,
+            );
+
+            logger.info(
+                `[ProjectAggregated -> Task] Deleted chunk of ${affectedCount} tasks for ${projectIds.length} projects`,
+            );
+
+            if (affectedCount === BULK_DELETE_CHUNK_SIZE) {
+                logger.info(
+                    '[ProjectAggregated -> Task] Chunk full — emitting continuation signal',
+                );
+                await appendEventsToOutbox(trx, [
+                    {
+                        kafka_topic: KAFKA_TOPICS.PROJECT_AGGREGATED,
+                        payload: {
+                            type: KAFKA_EVENTS.PROJECT_AGGREGATED
+                                .DELETE_PROJECT_TASK_CHUNK,
+                            projectIds,
+                        },
+                    },
+                ]);
+            }
+        });
+    }
+
+    async handleDeleteProjectTaskLink(
+        events: DomainEvent<{ projectIds: string[] }>[],
+    ): Promise<void> {
+        if (events.length === 0) return;
+
+        await db.transaction().execute(async (trx) => {
+            const unprocessed = await claimEventsAtomic(
+                trx,
+                events,
+                'task-link-decommissioning-group',
+            );
+
+            if (unprocessed.length === 0) return;
+
+            const projectIds = this.collectProjectIds(unprocessed);
+            const { affectedCount } = await deleteProjectTaskLinksChunk(
+                projectIds,
+                trx,
+            );
+
+            logger.info(
+                `[ProjectAggregated -> Task] Deleted chunk of ${affectedCount} task links for ${projectIds.length} projects`,
+            );
+
+            if (affectedCount === BULK_DELETE_CHUNK_SIZE) {
+                logger.info(
+                    '[ProjectAggregated -> Task] Chunk full — emitting continuation signal for task links',
+                );
+                await appendEventsToOutbox(trx, [
+                    {
+                        kafka_topic: KAFKA_TOPICS.PROJECT_AGGREGATED,
+                        payload: {
+                            type: KAFKA_EVENTS.PROJECT_AGGREGATED
+                                .DELETE_PROJECT_TASK_LINK_CHUNK,
+                            projectIds,
+                        },
+                    },
+                ]);
+            }
+        });
+    }
+
+    async handleDeleteProjectReachability(
+        events: DomainEvent<{ projectIds: string[] }>[],
+    ): Promise<void> {
+        if (events.length === 0) return;
+
+        await db.transaction().execute(async (trx) => {
+            const unprocessed = await claimEventsAtomic(
+                trx,
+                events,
+                'task-project-reachability-purge-group',
+            );
+
+            if (unprocessed.length === 0) return;
+
+            const projectIds = this.collectProjectIds(unprocessed);
+            const { affectedCount } = await deleteProjectTaskReachabilityChunk(
+                projectIds,
+                trx,
+            );
+
+            logger.info(
+                `[Graph Engine] Purged chunk of ${affectedCount} reachability rows for ${projectIds.length} projects`,
+            );
+
+            if (affectedCount === BULK_DELETE_CHUNK_SIZE) {
+                logger.info(
+                    '[Graph Engine] Chunk full — emitting continuation signal for reachability purge',
+                );
+                await appendEventsToOutbox(trx, [
+                    {
+                        kafka_topic: KAFKA_TOPICS.PROJECT_AGGREGATED,
+                        payload: {
+                            type: KAFKA_EVENTS.PROJECT_AGGREGATED
+                                .DELETE_PROJECT_TASK_REACHABILITY_CHUNK,
+                            projectIds,
+                        },
+                    },
+                ]);
+            }
+        });
+    }
+
+    async handleOrphanTeamTasks(
+        events: DomainEvent<{ teamIds: string[] }>[],
+    ): Promise<void> {
+        if (events.length === 0) return;
+
+        await db.transaction().execute(async (trx) => {
+            const unprocessed = await claimEventsAtomic(
+                trx,
+                events,
+                'team-task-orphaning-group',
+            );
+
+            if (unprocessed.length === 0) return;
+
+            const teamIds = this.collectTeamIds(unprocessed);
+
+            logger.info(
+                `[TeamAggregated -> Task] Orphaning tasks for ${teamIds.length} teams (from ${unprocessed.length} events)`,
+            );
+
+            const { affectedCount } = await orphanTasksByTeamIdsBatch(
+                teamIds,
+                trx,
+            );
+
+            logger.info(
+                `[TeamAggregated -> Task] Successfully orphaned ${affectedCount} tasks`,
+            );
+        });
+    }
+
+    async handleUnassignMemberFromTeamTasks(
+        events: DomainEvent<{ teamId: string; userIds: string[] }>[],
+    ): Promise<void> {
+        if (events.length === 0) return;
+
+        await db.transaction().execute(async (trx) => {
+            const unprocessed = await claimEventsAtomic(
+                trx,
+                events,
+                'team-task-unassignment-group',
+            );
+
+            if (unprocessed.length === 0) return;
+
+            const deltas = this.consolidateTeamUserDeltas(unprocessed);
+            for (const { teamId, userIds } of deltas) {
+                logger.info(
+                    `[TeamAggregated -> Task] Unassigning ${userIds.length} users from tasks in team ${teamId}`,
+                );
+
+                await unassignMembersFromTeamTasksBatch(teamId, userIds, trx);
+            }
+        });
+    }
+
     private collectTaskIds(
         events: DomainEvent<{ taskIds: string[] }>[],
     ): string[] {
         return Array.from(
             new Set(events.flatMap((event) => event.data.taskIds)),
         );
+    }
+
+    private collectProjectIds(
+        events: DomainEvent<{ projectIds: string[] }>[],
+    ): string[] {
+        return Array.from(
+            new Set(events.flatMap((event) => event.data.projectIds)),
+        );
+    }
+
+    private collectTeamIds(
+        events: DomainEvent<{ teamIds: string[] }>[],
+    ): string[] {
+        return Array.from(
+            new Set(events.flatMap((event) => event.data.teamIds)),
+        );
+    }
+
+    private consolidateProjectUserDeltas(
+        events: DomainEvent<{ projectId: string; userIds: string[] }>[],
+    ): { projectId: string; userIds: string[] }[] {
+        const projectMap = new Map<string, Set<string>>();
+        for (const event of events) {
+            const { projectId, userIds } = event.data;
+            const existing = projectMap.get(projectId) ?? new Set<string>();
+            userIds.forEach((id: string) => existing.add(id));
+            projectMap.set(projectId, existing);
+        }
+
+        return Array.from(projectMap.entries()).map(
+            ([projectId, userIdsSet]) => ({
+                projectId,
+                userIds: Array.from(userIdsSet),
+            }),
+        );
+    }
+
+    private consolidateTeamUserDeltas(
+        events: DomainEvent<{ teamId: string; userIds: string[] }>[],
+    ): { teamId: string; userIds: string[] }[] {
+        const teamMap = new Map<string, Set<string>>();
+        for (const event of events) {
+            const { teamId, userIds } = event.data;
+            const existing = teamMap.get(teamId) ?? new Set<string>();
+            userIds.forEach((id: string) => existing.add(id));
+            teamMap.set(teamId, existing);
+        }
+
+        return Array.from(teamMap.entries()).map(([teamId, userIdsSet]) => ({
+            teamId,
+            userIds: Array.from(userIdsSet),
+        }));
     }
 
     async init(): Promise<void> {
