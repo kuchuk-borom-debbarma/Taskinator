@@ -1,6 +1,16 @@
 # Milestones
 
-## v11.0 Context Engine (Shipped: 2026-05-21)
+## v15.0 Service Layer Isolation (Planned: 2026-05-21)
+
+**Goals:**
+- Enforce strict Service Layer isolation across all Kafka listeners and smart aggregators.
+- Decouple listeners and aggregators from direct database access (`db`).
+- Delegate domain mutations to internal `queries/` or public `service/` interfaces.
+- Ensure services manage their own transactions for cleaner module boundaries.
+
+---
+
+## v14.0 Hide Internal Engines (Shipped: 2026-05-21)
 
 **Phases completed:** 1 phase, 1 plan, 7 tasks
 

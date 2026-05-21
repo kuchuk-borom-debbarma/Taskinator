@@ -1,27 +1,16 @@
----
-gsd_state_version: 1.0
-milestone: v14.0
-milestone_name: Hide Internal Engines
-status: Shipped
-last_updated: "2026-05-21T11:55:00.000Z"
-last_activity: 2026-05-21 — v14.0 shipped. Internal engines hidden, directory restructured, all 48 tests pass.
-progress:
-  total_phases: 4
-  completed_phases: 4
-  total_plans: 1
-  completed_plans: 1
-  percent: 100
----
+# Project State
 
-# Project State - Milestone v14.0 (Hide Internal Engines) — ✅ SHIPPED
+## Current Milestone: v15.0 Service Layer Isolation
 
-## Completed Phase: Phase 38 — Hide Internal Engines
+## Current Phase: Phase 39: Smart Aggregator Isolation
 
-- [x] **TSK-01**: Initialize GSD Milestone v14.0 (Documents created)
-- [x] **TSK-02**: Restructure `internal/` into functional sub-folders
-- [x] **TSK-03**: Move and hide all execution engines in `internal/engines/` and `internal/execution/`
-- [x] **TSK-04**: Update all internal imports and verify with tests
+## Recent Progress
+- Approved v15.0 Milestone Plan.
+- Updated `PROJECT.md`, `MILESTONES.md`, `ROADMAP.md`.
+- Created `v15.0-REQUIREMENTS.md` and `v15.0-ROADMAP.md`.
 
-## Next Step
+## Known Issues
+- 21+ Kafka listeners and 3 smart aggregators still use direct database access (`db`).
 
-- Milestone v14.0 is complete. Awaiting next user directive.
+## Next Steps
+- Begin Phase 39: Refactor Smart Aggregators.
