@@ -1,4 +1,5 @@
 import type { PaginationParams as SharedPaginationParams } from '../../types/pagination.ts';
+import type { DomainEvent } from '../../utils/event-bus';
 import type { BaseService } from './index.ts';
 
 export type TaskStatus = string;
@@ -54,6 +55,12 @@ export interface LinkConnection {
     nextCursor: string | null;
     prevCursor: string | null;
 }
+
+export type TaskReachabilityLinkChange = {
+    action: 'ADD' | 'REMOVE';
+    sourceTaskId: string;
+    targetTaskId: string;
+};
 
 /**
  * Minimal task row used by the auto-action context resolver.
@@ -175,6 +182,21 @@ export interface TaskService extends BaseService {
         targetTaskId?: string | null;
         label?: string | null;
     }): Promise<TaskLink>;
+
+    handleTaskReachabilitySync(
+        events: DomainEvent<{
+            projectId: string;
+            links: TaskReachabilityLinkChange[];
+        }>[],
+    ): Promise<void>;
+
+    handleDeleteTaskLinks(
+        events: DomainEvent<{ taskIds: string[] }>[],
+    ): Promise<void>;
+
+    handleDeleteTaskReachability(
+        events: DomainEvent<{ taskIds: string[] }>[],
+    ): Promise<void>;
 }
 
 // ─── Neighbourhood (Radial Graph View) ──────────────────────────────────────

@@ -1,10 +1,8 @@
-import { db } from '../../../../database';
 import { logger } from '../../../../logger';
 import eventBus from '../../../../utils/EventBus.ts';
 import type { DomainEvent } from '../../../../utils/event-bus';
 import { KAFKA_EVENTS, KAFKA_TOPICS } from '../../../../utils/event-bus';
-import { claimEventsAtomic } from '../../../../utils/event-bus/idempotency.ts';
-import { deleteTaskLinksByTaskIds } from '../TaskQueries.ts';
+import { taskService } from '../../index.ts';
 
 /**
  * Internal Listener for Task module graph cleanup.
@@ -30,28 +28,6 @@ export class TaskAggregated_DeleteTaskLinksListener {
     private async handleTaskLinksDeleted(
         events: DomainEvent<{ taskIds: string[] }>[],
     ) {
-        if (events.length === 0) return;
-
-        await db.transaction().execute(async (trx) => {
-            // [1] Explicit Idempotency Claim
-            const unprocessed = await claimEventsAtomic(
-                trx,
-                events,
-                'task-link-cleanup-group',
-            );
-
-            if (unprocessed.length === 0) return;
-
-            // [2] Consolidate task IDs from all batch signals
-            const allTaskIds = Array.from(
-                new Set(unprocessed.flatMap((e) => e.data.taskIds)),
-            );
-
-            logger.info(
-                `[TaskAggregated -> Task] Purging links for ${allTaskIds.length} tasks (from ${unprocessed.length} events)`,
-            );
-
-            await deleteTaskLinksByTaskIds(allTaskIds, trx);
-        });
+        await taskService.handleDeleteTaskLinks(events);
     }
 }

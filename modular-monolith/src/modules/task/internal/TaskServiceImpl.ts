@@ -1,4 +1,12 @@
+import { db } from '../../../database';
 import { logger } from '../../../logger';
+import type { DomainEvent } from '../../../utils/event-bus';
+import {
+    KAFKA_EVENTS,
+    KAFKA_TOPICS,
+} from '../../../utils/event-bus/constants.ts';
+import { claimEventsAtomic } from '../../../utils/event-bus/idempotency.ts';
+import { appendEventsToOutbox } from '../../../utils/event-bus/OutboxQueries.ts';
 import type {
     GetNeighbourhoodParam,
     GetTaskLinksParam,
@@ -9,11 +17,17 @@ import type {
     TaskContextRow,
     TaskLink,
     TaskNeighbourhoodResult,
+    TaskReachabilityLinkChange,
     TaskService,
 } from '../TaskService.ts';
 import {
+    BULK_DELETE_CHUNK_SIZE,
+    contractTaskReachability,
     deleteTask,
     deleteTaskLink,
+    deleteTaskLinksByTaskIds,
+    deleteTaskReachabilityChunk,
+    expandTaskReachability,
     getNeighbourhood,
     getProjectTaskLinksPage,
     getTaskContextById as getTaskContextByIdQuery,
@@ -23,6 +37,8 @@ import {
     getTasksPage,
     insertTask,
     insertTaskLink,
+    repairTaskReachabilityForProjects,
+    syncTaskGraphCounters,
     updateTask,
     updateTaskLink,
 } from './TaskQueries.ts';
@@ -202,6 +218,149 @@ export class TaskServiceImpl implements TaskService {
             `TaskService.getProjectLinks called for project: ${projectId}`,
         );
         return await getProjectTaskLinksPage(userId, projectId, pagination);
+    }
+
+    async handleTaskReachabilitySync(
+        events: DomainEvent<{
+            projectId: string;
+            links: TaskReachabilityLinkChange[];
+        }>[],
+    ): Promise<void> {
+        if (events.length === 0) return;
+
+        logger.info(
+            `[Graph Engine] Processing batched signals: ${events.length} projects`,
+        );
+
+        await db.transaction().execute(async (trx) => {
+            const unprocessed = await claimEventsAtomic(
+                trx,
+                events,
+                'task-reachability-sync-group',
+            );
+
+            if (unprocessed.length === 0) return;
+
+            for (const event of unprocessed) {
+                const { projectId, links } = event.data;
+
+                if (!links || !Array.isArray(links)) {
+                    logger.warn(
+                        `[Graph Engine] Received reachability signal without links for project ${projectId}`,
+                    );
+                    continue;
+                }
+
+                logger.info(
+                    `[Graph Engine] Applying ${links.length} reachability updates for project ${projectId}`,
+                );
+
+                for (const link of links) {
+                    if (link.action === 'ADD') {
+                        await expandTaskReachability(
+                            trx,
+                            projectId,
+                            link.sourceTaskId,
+                            link.targetTaskId,
+                        );
+                    } else if (link.action === 'REMOVE') {
+                        await contractTaskReachability(
+                            trx,
+                            projectId,
+                            link.sourceTaskId,
+                            link.targetTaskId,
+                        );
+                    }
+                }
+
+                await syncTaskGraphCounters(trx, projectId);
+            }
+        });
+    }
+
+    async handleDeleteTaskLinks(
+        events: DomainEvent<{ taskIds: string[] }>[],
+    ): Promise<void> {
+        if (events.length === 0) return;
+
+        await db.transaction().execute(async (trx) => {
+            const unprocessed = await claimEventsAtomic(
+                trx,
+                events,
+                'task-link-cleanup-group',
+            );
+
+            if (unprocessed.length === 0) return;
+
+            const taskIds = this.collectTaskIds(unprocessed);
+
+            logger.info(
+                `[TaskAggregated -> Task] Purging links for ${taskIds.length} tasks (from ${unprocessed.length} events)`,
+            );
+
+            await deleteTaskLinksByTaskIds(taskIds, trx);
+        });
+    }
+
+    async handleDeleteTaskReachability(
+        events: DomainEvent<{ taskIds: string[] }>[],
+    ): Promise<void> {
+        if (events.length === 0) return;
+
+        await db.transaction().execute(async (trx) => {
+            const unprocessed = await claimEventsAtomic(
+                trx,
+                events,
+                'task-bulk-reachability-group',
+            );
+
+            if (unprocessed.length === 0) return;
+
+            const taskIds = this.collectTaskIds(unprocessed);
+
+            logger.info(
+                `[Graph Engine] Purging reachability chunk for ${taskIds.length} tasks`,
+            );
+
+            const { affectedCount, affectedProjectIds } =
+                await deleteTaskReachabilityChunk(trx, taskIds);
+
+            logger.info(
+                `[Graph Engine] Purged ${affectedCount} reachability rows across ${affectedProjectIds.length} projects`,
+            );
+
+            if (affectedCount === BULK_DELETE_CHUNK_SIZE) {
+                logger.info(
+                    '[Graph Engine] Chunk full — deferring repair, emitting continuation signal',
+                );
+                await appendEventsToOutbox(trx, [
+                    {
+                        kafka_topic: KAFKA_TOPICS.TASK_AGGREGATED,
+                        payload: {
+                            type: KAFKA_EVENTS.TASK_AGGREGATED
+                                .DELETE_TASK_REACHABILITY_CHUNK,
+                            taskIds,
+                        },
+                    },
+                ]);
+            } else if (affectedProjectIds.length > 0) {
+                logger.info(
+                    `[Graph Engine] Final chunk complete — repairing closure for ${affectedProjectIds.length} projects`,
+                );
+                await repairTaskReachabilityForProjects(
+                    trx,
+                    affectedProjectIds,
+                );
+            }
+        });
+    }
+
+    private collectTaskIds(
+        events: DomainEvent<{ taskIds: string[] }>[],
+    ): string[] {
+        return Array.from(
+            new Set(events.flatMap((event) => event.data.taskIds)),
+        );
     }
 
     async init(): Promise<void> {

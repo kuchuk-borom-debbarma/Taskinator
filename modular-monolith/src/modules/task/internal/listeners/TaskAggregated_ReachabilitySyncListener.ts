@@ -1,15 +1,12 @@
-import { db } from '../../../../database';
 import { logger } from '../../../../logger';
 import eventBus from '../../../../utils/EventBus.ts';
+import type { DomainEvent } from '../../../../utils/event-bus';
 import {
     KAFKA_EVENTS,
     KAFKA_TOPICS,
 } from '../../../../utils/event-bus/constants.ts';
-import {
-    contractTaskReachability,
-    expandTaskReachability,
-    syncTaskGraphCounters,
-} from '../TaskQueries.ts';
+import { taskService } from '../../index.ts';
+import type { TaskReachabilityLinkChange } from '../../TaskService.ts';
 
 /**
  * Task Aggregated Listener: Reachability Sync
@@ -36,49 +33,12 @@ export class TaskAggregated_ReachabilitySyncListener {
         );
     }
 
-    private async handleSync(events: any[]) {
-        if (!events.length) return;
-
-        logger.info(
-            `[Graph Engine] Processing batched signals: ${events.length} projects`,
-        );
-
-        await db.transaction().execute(async (trx) => {
-            for (const e of events) {
-                const { projectId, links } = e.data;
-
-                if (!links || !Array.isArray(links)) {
-                    logger.warn(
-                        `[Graph Engine] Received reachability signal without links for project ${projectId}`,
-                    );
-                    continue;
-                }
-
-                logger.info(
-                    `[Graph Engine] Applying ${links.length} reachability updates for project ${projectId}`,
-                );
-
-                for (const link of links) {
-                    if (link.action === 'ADD') {
-                        await expandTaskReachability(
-                            trx,
-                            projectId,
-                            link.sourceTaskId,
-                            link.targetTaskId,
-                        );
-                    } else if (link.action === 'REMOVE') {
-                        await contractTaskReachability(
-                            trx,
-                            projectId,
-                            link.sourceTaskId,
-                            link.targetTaskId,
-                        );
-                    }
-                }
-
-                // Sync denormalized incoming/outgoing counts for the project UI once per signal
-                await syncTaskGraphCounters(trx, projectId);
-            }
-        });
+    private async handleSync(
+        events: DomainEvent<{
+            projectId: string;
+            links: TaskReachabilityLinkChange[];
+        }>[],
+    ) {
+        await taskService.handleTaskReachabilitySync(events);
     }
 }
