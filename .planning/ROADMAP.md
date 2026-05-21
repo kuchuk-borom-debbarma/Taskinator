@@ -18,7 +18,7 @@
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |---|---|---|---|---|
-| 39. Smart Aggregator Isolation | v15.0 | 7/7 | Complete   | 2026-05-21 |
+| 39. Smart Aggregator Isolation | v15.0 | 7/7 | Complete    | 2026-05-22 |
 | 40. Intra-Module Listener Decoupling | v15.0 | 0/1 | ⏳ Pending | - |
 | 41. Inter-Module Listener Service Delegation | v15.0 | 0/1 | ⏳ Pending | - |
 | 38. Hide Internal Engines | v14.0 | 1/1 | ✅ Shipped | 2026-05-21 |
