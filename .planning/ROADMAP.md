@@ -18,6 +18,23 @@
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |---|---|---|---|---|
-| 39-41. Service Layer Isolation | v15.0 | 0/3 | 🔄 Planned | - |
+| 39. Smart Aggregator Isolation | v15.0 | 0/7 | 🔄 Planned | - |
+| 40. Intra-Module Listener Decoupling | v15.0 | 0/1 | ⏳ Pending | - |
+| 41. Inter-Module Listener Service Delegation | v15.0 | 0/1 | ⏳ Pending | - |
 | 38. Hide Internal Engines | v14.0 | 1/1 | ✅ Shipped | 2026-05-21 |
 | 37. Auto Action Re-sectoring | v13.0 | 1/1 | ✅ Shipped | 2026-05-21 |
+
+---
+
+### Phase 39: Smart Aggregator Isolation
+**Goal:** Isolate Smart Aggregators and refactor 21+ listeners to use Service layer.
+**Requirements:** R1, R3, R4
+
+**Plans:**
+- [ ] 39-01-PLAN.md — Aggregator Utility & Project Aggregator
+- [ ] 39-02-PLAN.md — Task & Team Aggregators
+- [ ] 39-03-PLAN.md — Auth Module Isolation
+- [ ] 39-04-PLAN.md — Project Module Isolation
+- [ ] 39-05-PLAN.md — Team Module Isolation
+- [ ] 39-06-PLAN.md — Task Module - Reachability & Graph
+- [ ] 39-07-PLAN.md — Task Module - Assignments & Project Deletions
