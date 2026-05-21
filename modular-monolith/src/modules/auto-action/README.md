@@ -134,26 +134,29 @@ Below are example configurations demonstrating how rules are represented as JSON
 ```
 src/modules/auto-action/
 ├── README.md                    # User-facing guide (this file)
-├── index.ts                     # Root module entrypoint and bootstrappers
+├── index.ts                     # Root module entrypoint, bootstrappers, and autoActionService singleton
+├── AutoActionService.ts         # Public service interface (CRUD + OCC contract)
 ├── types.ts                     # Scope-agnostic AST and core registry types
 ├── contextEngine.ts             # Isolated ContextResolverRegistry and fetchContext()
 ├── actionEngine.ts              # Isolated ActionExecutorRegistry and executeAction()
 ├── conditionEngine.ts           # ConditionRegistry, evaluateCondition() & evaluateConditionFromIndex()
+├── internal/                    # Private service layer (not exported beyond this module)
+│   ├── AutoActionQueries.ts     # Raw Kysely DB functions (insert, select, update, delete)
+│   └── AutoActionServiceImpl.ts # Business logic: OCC, name-uniqueness, pipeline validation
 ├── auto-action-engine/          # Central orchestration subsystems
 │   ├── index.ts                 # Sub-module exports
 │   ├── types.ts                 # PipelineStep schemas, isFlowSyncSafe(), isConditionAsync()
 │   ├── executor.ts              # executeAutoActionStep(), executeAutoActionPipeline(), StepResumeCursor
-│   ├── manager.ts               # CRUD, OCC, name-uniqueness enforcement
 │   └── template.ts              # Dynamic Zod-to-JSON-Schema converter and scope catalog
 ├── scopes/
 │   └── task/                    # Scoped implementations isolated for TASK
 │       ├── index.ts             # Task scope bridge and bootstrappers
 │       ├── types.ts             # TaskContext & TaskPredicate leaf Zod schemas
-│       ├── context.ts           # TASK scope database resolver (DB-first prev_ columns)
+│       ├── context.ts           # TASK scope resolver — uses taskService.getTaskContextById()
 │       ├── conditions.ts        # Task predicate evaluator bridge
 │       ├── conditions/          # Modular split of individual task leaf conditions
 │       └── actions/
-│           └── setFields.ts     # Task field assignment action (writes prev_ columns atomically)
+│           └── setFields.ts     # Task field action — delegates to taskService.updateTask()
 └── docs/                        # Internal implementation and architecture guides
     ├── architecture.md
     ├── orchestration.md         # Pipeline execution, condition splitting, prev_ columns
