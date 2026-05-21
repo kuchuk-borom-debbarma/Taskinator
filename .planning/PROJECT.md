@@ -39,7 +39,7 @@ Automate the "busy work" of project management through reliable, transparent, an
 - ✓ [Dynamic Scope & Template Sync] — Integrate condition variables and schemas in registry template and metadata output (v9.0).
 - ✓ [Action & Condition Engine Isolation] — Decouple and isolate execution engines independently without tied triggers or tied flows (v10.0).
 - ✓ [Context Engine] — Centrally resolve, merge snapshots, and validate type-safe entity contexts via registries and database resolvers (v11.0).
-- [ ] [Tied Rule Orchestration] — Tie independent triggers, conditions, actions, and context resolvers together into unified execution rules (v12.0).
+- ✓ [Tied Rule Orchestration] — Tie independent triggers, conditions, actions, and context resolvers together into unified execution rules (v12.0).
 - [ ] [Multi-domain Triggers] — Evaluate events crossing project boundaries.
 - [ ] [Complex Predicates] — Evaluate conditions referencing recursive parent/child states.
 
@@ -48,12 +48,15 @@ Automate the "busy work" of project management through reliable, transparent, an
 - [Cron-based Triggers] — Reactive/event-driven architecture remains primary focus.
 - [External Service Actions] — Scope confined to internal Taskinator domain mutations.
 
-## Next Milestone Goals (v12.0 - Tied Rule Orchestration)
+## Next Milestone Goals (v13.0)
 
-**Goal:** Integrate the newly isolated action, condition, and context engines together with event triggers into a unified automation rule engine, enabling end-to-end execution workflows.
+- Trigger listener wiring — bind domain events to `executeAutoActionPipeline`
+- GraphQL CRUD resolvers — expose `createAutoAction`, `updateAutoAction` etc. via API
+- Async pipeline queue — event-driven step chunking for long-running flows
 
-## Current State (Post-v11.0)
-The standalone `conditionEngine`, `actionEngine`, and `contextEngine` are fully operational, tested, and decoupled from triggers and orchestration flows. This provides a highly clean, modular foundation, ready for integration in the next milestone.
+## Current State (Post-v12.0)
+
+The Auto Action Engine is fully operational. All core engines are integrated into a unified rule-based execution system. Persistent `prev_` columns ensure state integrity, and the system is now fully prepared for external-facing API development and event-listener wiring.
 
 ## Key Decisions
 
@@ -74,10 +77,11 @@ The standalone `conditionEngine`, `actionEngine`, and `contextEngine` are fully 
 | Strict depth hop ceiling | Prevent resource exhaustion by halting recursive events exceeding a depth of 50. | **Complete (v8.0)** |
 | Isolated Engines | Introduce completely standalone actionEngine and conditionEngine for high modularity. | **Complete (v10.0)** |
 | Context Engine | Centrally resolve, merge snapshots, and validate type-safe entity contexts via registries and database resolvers. | **Complete (v11.0)** |
+| Tied Rule Orchestration | Sequential pipeline executor binding context, conditions, and actions; persistent prev_ columns for concurrent-safe transition state; condition splitting for future async chunking. | **Complete (v12.0)** |
 
 ## Evolution
 
 This document evolves at phase transitions and milestone boundaries.
 
 ---
-*Last updated: 2026-05-21 initiating v12.0 milestone*
+*Last updated: 2026-05-21 — v12.0 shipped*
