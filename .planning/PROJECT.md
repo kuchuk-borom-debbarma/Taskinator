@@ -41,6 +41,7 @@ Automate the "busy work" of project management through reliable, transparent, an
 - ✓ [Context Engine] — Centrally resolve, merge snapshots, and validate type-safe entity contexts via registries and database resolvers (v11.0).
 - ✓ [Tied Rule Orchestration] — Tie independent triggers, conditions, actions, and context resolvers together into unified execution rules (v12.0).
 - ✅ [Auto Action Re-sectoring] — Restructure the auto-action module to match the established Controller/Service/Queries pattern; route cross-module operations through service interfaces (v13.0).
+- [ ] [Hide Internal Engines] — Simplify auto-action module structure by hiding internal engines and organizing the internal directory (v14.0).
 - [ ] [Multi-domain Triggers] — Evaluate events crossing project boundaries.
 - [ ] [Complex Predicates] — Evaluate conditions referencing recursive parent/child states.
 
@@ -49,9 +50,9 @@ Automate the "busy work" of project management through reliable, transparent, an
 - [Cron-based Triggers] — Reactive/event-driven architecture remains primary focus.
 - [External Service Actions] — Scope confined to internal Taskinator domain mutations.
 
-## Current State (Post-v13.0)
+## Current State (Post-v14.0 Initial Planning)
 
-The Auto Action Engine is fully operational and architecturally consistent with all other modules. The service layer follows the `Interface → ServiceImpl → Queries` pattern. All cross-module operations (task reads/writes) route through `taskService` instead of direct `db` access. The three isolated engines (Action, Condition, Context) are tied together into a sequential, suspendable execution pipeline. Persistent `prev_` columns on `project_task` guarantee transition-state accuracy under concurrent execution. The system is ready for trigger wiring, controller/API exposure, and frontend development.
+The Auto Action Engine has been re-sectored into a proper service pattern (v13.0). We are now simplifying the module structure (v14.0) to hide internal execution details (engines, executor, template) behind a clean public interface, organizing the `internal/` directory into functional sub-folders (`engines/`, `execution/`, `service/`, `queries/`).
 
 ## Key Decisions
 
@@ -74,10 +75,11 @@ The Auto Action Engine is fully operational and architecturally consistent with 
 | Context Engine | Centrally resolve, merge snapshots, and validate type-safe entity contexts via registries and database resolvers. | **Complete (v11.0)** |
 | Tied Rule Orchestration | Sequential pipeline executor binding context, conditions, and actions; persistent prev_ columns for concurrent-safe transition state; condition splitting for future async chunking. | **Complete (v12.0)** |
 | Auto Action Re-sectoring | Service interface + internal Queries/ServiceImpl pattern; task scope goes through taskService not bare db. | **Complete (v13.0)** |
+| Internal Engine Hiding | Organize internal/ into functional sub-folders and hide all execution engines behind the service layer. | **Planned (v14.0)** |
 
 ## Evolution
 
 This document evolves at phase transitions and milestone boundaries.
 
 ---
-*Last updated: 2026-05-21 — v13.0 shipped*
+*Last updated: 2026-05-21 — v14.0 planned*
