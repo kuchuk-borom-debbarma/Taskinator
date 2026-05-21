@@ -18,7 +18,7 @@
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |---|---|---|---|---|
-| 39. Smart Aggregator Isolation | v15.0 | 3/7 | In Progress|  |
+| 39. Smart Aggregator Isolation | v15.0 | 4/7 | In Progress|  |
 | 40. Intra-Module Listener Decoupling | v15.0 | 0/1 | ⏳ Pending | - |
 | 41. Inter-Module Listener Service Delegation | v15.0 | 0/1 | ⏳ Pending | - |
 | 38. Hide Internal Engines | v14.0 | 1/1 | ✅ Shipped | 2026-05-21 |
@@ -34,7 +34,7 @@
 - [x] 39-01-PLAN.md — Aggregator Utility & Project Aggregator
 - [x] 39-02-PLAN.md — Task & Team Aggregators
 - [x] 39-03-PLAN.md — Auth Module Isolation
-- [ ] 39-04-PLAN.md — Project Module Isolation
+- [x] 39-04-PLAN.md — Project Module Isolation
 - [ ] 39-05-PLAN.md — Team Module Isolation
 - [ ] 39-06-PLAN.md — Task Module - Reachability & Graph
 - [ ] 39-07-PLAN.md — Task Module - Assignments & Project Deletions
