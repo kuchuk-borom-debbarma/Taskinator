@@ -50,9 +50,9 @@ Automate the "busy work" of project management through reliable, transparent, an
 - [Cron-based Triggers] — Reactive/event-driven architecture remains primary focus.
 - [External Service Actions] — Scope confined to internal Taskinator domain mutations.
 
-## Current State (Post-v14.0 Initial Planning)
+## Current State (Post-v14.0)
 
-The Auto Action Engine has been re-sectored into a proper service pattern (v13.0). We are now simplifying the module structure (v14.0) to hide internal execution details (engines, executor, template) behind a clean public interface, organizing the `internal/` directory into functional sub-folders (`engines/`, `execution/`, `service/`, `queries/`).
+The Auto Action module structure has been simplified (v14.0). All internal implementation details (engines, executor, template) are now hidden behind the `AutoActionService` public interface. The `internal/` directory is strictly organized into functional sub-folders (`engines/`, `execution/`, `service/`, `queries/`). All 48 existing tests are passing.
 
 ## Key Decisions
 
@@ -75,11 +75,11 @@ The Auto Action Engine has been re-sectored into a proper service pattern (v13.0
 | Context Engine | Centrally resolve, merge snapshots, and validate type-safe entity contexts via registries and database resolvers. | **Complete (v11.0)** |
 | Tied Rule Orchestration | Sequential pipeline executor binding context, conditions, and actions; persistent prev_ columns for concurrent-safe transition state; condition splitting for future async chunking. | **Complete (v12.0)** |
 | Auto Action Re-sectoring | Service interface + internal Queries/ServiceImpl pattern; task scope goes through taskService not bare db. | **Complete (v13.0)** |
-| Internal Engine Hiding | Organize internal/ into functional sub-folders and hide all execution engines behind the service layer. | **Planned (v14.0)** |
+| Internal Engine Hiding | Organize internal/ into functional sub-folders and hide all execution engines behind the service layer. | **Complete (v14.0)** |
 
 ## Evolution
 
 This document evolves at phase transitions and milestone boundaries.
 
 ---
-*Last updated: 2026-05-21 — v14.0 planned*
+*Last updated: 2026-05-21 — v14.0 shipped*
