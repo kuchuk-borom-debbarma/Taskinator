@@ -1,15 +1,7 @@
 import { Kysely, PostgresDialect } from 'kysely';
 import { Pool } from 'pg';
 import { logger } from '../logger';
-import type {
-    AutopilotExecutionTable,
-    AutopilotStepLogTable,
-} from './tables/AuditLog.ts';
-import type { AutopilotTable } from './tables/Autopilot.ts';
-import type { ActionDefTable } from './tables/AutopilotActionDef.ts';
-import type { ActionLabelTable } from './tables/AutopilotActionLabel.ts';
-import type { ConditionTable } from './tables/AutopilotCondition.ts';
-import type { ConditionLabelTable } from './tables/AutopilotConditionLabel.ts';
+import type { AutoActionTable } from './tables/AutoAction.ts';
 import type { OutboxEventTable } from './tables/OutboxEvent.ts';
 import type { ProcessedEventTable } from './tables/ProcessedEvent.ts';
 import type { ProjectMemberTable, ProjectTable } from './tables/Project.ts';
@@ -23,13 +15,7 @@ import type { TaskReachabilityTable } from './tables/TaskReachability.ts';
 import type { PendingUserTable, UserTable } from './tables/User.ts';
 
 export interface Database {
-    autopilot: AutopilotTable;
-    conditions: ConditionTable;
-    condition_labels: ConditionLabelTable;
-    actions: ActionDefTable;
-    action_labels: ActionLabelTable;
-    autopilot_execution: AutopilotExecutionTable;
-    autopilot_step_log: AutopilotStepLogTable;
+    auto_action: AutoActionTable;
     project: ProjectTable;
     project_member: ProjectMemberTable;
     project_team: ProjectTeamTable;

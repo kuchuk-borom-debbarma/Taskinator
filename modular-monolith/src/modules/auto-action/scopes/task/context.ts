@@ -12,7 +12,7 @@ export const taskContextResolver: ContextResolver<TaskContext> = {
         traceId: string,
         wasSnapshot?: Record<string, any>,
     ): Promise<TaskContext> {
-        // Fetch the fresh task data from the database
+        // Fetch the fresh task data from the database — including persisted prev_ columns
         const task = await db
             .selectFrom('project_task')
             .select([
@@ -24,6 +24,11 @@ export const taskContextResolver: ContextResolver<TaskContext> = {
                 'status',
                 'priority',
                 'version',
+                'prev_status',
+                'prev_priority',
+                'prev_title',
+                'prev_team_id',
+                'prev_member_id',
             ])
             .where('id', '=', entityId as any)
             .executeTakeFirst();
@@ -34,6 +39,8 @@ export const taskContextResolver: ContextResolver<TaskContext> = {
             );
         }
 
+        // wasSnapshot is only used as a fallback for the initial trigger call,
+        // before any update has written prev_ values into the database.
         const was = wasSnapshot || {};
 
         return {
@@ -43,41 +50,54 @@ export const taskContextResolver: ContextResolver<TaskContext> = {
             taskId: entityId,
             projectId: task.fk_project_id,
 
-            // Previous state mapping (wasSnapshot support with fallbacks)
+            // Previous state: DB is the primary source of truth.
+            // wasSnapshot is the fallback for the first-ever trigger execution
+            // before the first update has persisted the prev_ columns.
             prev_status:
-                was.status !== undefined
-                    ? was.status
-                    : was.prev_status !== undefined
-                      ? was.prev_status
-                      : null,
+                task.prev_status !== null
+                    ? task.prev_status
+                    : was.status !== undefined
+                      ? was.status
+                      : was.prev_status !== undefined
+                        ? was.prev_status
+                        : null,
             prev_priority:
-                was.priority !== undefined
-                    ? was.priority
-                    : was.prev_priority !== undefined
-                      ? was.prev_priority
-                      : null,
+                task.prev_priority !== null
+                    ? task.prev_priority
+                    : was.priority !== undefined
+                      ? was.priority
+                      : was.prev_priority !== undefined
+                        ? was.prev_priority
+                        : null,
             prev_title:
-                was.title !== undefined
-                    ? was.title
-                    : was.prev_title !== undefined
-                      ? was.prev_title
-                      : null,
+                task.prev_title !== null
+                    ? task.prev_title
+                    : was.title !== undefined
+                      ? was.title
+                      : was.prev_title !== undefined
+                        ? was.prev_title
+                        : null,
             prev_team_id:
-                was.fk_team_id !== undefined
-                    ? was.fk_team_id
-                    : was.teamId !== undefined
-                      ? was.teamId
-                      : was.prev_team_id !== undefined
-                        ? was.prev_team_id
-                        : null,
+                task.prev_team_id !== null
+                    ? task.prev_team_id
+                    : was.fk_team_id !== undefined
+                      ? was.fk_team_id
+                      : was.teamId !== undefined
+                        ? was.teamId
+                        : was.prev_team_id !== undefined
+                          ? was.prev_team_id
+                          : null,
             prev_member_id:
-                was.fk_member_id !== undefined
-                    ? was.fk_member_id
-                    : was.memberId !== undefined
-                      ? was.memberId
-                      : was.prev_member_id !== undefined
-                        ? was.prev_member_id
-                        : null,
+                task.prev_member_id !== null
+                    ? task.prev_member_id
+                    : was.fk_member_id !== undefined
+                      ? was.fk_member_id
+                      : was.memberId !== undefined
+                        ? was.memberId
+                        : was.prev_member_id !== undefined
+                          ? was.prev_member_id
+                          : null,
+            // version has no dedicated prev_ column — wasSnapshot only
             prev_version:
                 was.version !== undefined
                     ? was.version

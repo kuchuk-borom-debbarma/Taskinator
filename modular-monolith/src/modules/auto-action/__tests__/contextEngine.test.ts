@@ -119,6 +119,12 @@ describe('Auto Action Module - Context Engine', () => {
                                 status: 'TODO',
                                 priority: 2,
                                 version: 3,
+                                // No prior update — prev_ columns are null in DB
+                                prev_status: null,
+                                prev_priority: null,
+                                prev_title: null,
+                                prev_team_id: null,
+                                prev_member_id: null,
                             },
                         ],
                     };
@@ -164,7 +170,7 @@ describe('Auto Action Module - Context Engine', () => {
             expect(selectCall?.[0].parameters).toContain(taskId);
         });
 
-        it('should correctly map standard wasSnapshot fields to prev_ properties', async () => {
+        it('should use wasSnapshot as fallback for prev_ when DB columns are null (initial trigger)', async () => {
             executeSpy.mockImplementation(async (query: any) => {
                 return {
                     rows: [
@@ -177,12 +183,18 @@ describe('Auto Action Module - Context Engine', () => {
                             status: 'IN_PROGRESS',
                             priority: 1,
                             version: 4,
+                            // DB prev_ are null — first-ever trigger, no prior update
+                            prev_status: null,
+                            prev_priority: null,
+                            prev_title: null,
+                            prev_team_id: null,
+                            prev_member_id: null,
                         },
                     ],
                 };
             });
 
-            // wasSnapshot has original/database column names
+            // wasSnapshot carries the original event payload (db column names)
             const wasSnapshot = {
                 status: 'TODO',
                 priority: 2,
@@ -200,6 +212,7 @@ describe('Auto Action Module - Context Engine', () => {
                 wasSnapshot,
             );
 
+            // DB prev_ columns were null → should fall through to wasSnapshot
             expect(context.prev_status).toBe('TODO');
             expect(context.prev_priority).toBe(2);
             expect(context.prev_title).toBe('Database Migration');
@@ -215,7 +228,60 @@ describe('Auto Action Module - Context Engine', () => {
             expect(context.current_version).toBe(4);
         });
 
-        it('should map camelCase wasSnapshot fields to prev_ properties correctly', async () => {
+        it('should prefer DB prev_ columns over wasSnapshot when both are present', async () => {
+            executeSpy.mockImplementation(async (query: any) => {
+                return {
+                    rows: [
+                        {
+                            id: taskId,
+                            fk_project_id: 'project-uuid-1',
+                            fk_team_id: 'team-uuid-3',
+                            fk_member_id: 'member-uuid-3',
+                            title: 'Step 2 title',
+                            status: 'DONE',
+                            priority: 0,
+                            version: 5,
+                            // DB has prev_ values written by Step 1's update
+                            prev_status: 'IN_PROGRESS',
+                            prev_priority: 1,
+                            prev_title: 'Updated title',
+                            prev_team_id: 'team-uuid-2',
+                            prev_member_id: 'member-uuid-2',
+                        },
+                    ],
+                };
+            });
+
+            // wasSnapshot is the original event payload — stale compared to DB
+            const wasSnapshot = {
+                status: 'TODO',
+                priority: 2,
+                title: 'Database Migration',
+                fk_team_id: 'team-uuid-1',
+                fk_member_id: 'member-uuid-1',
+                version: 3,
+            };
+
+            const context = await fetchContext(
+                'TASK',
+                taskId,
+                actorId,
+                traceId,
+                wasSnapshot,
+            );
+
+            // DB prev_ columns should win — they represent the most recent transition
+            expect(context.prev_status).toBe('IN_PROGRESS');
+            expect(context.prev_priority).toBe(1);
+            expect(context.prev_title).toBe('Updated title');
+            expect(context.prev_team_id).toBe('team-uuid-2');
+            expect(context.prev_member_id).toBe('member-uuid-2');
+
+            expect(context.current_status).toBe('DONE');
+            expect(context.current_priority).toBe(0);
+        });
+
+        it('should map camelCase wasSnapshot fields to prev_ properties when DB columns are null', async () => {
             executeSpy.mockImplementation(async (query: any) => {
                 return {
                     rows: [
@@ -228,12 +294,18 @@ describe('Auto Action Module - Context Engine', () => {
                             status: 'DONE',
                             priority: 1,
                             version: 5,
+                            // DB prev_ are null — fall through to wasSnapshot
+                            prev_status: null,
+                            prev_priority: null,
+                            prev_title: null,
+                            prev_team_id: null,
+                            prev_member_id: null,
                         },
                     ],
                 };
             });
 
-            // wasSnapshot has camelCase fields
+            // wasSnapshot has camelCase fields (legacy event payload format)
             const wasSnapshot = {
                 teamId: 'team-uuid-old',
                 memberId: 'member-uuid-old',
@@ -251,7 +323,7 @@ describe('Auto Action Module - Context Engine', () => {
             expect(context.prev_member_id).toBe('member-uuid-old');
         });
 
-        it('should fallback to explicit prev_ keys in wasSnapshot', async () => {
+        it('should fallback to explicit prev_ keys in wasSnapshot when DB columns are null', async () => {
             executeSpy.mockImplementation(async (query: any) => {
                 return {
                     rows: [
@@ -264,6 +336,12 @@ describe('Auto Action Module - Context Engine', () => {
                             status: 'DONE',
                             priority: 1,
                             version: 5,
+                            // DB prev_ are null — fall through to wasSnapshot
+                            prev_status: null,
+                            prev_priority: null,
+                            prev_title: null,
+                            prev_team_id: null,
+                            prev_member_id: null,
                         },
                     ],
                 };
@@ -310,6 +388,11 @@ describe('Auto Action Module - Context Engine', () => {
                             status: 'TODO',
                             priority: 'HIGH', // Invalid type: expected number, returned string
                             version: 3,
+                            prev_status: null,
+                            prev_priority: null,
+                            prev_title: null,
+                            prev_team_id: null,
+                            prev_member_id: null,
                         },
                     ],
                 };

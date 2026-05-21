@@ -80,4 +80,4 @@ The standalone `conditionEngine`, `actionEngine`, and `contextEngine` are fully 
 This document evolves at phase transitions and milestone boundaries.
 
 ---
-*Last updated: 2026-05-21 after v11.0 milestone completion*
+*Last updated: 2026-05-21 initiating v12.0 milestone*

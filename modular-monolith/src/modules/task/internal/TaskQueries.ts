@@ -1,4 +1,4 @@
-import { sql, type Transaction } from 'kysely';
+import { type ExpressionBuilder, sql, type Transaction } from 'kysely';
 import { type Database, db } from '../../../database';
 import { ConflictError, NotFoundError } from '../../../graphql/errors.ts';
 import {
@@ -806,7 +806,13 @@ export const updateTask = async (param: {
             )
         ),
         updated_task AS (
-            UPDATE project_task SET ${setClause}
+            UPDATE project_task SET 
+                prev_status = status,
+                prev_priority = priority,
+                prev_title = title,
+                prev_team_id = fk_team_id,
+                prev_member_id = fk_member_id,
+                ${setClause}
             WHERE id = ${param.taskId}::uuid
               AND fk_project_id = ${param.projectId}::uuid
               AND version = ${param.version}
@@ -1196,6 +1202,8 @@ export const unassignTasksByTeamIds = async (
     const result = await sql<{ id: string }>`
         UPDATE project_task
         SET 
+            prev_team_id = fk_team_id,
+            prev_member_id = fk_member_id,
             fk_team_id = NULL,
             fk_member_id = NULL,
             updated_at = NOW()
@@ -1222,6 +1230,7 @@ export const unassignMembersFromProjectTasksBatch = async (
     const result = await sql<{ id: string }>`
         UPDATE project_task
         SET 
+            prev_member_id = fk_member_id,
             fk_member_id = NULL,
             updated_at = NOW()
         FROM (
@@ -1251,6 +1260,7 @@ export const unassignTeamMembersFromTasksBatch = async (
     const result = await sql<{ id: string }>`
         UPDATE project_task
         SET 
+            prev_member_id = fk_member_id,
             fk_member_id = NULL,
             updated_at = NOW()
         FROM (
@@ -1433,7 +1443,8 @@ export const unassignProjectTaskMembersBatch = async (
 
         const result = await sql`
             UPDATE project_task
-            SET fk_member_id = NULL,
+            SET prev_member_id = fk_member_id,
+                fk_member_id = NULL,
                 updated_at = NOW()
             WHERE fk_project_id = ${projectId}::uuid
               AND fk_member_id = ANY(${userIds}::text[])
@@ -1594,7 +1605,10 @@ export async function unassignMembersFromTeamTasksBatch(
 
     const result = await (trx || db)
         .updateTable('project_task')
-        .set({ fk_member_id: null })
+        .set((eb: ExpressionBuilder<Database, 'project_task'>) => ({
+            prev_member_id: eb.ref('fk_member_id'),
+            fk_member_id: null,
+        }))
         .where('fk_team_id', '=', teamId)
         .where('fk_member_id', 'in', userIds)
         .executeTakeFirst();
@@ -1614,7 +1628,12 @@ export async function orphanTasksByTeamIdsBatch(
 
     const result = await (trx || db)
         .updateTable('project_task')
-        .set({ fk_team_id: null, fk_member_id: null })
+        .set((eb: ExpressionBuilder<Database, 'project_task'>) => ({
+            prev_team_id: eb.ref('fk_team_id'),
+            prev_member_id: eb.ref('fk_member_id'),
+            fk_team_id: null,
+            fk_member_id: null,
+        }))
         .where('fk_team_id', 'in', teamIds)
         .executeTakeFirst();
 

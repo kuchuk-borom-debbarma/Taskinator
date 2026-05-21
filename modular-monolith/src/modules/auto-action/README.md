@@ -133,25 +133,35 @@ Below are example configurations demonstrating how rules are represented as JSON
 
 ```
 src/modules/auto-action/
-├── README.md                 # User-facing guide (This file)
-├── index.ts                  # Root module entrypoint and bootstrappers
-├── types.ts                  # Scope-agnostic AST and core registry types
-├── registry.ts               # Central singleton registry for triggers, actions, conditions
-├── evaluator.ts              # Stateless recursive logical AST evaluator
-├── contextEngine.ts          # [NEW] Isolated ContextResolverRegistry and fetchContext()
-├── actionEngine.ts           # Isolated ActionExecutorRegistry and executeAction()
-├── conditionEngine.ts        # Isolated ConditionPredicateRegistry and evaluateCondition()
-├── template.ts               # Dynamic Zod-to-JSON-Schema converter
+├── README.md                    # User-facing guide (this file)
+├── index.ts                     # Root module entrypoint and bootstrappers
+├── types.ts                     # Scope-agnostic AST and core registry types
+├── contextEngine.ts             # Isolated ContextResolverRegistry and fetchContext()
+├── actionEngine.ts              # Isolated ActionExecutorRegistry and executeAction()
+├── conditionEngine.ts           # ConditionRegistry, evaluateCondition() & evaluateConditionFromIndex()
+├── auto-action-engine/          # Central orchestration subsystems
+│   ├── index.ts                 # Sub-module exports
+│   ├── types.ts                 # PipelineStep schemas, isFlowSyncSafe(), isConditionAsync()
+│   ├── executor.ts              # executeAutoActionStep(), executeAutoActionPipeline(), StepResumeCursor
+│   ├── manager.ts               # CRUD, OCC, name-uniqueness enforcement
+│   └── template.ts              # Dynamic Zod-to-JSON-Schema converter and scope catalog
 ├── scopes/
-│   └── task/                 # Scoped implementations isolated for TASK
-│       ├── index.ts          # Task scope bridge and bootstrappers
-│       ├── types.ts          # TaskContext & TaskPredicate leaf Zod schemas
-│       ├── context.ts        # [NEW] TASK scope database resolver mapping and schema checks
-│       ├── conditions.ts     # Task predicate evaluator bridge
-│       ├── conditions/       # Modular split of individual task leaf conditions
+│   └── task/                    # Scoped implementations isolated for TASK
+│       ├── index.ts             # Task scope bridge and bootstrappers
+│       ├── types.ts             # TaskContext & TaskPredicate leaf Zod schemas
+│       ├── context.ts           # TASK scope database resolver (DB-first prev_ columns)
+│       ├── conditions.ts        # Task predicate evaluator bridge
+│       ├── conditions/          # Modular split of individual task leaf conditions
 │       └── actions/
-│           └── setFields.ts  # Task field assignment action
-└── docs/                     # Internal implementation and architecture guides
+│           └── setFields.ts     # Task field assignment action (writes prev_ columns atomically)
+└── docs/                        # Internal implementation and architecture guides
+    ├── architecture.md
+    ├── orchestration.md         # Pipeline execution, condition splitting, prev_ columns
+    ├── context.md               # Context engine, DB-first prev_ priority chain
+    ├── conditions.md
+    ├── actions.md
+    ├── registry.md
+    └── triggers.md
 ```
 
 ---
@@ -181,25 +191,29 @@ If you are a developer extending the engine, building new actions/conditions, or
 * **Action Registration**: Schema requirements and input Zod shapes.
 * **Execution Flow**: Step-by-step transaction walkthrough, cascading assignment calculations, and lock-checking updates.
 
-### 🗃️ [6. Central Registry & Templates](docs/registry.md)
-* **Registry Store**: Singleton container decoupling rules from execution.
-* **Dynamic Serialization**: How the Zod-to-JSON-Schema transformer compiles schemas to automatically feed dynamic front-end form builders.
+### 🔁 [7. Orchestration, Pipeline & Condition Splitting](docs/orchestration.md)
+* **Pipeline Execution**: How `executeAutoActionPipeline` sequences steps and fetches fresh context at every iteration.
+* **Persistent `prev_` Columns**: How previous field values are stored atomically in `project_task` so every pipeline step reads consistent transition state regardless of concurrency.
+* **Condition Splitting**: How `StepResumeCursor` and `evaluateConditionFromIndex` allow very long `AND` condition trees to be split across future batch/async boundaries.
+* **Suspendable Execution**: How `startIndex` + `startCursor` enable exact mid-pipeline and mid-condition resumption.
+* **Extension Points**: The precise swap points for plugging in future async processing (Kafka/Outbox, queued dispatchers, new scopes).
 
 ---
 
 ## 🧪 Verification & Testing
 
-To run the automated suite verifying the scoped conditions and actions:
+To run the complete automated test suite covering context resolution, condition evaluation, pipeline execution, and condition splitting:
 ```bash
-bun test src/modules/auto-action/__tests__/autoAction.test.ts
+bun test src/modules/auto-action/__tests__/
 ```
 
-To run the new Context Engine test suite:
+To run individual suites:
 ```bash
 bun test src/modules/auto-action/__tests__/contextEngine.test.ts
+bun test src/modules/auto-action/__tests__/autoActionEngine.test.ts
 ```
 
-To run the TypeScript compiler and typecheck the module:
+To typecheck the module:
 ```bash
 bun x tsc --noEmit
 ```

@@ -77,7 +77,14 @@ export const setFieldsAction: ActionDefinition<typeof inputSchema> = {
         // 3. Perform database update enforcing optimistic locking via the 'version' column
         const result = await db
             .updateTable('project_task')
-            .set(updateData)
+            .set((eb) => ({
+                ...updateData,
+                prev_status: eb.ref('status'),
+                prev_priority: eb.ref('priority'),
+                prev_title: eb.ref('title'),
+                prev_team_id: eb.ref('fk_team_id'),
+                prev_member_id: eb.ref('fk_member_id'),
+            }))
             .where('id', '=', taskId as any)
             .where('version', '=', currentVersion)
             .executeTakeFirst();

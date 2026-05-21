@@ -15,6 +15,11 @@ export interface ProjectTaskTable {
     description: Generated<string>;
     status: Generated<string>;
     priority: Generated<number | null>;
+    prev_status: string | null;
+    prev_priority: number | null;
+    prev_title: string | null;
+    prev_team_id: string | null;
+    prev_member_id: string | null;
     version: Generated<number>;
     created_by: string;
     updated_by: string;

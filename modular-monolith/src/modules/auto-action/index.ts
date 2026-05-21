@@ -2,6 +2,7 @@ import { logger } from '../../logger/index.ts';
 import { initTaskScope } from './scopes/task/index.js';
 
 export * from './actionEngine.js';
+export * from './auto-action-engine/index.js';
 export * from './conditionEngine.js';
 export * from './contextEngine.js';
 export * from './scopes/task/index.js';

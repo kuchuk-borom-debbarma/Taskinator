@@ -9,7 +9,11 @@
 - ✅ **v9.0 Auto-Action Condition Component** — Phases 31-33 (shipped 2026-05-21) [.planning/milestones/v9.0-ROADMAP.md]
 - ✅ **v10.0 Action & Condition Engine Isolation** — Phase 34 (shipped 2026-05-21) [.planning/milestones/v10.0-ROADMAP.md]
 - ✅ **v11.0 Context Engine** — Phase 35 (shipped 2026-05-21) [.planning/milestones/v11.0-ROADMAP.md]
+- 🔄 **v12.0 Tied Rule Orchestration** — Phase 36 (In Progress)
 
 ## Progress
 
-No active phases in progress. Use `/gsd-new-milestone` to start the next milestone cycle.
+| Phase                  | Milestone | Plans Complete | Status      | Completed  |
+| ---------------------- | --------- | -------------- | ----------- | ---------- |
+| 36. Auto Action Engine | v12.0     | 0/1            | In Progress | —          |
+
