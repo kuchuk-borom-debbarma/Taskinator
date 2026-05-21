@@ -1,6 +1,9 @@
+import { db } from '../../../database';
 import { logger } from '../../../logger';
 import type { PaginationParams } from '../../../types/pagination.ts';
 import eventBus from '../../../utils/EventBus.ts';
+import type { DomainEvent } from '../../../utils/event-bus';
+import { claimEventsAtomic } from '../../../utils/event-bus/idempotency.ts';
 import type {
     Project,
     ProjectMember,
@@ -199,5 +202,128 @@ export class ProjectServiceImpl implements ProjectService {
         const result = await queries.deleteProjectMembers(param);
         logger.info(`ProjectService.removeProjectMembers result: ${result}`);
         return result;
+    }
+
+    async handleProjectMemberCountSync(
+        events: DomainEvent<{ projectId: string; delta: number }>[],
+    ): Promise<void> {
+        await this.handleProjectCountSync(
+            events,
+            'project-member-count-group',
+            'members_count',
+            queries.updateProjectMemberCountsBulk,
+        );
+    }
+
+    async handleSyncProjectTaskCount(
+        events: DomainEvent<{ projectId: string; delta: number }>[],
+    ): Promise<void> {
+        await this.handleProjectCountSync(
+            events,
+            'project-task-count-group',
+            'tasks_count',
+            queries.updateProjectTaskCountsBulk,
+        );
+    }
+
+    async handleSyncProjectTeamCount(
+        events: DomainEvent<{ projectId: string; delta: number }>[],
+    ): Promise<void> {
+        await this.handleProjectCountSync(
+            events,
+            'project-team-count-group',
+            'teams_count',
+            queries.updateProjectTeamCountsBulk,
+        );
+    }
+
+    async handleRemoveProjectMember(
+        events: DomainEvent<{ projectId: string; userIds: string[] }>[],
+    ): Promise<void> {
+        if (events.length === 0) return;
+
+        await db.transaction().execute(async (trx) => {
+            const unprocessed = await claimEventsAtomic(
+                trx,
+                events,
+                'project-member-removal-group',
+            );
+
+            if (unprocessed.length === 0) return;
+
+            const projectMap = new Map<string, Set<string>>();
+            for (const event of unprocessed) {
+                const { projectId, userIds } = event.data;
+                const existing = projectMap.get(projectId) || new Set<string>();
+                userIds.forEach((id: string) => existing.add(id));
+                projectMap.set(projectId, existing);
+            }
+
+            const deltas = Array.from(projectMap.entries()).map(
+                ([projectId, userIdsSet]) => ({
+                    projectId,
+                    userIds: Array.from(userIdsSet),
+                }),
+            );
+
+            logger.info(
+                `[ProjectService] Removing project members for ${deltas.length} projects (from ${unprocessed.length} events)`,
+            );
+
+            await queries.purgeProjectMembersBatch(deltas, trx);
+        });
+    }
+
+    async handleDeleteProjectMember(
+        events: DomainEvent<{ projectIds: string[] }>[],
+    ): Promise<void> {
+        if (events.length === 0) return;
+
+        await db.transaction().execute(async (trx) => {
+            const unprocessed = await claimEventsAtomic(
+                trx,
+                events,
+                'project-decommissioning-group',
+            );
+
+            if (unprocessed.length === 0) return;
+
+            const projectIds = Array.from(
+                new Set(unprocessed.flatMap((event) => event.data.projectIds)),
+            );
+
+            logger.info(
+                `[ProjectService] Decommissioning all members for ${projectIds.length} projects (from ${unprocessed.length} events)`,
+            );
+
+            await queries.purgeProjectMembersByProjectIdsBatch(projectIds, trx);
+        });
+    }
+
+    private async handleProjectCountSync(
+        events: DomainEvent<{ projectId: string; delta: number }>[],
+        groupId: string,
+        metricName: string,
+        update: (updates: Map<string, number>, trx?: any) => Promise<void>,
+    ): Promise<void> {
+        if (events.length === 0) return;
+
+        await db.transaction().execute(async (trx) => {
+            const unprocessed = await claimEventsAtomic(trx, events, groupId);
+
+            if (unprocessed.length === 0) return;
+
+            const updates = new Map<string, number>();
+            for (const event of unprocessed) {
+                const { projectId, delta } = event.data;
+                updates.set(projectId, (updates.get(projectId) || 0) + delta);
+            }
+
+            logger.info(
+                `[ProjectService] Syncing ${metricName} for ${updates.size} projects (from ${unprocessed.length} events)`,
+            );
+
+            await update(updates, trx);
+        });
     }
 }
