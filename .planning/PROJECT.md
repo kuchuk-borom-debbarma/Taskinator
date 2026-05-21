@@ -40,7 +40,7 @@ Automate the "busy work" of project management through reliable, transparent, an
 - ✓ [Action & Condition Engine Isolation] — Decouple and isolate execution engines independently without tied triggers or tied flows (v10.0).
 - ✓ [Context Engine] — Centrally resolve, merge snapshots, and validate type-safe entity contexts via registries and database resolvers (v11.0).
 - ✓ [Tied Rule Orchestration] — Tie independent triggers, conditions, actions, and context resolvers together into unified execution rules (v12.0).
-- [ ] [Auto Action Re-sectoring] — Restructure the auto-action module to match the established Controller/Service/Queries pattern; route cross-module operations through service interfaces (v13.0).
+- ✅ [Auto Action Re-sectoring] — Restructure the auto-action module to match the established Controller/Service/Queries pattern; route cross-module operations through service interfaces (v13.0).
 - [ ] [Multi-domain Triggers] — Evaluate events crossing project boundaries.
 - [ ] [Complex Predicates] — Evaluate conditions referencing recursive parent/child states.
 
@@ -49,15 +49,9 @@ Automate the "busy work" of project management through reliable, transparent, an
 - [Cron-based Triggers] — Reactive/event-driven architecture remains primary focus.
 - [External Service Actions] — Scope confined to internal Taskinator domain mutations.
 
-## Next Milestone Goals (v13.0 — Auto Action Re-sectoring)
+## Current State (Post-v13.0)
 
-**Goal:** Make the `auto-action` module architecturally consistent with every other module. Two concrete changes:
-1. **Service layer**: Replace `auto-action-engine/manager.ts` with `AutoActionService` interface + `internal/AutoActionServiceImpl` + `internal/AutoActionQueries` — matching the task/project/team pattern.
-2. **Decoupled DB access**: Route all Task interactions in `scopes/task/` through `taskService` (via a new `getTaskContextById` method) instead of calling `db` directly.
-
-## Current State (Post-v12.0)
-
-The Auto Action Engine is fully operational. All three isolated engines (Action, Condition, Context) are tied together into a sequential, suspendable execution pipeline. Persistent `prev_` columns on `project_task` guarantee transition-state accuracy under concurrent execution. The legacy `autopilot` module has been removed. The system is ready for trigger wiring and API exposure.
+The Auto Action Engine is fully operational and architecturally consistent with all other modules. The service layer follows the `Interface → ServiceImpl → Queries` pattern. All cross-module operations (task reads/writes) route through `taskService` instead of direct `db` access. The three isolated engines (Action, Condition, Context) are tied together into a sequential, suspendable execution pipeline. Persistent `prev_` columns on `project_task` guarantee transition-state accuracy under concurrent execution. The system is ready for trigger wiring, controller/API exposure, and frontend development.
 
 ## Key Decisions
 
@@ -79,11 +73,11 @@ The Auto Action Engine is fully operational. All three isolated engines (Action,
 | Isolated Engines | Introduce completely standalone actionEngine and conditionEngine for high modularity. | **Complete (v10.0)** |
 | Context Engine | Centrally resolve, merge snapshots, and validate type-safe entity contexts via registries and database resolvers. | **Complete (v11.0)** |
 | Tied Rule Orchestration | Sequential pipeline executor binding context, conditions, and actions; persistent prev_ columns for concurrent-safe transition state; condition splitting for future async chunking. | **Complete (v12.0)** |
-| Auto Action Re-sectoring | Service interface + internal Queries/ServiceImpl pattern; task scope goes through taskService not bare db. | **In Progress (v13.0)** |
+| Auto Action Re-sectoring | Service interface + internal Queries/ServiceImpl pattern; task scope goes through taskService not bare db. | **Complete (v13.0)** |
 
 ## Evolution
 
 This document evolves at phase transitions and milestone boundaries.
 
 ---
-*Last updated: 2026-05-21 — v13.0 initiated*
+*Last updated: 2026-05-21 — v13.0 shipped*
