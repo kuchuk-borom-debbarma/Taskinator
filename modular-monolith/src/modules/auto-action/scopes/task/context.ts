@@ -1,5 +1,5 @@
 import { taskService } from '../../../task/index.js';
-import type { ContextResolver } from '../../contextEngine.js';
+import type { ContextResolver } from '../../internal/engines/contextEngine.js';
 import type { TaskContext } from './types.js';
 import { taskContextSchema } from './types.js';
 

@@ -1,9 +1,9 @@
-import { db } from '../../../database/index.ts';
-import { logger } from '../../../logger/index.ts';
-import { executeAction } from '../actionEngine.ts';
-import { evaluateConditionFromIndex } from '../conditionEngine.ts';
-import { fetchContext } from '../contextEngine.ts';
-import type { PipelineStep } from './types.ts';
+import { db } from '../../../../database/index.js';
+import { logger } from '../../../../logger/index.js';
+import type { PipelineStep } from '../../types.js';
+import { executeAction } from '../engines/actionEngine.js';
+import { evaluateConditionFromIndex } from '../engines/conditionEngine.js';
+import { fetchContext } from '../engines/contextEngine.js';
 
 /**
  * Cursor for resuming a step mid-execution.

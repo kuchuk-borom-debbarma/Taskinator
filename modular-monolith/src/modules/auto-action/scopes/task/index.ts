@@ -1,5 +1,5 @@
-import { conditionRegistry } from '../../conditionEngine.js';
-import { contextResolverRegistry } from '../../contextEngine.js';
+import { conditionRegistry } from '../../internal/engines/conditionEngine.js';
+import { contextResolverRegistry } from '../../internal/engines/contextEngine.js';
 import { registerSetFields } from './actions/setFields.js';
 import { taskConditions } from './conditions/index.js';
 import { taskContextResolver } from './context.js';

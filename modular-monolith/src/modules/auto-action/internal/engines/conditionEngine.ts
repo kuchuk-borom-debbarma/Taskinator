@@ -1,4 +1,4 @@
-import type { ConditionDefinition, ConditionNode } from './types.js';
+import type { ConditionDefinition, ConditionNode } from '../../types.js';
 
 /**
  * Isolated Registry containing all registered condition definitions.

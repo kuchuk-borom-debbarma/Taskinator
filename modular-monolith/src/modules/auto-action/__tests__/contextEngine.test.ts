@@ -1,14 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, mock } from 'bun:test';
 import { z } from 'zod';
 import { db } from '../../../database/index.js';
-import type { ContextResolver } from '../contextEngine.js';
+import { init } from '../index.js';
+import { actionRegistry } from '../internal/engines/actionEngine.js';
+import { conditionRegistry } from '../internal/engines/conditionEngine.js';
+import type { ContextResolver } from '../internal/engines/contextEngine.js';
 import {
-    actionRegistry,
-    conditionRegistry,
     contextResolverRegistry,
     fetchContext,
-    init,
-} from '../index.js';
+} from '../internal/engines/contextEngine.js';
 
 // Mock logger to avoid cluttering test outputs
 const loggerPathJs = import.meta.resolve('../../../logger/index.js');

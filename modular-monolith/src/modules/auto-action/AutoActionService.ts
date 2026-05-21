@@ -2,7 +2,8 @@ import type {
     AutoAction,
     AutoActionUpdate,
     NewAutoAction,
-} from '../../database/tables/AutoAction.ts';
+} from '../../database/tables/AutoAction.js';
+import type { EntityScope, ScopeTemplate } from './types.js';
 
 /**
  * Public service interface for the Auto Action module.
@@ -40,4 +41,24 @@ export interface AutoActionService {
      * Returns undefined if not found.
      */
     getAutoActionById(id: string): Promise<AutoAction | undefined>;
+
+    /**
+     * Builds a dynamic template catalog for a specific scope.
+     * Filters actions and conditions depending on the sync/async bounds if requested.
+     */
+    getTemplateForScope(scope: EntityScope, isSync?: boolean): ScopeTemplate;
+
+    /**
+     * Executes an auto-action pipeline for a specific entity.
+     * Supports suspendable execution with startIndex and startCursor.
+     */
+    executePipeline(
+        autoActionId: string,
+        entityId: string,
+        actorId: string,
+        traceId: string,
+        wasSnapshot: any,
+        startIndex?: number,
+        startCursor?: any,
+    ): Promise<any>;
 }

@@ -11,11 +11,11 @@
 - ✅ **v11.0 Context Engine** — Phase 35 (shipped 2026-05-21) [.planning/milestones/v11.0-ROADMAP.md]
 - ✅ **v12.0 Tied Rule Orchestration** — Phase 36 (shipped 2026-05-21) [.planning/v12.0-MILESTONE-AUDIT.md]
 - ✅ **v13.0 Auto Action Re-sectoring** — Phase 37 (shipped 2026-05-21) [.planning/milestones/v13.0-ROADMAP.md]
-- ⏳ **v14.0 Hide Internal Engines** — Phase 38 (planned) [.planning/milestones/v14.0-ROADMAP.md]
+- ✅ **v14.0 Hide Internal Engines** — Phase 38 (shipped 2026-05-21) [.planning/milestones/v14.0-ROADMAP.md]
 
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |---|---|---|---|---|
-| 38. Hide Internal Engines | v14.0 | 0/1 | ⏳ Planned | - |
+| 38. Hide Internal Engines | v14.0 | 1/1 | ✅ Shipped | 2026-05-21 |
 | 37. Auto Action Re-sectoring | v13.0 | 1/1 | ✅ Shipped | 2026-05-21 |

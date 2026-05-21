@@ -11,18 +11,19 @@ mock.module(loggerPathJs, () => ({
     },
 }));
 
-import type { ConditionNode } from '../index.js';
+import { init } from '../index.js';
 import {
     actionRegistry,
-    conditionNodeSchema,
-    conditionRegistry,
-    contextResolverRegistry,
-    EntityScope,
-    evaluateCondition,
     executeAction,
-    init,
-    setFieldsAction,
-} from '../index.js';
+} from '../internal/engines/actionEngine.js';
+import {
+    conditionRegistry,
+    evaluateCondition,
+} from '../internal/engines/conditionEngine.js';
+import { contextResolverRegistry } from '../internal/engines/contextEngine.js';
+import { setFieldsAction } from '../scopes/task/index.js';
+import type { ConditionNode } from '../types.js';
+import { conditionNodeSchema, EntityScope } from '../types.js';
 
 const executeSpy = mock(
     async (query?: any): Promise<any> => ({ rows: [] as any[] }),

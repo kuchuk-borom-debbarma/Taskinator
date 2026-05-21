@@ -1,8 +1,8 @@
-import { db } from '../../../database/index.ts';
+import { db } from '../../../../database/index.js';
 import type {
     AutoAction,
     NewAutoAction,
-} from '../../../database/tables/AutoAction.ts';
+} from '../../../../database/tables/AutoAction.js';
 
 /**
  * Raw Kysely DB queries for the auto_action table.

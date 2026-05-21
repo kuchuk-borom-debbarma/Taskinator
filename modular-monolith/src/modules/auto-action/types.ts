@@ -91,3 +91,69 @@ export interface LogicalNode {
     operator: LogicalOperator;
     children: ConditionNode[];
 }
+
+/**
+ * Single action step within a pipeline.
+ */
+export const actionStepSchema = z.object({
+    type: z.literal('action'),
+    actionId: z.string(),
+    inputs: z.any(),
+});
+
+/**
+ * Conditional action step within a pipeline.
+ */
+export const conditionActionStepSchema = z.object({
+    type: z.literal('condition_action'),
+    condition: conditionNodeSchema,
+    actionId: z.string(),
+    inputs: z.any(),
+});
+
+/**
+ * Unified schema for any step within an auto-action pipeline.
+ */
+export const pipelineStepSchema = z.discriminatedUnion('type', [
+    actionStepSchema,
+    conditionActionStepSchema,
+]);
+
+export type ActionStep = z.infer<typeof actionStepSchema>;
+export type ConditionActionStep = z.infer<typeof conditionActionStepSchema>;
+export type PipelineStep = z.infer<typeof pipelineStepSchema>;
+
+/**
+ * Schema for the full auto-action execution flow.
+ */
+export const autoActionFlowSchema = z.array(pipelineStepSchema);
+
+export interface ActionTemplate {
+    id: string;
+    name: string;
+    description: string;
+    isAsync: boolean;
+    scope: string;
+    inputSchema: any;
+}
+
+export interface ConditionTemplate {
+    type: string;
+    name: string;
+    description?: string;
+    isAsync: boolean;
+    scope: string;
+    schema: any;
+}
+
+export interface ScopeTemplate {
+    triggers: Array<{
+        type: string;
+        name: string;
+        description: string;
+        scope: string;
+    }>;
+    contextFields: string[];
+    actions: ActionTemplate[];
+    conditions: ConditionTemplate[];
+}

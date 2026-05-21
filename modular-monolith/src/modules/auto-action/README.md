@@ -135,25 +135,26 @@ Below are example configurations demonstrating how rules are represented as JSON
 src/modules/auto-action/
 ├── README.md                    # User-facing guide (this file)
 ├── index.ts                     # Root module entrypoint, bootstrappers, and autoActionService singleton
-├── AutoActionService.ts         # Public service interface (CRUD + OCC contract)
-├── types.ts                     # Scope-agnostic AST and core registry types
-├── contextEngine.ts             # Isolated ContextResolverRegistry and fetchContext()
-├── actionEngine.ts              # Isolated ActionExecutorRegistry and executeAction()
-├── conditionEngine.ts           # ConditionRegistry, evaluateCondition() & evaluateConditionFromIndex()
-├── internal/                    # Private service layer (not exported beyond this module)
-│   ├── AutoActionQueries.ts     # Raw Kysely DB functions (insert, select, update, delete)
-│   └── AutoActionServiceImpl.ts # Business logic: OCC, name-uniqueness, pipeline validation
-├── auto-action-engine/          # Central orchestration subsystems
-│   ├── index.ts                 # Sub-module exports
-│   ├── types.ts                 # PipelineStep schemas, isFlowSyncSafe(), isConditionAsync()
-│   ├── executor.ts              # executeAutoActionStep(), executeAutoActionPipeline(), StepResumeCursor
-│   └── template.ts              # Dynamic Zod-to-JSON-Schema converter and scope catalog
+├── AutoActionService.ts         # Public service interface (CRUD + Execution + Template contract)
+├── types.ts                     # Public types, AST nodes, and template schemas
+├── internal/                    # Private implementation layer
+│   ├── engines/                 # Core logic registries and evaluators
+│   │   ├── actionEngine.ts      # ActionExecutorRegistry and executeAction()
+│   │   ├── conditionEngine.ts   # ConditionRegistry and evaluateCondition()
+│   │   └── contextEngine.ts     # ContextResolverRegistry and fetchContext()
+│   ├── execution/               # Pipeline orchestration subsystems
+│   │   ├── executor.ts          # executeAutoActionPipeline() and StepResumeCursor
+│   │   └── template.ts          # Dynamic Zod-to-JSON-Schema converter
+│   ├── queries/                 # Raw DB persistence
+│   │   └── AutoActionQueries.ts # Kysely DB functions
+│   └── service/                 # Business logic and validation
+│       ├── AutoActionServiceImpl.ts # Main service implementation
+│       └── validation.ts        # Sync-safety and condition validation helpers
 ├── scopes/
 │   └── task/                    # Scoped implementations isolated for TASK
 │       ├── index.ts             # Task scope bridge and bootstrappers
 │       ├── types.ts             # TaskContext & TaskPredicate leaf Zod schemas
 │       ├── context.ts           # TASK scope resolver — uses taskService.getTaskContextById()
-│       ├── conditions.ts        # Task predicate evaluator bridge
 │       ├── conditions/          # Modular split of individual task leaf conditions
 │       └── actions/
 │           └── setFields.ts     # Task field action — delegates to taskService.updateTask()

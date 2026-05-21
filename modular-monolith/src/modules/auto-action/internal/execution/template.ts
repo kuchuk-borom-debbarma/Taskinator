@@ -1,8 +1,8 @@
 import type { z } from 'zod';
-import { actionRegistry } from '../actionEngine.ts';
-import { conditionRegistry } from '../conditionEngine.ts';
-import { taskContextSchema } from '../scopes/task/types.ts';
-import { EntityScope } from '../types.ts';
+import { taskContextSchema } from '../../scopes/task/types.js';
+import { EntityScope } from '../../types.js';
+import { actionRegistry } from '../engines/actionEngine.js';
+import { conditionRegistry } from '../engines/conditionEngine.js';
 
 /**
  * Recursively converts a Zod schema into a JSON Schema draft-07 representation.

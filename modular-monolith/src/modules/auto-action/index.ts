@@ -1,13 +1,8 @@
-import { logger } from '../../logger/index.ts';
-import { AutoActionServiceImpl } from './internal/AutoActionServiceImpl.ts';
+import { logger } from '../../logger/index.js';
+import { AutoActionServiceImpl } from './internal/service/AutoActionServiceImpl.js';
 import { initTaskScope } from './scopes/task/index.js';
 
-export * from './AutoActionService.ts';
-export * from './actionEngine.js';
-export * from './auto-action-engine/index.js';
-export * from './conditionEngine.js';
-export * from './contextEngine.js';
-export * from './scopes/task/index.js';
+export * from './AutoActionService.js';
 export * from './types.js';
 
 export const autoActionService = new AutoActionServiceImpl();

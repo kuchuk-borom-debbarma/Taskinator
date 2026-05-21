@@ -1,4 +1,4 @@
-import type { ActionDefinition } from './types.js';
+import type { ActionDefinition } from '../../types.js';
 
 /**
  * Isolated Registry containing all registered action definitions.

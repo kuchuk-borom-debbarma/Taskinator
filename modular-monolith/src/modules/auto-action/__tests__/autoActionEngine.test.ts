@@ -1,20 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, mock } from 'bun:test';
 import { z } from 'zod';
 import { db } from '../../../database/index.js';
+import { autoActionService, EntityScope, init } from '../index.js';
+import { actionRegistry } from '../internal/engines/actionEngine.js';
+import { conditionRegistry } from '../internal/engines/conditionEngine.js';
+import { contextResolverRegistry } from '../internal/engines/contextEngine.js';
 import {
     executeAutoActionPipeline,
     executeAutoActionStep,
     type StepResumeCursor,
-} from '../auto-action-engine/executor.ts';
-import { getTemplateForScope } from '../auto-action-engine/template.ts';
-import {
-    actionRegistry,
-    autoActionService,
-    conditionRegistry,
-    contextResolverRegistry,
-    EntityScope,
-    init,
-} from '../index.js';
+} from '../internal/execution/executor.js';
+import { getTemplateForScope } from '../internal/execution/template.js';
 
 // Mock logger to avoid cluttering test outputs
 const loggerPathJs = import.meta.resolve('../../../logger/index.js');

@@ -2,13 +2,16 @@ import type {
     AutoAction,
     AutoActionUpdate,
     NewAutoAction,
-} from '../../../database/tables/AutoAction.ts';
-import { logger } from '../../../logger/index.ts';
-import type { AutoActionService } from '../AutoActionService.ts';
+} from '../../../../database/tables/AutoAction.js';
+import { logger } from '../../../../logger/index.js';
+import type { AutoActionService } from '../../AutoActionService.js';
 import {
     autoActionFlowSchema,
-    isFlowSyncSafe,
-} from '../auto-action-engine/types.ts';
+    type EntityScope,
+    type ScopeTemplate,
+} from '../../types.js';
+import { executeAutoActionPipeline } from '../execution/executor.js';
+import { getTemplateForScope } from '../execution/template.js';
 import {
     deleteAutoActionById,
     insertAutoAction,
@@ -16,7 +19,8 @@ import {
     selectAutoActionById,
     selectAutoActionsForProject,
     updateAutoActionById,
-} from './AutoActionQueries.ts';
+} from '../queries/AutoActionQueries.js';
+import { isFlowSyncSafe } from './validation.js';
 
 export class AutoActionServiceImpl implements AutoActionService {
     // ─── Private Helpers ────────────────────────────────────────────────────────
@@ -206,5 +210,29 @@ export class AutoActionServiceImpl implements AutoActionService {
     async getAutoActionById(id: string): Promise<AutoAction | undefined> {
         logger.debug(`AutoActionService.getAutoActionById: fetching "${id}"`);
         return selectAutoActionById(id);
+    }
+
+    getTemplateForScope(scope: EntityScope, isSync = false): ScopeTemplate {
+        return getTemplateForScope(scope, isSync);
+    }
+
+    async executePipeline(
+        autoActionId: string,
+        entityId: string,
+        actorId: string,
+        traceId: string,
+        wasSnapshot: any,
+        startIndex = 0,
+        startCursor?: any,
+    ): Promise<any> {
+        return executeAutoActionPipeline(
+            autoActionId,
+            entityId,
+            actorId,
+            traceId,
+            wasSnapshot,
+            startIndex,
+            startCursor,
+        );
     }
 }

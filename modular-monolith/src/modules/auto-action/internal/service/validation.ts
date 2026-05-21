@@ -1,31 +1,6 @@
-import { z } from 'zod';
-import { actionRegistry } from '../actionEngine.ts';
-import { conditionRegistry } from '../conditionEngine.ts';
-import { type ConditionNode, conditionNodeSchema } from '../types.ts';
-
-export const actionStepSchema = z.object({
-    type: z.literal('action'),
-    actionId: z.string(),
-    inputs: z.any(),
-});
-
-export const conditionActionStepSchema = z.object({
-    type: z.literal('condition_action'),
-    condition: conditionNodeSchema,
-    actionId: z.string(),
-    inputs: z.any(),
-});
-
-export const pipelineStepSchema = z.discriminatedUnion('type', [
-    actionStepSchema,
-    conditionActionStepSchema,
-]);
-
-export type ActionStep = z.infer<typeof actionStepSchema>;
-export type ConditionActionStep = z.infer<typeof conditionActionStepSchema>;
-export type PipelineStep = z.infer<typeof pipelineStepSchema>;
-
-export const autoActionFlowSchema = z.array(pipelineStepSchema);
+import type { ConditionNode, PipelineStep } from '../../types.js';
+import { actionRegistry } from '../engines/actionEngine.js';
+import { conditionRegistry } from '../engines/conditionEngine.js';
 
 /**
  * Recursively scans a condition tree to determine if any node uses an asynchronous condition definition.

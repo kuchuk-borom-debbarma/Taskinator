@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { taskService } from '../../../../task/index.js';
-import { actionRegistry } from '../../../actionEngine.js';
+import { actionRegistry } from '../../../internal/engines/actionEngine.js';
 import type { ActionDefinition } from '../../../types.js';
 import { EntityScope } from '../../../types.js';
 import type { TaskContext } from '../types.js';
