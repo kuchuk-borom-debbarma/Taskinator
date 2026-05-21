@@ -2,6 +2,7 @@ import jwt from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
 import { db } from '../../../database';
 import { logger } from '../../../logger';
+import type { DomainEvent } from '../../../utils/event-bus';
 import type {
     AuthService,
     SearchUsersParam,
@@ -17,6 +18,8 @@ import {
     KAFKA_EVENTS,
     KAFKA_TOPICS,
 } from '../../../utils/event-bus/constants.ts';
+import { claimEventsAtomic } from '../../../utils/event-bus/idempotency.ts';
+import { updateUserProjectCountsBulk } from './AuthQueries.ts';
 
 export class AuthServiceImpl implements AuthService {
     async init(): Promise<void> {
@@ -199,5 +202,53 @@ export class AuthServiceImpl implements AuthService {
             WHERE id::text = ANY(${ids}::text[])
         `.execute(db);
         return rows.rows;
+    }
+
+    async handleUserProjectCountSync(
+        events: DomainEvent<{ userId: string; delta: number }>[],
+    ): Promise<void> {
+        if (events.length === 0) return;
+
+        await db.transaction().execute(async (trx) => {
+            const unprocessed = await claimEventsAtomic(
+                trx,
+                events,
+                'auth-project-aggregator-group',
+            );
+
+            if (unprocessed.length === 0) return;
+
+            const uuidRegex =
+                /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+            const validUnprocessed = unprocessed.filter(
+                (event) =>
+                    event.data.userId && uuidRegex.test(event.data.userId),
+            );
+
+            if (validUnprocessed.length === 0) {
+                logger.debug(
+                    `[AuthService] All ${unprocessed.length} project count events skipped (no valid UUID userIds found)`,
+                );
+                return;
+            }
+
+            const consolidates = new Map<string, number>();
+            for (const event of validUnprocessed) {
+                const { userId, delta } = event.data;
+                logger.debug(
+                    `[AuthService] Aggregating project count for user ${userId}: delta ${delta}`,
+                );
+                consolidates.set(
+                    userId,
+                    (consolidates.get(userId) || 0) + delta,
+                );
+            }
+
+            logger.info(
+                `[AuthService] Performing bulk projects_count update for ${consolidates.size} users (from ${validUnprocessed.length} events)`,
+            );
+
+            await updateUserProjectCountsBulk(consolidates, trx);
+        });
     }
 }
