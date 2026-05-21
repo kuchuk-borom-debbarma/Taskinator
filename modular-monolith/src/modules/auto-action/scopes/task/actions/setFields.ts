@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { db } from '../../../../../database/index.js';
+import { taskService } from '../../../../task/index.js';
 import { actionRegistry } from '../../../actionEngine.js';
 import type { ActionDefinition } from '../../../types.js';
 import { EntityScope } from '../../../types.js';
@@ -27,12 +27,8 @@ export const setFieldsAction: ActionDefinition<typeof inputSchema> = {
     ): Promise<void> {
         const { taskId } = ctx;
 
-        // 1. Fetch always-fresh, up-to-date task data from the database
-        const task = await db
-            .selectFrom('project_task')
-            .select(['id', 'version'])
-            .where('id', '=', taskId as any)
-            .executeTakeFirst();
+        // 1. Fetch always-fresh, up-to-date task data via taskService
+        const task = await taskService.getTaskContextById(taskId);
 
         if (!task) {
             throw new Error(
@@ -40,61 +36,25 @@ export const setFieldsAction: ActionDefinition<typeof inputSchema> = {
             );
         }
 
-        const currentVersion = task.version;
-
-        // 2. Map input fields to database columns dynamically
-        const updateData: any = {};
-        let hasUpdates = false;
-
-        if (inputs.status !== undefined) {
-            updateData.status = inputs.status;
-            hasUpdates = true;
-        }
-        if (inputs.title !== undefined) {
-            updateData.title = inputs.title;
-            hasUpdates = true;
-        }
-        if (inputs.description !== undefined) {
-            updateData.description = inputs.description;
-            hasUpdates = true;
-        }
-        if (inputs.teamId !== undefined) {
-            updateData.fk_team_id = inputs.teamId;
-            hasUpdates = true;
-        }
-        if (inputs.memberId !== undefined) {
-            updateData.fk_member_id = inputs.memberId;
-            hasUpdates = true;
-        }
-
+        // 2. No-op if no inputs are defined
+        const hasUpdates = Object.values(inputs).some((v) => v !== undefined);
         if (!hasUpdates) {
-            return; // No-op if no updates are specified
+            return;
         }
 
-        updateData.version = currentVersion + 1;
-        updateData.updated_at = new Date().toISOString() as any;
-
-        // 3. Perform database update enforcing optimistic locking via the 'version' column
-        const result = await db
-            .updateTable('project_task')
-            .set((eb) => ({
-                ...updateData,
-                prev_status: eb.ref('status'),
-                prev_priority: eb.ref('priority'),
-                prev_title: eb.ref('title'),
-                prev_team_id: eb.ref('fk_team_id'),
-                prev_member_id: eb.ref('fk_member_id'),
-            }))
-            .where('id', '=', taskId as any)
-            .where('version', '=', currentVersion)
-            .executeTakeFirst();
-
-        // 4. If no rows were updated, a concurrent transaction has modified this task
-        if (Number(result.numUpdatedRows) === 0) {
-            throw new Error(
-                `[SetFieldsAction] Optimistic lock failure: Task "${taskId}" was modified concurrently (expected version ${currentVersion}).`,
-            );
-        }
+        // 3. Delegate to taskService.updateTask — prev_ writes happen inside TaskQueries.updateTask
+        //    description is passed through directly; taskService.updateTask already supports it.
+        await taskService.updateTask({
+            actorId: ctx.actorId,
+            projectId: task.fk_project_id,
+            taskId,
+            version: task.version,
+            title: inputs.title,
+            description: inputs.description,
+            status: inputs.status,
+            teamId: inputs.teamId,
+            memberId: inputs.memberId,
+        });
     },
 };
 

@@ -1,4 +1,4 @@
-import { db } from '../../../../database/index.js';
+import { taskService } from '../../../task/index.js';
 import type { ContextResolver } from '../../contextEngine.js';
 import type { TaskContext } from './types.js';
 import { taskContextSchema } from './types.js';
@@ -12,26 +12,8 @@ export const taskContextResolver: ContextResolver<TaskContext> = {
         traceId: string,
         wasSnapshot?: Record<string, any>,
     ): Promise<TaskContext> {
-        // Fetch the fresh task data from the database — including persisted prev_ columns
-        const task = await db
-            .selectFrom('project_task')
-            .select([
-                'id',
-                'fk_project_id',
-                'fk_team_id',
-                'fk_member_id',
-                'title',
-                'status',
-                'priority',
-                'version',
-                'prev_status',
-                'prev_priority',
-                'prev_title',
-                'prev_team_id',
-                'prev_member_id',
-            ])
-            .where('id', '=', entityId as any)
-            .executeTakeFirst();
+        // Fetch the fresh task data via taskService — including persisted prev_ columns
+        const task = await taskService.getTaskContextById(entityId);
 
         if (!task) {
             throw new Error(

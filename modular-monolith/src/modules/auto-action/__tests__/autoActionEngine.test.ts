@@ -6,13 +6,10 @@ import {
     executeAutoActionStep,
     type StepResumeCursor,
 } from '../auto-action-engine/executor.ts';
-import {
-    createAutoAction,
-    updateAutoAction,
-} from '../auto-action-engine/manager.ts';
 import { getTemplateForScope } from '../auto-action-engine/template.ts';
 import {
     actionRegistry,
+    autoActionService,
     conditionRegistry,
     contextResolverRegistry,
     EntityScope,
@@ -117,7 +114,7 @@ describe('Auto Action Engine Orchestrator', () => {
                 return { rows: [] };
             });
 
-            const action = await createAutoAction({
+            const action = await autoActionService.createAutoAction({
                 fk_project_id: projectId,
                 name: 'My Sync Flow',
                 description: 'A test flow',
@@ -142,7 +139,7 @@ describe('Auto Action Engine Orchestrator', () => {
 
         it('should block creation of sync flow containing async action', async () => {
             await expect(
-                createAutoAction({
+                autoActionService.createAutoAction({
                     fk_project_id: projectId,
                     name: 'My Sync Flow',
                     is_active: true,
@@ -168,7 +165,7 @@ describe('Auto Action Engine Orchestrator', () => {
             (cond as any).isAsync = true; // Temporarily make it async for test
 
             await expect(
-                createAutoAction({
+                autoActionService.createAutoAction({
                     fk_project_id: projectId,
                     name: 'My Sync Flow',
                     is_active: true,
@@ -205,7 +202,7 @@ describe('Auto Action Engine Orchestrator', () => {
             });
 
             await expect(
-                createAutoAction({
+                autoActionService.createAutoAction({
                     fk_project_id: projectId,
                     name: 'Duplicate Flow',
                     is_active: true,
@@ -244,7 +241,11 @@ describe('Auto Action Engine Orchestrator', () => {
 
             // Updating with expectedVersion = 4 (mismatch! should fail)
             await expect(
-                updateAutoAction('action-uuid-1', { name: 'Updated Flow' }, 4),
+                autoActionService.updateAutoAction(
+                    'action-uuid-1',
+                    { name: 'Updated Flow' },
+                    4,
+                ),
             ).rejects.toThrow(
                 /Optimistic locking failure: expected version 4 but found 5/,
             );

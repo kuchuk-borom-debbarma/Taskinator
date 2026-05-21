@@ -1,12 +1,16 @@
 import { logger } from '../../logger/index.ts';
+import { AutoActionServiceImpl } from './internal/AutoActionServiceImpl.ts';
 import { initTaskScope } from './scopes/task/index.js';
 
+export * from './AutoActionService.ts';
 export * from './actionEngine.js';
 export * from './auto-action-engine/index.js';
 export * from './conditionEngine.js';
 export * from './contextEngine.js';
 export * from './scopes/task/index.js';
 export * from './types.js';
+
+export const autoActionService = new AutoActionServiceImpl();
 
 /**
  * Initializes the auto-action module by registering all starter scopes, actions and conditions.

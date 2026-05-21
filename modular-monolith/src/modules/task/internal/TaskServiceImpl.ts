@@ -6,6 +6,7 @@ import type {
     PaginationParams,
     Task,
     TaskConnection,
+    TaskContextRow,
     TaskLink,
     TaskNeighbourhoodResult,
     TaskService,
@@ -15,6 +16,7 @@ import {
     deleteTaskLink,
     getNeighbourhood,
     getProjectTaskLinksPage,
+    getTaskContextById as getTaskContextByIdQuery,
     getTaskLinksPage,
     getTasksByActorIdAndIds,
     getTasksByIds as getTasksByIdsQuery,
@@ -50,6 +52,15 @@ export class TaskServiceImpl implements TaskService {
             `TaskService.getTasksByActorIdAndIds called for actor: ${actorId}, tasks: ${ids.length}`,
         );
         return await getTasksByActorIdAndIds(actorId, ids);
+    }
+
+    async getTaskContextById(
+        taskId: string,
+    ): Promise<TaskContextRow | undefined> {
+        logger.debug(
+            `TaskService.getTaskContextById called for task: ${taskId}`,
+        );
+        return getTaskContextByIdQuery(taskId);
     }
 
     async getTaskLinks(

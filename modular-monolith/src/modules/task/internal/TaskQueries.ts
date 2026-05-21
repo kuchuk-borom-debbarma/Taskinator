@@ -10,6 +10,7 @@ import type {
     GetNeighbourhoodParam,
     PaginationParams,
     Task,
+    TaskContextRow,
     TaskLink,
     TaskNeighbourhoodResult,
 } from '../TaskService.ts';
@@ -1852,3 +1853,32 @@ export const repairTaskReachabilityForProjects = async (
         await syncTaskGraphCounters(trx, projectId);
     }
 };
+
+/**
+ * Fetches a minimal task row for the auto-action context resolver.
+ * Includes all prev_ columns needed by TaskContextRow.
+ * Internal-only — no permission check.
+ */
+export async function getTaskContextById(
+    taskId: string,
+): Promise<TaskContextRow | undefined> {
+    return db
+        .selectFrom('project_task')
+        .select([
+            'id',
+            'fk_project_id',
+            'fk_team_id',
+            'fk_member_id',
+            'title',
+            'status',
+            'priority',
+            'version',
+            'prev_status',
+            'prev_priority',
+            'prev_title',
+            'prev_team_id',
+            'prev_member_id',
+        ])
+        .where('id', '=', taskId as any)
+        .executeTakeFirst();
+}

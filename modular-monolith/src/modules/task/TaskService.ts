@@ -55,6 +55,26 @@ export interface LinkConnection {
     prevCursor: string | null;
 }
 
+/**
+ * Minimal task row used by the auto-action context resolver.
+ * Internal-only — no actor permission check needed.
+ */
+export type TaskContextRow = {
+    id: string;
+    fk_project_id: string;
+    fk_team_id: string | null;
+    fk_member_id: string | null;
+    title: string;
+    status: string;
+    priority: number | null;
+    version: number;
+    prev_status: string | null;
+    prev_priority: number | null;
+    prev_title: string | null;
+    prev_team_id: string | null;
+    prev_member_id: string | null;
+};
+
 export interface GetTaskLinksParam {
     userId: string;
     projectId: string;
@@ -80,6 +100,12 @@ export interface TaskService extends BaseService {
      * Authorized batch fetch.
      */
     getTasksByActorIdAndIds(actorId: string, ids: string[]): Promise<Task[]>;
+
+    /**
+     * Internal fetch for auto-action context resolution.
+     * No actor permission check — caller is trusted (auto-action engine).
+     */
+    getTaskContextById(taskId: string): Promise<TaskContextRow | undefined>;
 
     getTaskLinks(
         params: GetTaskLinksParam,
