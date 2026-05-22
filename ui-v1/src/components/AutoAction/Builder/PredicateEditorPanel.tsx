@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useAutoActionTrigger } from '../AutoActionTriggerContext';
 import { useAutoActionMetadata } from '../AutoActionMetadataContext';
 import {
-  DOMAIN_FIELDS,
   OPERATORS,
   TASK_STATUS_OPTIONS,
   TASK_PRIORITY_OPTIONS,
@@ -114,15 +113,17 @@ export const PredicateEditorPanel: React.FC<PredicateEditorPanelProps> = ({
   onClose,
 }) => {
   const { selectedEntityType } = useAutoActionTrigger();
-  const { getFieldsForEntity, isLoading } = useAutoActionMetadata();
+  const { template, isLoading } = useAutoActionMetadata();
   const [draft, setDraft] = useState<PredicateNodeData>({ ...data, domain: selectedEntityType });
 
-  const metadataFields = getFieldsForEntity(selectedEntityType);
-  
-  // Use metadata fields if available, otherwise fallback to local definitions
-  const fieldsForDomain = metadataFields.length > 0 
-    ? metadataFields.map(f => ({ value: f.name, label: f.name.charAt(0).toUpperCase() + f.name.slice(1) }))
-    : DOMAIN_FIELDS[selectedEntityType] ?? [];
+  // Use dynamic fields from template
+  const fieldsForDomain = useMemo(() => {
+    if (!template?.contextFields) return [];
+    return template.contextFields.map((f: string) => ({
+      value: f,
+      label: f.split('.').pop()?.replace(/_/g, ' ').replace(/\b\w/g, (l: string) => l.toUpperCase()) || f,
+    }));
+  }, [template]);
 
   useEffect(() => {
     if (draft.domain !== selectedEntityType) {

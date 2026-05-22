@@ -54,6 +54,30 @@ export const useAutoActionMetadata = () => {
   return context;
 };
 
+// Helper to get formatted context fields for a specific domain
+export const useAutoActionFields = () => {
+  const { template } = useAutoActionMetadata();
+  return useMemo(() => {
+    if (!template?.contextFields) return [];
+    return template.contextFields.map((field: string) => ({
+      value: field,
+      label: field.split('.').pop()?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) || field,
+    }));
+  }, [template]);
+};
+
+// Helper to get available triggers
+export const useAutoActionTriggers = () => {
+  const { template } = useAutoActionMetadata();
+  return template?.triggers || [];
+};
+
+// Helper to get available conditions
+export const useAutoActionConditions = () => {
+  const { template } = useAutoActionMetadata();
+  return template?.conditions || [];
+};
+
 // ─── Provider Component ──────────────────────────────────────────────────────
 
 interface ProviderProps {

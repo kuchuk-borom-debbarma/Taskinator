@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Zap, GitBranch, FileText, ArrowLeft, PlusCircle, AlertTriangle } from 'lucide-react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { AppModal } from '../shared/workspace';
@@ -6,7 +6,7 @@ import { PipelineEditor } from './Pipeline/PipelineEditor';
 import { useGraphQLClient } from '../../hooks/useGraphQLClient';
 import { graphql } from '../../gql';
 import { AutoActionTriggerProvider, useAutoActionTrigger } from './AutoActionTriggerContext';
-import { AutoActionMetadataProvider } from './AutoActionMetadataContext';
+import { AutoActionMetadataProvider, useAutoActionMetadata } from './AutoActionMetadataContext';
 import type { PipelineStep, AutoActionCondition } from '../../gql/graphql';
 import { normalizeAction } from './Pipeline/actionTypes';
 
@@ -22,13 +22,6 @@ const STEPS = [
   { id: 'triggers', label: 'Triggers', icon: Zap },
   { id: 'pipeline', label: 'Pipeline', icon: GitBranch },
   { id: 'review', label: 'Review', icon: FileText },
-];
-
-const TRIGGER_OPTIONS = [
-  { value: 'task.created', label: 'Task Created', description: 'Fires immediately when a new task is created in the project.' },
-  { value: 'task.updated', label: 'Task Updated', description: 'Fires whenever a task title, description or custom attributes change.' },
-  { value: 'task.status_changed', label: 'Status Changed', description: 'Fires when a task changes from one lifecycle state to another.' },
-  { value: 'task.assigned', label: 'Member Assigned', description: 'Fires when a team member is assigned to a task.' },
 ];
 
 const INITIAL_PIPELINE: PipelineStep[] = [
@@ -147,15 +140,21 @@ const CreateAutoActionModalContent: React.FC<CreateAutoActionModalProps> = ({
   const queryClient = useQueryClient();
   const { request } = useGraphQLClient();
   const { setSelectedEntityType } = useAutoActionTrigger();
-  
+  const { template, isLoading: isTemplateLoading } = useAutoActionMetadata();
+
   const [currentStepIdx, setCurrentStepIdx] = useState(0);
   const [error, setError] = useState<string | null>(null);
 
   // Form state
   const [triggers, setTriggers] = useState<string[]>([]);
-  const [pipeline, setPipeline] = useState<PipelineStep[]>(INITIAL_PIPELINE);
+  const [pipeline, setPipeline] = useState<any[]>(INITIAL_PIPELINE);
 
   const step = STEPS[currentStepIdx]?.id;
+
+  const triggerOptions = useMemo(() => {
+    return template?.triggers || [];
+  }, [template]);
+
 
   useEffect(() => {
     if (open) {
@@ -337,39 +336,47 @@ const CreateAutoActionModalContent: React.FC<CreateAutoActionModalProps> = ({
               <h4 className="text-xs font-bold uppercase tracking-wider text-app-muted">
                 Select when this rule should fire
               </h4>
-              <div className="grid gap-3">
-                {TRIGGER_OPTIONS.map((opt) => {
-                  const isSelected = triggers.includes(opt.value);
-                  return (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      onClick={() => toggleTrigger(opt.value)}
-                      className={`group flex items-start gap-3.5 rounded-2xl border p-4 text-left transition ${
-                        isSelected
-                          ? 'border-app-accent bg-app-accent-soft ring-2 ring-app-accent/10'
-                          : 'border-app-line bg-white/60 hover:border-app-accent/30 hover:bg-white/90'
-                      }`}
-                    >
-                      <div
-                        className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition ${
-                          isSelected ? 'border-app-accent bg-app-accent text-white' : 'border-app-line bg-white group-hover:border-app-accent/50'
+              {isTemplateLoading ? (
+                <div className="flex flex-col gap-3">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="h-20 w-full animate-pulse rounded-2xl bg-app-line/20" />
+                  ))}
+                </div>
+              ) : (
+                <div className="grid gap-3">
+                  {triggerOptions.map((opt: any) => {
+                    const isSelected = triggers.includes(opt.type);
+                    return (
+                      <button
+                        key={opt.type}
+                        type="button"
+                        onClick={() => toggleTrigger(opt.type)}
+                        className={`group flex items-start gap-3.5 rounded-2xl border p-4 text-left transition ${
+                          isSelected
+                            ? 'border-app-accent bg-app-accent-soft ring-2 ring-app-accent/10'
+                            : 'border-app-line bg-white/60 hover:border-app-accent/30 hover:bg-white/90'
                         }`}
                       >
-                        {isSelected && (
-                          <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                          </svg>
-                        )}
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold text-app-ink">{opt.label}</p>
-                        <p className="mt-1 text-xs leading-relaxed text-app-muted">{opt.description}</p>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
+                        <div
+                          className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition ${
+                            isSelected ? 'border-app-accent bg-app-accent text-white' : 'border-app-line bg-white group-hover:border-app-accent/50'
+                          }`}
+                        >
+                          {isSelected && (
+                            <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-app-ink">{opt.name}</p>
+                          <p className="mt-1 text-xs leading-relaxed text-app-muted">{opt.description}</p>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
               {triggers.length === 0 && (
                 <p className="text-xs italic text-app-muted text-center mt-3">
                   * Select at least one trigger to continue.
@@ -410,7 +417,7 @@ const CreateAutoActionModalContent: React.FC<CreateAutoActionModalProps> = ({
                     {triggers.map((t) => (
                       <span key={t} className="px-2.5 py-1 text-xs font-semibold rounded-full bg-white border border-app-line text-app-ink shadow-sm flex items-center gap-1">
                         <Zap size={10} className="text-app-accent fill-app-accent" />
-                        {TRIGGER_OPTIONS.find((o) => o.value === t)?.label || t}
+                        {triggerOptions.find((o: any) => o.type === t)?.name || t}
                       </span>
                     ))}
                   </div>
