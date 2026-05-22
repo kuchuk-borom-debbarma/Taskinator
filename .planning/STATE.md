@@ -1,23 +1,23 @@
-# State: v19.0 - UI-v1 Auto Action Modernization
+# State: v20.0 - Advanced Automation Intelligence
 
 ## Milestone Status
-- Current Milestone: v19.0
+- Current Milestone: v20.0
 - Progress: 0% (0/5 Phases)
 - Blockers: None
 
 ## Active Phase
-- Phase: 46 - Expose Auto Action Template API
+- Phase: 51 - Recursive Context Resolution
 - Status: Planning
 
 ## Phase Progress
-- [ ] Define GraphQL types
-- [ ] Implement resolver
-- [ ] Verify output
+- [ ] Research current context engine limits
+- [ ] Design recursive resolution logic
+- [ ] Implement parent/child loaders
 
 ## Recent Changes
-- Initiated v19.0 milestone planning.
+- Initiated v20.0 milestone planning.
 - Updated PROJECT.md, REQUIREMENTS.md, and ROADMAP.md.
 
 ## Notes
-- ui-v1 still references "Autopilot" and needs a full rename.
-- The template API is critical for the new dynamic UI approach.
+- v20.0 is a major intelligence upgrade focusing on relational data evaluation.
+- Multi-domain triggers will significantly expand the scope of automation beyond single projects.

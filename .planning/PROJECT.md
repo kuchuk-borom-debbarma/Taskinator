@@ -46,17 +46,17 @@ Automate the "busy work" of project management through reliable, transparent, an
 - ✓ [Auto Action Runtime Integration] — Connected auto-action rules to event consumers and GraphQL APIs (v16.0).
 - ✓ [Auto Action E2E Verification & Reliability] — Validated end-to-end flows and hardened runtime reliability (v17.0).
 - ✓ [Auto Action Architecture & Performance Evolution] — Transformed the engine into a high-throughput, resilient, and resumable system with CTEs and Sync Orchestration (v18.0).
-- [ ] [UI-v1 Auto Action Modernization] — Refactor ui-v1 to replace Autopilot with the new Auto Action engine, support dynamic templates, and full terminology rename (v19.0).
+- ✓ [UI-v1 Auto Action Modernization] — Refactor ui-v1 to replace Autopilot with the new Auto Action engine, support dynamic templates, and full terminology rename (v19.0).
 - [ ] [Multi-domain Triggers] — Evaluate events crossing project boundaries (v20.0).
 - [ ] [Complex Predicates] — Evaluate conditions referencing recursive parent/child states (v20.0).
 
-## Current Milestone: v19.0 (Planning)
+## Current Milestone: v20.0 (Planning)
 
-**Goal:** Modernize ui-v1 to support the new Auto Action engine with dynamic templates and full terminology rename.
+**Goal:** Expand Auto Action intelligence with Multi-domain triggers and complex cross-entity recursive predicates.
 
-## Current State (Post-v18.0)
+## Current State (Post-v19.0)
 
-v18.0 is complete. The system supports high-performance CTEs and resumable async pipelines. ui-v1 still uses the legacy "Autopilot" terminology and schema, which is now decoupled from the backend.
+v19.0 is complete. ui-v1 is fully modernized and uses the new dynamic Auto Action engine. The system is ready for advanced intelligence features.
 
 ## Key Decisions
 

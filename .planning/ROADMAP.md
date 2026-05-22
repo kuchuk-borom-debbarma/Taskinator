@@ -1,26 +1,26 @@
-# Roadmap: v19.0 - UI-v1 Auto Action Modernization
+# Roadmap: v20.0 - Advanced Automation Intelligence
 
-## Phase 46: Expose Auto Action Template API
-- [ ] Define `AutoActionTemplate` GraphQL types in `modular-monolith`.
-- [ ] Implement `autoActionTemplate` query resolver in backend.
-- [ ] Verify template query returns correct JSON schemas for actions and conditions.
+## Phase 51: Recursive Context Resolution
+- [ ] Update `ContextEngine` to support resolving related entities (parent/children).
+- [ ] Implement lazy-loading for related entity contexts to minimize initial payload.
+- [ ] Add depth limits to prevent circular dependency resolution.
 
-## Phase 47: Terminology Rename & GQL Migration (Part 1)
-- [ ] Batch rename "Autopilot" to "Auto Action" in `ui-v1` filesystem and code.
-- [ ] Update `ui-v1` GraphQL fragments and queries to use `AutoAction` schema.
-- [ ] Run `codegen` in `ui-v1` to generate new types.
+## Phase 52: Path-based Predicate AST & Evaluator
+- [ ] Refactor `ConditionNode` to support dot-notation paths in field selection.
+- [ ] Update `evaluateCondition` to handle path traversal across resolved contexts.
+- [ ] Implement aggregation functions (`count`, `sum`, `every`, `some`) for child collections.
 
-## Phase 48: Dynamic Trigger & Condition Builder
-- [ ] Update `ui-v1` to fetch `autoActionTemplate`.
-- [ ] Refactor Trigger selection to use template-driven list.
-- [ ] Refactor Condition builder to use template-driven `contextFields` and `conditions`.
+## Phase 53: Multi-domain Trigger Registry & Dispatcher
+- [ ] Implement a global trigger index in the database or an efficient lookup mechanism for cross-project events.
+- [ ] Update `AutoActionService` to dispatch events to all matching rules, regardless of project ID.
+- [ ] Refine authorization logic for cross-project action execution.
 
-## Phase 49: JSON Schema Action Form Generator
-- [ ] Implement a dynamic form generator in `ui-v1` that reads `inputSchema` from the action template.
-- [ ] Replace hardcoded action parameter forms with the dynamic generator.
-- [ ] Support `isSync` toggle in the creation wizard.
+## Phase 54: UI Support for Advanced Intelligence
+- [ ] Update `ui-v1` Visual Builder to allow selecting fields from related entities.
+- [ ] Implement UI for aggregation condition configuration.
+- [ ] Add "Trigger Source" selection in the creation wizard (Current Project vs. All Projects).
 
-## Phase 50: Integration & Optimistic UI
-- [ ] Finalize `create`/`update`/`delete` mutations in `ui-v1`.
-- [ ] Implement optimistic UI for status toggling with `version` tracking.
-- [ ] End-to-end manual verification of the new Auto Action builder flow.
+## Phase 55: E2E Validation & Performance Benchmarking
+- [ ] Add integration tests for recursive parent-child conditions.
+- [ ] Validate cross-project trigger latency and reliability.
+- [ ] Perform stress testing on complex predicate trees to ensure stability.
