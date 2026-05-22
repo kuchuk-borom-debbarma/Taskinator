@@ -17,13 +17,14 @@ progress:
 
 ## Current Milestone: v16.0 Auto Action Runtime Integration
 
-## Current Phase: Not started (Phase 42 next)
+## Current Phase: Phase 42: Auto Action Event Consumer
 
 ## Recent Progress
 
 - Started v16.0 Auto Action Runtime Integration milestone.
 - Defined v16.0 requirements for runtime consumer, GraphQL API, connection pagination, DataLoader, and service design.
 - Created v16.0 roadmap with Phase 42 Auto Action Event Consumer and Phase 43 Auto Action GraphQL API.
+- Planned Phase 42 Consumer & Service Runtime Wiring.
 - Approved v15.0 Milestone Plan.
 - Updated `PROJECT.md`, `MILESTONES.md`, `ROADMAP.md`.
 - Created `v15.0-REQUIREMENTS.md` and `v15.0-ROADMAP.md`.
@@ -49,10 +50,10 @@ progress:
 
 ## Current Position
 
-Phase: Not started (defining requirements)
-Plan: —
-Status: Defining requirements
-Last activity: 2026-05-22 — Milestone v16.0 started
+Phase: 42 Auto Action Event Consumer
+Plan: 42-01 Consumer & Service Runtime Wiring
+Status: Ready for execution
+Last activity: 2026-05-22 — Phase 42 planned
 
 ## Operator Next Steps
 
