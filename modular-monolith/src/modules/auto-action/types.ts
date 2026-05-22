@@ -24,7 +24,7 @@ export interface ActionDefinition<I extends z.ZodObject<any>> {
     readonly id: string;
     readonly name: string;
     readonly description: string;
-    readonly isAsync: boolean;
+    readonly isSync: boolean;
     readonly scope: EntityScope;
     readonly inputSchema: I;
     handler(ctx: any, inputs: z.infer<I>): Promise<unknown>;
@@ -39,7 +39,7 @@ export interface ConditionDefinition<
     readonly type: string;
     readonly name: string;
     readonly description?: string;
-    readonly isAsync: boolean;
+    readonly isSync: boolean;
     readonly scope: EntityScope;
     readonly schema: NodeSchema;
     evaluate(ctx: any, node: z.infer<NodeSchema>): boolean;
@@ -132,7 +132,7 @@ export interface ActionTemplate {
     id: string;
     name: string;
     description: string;
-    isAsync: boolean;
+    isSync: boolean;
     scope: string;
     inputSchema: any;
 }
@@ -141,7 +141,7 @@ export interface ConditionTemplate {
     type: string;
     name: string;
     description?: string;
-    isAsync: boolean;
+    isSync: boolean;
     scope: string;
     schema: any;
 }

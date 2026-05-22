@@ -9,7 +9,7 @@ export const TaskTeamUnassignedCondition: ConditionDefinition<
     type: 'TaskTeamUnassigned',
     name: 'Task Team Unassigned',
     description: 'Triggers when a team is unassigned from the task.',
-    isAsync: false,
+    isSync: true,
     scope: EntityScope.TASK,
     schema: taskTeamUnassignedSchema,
     evaluate(ctx: TaskContext) {

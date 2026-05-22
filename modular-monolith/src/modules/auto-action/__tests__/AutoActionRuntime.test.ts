@@ -135,21 +135,23 @@ describe('AutoAction runtime wiring', () => {
             traceId: 'trace-1',
             old: { status: 'TODO' },
         });
+
+        // Mock queries:
+        // 1. isEventProcessed -> returns false
+        // 2. selectActiveAutoActionsForProject -> returns rules
+        // 3. markEventProcessed -> (insert)
+        executeQueryMock.mockResolvedValueOnce({ rows: [] }); // not processed
         executeQueryMock.mockResolvedValueOnce({
             rows: [
-                createAutoAction(),
-                createAutoAction({
-                    id: 'auto-action-2',
-                    triggers: [
-                        { type: KAFKA_EVENTS.TASK.CREATED, scope: 'TASK' },
-                    ],
-                }),
+                createAutoAction({ is_sync: false }), // ASYNC ACTION
             ],
         });
+        executeQueryMock.mockResolvedValueOnce({ rows: [] }); // insert processed_event
 
         await service.handleTaskEvents([event]);
 
-        expect(executeQueryMock).toHaveBeenCalledTimes(1);
+        // Called for idempotency check and rule selection
+        expect(executeQueryMock).toHaveBeenCalledTimes(3);
         expect(executePipelineMock).toHaveBeenCalledTimes(1);
         expect(executePipelineMock).toHaveBeenCalledWith(
             'auto-action-1',
@@ -157,6 +159,45 @@ describe('AutoAction runtime wiring', () => {
             'user-1',
             'trace-1',
             { status: 'TODO' },
+            0,
+            undefined,
+            5, // async limit
+        );
+    });
+
+    it('selects and executes sync-only matching rules for sync task events', async () => {
+        const service = new AutoActionServiceImpl();
+        service.executePipeline = executePipelineMock as any;
+        const event = createEvent(KAFKA_EVENTS.TASK.UPDATED, {
+            projectId: 'project-1',
+            taskId: 'task-1',
+            actorId: 'user-1',
+            traceId: 'trace-1',
+            old: { status: 'TODO' },
+        });
+
+        // handleSyncTaskEvents does NOT check idempotency (it's in the req lifecycle)
+        // 1. selectActiveAutoActionsForProject -> returns rules
+        executeQueryMock.mockResolvedValueOnce({
+            rows: [
+                createAutoAction({ id: 'sync-action-1', is_sync: true }),
+                createAutoAction({ id: 'async-action-2', is_sync: false }),
+            ],
+        });
+
+        await service.handleSyncTaskEvents(event);
+
+        expect(executeQueryMock).toHaveBeenCalledTimes(1);
+        expect(executePipelineMock).toHaveBeenCalledTimes(1);
+        expect(executePipelineMock).toHaveBeenCalledWith(
+            'sync-action-1',
+            'task-1',
+            'user-1',
+            'trace-1',
+            { status: 'TODO' },
+            0,
+            undefined,
+            10, // sync limit
         );
     });
 

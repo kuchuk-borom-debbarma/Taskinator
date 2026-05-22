@@ -9,7 +9,7 @@ export const TaskTeamChangedCondition: ConditionDefinition<
     type: 'TaskTeamChanged',
     name: 'Task Team Changed',
     description: 'Triggers when the team assigned to the task changes.',
-    isAsync: false,
+    isSync: true,
     scope: EntityScope.TASK,
     schema: taskTeamChangedSchema,
     evaluate(ctx: TaskContext) {

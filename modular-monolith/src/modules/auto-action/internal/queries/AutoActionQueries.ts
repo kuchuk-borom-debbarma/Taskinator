@@ -15,11 +15,54 @@ import { decodeCursor, encodeCursor } from '../../../../utils/utils.ts';
 export async function insertAutoAction(
     data: NewAutoAction,
 ): Promise<AutoAction> {
-    return db
-        .insertInto('auto_action')
-        .values(data)
-        .returningAll()
-        .executeTakeFirstOrThrow();
+    const result = await sql<AutoAction>`
+        WITH inserted_action AS (
+            INSERT INTO auto_action (
+                fk_project_id,
+                name,
+                description,
+                triggers,
+                steps,
+                is_active,
+                is_sync,
+                version,
+                created_by,
+                updated_by
+            )
+            VALUES (
+                ${data.fk_project_id}::uuid,
+                ${data.name},
+                ${data.description},
+                ${data.triggers}::jsonb,
+                ${data.steps}::jsonb,
+                ${data.is_active},
+                ${data.is_sync},
+                ${data.version},
+                ${data.created_by},
+                ${data.updated_by}
+            )
+            RETURNING *
+        ),
+        inserted_outbox AS (
+            INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
+            SELECT
+                'auto-action-events',
+                fk_project_id::text,
+                jsonb_build_object(
+                    'type', 'auto_action.created',
+                    'autoActionId', id,
+                    'projectId', fk_project_id,
+                    'name', name,
+                    'isActive', is_active,
+                    'isSync', is_sync,
+                    'actorId', created_by
+                )
+            FROM inserted_action
+        )
+        SELECT * FROM inserted_action
+    `.execute(db);
+
+    return result.rows[0]!;
 }
 
 export async function selectAutoActionById(
@@ -55,17 +98,57 @@ export async function updateAutoActionById(
     patch: Record<string, any>,
     expectedVersion: number,
 ): Promise<AutoAction> {
-    const updated = await db
-        .updateTable('auto_action')
-        .set(patch)
-        .where('id', '=', id)
-        .where('version', '=', expectedVersion)
-        .returningAll()
-        .executeTakeFirst();
+    const updates: any[] = [];
+    if (patch.name !== undefined) updates.push(sql`name = ${patch.name}`);
+    if (patch.description !== undefined)
+        updates.push(sql`description = ${patch.description}`);
+    if (patch.triggers !== undefined)
+        updates.push(sql`triggers = ${patch.triggers}::jsonb`);
+    if (patch.steps !== undefined)
+        updates.push(sql`steps = ${patch.steps}::jsonb`);
+    if (patch.is_active !== undefined)
+        updates.push(sql`is_active = ${patch.is_active}`);
+    if (patch.is_sync !== undefined)
+        updates.push(sql`is_sync = ${patch.is_sync}`);
+    if (patch.updated_by !== undefined)
+        updates.push(sql`updated_by = ${patch.updated_by}`);
 
+    updates.push(sql`version = version + 1`);
+    updates.push(sql`updated_at = NOW()`);
+
+    const setClause = sql.join(updates, sql`, `);
+
+    const result = await sql<AutoAction>`
+        WITH updated_action AS (
+            UPDATE auto_action
+            SET ${setClause}
+            WHERE id = ${id}::uuid
+              AND version = ${expectedVersion}
+            RETURNING *
+        ),
+        inserted_outbox AS (
+            INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
+            SELECT
+                'auto-action-events',
+                fk_project_id::text,
+                jsonb_build_object(
+                    'type', 'auto_action.updated',
+                    'autoActionId', id,
+                    'projectId', fk_project_id,
+                    'name', name,
+                    'isActive', is_active,
+                    'isSync', is_sync,
+                    'actorId', updated_by
+                )
+            FROM updated_action
+        )
+        SELECT * FROM updated_action
+    `.execute(db);
+
+    const updated = result.rows[0];
     if (!updated) {
         throw new Error(
-            `Failed to update Auto Action "${id}". Potential concurrent update.`,
+            `Failed to update Auto Action "${id}". Potential concurrent update or not found.`,
         );
     }
 
@@ -73,7 +156,27 @@ export async function updateAutoActionById(
 }
 
 export async function deleteAutoActionById(id: string): Promise<void> {
-    await db.deleteFrom('auto_action').where('id', '=', id).execute();
+    await sql`
+        WITH deleted_action AS (
+            DELETE FROM auto_action
+            WHERE id = ${id}::uuid
+            RETURNING *
+        ),
+        inserted_outbox AS (
+            INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
+            SELECT
+                'auto-action-events',
+                fk_project_id::text,
+                jsonb_build_object(
+                    'type', 'auto_action.deleted',
+                    'autoActionId', id,
+                    'projectId', fk_project_id,
+                    'name', name
+                )
+            FROM deleted_action
+        )
+        SELECT 1 FROM deleted_action
+    `.execute(db);
 }
 
 export async function selectAutoActionsForProject(
@@ -216,4 +319,26 @@ export async function selectActiveAutoActionByName(
     }
 
     return query.executeTakeFirst();
+}
+
+/**
+ * Checks if an event has already been processed by the auto-action consumer.
+ */
+export async function isEventProcessed(eventId: string): Promise<boolean> {
+    const result = await db
+        .selectFrom('processed_event')
+        .where('event_id', '=', eventId as any)
+        .where('consumer_group', '=', 'auto-action')
+        .executeTakeFirst();
+    return !!result;
+}
+
+/**
+ * Marks an event as processed by the auto-action consumer.
+ */
+export async function markEventProcessed(eventId: string): Promise<void> {
+    await db
+        .insertInto('processed_event')
+        .values({ event_id: eventId as any, consumer_group: 'auto-action' })
+        .execute();
 }

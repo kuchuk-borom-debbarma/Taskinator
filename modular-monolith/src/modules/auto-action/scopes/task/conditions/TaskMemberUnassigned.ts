@@ -9,7 +9,7 @@ export const TaskMemberUnassignedCondition: ConditionDefinition<
     type: 'TaskMemberUnassigned',
     name: 'Task Member Unassigned',
     description: 'Triggers when a member is unassigned from the task.',
-    isAsync: false,
+    isSync: true,
     scope: EntityScope.TASK,
     schema: taskMemberUnassignedSchema,
     evaluate(ctx: TaskContext) {

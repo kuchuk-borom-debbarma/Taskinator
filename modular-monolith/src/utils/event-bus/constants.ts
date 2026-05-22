@@ -94,4 +94,9 @@ export const KAFKA_EVENTS = {
         TRIGGER: 'pipeline.trigger',
         CONTINUE: 'pipeline.continue',
     },
+    AUTO_ACTION: {
+        CREATED: 'auto_action.created',
+        UPDATED: 'auto_action.updated',
+        DELETED: 'auto_action.deleted',
+    },
 } as const;

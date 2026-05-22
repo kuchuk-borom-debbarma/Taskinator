@@ -125,6 +125,13 @@ export interface AutoActionService {
     handleTaskEvents(events: DomainEvent[]): Promise<void>;
 
     /**
+     * Handles sync task domain events. Executes matching sync-only auto-actions.
+     * Guaranteed to return only after all sync actions are attempted.
+     * Failures in individual actions are logged but do not propagate.
+     */
+    handleSyncTaskEvents(event: DomainEvent): Promise<void>;
+
+    /**
      * Builds a dynamic template catalog for a specific scope.
      * Filters actions and conditions depending on the sync/async bounds if requested.
      */

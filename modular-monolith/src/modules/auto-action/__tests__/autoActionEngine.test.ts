@@ -46,7 +46,7 @@ describe('Auto Action Engine Orchestrator', () => {
             id: 'test-sync-action',
             name: 'Test Sync Action',
             description: 'A synchronous test action',
-            isAsync: false,
+            isSync: true,
             scope: EntityScope.TASK,
             inputSchema: z.object({ value: z.string() }),
             handler: async (ctx, inputs) => inputs.value,
@@ -56,7 +56,7 @@ describe('Auto Action Engine Orchestrator', () => {
             id: 'test-async-action',
             name: 'Test Async Action',
             description: 'An asynchronous test action',
-            isAsync: true,
+            isSync: false,
             scope: EntityScope.TASK,
             inputSchema: z.object({ value: z.string() }),
             handler: async (ctx, inputs) => inputs.value,
@@ -65,10 +65,10 @@ describe('Auto Action Engine Orchestrator', () => {
 
     afterEach(() => {
         db.getExecutor().executeQuery = originalExecuteQuery;
-        // Make sure standard condition isAsync is reset
+        // Make sure standard condition isSync is reset
         const cond = conditionRegistry.getCondition('TaskFieldChangedTo');
         if (cond) {
-            (cond as any).isAsync = false;
+            (cond as any).isSync = true;
         }
     });
 
@@ -158,7 +158,7 @@ describe('Auto Action Engine Orchestrator', () => {
 
         it('should block creation of sync flow containing async condition', async () => {
             const cond = conditionRegistry.getCondition('TaskFieldChangedTo')!;
-            (cond as any).isAsync = true; // Temporarily make it async for test
+            (cond as any).isSync = false; // Temporarily make it async for test
 
             await expect(
                 autoActionService.createAutoAction({

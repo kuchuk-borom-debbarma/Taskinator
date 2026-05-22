@@ -11,7 +11,7 @@ export const TaskFieldChangedFromCondition: ConditionDefinition<
     name: 'Task Field Changed From',
     description:
         'Triggers when a specific standard task field changes away from a targeted value.',
-    isAsync: false,
+    isSync: true,
     scope: EntityScope.TASK,
     schema: taskFieldChangedFromSchema,
     evaluate(ctx: TaskContext, node) {

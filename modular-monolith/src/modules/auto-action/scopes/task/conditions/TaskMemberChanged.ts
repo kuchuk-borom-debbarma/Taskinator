@@ -9,7 +9,7 @@ export const TaskMemberChangedCondition: ConditionDefinition<
     type: 'TaskMemberChanged',
     name: 'Task Member Changed',
     description: 'Triggers when the member assigned to the task changes.',
-    isAsync: false,
+    isSync: true,
     scope: EntityScope.TASK,
     schema: taskMemberChangedSchema,
     evaluate(ctx: TaskContext) {

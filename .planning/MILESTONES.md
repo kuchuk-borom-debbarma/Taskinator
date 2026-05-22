@@ -1,5 +1,47 @@
 # Milestones
 
+## v18.0 Auto Action Architecture & Performance Evolution (Shipped: 2026-05-22)
+
+**Phases completed:** 4 phases, 5 plans, 15 tasks
+
+**Key accomplishments:**
+
+- Refactored AutoAction mutations into Single-Query CTEs with atomic outbox signaling.
+- Decoupled Sync/Async orchestration using a central `SyncActionRegistry`.
+- Integrated sync auto-actions into the primary request lifecycle for Tasks.
+- Implemented "Log and Proceed" fault tolerance for non-breaking sync rules.
+- Established resumable async pipeline execution with Kafka-driven re-emission and cursors.
+- Standardized naming conventions (`isSync`) across the entire module.
+
+---
+
+## v17.0 Auto Action E2E Verification & Reliability (Shipped: 2026-05-22)
+
+**Phases completed:** 2 phases, 3 plans, 5 tasks
+
+**Key accomplishments:**
+
+- Implemented comprehensive E2E test suite for Auto Action rule execution.
+- Validated traceId and depth propagation across recursive Kafka loops.
+- Hardened recursion guards with strict depth limits and cycle detection.
+- Verified "wasSnapshot" context resolution for transition-based predicates.
+
+---
+
+## v16.0 Auto Action Runtime Integration (Shipped: 2026-05-22)
+
+**Phases completed:** 2 phases, 4 plans, 10 tasks
+
+**Key accomplishments:**
+
+- Integrated Auto Action service with Kafka domain event listeners.
+- Implemented Relay-style GraphQL connections with paginated results and total counts.
+- Optimized nested field loading using DataLoader batching (AutoAction -> Project).
+- Enforced auth-aware boundaries for all auto-action mutations and queries.
+- Modularized internal engines and hidden query logic behind service interfaces.
+
+---
+
 ## v15.0 Service Layer Isolation (Shipped: 2026-05-22)
 
 **Phases completed:** 3 phases, 9 plans, 20 tasks

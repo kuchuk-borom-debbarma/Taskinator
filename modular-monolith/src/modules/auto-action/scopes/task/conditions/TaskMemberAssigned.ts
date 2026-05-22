@@ -9,7 +9,7 @@ export const TaskMemberAssignedCondition: ConditionDefinition<
     type: 'TaskMemberAssigned',
     name: 'Task Member Assigned',
     description: 'Triggers when a member is assigned to the task.',
-    isAsync: false,
+    isSync: true,
     scope: EntityScope.TASK,
     schema: taskMemberAssignedSchema,
     evaluate(ctx: TaskContext, node) {

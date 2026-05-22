@@ -81,6 +81,7 @@ export async function executeAutoActionPipeline(
     wasSnapshot?: Record<string, any>,
     startIndex = 0,
     startCursor?: StepResumeCursor,
+    maxSteps?: number,
 ): Promise<{ completed: boolean; lastProcessedIndex: number }> {
     const autoAction = await selectAutoActionForExecution(autoActionId);
 
@@ -106,8 +107,14 @@ export async function executeAutoActionPipeline(
 
     const scope = 'TASK'; // Default scope
     let lastProcessedIndex = startIndex - 1;
+    let stepsProcessed = 0;
 
     for (let i = startIndex; i < steps.length; i++) {
+        // RES-02: Support chunked execution
+        if (maxSteps !== undefined && stepsProcessed >= maxSteps) {
+            return { completed: false, lastProcessedIndex };
+        }
+
         const step = steps[i]!;
         // The startCursor applies only to the first step we execute in this run.
         // After that, every step starts fresh from the beginning of its condition.
@@ -122,6 +129,7 @@ export async function executeAutoActionPipeline(
             cursor,
         );
         lastProcessedIndex = i;
+        stepsProcessed++;
     }
 
     return { completed: true, lastProcessedIndex };

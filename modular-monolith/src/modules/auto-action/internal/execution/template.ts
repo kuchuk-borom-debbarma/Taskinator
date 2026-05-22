@@ -123,7 +123,7 @@ export interface ActionTemplate {
     id: string;
     name: string;
     description: string;
-    isAsync: boolean;
+    isSync: boolean;
     scope: string;
     inputSchema: any;
 }
@@ -132,7 +132,7 @@ export interface ConditionTemplate {
     type: string;
     name: string;
     description?: string;
-    isAsync: boolean;
+    isSync: boolean;
     scope: string;
     schema: any;
 }
@@ -180,26 +180,26 @@ export function getTemplateForScope(
 
     let actions = actionRegistry.getAllActions();
     if (isSync) {
-        actions = actions.filter((a) => !a.isAsync);
+        actions = actions.filter((a) => a.isSync);
     }
     const actionTemplates: ActionTemplate[] = actions.map((a) => ({
         id: a.id,
         name: a.name,
         description: a.description,
-        isAsync: a.isAsync,
+        isSync: a.isSync,
         scope: a.scope,
         inputSchema: convertZodToJSONSchema(a.inputSchema),
     }));
 
     let conditions = conditionRegistry.getAllConditions();
     if (isSync) {
-        conditions = conditions.filter((c) => !c.isAsync);
+        conditions = conditions.filter((c) => c.isSync);
     }
     const conditionTemplates: ConditionTemplate[] = conditions.map((c) => ({
         type: c.type,
         name: c.name,
         description: c.description,
-        isAsync: c.isAsync,
+        isSync: c.isSync,
         scope: c.scope,
         schema: convertZodToJSONSchema(c.schema),
     }));

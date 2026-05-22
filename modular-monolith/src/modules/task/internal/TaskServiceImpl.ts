@@ -1,12 +1,13 @@
-import { db } from '../../../database';
-import { logger } from '../../../logger';
-import type { DomainEvent } from '../../../utils/event-bus';
+import { db } from '../../../database/index.js';
+import { logger } from '../../../logger/index.js';
 import {
     KAFKA_EVENTS,
     KAFKA_TOPICS,
 } from '../../../utils/event-bus/constants.ts';
 import { claimEventsAtomic } from '../../../utils/event-bus/idempotency.ts';
+import type { DomainEvent } from '../../../utils/event-bus/index.js';
 import { appendEventsToOutbox } from '../../../utils/event-bus/OutboxQueries.ts';
+import { syncActionRegistry } from '../../../utils/SyncActionRegistry.js';
 import type {
     GetNeighbourhoodParam,
     GetTaskLinksParam,
@@ -127,6 +128,21 @@ export class TaskServiceImpl implements TaskService {
             throw new Error('Task title must be between 3 and 255 characters.');
         }
         const result = await insertTask(param);
+
+        // Trigger Sync Auto Actions (ORCH-01)
+        await syncActionRegistry.executeHandlers('task.created', {
+            type: KAFKA_EVENTS.TASK.CREATED,
+            data: {
+                taskId: result.id,
+                projectId: result.projectId,
+                teamId: result.teamId,
+                memberId: result.memberId,
+                title: result.title,
+                actorId: param.actorId,
+                traceId: param.traceId,
+            },
+        });
+
         logger.info(`TaskService.createTask successful: ${result.id}`);
         return result;
     }
@@ -154,6 +170,28 @@ export class TaskServiceImpl implements TaskService {
             throw new Error('Task title must be between 3 and 255 characters.');
         }
         const result = await updateTask(param);
+
+        // Trigger Sync Auto Actions (ORCH-01)
+        await syncActionRegistry.executeHandlers('task.updated', {
+            type: KAFKA_EVENTS.TASK.UPDATED,
+            data: {
+                taskId: result.id,
+                projectId: result.projectId,
+                teamId: result.teamId,
+                memberId: result.memberId,
+                title: result.title,
+                status: result.status,
+                actorId: param.actorId,
+                traceId: param.traceId,
+                old: {
+                    teamId: (result as any).prev_team_id,
+                    memberId: (result as any).prev_member_id,
+                    title: (result as any).prev_title,
+                    status: (result as any).prev_status,
+                },
+            },
+        });
+
         logger.info(`TaskService.updateTask successful: ${param.taskId}`);
         return result;
     }

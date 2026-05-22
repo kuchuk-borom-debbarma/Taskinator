@@ -43,25 +43,30 @@ Automate the "busy work" of project management through reliable, transparent, an
 - ✅ [Auto Action Re-sectoring] — Restructure the auto-action module to match the established Controller/Service/Queries pattern; route cross-module operations through service interfaces (v13.0).
 - ✅ [Hide Internal Engines] — Simplify auto-action module structure by hiding internal engines and organizing the internal directory (v14.0).
 - ✓ [Service Layer Isolation] — Enforce strict service layer isolation in all Kafka listeners and smart aggregators by decoupling direct database access (v15.0).
-- ✓ [Auto Action Runtime Integration] — Connected auto-action rules to event consumers and GraphQL APIs with paginated reads, DataLoader batching, and simple service boundaries (v16.0).
+- ✓ [Auto Action Runtime Integration] — Connected auto-action rules to event consumers and GraphQL APIs (v16.0).
+- ✓ [Auto Action E2E Verification & Reliability] — Validated end-to-end flows and hardened runtime reliability (v17.0).
+- ✓ [Auto Action Architecture & Performance Evolution] — Transformed the engine into a high-throughput, resilient, and resumable system with CTEs and Sync Orchestration (v18.0).
 - [ ] [Multi-domain Triggers] — Evaluate events crossing project boundaries.
 
 - [ ] [Complex Predicates] — Evaluate conditions referencing recursive parent/child states.
 
-## Current Milestone: v17.0 (Planning)
+## Current Milestone: v19.0 (Planning)
 
-**Goal:** TBD
+**Goal:** Expand Auto Action capabilities with Multi-domain triggers and complex cross-entity predicates.
 
-## Current State (Post-v16.0)
+## Current State (Post-v18.0)
 
-v16.0 Auto Action Runtime Integration is complete. The auto-action module is now fully wired into the runtime event system through a thin Kafka consumer and service-owned trigger orchestration. The module also exposes a robust GraphQL API with Relay-style connection pagination and DataLoader batching for efficient nested field loading. Boundaries are enforced through a strict public service layer, hiding internal engines and query logic.
+v18.0 is complete. The system now supports high-performance Single-Query CTEs, decoupled sync orchestration in the request lifecycle, and resumable async pipeline execution. The architecture is fully standardized and SOLID-compliant.
 
 ## Key Decisions
 
 | Key Decisions | Rationale | Outcome |
 |----------|-----------|---------|
-| Action Chain Model | Ensures predictable execution order and atomicity. | **Complete** |
-| Live-Context Evaluation | Prevents logic execution on stale snapshots; ensures data integrity. | **Complete** |
+...
+| Runtime Integration | Thin Kafka consumer + Service orchestration; GraphQL connections + DataLoaders; internal engine/query hiding. | **Complete (v16.0)** |
+| E2E Verification | Comprehensive test suite for rule execution and recursion guards. | **Complete (v17.0)** |
+| Performance & Orchestration | Single-Query CTEs, Sync Registry, and Resumable Async Chunking. | **Complete (v18.0)** |
+
 | TraceID + Depth Loop Detection | Simpler and more reliable than mutation hashing for initial release. | **Complete** |
 | SSE Streaming | Low-latency progress updates without polling overhead. | **Complete** |
 | XYFlow Serialization | Decoupled graph coordinate state from logical execution JSON trees. | **Complete (v2.0)** |
@@ -86,4 +91,4 @@ v16.0 Auto Action Runtime Integration is complete. The auto-action module is now
 This document evolves at phase transitions and milestone boundaries.
 
 ---
-*Last updated: 2026-05-22 — v16.0 milestone complete*
+*Last updated: 2026-05-22 — v18.0 milestone complete*

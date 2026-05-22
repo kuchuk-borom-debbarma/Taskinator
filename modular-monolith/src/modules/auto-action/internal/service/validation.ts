@@ -3,32 +3,32 @@ import { actionRegistry } from '../engines/actionEngine.js';
 import { conditionRegistry } from '../engines/conditionEngine.js';
 
 /**
- * Recursively scans a condition tree to determine if any node uses an asynchronous condition definition.
+ * Recursively scans a condition tree to determine if all nodes use synchronous condition definitions.
  */
-export function isConditionAsync(node: ConditionNode): boolean {
+export function isConditionSync(node: ConditionNode): boolean {
     if (node.type === 'logical') {
-        return node.children.some((child) => isConditionAsync(child));
+        return node.children.every((child) => isConditionSync(child));
     }
     const def = conditionRegistry.getCondition(node.type);
-    return def ? def.isAsync : false;
+    return def ? def.isSync : true;
 }
 
 /**
  * Verifies that all actions and conditions within a pipeline are fully synchronous.
  * Throws an error if an unregistered action is referenced.
  */
-export function isFlowSyncSafe(steps: PipelineStep[]): boolean {
+export function isFlowSync(steps: PipelineStep[]): boolean {
     for (const step of steps) {
         const action = actionRegistry.getAction(step.actionId);
         if (!action) {
             throw new Error(`Action "${step.actionId}" is not registered.`);
         }
-        if (action.isAsync) {
+        if (!action.isSync) {
             return false;
         }
 
         if (step.type === 'condition_action') {
-            if (isConditionAsync(step.condition)) {
+            if (!isConditionSync(step.condition)) {
                 return false;
             }
         }

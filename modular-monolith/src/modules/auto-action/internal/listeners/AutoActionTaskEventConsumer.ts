@@ -11,12 +11,24 @@ export class AutoActionTaskEventConsumer {
     async init() {
         logger.info('[AutoAction -> Task Event Consumer] Initializing');
 
+        // Listen for Task events to trigger new auto-actions
         await eventBus.subscribe(
             KAFKA_TOPICS.TASK,
             'auto-action-task-trigger-group',
             {
                 [KAFKA_EVENTS.TASK.CREATED]: this.handleTaskEvents.bind(this),
                 [KAFKA_EVENTS.TASK.UPDATED]: this.handleTaskEvents.bind(this),
+            },
+            { batch: true },
+        );
+
+        // Listen for Auto Action internal events (e.g. PIPELINE.CONTINUE) for resumable execution (RES-02)
+        await eventBus.subscribe(
+            KAFKA_TOPICS.AUTO_ACTION,
+            'auto-action-internal-group',
+            {
+                [KAFKA_EVENTS.PIPELINE.CONTINUE]:
+                    this.handleTaskEvents.bind(this),
             },
             { batch: true },
         );

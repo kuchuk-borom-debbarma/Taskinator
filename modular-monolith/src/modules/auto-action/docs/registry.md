@@ -82,7 +82,7 @@ The resulting template catalog payload returned by `getTemplateForScope` contain
     {
       "type": "TaskFieldChangedTo",
       "name": "Task Field Changed To",
-      "isAsync": false,
+      "isSync": true,
       "inputs": {
         "field": {
           "type": "enum",

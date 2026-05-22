@@ -18,7 +18,7 @@ export const setFieldsAction: ActionDefinition<typeof inputSchema> = {
     name: 'Set Fields',
     description:
         'Updates multiple task fields using fresh database state and optimistic locking.',
-    isAsync: false,
+    isSync: true,
     scope: EntityScope.TASK,
     inputSchema,
     async handler(

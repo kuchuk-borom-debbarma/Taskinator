@@ -91,12 +91,12 @@ This means every step in a multi-step pipeline automatically sees the transition
 
 To protect main-thread event loops from resource starvation and slow external requests, the orchestrator enforces **strict execution isolation**:
 
-1. **Definition Isolation**: Every Action and Condition registered in the engines exposes a static boolean flag: `isAsync`.
+1. **Definition Isolation**: Every Action and Condition registered in the engines exposes a static boolean flag: `isSync`.
 2. **Sync Flow Enforcements**: When creating or updating an auto-action, if the `is_sync` flag is set to `true`:
    * The manager performs a compile-time static check on all steps.
-   * If even a **single step** references an asynchronous action or an asynchronous condition, the registration/update is rejected with a validation error.
+   * If even a **single step** references an asynchronous action or an asynchronous condition (where `isSync` is `false`), the registration/update is rejected with a validation error.
    * A synchronous pipeline is thus guaranteed to have **zero** blocking operations or remote network requests.
-3. **Template Filtering**: When rendering the dynamic catalog of available components for the UI, the system filters out all asynchronous definitions when in sync mode, ensuring users cannot accidentally select incompatible steps.
+3. **Template Filtering**: When rendering the dynamic catalog of available components for the UI, the system filters out all asynchronous definitions (where `isSync` is `false`) when in sync mode, ensuring users cannot accidentally select incompatible steps.
 
 ---
 

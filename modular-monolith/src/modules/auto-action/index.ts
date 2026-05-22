@@ -1,4 +1,5 @@
 import { logger } from '../../logger/index.js';
+import { syncActionRegistry } from '../../utils/SyncActionRegistry.js';
 import { AutoActionServiceImpl } from './internal/service/AutoActionServiceImpl.js';
 import { initTaskScope } from './scopes/task/index.js';
 
@@ -15,6 +16,14 @@ export async function init(): Promise<void> {
 
     // Initialize the TASK scope registries
     initTaskScope();
+
+    // Register sync event handlers for the request lifecycle (ORCH-01)
+    syncActionRegistry.registerHandler('task.created', (event) =>
+        autoActionService.handleSyncTaskEvents(event),
+    );
+    syncActionRegistry.registerHandler('task.updated', (event) =>
+        autoActionService.handleSyncTaskEvents(event),
+    );
 
     logger.info(
         '[AutoAction] Automation engine successfully initialized and registered.',
