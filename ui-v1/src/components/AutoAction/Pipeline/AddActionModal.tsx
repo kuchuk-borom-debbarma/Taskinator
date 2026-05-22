@@ -1,37 +1,18 @@
 import React, { useState } from 'react';
 import {
-  CheckCircle2,
-  AlertTriangle,
-  Users,
-  UserCheck,
-  UserMinus,
-  UserX,
-  type LucideIcon,
+  Activity,
 } from 'lucide-react';
 import { AppModal } from '../../shared/workspace';
-import { ACTION_TYPE_REGISTRY, type ActionTypeDefinition } from './actionTypes';
-import { ActionConfigForm } from './ActionConfigForm';
-
-// ─── Icon resolver ────────────────────────────────────────────────────────────
-
-const ICON_MAP: Record<string, LucideIcon> = {
-  CheckCircle2,
-  AlertTriangle,
-  Users,
-  UserCheck,
-  UserMinus,
-  UserX,
-};
+import { DynamicActionForm } from './DynamicActionForm';
+import { useAutoActionMetadata } from '../AutoActionMetadataContext';
 
 // ─── Action type picker card ──────────────────────────────────────────────────
 
 const ActionTypeTile: React.FC<{
-  definition: ActionTypeDefinition;
+  template: any;
   selected: boolean;
   onClick: () => void;
-}> = ({ definition, selected, onClick }) => {
-  const Icon = ICON_MAP[definition.icon] ?? CheckCircle2;
-
+}> = ({ template, selected, onClick }) => {
   return (
     <button
       type="button"
@@ -49,11 +30,11 @@ const ActionTypeTile: React.FC<{
           selected ? 'bg-app-accent text-white' : 'bg-app-ink/8 text-app-muted'
         }`}
       >
-        <Icon size={18} />
+        <Activity size={18} />
       </div>
       <div>
-        <p className="text-sm font-semibold text-app-ink">{definition.label}</p>
-        <p className="mt-0.5 text-xs leading-relaxed text-app-muted">{definition.description}</p>
+        <p className="text-sm font-semibold text-app-ink">{template.name}</p>
+        <p className="mt-0.5 text-xs leading-relaxed text-app-muted line-clamp-2">{template.description}</p>
       </div>
     </button>
   );
@@ -74,19 +55,21 @@ export const AddActionModal: React.FC<AddActionModalProps> = ({
   nextPosition,
   onAdd,
 }) => {
+  const { template, isLoading } = useAutoActionMetadata();
   const [step, setStep] = useState<'pick' | 'configure'>('pick');
-  const [selectedKey, setSelectedKey] = useState<string>(ACTION_TYPE_REGISTRY[0]?.key ?? '');
+  const [selectedId, setSelectedId] = useState<string>('');
 
-  const selectedDef = ACTION_TYPE_REGISTRY.find((d) => d.key === selectedKey);
+  const actions = template?.actions || [];
+  const selectedDef = actions.find((a: any) => a.id === selectedId);
 
   const handleClose = () => {
     setStep('pick');
-    setSelectedKey(ACTION_TYPE_REGISTRY[0]?.key ?? '');
+    setSelectedId('');
     onClose();
   };
 
   const handleAdd = (config: Record<string, any>) => {
-    onAdd({ type: selectedKey, config, position: nextPosition });
+    onAdd({ type: selectedId, config, position: nextPosition });
     handleClose();
   };
 
@@ -94,7 +77,7 @@ export const AddActionModal: React.FC<AddActionModalProps> = ({
     <AppModal
       open={open}
       onClose={handleClose}
-      title={step === 'pick' ? 'Choose Action Type' : `Configure: ${selectedDef?.label}`}
+      title={step === 'pick' ? 'Choose Action Type' : `Configure: ${selectedDef?.name}`}
       description={
         step === 'pick'
           ? 'Select what this step should do when the autoAction fires.'
@@ -103,21 +86,29 @@ export const AddActionModal: React.FC<AddActionModalProps> = ({
     >
       {step === 'pick' ? (
         <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-3">
-            {ACTION_TYPE_REGISTRY.map((def) => (
-              <ActionTypeTile
-                key={def.key}
-                definition={def}
-                selected={selectedKey === def.key}
-                onClick={() => setSelectedKey(def.key)}
-              />
-            ))}
-          </div>
+          {isLoading ? (
+             <div className="grid grid-cols-2 gap-3">
+               {[1, 2, 3, 4].map(i => (
+                 <div key={i} className="h-28 animate-pulse rounded-[14px] bg-app-line/20" />
+               ))}
+             </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-3">
+              {actions.map((def: any) => (
+                <ActionTypeTile
+                  key={def.id}
+                  template={def}
+                  selected={selectedId === def.id}
+                  onClick={() => setSelectedId(def.id)}
+                />
+              ))}
+            </div>
+          )}
 
           <button
             type="button"
             onClick={() => setStep('configure')}
-            disabled={!selectedKey}
+            disabled={!selectedId}
             className="mt-2 w-full rounded-full bg-app-accent py-2.5 text-sm font-semibold text-white transition hover:bg-app-accent/90 disabled:opacity-50"
           >
             Next: Configure →
@@ -134,8 +125,8 @@ export const AddActionModal: React.FC<AddActionModalProps> = ({
           </button>
 
           {selectedDef && (
-            <ActionConfigForm
-              definition={selectedDef}
+            <DynamicActionForm
+              schema={selectedDef.inputSchema}
               onSubmit={handleAdd}
               submitLabel="Add to Pipeline"
             />
