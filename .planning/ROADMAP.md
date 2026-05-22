@@ -22,7 +22,7 @@
 | 39. Smart Aggregator Isolation | v15.0 | 7/7 | Complete    | 2026-05-22 |
 | 40. Intra-Module Listener Decoupling | v15.0 | 1/1 | Complete    | 2026-05-22 |
 | 41. Inter-Module Listener Service Delegation | v15.0 | 1/1 | Complete    | 2026-05-22 |
-| 42. Auto Action Event Consumer | v16.0 | 0/1 | Planned | - |
+| 42. Auto Action Event Consumer | v16.0 | 1/1 | Complete | 2026-05-22 |
 | 43. Auto Action GraphQL API | v16.0 | 0/1 | Pending | - |
 | 38. Hide Internal Engines | v14.0 | 1/1 | ✅ Shipped | 2026-05-21 |
 | 37. Auto Action Re-sectoring | v13.0 | 1/1 | ✅ Shipped | 2026-05-21 |
@@ -67,7 +67,7 @@
 4. Consumer stays thin; internal engines remain hidden behind service layer.
 
 **Plans:**
-- [ ] 42-01-PLAN.md — Consumer & Service Runtime Wiring
+- [x] 42-01-PLAN.md — Consumer & Service Runtime Wiring
 
 ### Phase 43: Auto Action GraphQL API
 **Goal:** Expose auto-action query/mutation APIs with connection pagination and DataLoader batching.

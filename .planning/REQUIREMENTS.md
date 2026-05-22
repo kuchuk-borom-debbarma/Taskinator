@@ -8,10 +8,10 @@
 
 ### Runtime Consumer
 
-- [ ] **RUNTIME-01**: Auto-action consumer can receive supported domain events and route them to the auto-action service.
-- [ ] **RUNTIME-02**: Auto-action service can find eligible rules for an event without coupling the consumer to internal query details.
-- [ ] **RUNTIME-03**: Auto-action service can trigger rule execution using existing context, condition, and action orchestration.
-- [ ] **RUNTIME-04**: Consumer handling preserves idempotency, trace/depth metadata, and failure visibility.
+- [x] **RUNTIME-01**: Auto-action consumer can receive supported domain events and route them to the auto-action service.
+- [x] **RUNTIME-02**: Auto-action service can find eligible rules for an event without coupling the consumer to internal query details.
+- [x] **RUNTIME-03**: Auto-action service can trigger rule execution using existing context, condition, and action orchestration.
+- [x] **RUNTIME-04**: Consumer handling preserves idempotency, trace/depth metadata, and failure visibility.
 
 ### GraphQL API
 
@@ -29,8 +29,8 @@
 
 ### Service Design
 
-- [ ] **SVC-01**: Auto-action module exposes service functions needed by consumers and GraphQL without leaking internal engines.
-- [ ] **SVC-02**: New service functions stay small, readable, and single-purpose.
+- [x] **SVC-01**: Auto-action module exposes service functions needed by consumers and GraphQL without leaking internal engines.
+- [x] **SVC-02**: New service functions stay small, readable, and single-purpose.
 - [ ] **SVC-03**: Auto-action query functions remain internal to the module and are covered by focused tests where behavior is non-trivial.
 
 ## Future Requirements
@@ -53,12 +53,12 @@
 
 | Requirement | Phase | Status |
 |---|---|---|
-| RUNTIME-01 | Phase 42 | Pending |
-| RUNTIME-02 | Phase 42 | Pending |
-| RUNTIME-03 | Phase 42 | Pending |
-| RUNTIME-04 | Phase 42 | Pending |
-| SVC-01 | Phase 42 | Pending |
-| SVC-02 | Phase 42 | Pending |
+| RUNTIME-01 | Phase 42 | Complete |
+| RUNTIME-02 | Phase 42 | Complete |
+| RUNTIME-03 | Phase 42 | Complete |
+| RUNTIME-04 | Phase 42 | Complete |
+| SVC-01 | Phase 42 | Complete |
+| SVC-02 | Phase 42 | Complete |
 | GQL-01 | Phase 43 | Pending |
 | GQL-02 | Phase 43 | Pending |
 | GQL-03 | Phase 43 | Pending |
@@ -76,4 +76,4 @@
 
 ---
 *Requirements defined: 2026-05-22*
-*Last updated: 2026-05-22 after v16.0 milestone definition*
+*Last updated: 2026-05-22 after Phase 42 execution*
