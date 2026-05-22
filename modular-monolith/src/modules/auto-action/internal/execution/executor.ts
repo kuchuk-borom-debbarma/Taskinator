@@ -67,11 +67,14 @@ export async function executeAutoActionStep(
 
 /**
  * Sequential Pipeline Processor.
- * Loops sequentially through pipeline steps starting from `startIndex`, fetching fresh context
- * at each step. Returns the completion status and last processed index to support suspendable flow execution.
+ * Loops sequentially through pipeline steps starting from `startIndex`.
+ * Fetches fresh context at each step to ensure data consistency across multi-step mutations.
  *
- * `startCursor` applies only to the first step executed (at `startIndex`), enabling mid-step
- * condition resumption. Subsequent steps always start from index 0.
+ * @param maxSteps Limits how many steps to process in one execution run.
+ *                 Enables "Resumable Pipelines": if completed is false, the caller
+ *                 should re-emit a CONTINUE event to resume from lastProcessedIndex + 1.
+ *
+ * Returns completion status and last processed index to support suspendable flow execution.
  */
 export async function executeAutoActionPipeline(
     autoActionId: string,
@@ -110,7 +113,9 @@ export async function executeAutoActionPipeline(
     let stepsProcessed = 0;
 
     for (let i = startIndex; i < steps.length; i++) {
-        // RES-02: Support chunked execution
+        // CHUNKING LOGIC (RES-02):
+        // If we exceed the maxSteps limit, stop execution and return current state.
+        // This prevents long-running synchronous requests or Kafka consumer timeouts.
         if (maxSteps !== undefined && stepsProcessed >= maxSteps) {
             return { completed: false, lastProcessedIndex };
         }

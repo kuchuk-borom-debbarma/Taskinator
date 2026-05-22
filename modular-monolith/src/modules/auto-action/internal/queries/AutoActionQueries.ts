@@ -12,6 +12,15 @@ import { decodeCursor, encodeCursor } from '../../../../utils/utils.ts';
  * Zero business logic — all validation and orchestration lives in AutoActionServiceImpl.
  */
 
+/**
+ * Inserts a new AutoAction and its initial outbox signal in a single atomic database roundtrip.
+ *
+ * This uses a PostgreSQL CTE (Common Table Expression) to:
+ * 1. Write to the 'auto_action' table.
+ * 2. Immediately use the resulting ID to write to the 'outbox_events' table.
+ *
+ * This pattern ensures data consistency and high throughput by reducing roundtrips to exactly 1.
+ */
 export async function insertAutoAction(
     data: NewAutoAction,
 ): Promise<AutoAction> {

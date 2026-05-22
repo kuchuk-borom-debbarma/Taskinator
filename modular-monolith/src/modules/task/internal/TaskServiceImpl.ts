@@ -129,7 +129,9 @@ export class TaskServiceImpl implements TaskService {
         }
         const result = await insertTask(param);
 
-        // Trigger Sync Auto Actions (ORCH-01)
+        // SYNC ORCHESTRATION (ORCH-01)
+        // Trigger synchronous auto-actions immediately in the request lifecycle.
+        // The registry ensures decoupling while allowing side-effects to run before the response.
         await syncActionRegistry.executeHandlers('task.created', {
             type: KAFKA_EVENTS.TASK.CREATED,
             data: {
@@ -171,7 +173,8 @@ export class TaskServiceImpl implements TaskService {
         }
         const result = await updateTask(param);
 
-        // Trigger Sync Auto Actions (ORCH-01)
+        // SYNC ORCHESTRATION (ORCH-01)
+        // Passes both 'current' and 'old' (snapshot) state to allow transition-based predicates.
         await syncActionRegistry.executeHandlers('task.updated', {
             type: KAFKA_EVENTS.TASK.UPDATED,
             data: {

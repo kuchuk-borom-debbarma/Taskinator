@@ -61,6 +61,20 @@ type NormalizedTaskEvent = {
     startCursor?: any;
 };
 
+/**
+ * AutoActionServiceImpl: The central brain of the Automation Engine.
+ *
+ * This service handles two distinct execution paths:
+ * 1. Synchronous (Sync): Executes rules within the primary request lifecycle (e.g., during task creation).
+ *    - Uses "Log and Proceed" fault tolerance: primary operations must NOT fail if automation fails.
+ *    - Limited to top 10 rules to protect API latency.
+ *
+ * 2. Asynchronous (Async): Executes rules in the background via Kafka domain events.
+ *    - Supports "Resumable Pipelines": execution is chunked into 5-step batches.
+ *    - If a batch is incomplete, it emits a CONTINUE event to resume later via a cursor.
+ *
+ * All mutations (create/update/delete) are performed using Single-Query CTEs with outbox signaling.
+ */
 export class AutoActionServiceImpl implements AutoActionService {
     // ─── Private Helpers ────────────────────────────────────────────────────────
 
@@ -134,6 +148,11 @@ export class AutoActionServiceImpl implements AutoActionService {
         });
     }
 
+    /**
+     * Normalizes disparate domain events into a standard internal format.
+     * Handles Task Lifecycle events and Pipeline Continuation events.
+     * This ensures the rest of the engine (conditions/actions) always sees consistent data.
+     */
     private normalizeTaskEvent(
         event: DomainEvent,
     ): NormalizedTaskEvent | undefined {
@@ -184,6 +203,14 @@ export class AutoActionServiceImpl implements AutoActionService {
         };
     }
 
+    /**
+     * The core dispatcher for automation rules.
+     * Filters rules by trigger type and sync/async preference, then executes pipelines.
+     *
+     * @param normalized Standardized event data
+     * @param isSyncOnly If true, only executes rules marked is_sync: true
+     * @param isAsyncOnly If true, only executes rules marked is_sync: false
+     */
     private async executeMatchingTaskActions(
         normalized: NormalizedTaskEvent,
         isSyncOnly = false,
@@ -599,6 +626,11 @@ export class AutoActionServiceImpl implements AutoActionService {
         await this.deleteAutoAction(id);
     }
 
+    /**
+     * Entry point for ASYNC background execution (Kafka Consumer).
+     * Processes batches of events and filters out already-processed traceIds for idempotency.
+     * Only triggers rules marked as is_sync: false.
+     */
     async handleTaskEvents(events: DomainEvent[]): Promise<void> {
         if (events.length === 0) return;
 
@@ -628,6 +660,11 @@ export class AutoActionServiceImpl implements AutoActionService {
         }
     }
 
+    /**
+     * Entry point for SYNC request-lifecycle execution (Service Hook).
+     * Runs immediately during Task mutations. Failure is absorbed to protect the primary operation.
+     * Only triggers rules marked as is_sync: true.
+     */
     async handleSyncTaskEvents(event: DomainEvent): Promise<void> {
         const normalized = this.normalizeTaskEvent(event);
         if (!normalized) return;
