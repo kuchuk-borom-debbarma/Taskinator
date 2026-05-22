@@ -14,6 +14,11 @@ extend type Query {
         last: Int
         before: String
     ): AutoActionConnection!
+
+    """
+    Fetches the dynamic template for an Auto Action scope.
+    """
+    autoActionTemplate(scope: String!, isSync: Boolean): AutoActionTemplate!
 }
 
 extend type Mutation {

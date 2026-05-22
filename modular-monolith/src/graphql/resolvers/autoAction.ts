@@ -109,6 +109,15 @@ export const autoActionResolvers = {
                 pagination,
             );
         },
+        autoActionTemplate: (
+            _parent: any,
+            { scope, isSync }: { scope: string; isSync?: boolean },
+            context: GraphQLContext,
+        ) => {
+            requireUserId(context);
+            // The service handles scope validation and template generation
+            return autoActionService.getTemplateForScope(scope as any, isSync);
+        },
     },
 
     Mutation: {
