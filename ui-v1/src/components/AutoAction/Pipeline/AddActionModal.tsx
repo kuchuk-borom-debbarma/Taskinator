@@ -97,7 +97,7 @@ export const AddActionModal: React.FC<AddActionModalProps> = ({
       title={step === 'pick' ? 'Choose Action Type' : `Configure: ${selectedDef?.label}`}
       description={
         step === 'pick'
-          ? 'Select what this step should do when the autopilot fires.'
+          ? 'Select what this step should do when the autoAction fires.'
           : 'Set the parameters for this action.'
       }
     >

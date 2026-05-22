@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useAutopilotTrigger } from '../AutopilotTriggerContext';
-import { useAutopilotMetadata } from '../AutopilotMetadataContext';
+import { useAutoActionTrigger } from '../AutoActionTriggerContext';
+import { useAutoActionMetadata } from '../AutoActionMetadataContext';
 import {
   DOMAIN_FIELDS,
   OPERATORS,
@@ -113,8 +113,8 @@ export const PredicateEditorPanel: React.FC<PredicateEditorPanelProps> = ({
   onRemove,
   onClose,
 }) => {
-  const { selectedEntityType } = useAutopilotTrigger();
-  const { getFieldsForEntity, isLoading } = useAutopilotMetadata();
+  const { selectedEntityType } = useAutoActionTrigger();
+  const { getFieldsForEntity, isLoading } = useAutoActionMetadata();
   const [draft, setDraft] = useState<PredicateNodeData>({ ...data, domain: selectedEntityType });
 
   const metadataFields = getFieldsForEntity(selectedEntityType);

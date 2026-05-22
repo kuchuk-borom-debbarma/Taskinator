@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Play, Plus, Hexagon } from 'lucide-react';
 import { Reorder } from 'framer-motion';
-import type { PipelineStep, AutopilotAction, AutopilotCondition } from '../../../gql/graphql';
+import type { PipelineStep, AutoActionAction, AutoActionCondition } from '../../../gql/graphql';
 import { ActionStepCard } from './ActionStepCard';
 import { ConditionStepCard } from '../Builder/ConditionStepCard';
 import { ConditionBuilderCanvas } from '../Builder/ConditionBuilderCanvas';
@@ -27,10 +27,10 @@ export const PipelineEditor: React.FC<PipelineEditorProps> = ({
   const [editActionIndex, setEditActionIndex] = useState<number | null>(null);
   const [editConditionIndex, setEditConditionIndex] = useState<number | null>(null);
 
-  const editAction = editActionIndex !== null ? (draft[editActionIndex] as AutopilotAction) : null;
+  const editAction = editActionIndex !== null ? (draft[editActionIndex] as AutoActionAction) : null;
   const normalizedEditAction = editAction ? normalizeAction(editAction) : null;
   const editDefinition = normalizedEditAction ? getActionDefinition(normalizedEditAction.type) : null;
-  const editCondition = editConditionIndex !== null ? (draft[editConditionIndex] as AutopilotCondition) : null;
+  const editCondition = editConditionIndex !== null ? (draft[editConditionIndex] as AutoActionCondition) : null;
 
   useEffect(() => {
     setDraft(pipeline);
@@ -41,8 +41,8 @@ export const PipelineEditor: React.FC<PipelineEditorProps> = ({
   const notify = (updated: PipelineStep[]) => {
     // Re-calculate positions for actions after any change (add/remove/reorder)
     const withPositions = updated.map((item, i) => {
-      if (item.__typename === 'AutopilotAction') {
-        return { ...item, position: i + 1 } as AutopilotAction;
+      if (item.__typename === 'AutoActionAction') {
+        return { ...item, position: i + 1 } as AutoActionAction;
       }
       return item;
     });
@@ -52,7 +52,7 @@ export const PipelineEditor: React.FC<PipelineEditorProps> = ({
 
   const handleAddAction = (incoming: { type: string; config: Record<string, any>; position: number }) => {
     const newAction: any = {
-      __typename: 'AutopilotAction',
+      __typename: 'AutoActionAction',
       id: `draft-action-${Date.now()}`,
       type: incoming.type,
       config: incoming.config,
@@ -62,8 +62,8 @@ export const PipelineEditor: React.FC<PipelineEditorProps> = ({
   };
 
   const handleAddCondition = () => {
-    const newCondition: AutopilotCondition = {
-      __typename: 'AutopilotCondition',
+    const newCondition: AutoActionCondition = {
+      __typename: 'AutoActionCondition',
       id: `draft-cond-${Date.now()}`,
       name: 'New Logic Block',
       definition: {
@@ -169,9 +169,9 @@ export const PipelineEditor: React.FC<PipelineEditorProps> = ({
             className="flex flex-col"
           >
             {displayPipeline.map((item, index) => {
-              const itemId = item.__typename === 'AutopilotAction'
-                ? (item as AutopilotAction).id
-                : (item as AutopilotCondition).id;
+              const itemId = item.__typename === 'AutoActionAction'
+                ? (item as AutoActionAction).id
+                : (item as AutoActionCondition).id;
 
               const nextStep = displayPipeline[index + 1];
 
@@ -182,7 +182,7 @@ export const PipelineEditor: React.FC<PipelineEditorProps> = ({
                   dragListener={!readOnly}
                   className="relative"
                 >
-                  {item.__typename === 'AutopilotAction' ? (
+                  {item.__typename === 'AutoActionAction' ? (
                     <ActionStepCard
                       action={item as any}
                       index={index}
@@ -192,7 +192,7 @@ export const PipelineEditor: React.FC<PipelineEditorProps> = ({
                     />
                   ) : (
                     <ConditionStepCard
-                      condition={item as AutopilotCondition}
+                      condition={item as AutoActionCondition}
                       index={index}
                       readOnly={readOnly}
                       onEdit={setEditConditionIndex}

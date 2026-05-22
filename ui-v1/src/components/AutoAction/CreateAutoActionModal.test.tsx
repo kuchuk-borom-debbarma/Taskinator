@@ -1,7 +1,7 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
-import { CreateAutopilotModal } from './CreateAutopilotModal';
+import { CreateAutoActionModal } from './CreateAutoActionModal';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { AutopilotMetadataProvider } from './AutopilotMetadataContext';
+import { AutoActionMetadataProvider } from './AutoActionMetadataContext';
 import { vi } from 'vitest';
 import { useGraphQLClient } from '../../hooks/useGraphQLClient';
 
@@ -20,24 +20,24 @@ const queryClient = new QueryClient({
 
 const wrapper = ({ children }: { children: React.ReactNode }) => (
   <QueryClientProvider client={queryClient}>
-    <AutopilotMetadataProvider>
+    <AutoActionMetadataProvider>
       {children}
-    </AutopilotMetadataProvider>
+    </AutoActionMetadataProvider>
   </QueryClientProvider>
 );
 
-describe('CreateAutopilotModal', () => {
+describe('CreateAutoActionModal', () => {
   beforeEach(() => {
     vi.mocked(useGraphQLClient).mockReturnValue({
       request: vi.fn().mockResolvedValue({
-        autopilotMetadata: { entities: [] }
+        autoActionMetadata: { entities: [] }
       })
     } as any);
   });
 
   it('renders trigger selection as step 1', () => {
     render(
-      <CreateAutopilotModal
+      <CreateAutoActionModal
         open={true}
         onClose={() => {}}
         projectId="test-project"
@@ -50,7 +50,7 @@ describe('CreateAutopilotModal', () => {
 
   it('advances to pipeline editor as step 2 after selecting a trigger', () => {
     render(
-      <CreateAutopilotModal
+      <CreateAutoActionModal
         open={true}
         onClose={() => {}}
         projectId="test-project"
@@ -68,16 +68,16 @@ describe('CreateAutopilotModal', () => {
     expect(screen.getByText(/Build Action Pipeline/i)).toBeInTheDocument();
   });
 
-  it('integration: serializes final pipeline payload to match CreateAutopilotInput', async () => {
+  it('integration: serializes final pipeline payload to match CreateAutoActionInput', async () => {
     const mockRequest = vi.fn().mockResolvedValue({
-      createAutopilot: { id: 'auto-1', isActive: true, triggers: [] }
+      createAutoAction: { id: 'auto-1', isActive: true, triggers: [] }
     });
     vi.mocked(useGraphQLClient).mockReturnValue({
       request: mockRequest
     } as any);
 
     render(
-      <CreateAutopilotModal
+      <CreateAutoActionModal
         open={true}
         onClose={() => {}}
         projectId="test-project"
@@ -97,8 +97,8 @@ describe('CreateAutopilotModal', () => {
     // Step 3: Review
     expect(screen.getByText(/Review Rule Configuration/i)).toBeInTheDocument();
     
-    // Create Autopilot
-    fireEvent.click(screen.getByText(/Activate Autopilot/i));
+    // Create AutoAction
+    fireEvent.click(screen.getByText(/Activate AutoAction/i));
 
     await waitFor(() => {
       expect(mockRequest).toHaveBeenCalledWith(

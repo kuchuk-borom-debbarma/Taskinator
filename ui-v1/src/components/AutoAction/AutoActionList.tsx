@@ -1,13 +1,13 @@
 import React from 'react';
 import { motion, type Variants } from 'framer-motion';
 import type { FragmentType } from '../../gql';
-import { AutopilotCard, AutopilotCardFragment } from './AutopilotCard';
+import { AutoActionCard, AutoActionCardFragment } from './AutoActionCard';
 
-interface AutopilotListProps {
-  autopilots: (FragmentType<typeof AutopilotCardFragment> & { id: string })[];
-  onCardClick?: (autopilot: any) => void;
-  onToggle?: (id: string, isActive: boolean) => void;
-  onEdit?: (autopilot: any) => void;
+interface AutoActionListProps {
+  autoActions: (FragmentType<typeof AutoActionCardFragment> & { id: string })[];
+  onCardClick?: (autoAction: any) => void;
+  onToggle?: (id: string, version: number, isActive: boolean) => void;
+  onEdit?: (autoAction: any) => void;
   onDelete?: (id: string) => void;
 }
 
@@ -38,8 +38,8 @@ const itemVariants: Variants = {
   },
 };
 
-export const AutopilotList: React.FC<AutopilotListProps> = ({
-  autopilots,
+export const AutoActionList: React.FC<AutoActionListProps> = ({
+  autoActions,
   onCardClick,
   onToggle,
   onEdit,
@@ -52,11 +52,11 @@ export const AutopilotList: React.FC<AutopilotListProps> = ({
       animate="show"
       className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3"
     >
-      {autopilots.map((autopilot) => (
-        <motion.div key={autopilot.id} variants={itemVariants}>
-          <AutopilotCard
-            autopilot={autopilot}
-            onClick={() => onCardClick?.(autopilot)}
+      {autoActions.map((autoAction) => (
+        <motion.div key={autoAction.id} variants={itemVariants}>
+          <AutoActionCard
+            autoAction={autoAction}
+            onClick={() => onCardClick?.(autoAction)}
             onToggle={onToggle}
             onEdit={onEdit}
             onDelete={onDelete}

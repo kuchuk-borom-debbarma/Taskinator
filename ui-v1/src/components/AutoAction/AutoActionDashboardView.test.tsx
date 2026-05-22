@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { AutopilotDashboardView } from './AutopilotDashboardView';
+import { AutoActionDashboardView } from './AutoActionDashboardView';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 // Mock the dependencies
@@ -11,21 +11,21 @@ vi.mock('@tanstack/react-router', () => ({
 vi.mock('../../hooks/useGraphQLClient', () => ({
   useGraphQLClient: () => ({
     request: vi.fn().mockResolvedValue({
-      autopilots: { edges: [], totalCount: 0 },
-      autopilotMetadata: { entities: [] }
+      autoActions: { edges: [], totalCount: 0 },
+      autoActionMetadata: { entities: [] }
     }),
   }),
 }));
 
-vi.mock('./AutopilotList', () => ({
-  AutopilotList: () => <div data-testid="autopilot-list" />,
+vi.mock('./AutoActionList', () => ({
+  AutoActionList: () => <div data-testid="autoAction-list" />,
 }));
 
-vi.mock('./CreateAutopilotModal', () => ({
-  CreateAutopilotModal: () => <div data-testid="create-modal" />,
+vi.mock('./CreateAutoActionModal', () => ({
+  CreateAutoActionModal: () => <div data-testid="create-modal" />,
 }));
 
-describe('AutopilotDashboardView', () => {
+describe('AutoActionDashboardView', () => {
   const queryClient = new QueryClient({
     defaultOptions: {
       queries: {
@@ -37,10 +37,10 @@ describe('AutopilotDashboardView', () => {
   it('renders without crashing', async () => {
     render(
       <QueryClientProvider client={queryClient}>
-        <AutopilotDashboardView />
+        <AutoActionDashboardView />
       </QueryClientProvider>
     );
 
-    expect(screen.getByText('Autopilot')).toBeDefined();
+    expect(screen.getByText('AutoAction')).toBeDefined();
   });
 });

@@ -11,7 +11,7 @@ export const PipelineStepConnector: React.FC<PipelineStepConnectorProps> = ({
   previousStep,
   nextStep: _nextStep,
 }) => {
-  const isHaltOnFalse = previousStep.__typename === 'AutopilotCondition';
+  const isHaltOnFalse = previousStep.__typename === 'AutoActionCondition';
 
   return (
     <div className="flex flex-col items-center py-1 group">

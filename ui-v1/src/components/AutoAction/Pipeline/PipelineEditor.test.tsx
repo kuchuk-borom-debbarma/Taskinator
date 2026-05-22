@@ -10,14 +10,14 @@ vi.mock('../Builder/ConditionBuilderCanvas', () => ({
 describe('PipelineEditor', () => {
   const mockPipeline: PipelineStep[] = [
     {
-      __typename: 'AutopilotAction',
+      __typename: 'AutoActionAction',
       id: 'action-1',
       type: 'task.update_status',
       config: { status: 'DONE' },
       position: 1,
     } as any,
     {
-      __typename: 'AutopilotCondition',
+      __typename: 'AutoActionCondition',
       id: 'cond-1',
       name: 'Check Priority',
       definition: {
@@ -54,7 +54,7 @@ describe('PipelineEditor', () => {
     expect(onChange).toHaveBeenCalled();
     const updatedPipeline = onChange.mock.calls[0][0];
     expect(updatedPipeline).toHaveLength(1);
-    expect(updatedPipeline[0].__typename).toBe('AutopilotCondition');
+    expect(updatedPipeline[0].__typename).toBe('AutoActionCondition');
   });
 
   it('renders reorderable components', () => {
@@ -70,13 +70,13 @@ describe('PipelineEditor', () => {
     // Pipeline with condition followed by action
     const pipeline: PipelineStep[] = [
       {
-        __typename: 'AutopilotCondition',
+        __typename: 'AutoActionCondition',
         id: 'cond-1',
         name: 'Check Priority',
         definition: { __typename: 'AndNode', children: [] },
       },
       {
-        __typename: 'AutopilotAction',
+        __typename: 'AutoActionAction',
         id: 'action-1',
         type: 'task.update_status',
         config: { status: 'DONE' },

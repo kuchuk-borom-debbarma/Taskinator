@@ -3,7 +3,7 @@ import { conditionTreeToGraph } from './treeSerializer';
 import { graphToConditionTree } from './treeDeserializer';
 import type { ConditionNode } from '../../../gql/graphql';
 
-describe('Autopilot Tree Serializers (GQL Union)', () => {
+describe('AutoAction Tree Serializers (GQL Union)', () => {
   const mockTree: ConditionNode = {
     __typename: 'AndNode',
     children: [

@@ -4,23 +4,23 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion, AnimatePresence, type Variants } from 'framer-motion';
 import { Zap, Plus, Sparkles } from 'lucide-react';
 import { useGraphQLClient } from '../../hooks/useGraphQLClient';
-import { AutopilotList } from './AutopilotList';
+import { AutoActionList } from './AutoActionList';
 import { ZapEmptyState } from './ZapEmptyState';
-import { CreateAutopilotModal } from './CreateAutopilotModal';
+import { CreateAutoActionModal } from './CreateAutoActionModal';
 import { graphql } from '../../gql';
-import { AutopilotMetadataProvider } from './AutopilotMetadataContext';
-import { AutopilotTriggerProvider } from './AutopilotTriggerContext';
+import { AutoActionMetadataProvider } from './AutoActionMetadataContext';
+import { AutoActionTriggerProvider } from './AutoActionTriggerContext';
 
 // ─── GraphQL Operations ──────────────────────────────────────────────────────
 
-const GET_PROJECT_AUTOPILOTS = graphql(`
-  query GetProjectAutopilots($projectId: ID!, $first: Int) {
-    autopilots(projectId: $projectId, first: $first) {
+const GET_PROJECT_AUTO_ACTIONS = graphql(`
+  query GetProjectAutoActions($projectId: ID!, $first: Int) {
+    autoActions(projectId: $projectId, first: $first) {
       edges {
         node {
           id
           isActive
-          ...AutopilotCardFragment
+          ...AutoActionCardFragment
         }
       }
       totalCount
@@ -28,9 +28,9 @@ const GET_PROJECT_AUTOPILOTS = graphql(`
   }
 `);
 
-const TOGGLE_AUTOPILOT = graphql(`
-  mutation ToggleAutopilot($id: ID!, $isActive: Boolean!) {
-    toggleAutopilot(id: $id, isActive: $isActive) {
+const TOGGLE_AUTO_ACTION = graphql(`
+  mutation ToggleAutoAction($id: ID!, $version: Int!, $isActive: Boolean!) {
+    updateAutoAction(id: $id, version: $version, input: { isActive: $isActive }) {
       id
       isActive
       version
@@ -38,15 +38,18 @@ const TOGGLE_AUTOPILOT = graphql(`
   }
 `);
 
-const DELETE_AUTOPILOT = graphql(`
-  mutation DeleteAutopilot($id: ID!) {
-    deleteAutopilot(id: $id)
+const DELETE_AUTO_ACTION = graphql(`
+  mutation DeleteAutoAction($id: ID!) {
+    deleteAutoAction(id: $id) {
+      success
+      deletedId
+    }
   }
 `);
 
 // ─── Skeleton Loader ──────────────────────────────────────────────────────────
 
-const AutopilotCardSkeleton: React.FC = () => (
+const AutoActionCardSkeleton: React.FC = () => (
   <div className="surface-card animate-pulse rounded-[20px] p-5 border border-app-line/40 bg-white/40">
     <div className="mb-4 flex items-center justify-between">
       <div className="flex items-center gap-2.5">
@@ -87,31 +90,31 @@ const headerVariants: Variants = {
 
 // ─── Main Dashboard Component ────────────────────────────────────────────────
 
-export const AutopilotDashboardView: React.FC = () => {
+export const AutoActionDashboardView: React.FC = () => {
   const { projectId } = useParams({ from: '/authenticated-layout/projects/$projectId' });
   const { request } = useGraphQLClient();
   const queryClient = useQueryClient();
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
-  const [editingAutopilot, setEditingAutopilot] = useState<any>(null);
+  const [editingAutoAction, setEditingAutoAction] = useState<any>(null);
 
-  const queryKey = ['project-autopilots', projectId];
+  const queryKey = ['project-autoActions', projectId];
 
-  // 1. Query: Fetch list of Autopilots
+  // 1. Query: Fetch list of AutoActions
   const { data, isLoading, isError } = useQuery({
     queryKey,
-    queryFn: () => request(GET_PROJECT_AUTOPILOTS, { projectId, first: 30 }),
+    queryFn: () => request(GET_PROJECT_AUTO_ACTIONS, { projectId, first: 30 }),
     enabled: !!projectId,
     staleTime: 1000 * 60 * 5, // 5 mins
   });
 
-  const autopilots = data?.autopilots.edges.map(e => e.node) ?? [];
-  const totalCount = data?.autopilots.totalCount ?? 0;
+  const autoActions = data?.autoActions.edges.map(e => e.node) ?? [];
+  const totalCount = data?.autoActions.totalCount ?? 0;
 
   // 2. Mutation: Toggle active state (Optimistic Updates)
   const toggleMutation = useMutation({
-    mutationFn: ({ id, isActive }: { id: string; isActive: boolean }) =>
-      request(TOGGLE_AUTOPILOT, { id, isActive }),
+    mutationFn: ({ id, version, isActive }: { id: string; version: number; isActive: boolean }) =>
+      request(TOGGLE_AUTO_ACTION, { id, version, isActive }),
     onMutate: async ({ id, isActive }) => {
       await queryClient.cancelQueries({ queryKey });
       const previousData = queryClient.getQueryData<any>(queryKey);
@@ -120,9 +123,9 @@ export const AutopilotDashboardView: React.FC = () => {
         if (!old) return old;
         return {
           ...old,
-          autopilots: {
-            ...old.autopilots,
-            edges: old.autopilots.edges.map((e: any) =>
+          autoActions: {
+            ...old.autoActions,
+            edges: old.autoActions.edges.map((e: any) =>
               e.node.id === id ? { ...e, node: { ...e.node, isActive } } : e
             )
           }
@@ -135,16 +138,16 @@ export const AutopilotDashboardView: React.FC = () => {
       if (context?.previousData) {
         queryClient.setQueryData(queryKey, context.previousData);
       }
-      console.error('Autopilot toggle failed:', err);
+      console.error('AutoAction toggle failed:', err);
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey });
     },
   });
 
-  // 3. Mutation: Delete Autopilot (Optimistic Updates)
+  // 3. Mutation: Delete AutoAction (Optimistic Updates)
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => request(DELETE_AUTOPILOT, { id }),
+    mutationFn: (id: string) => request(DELETE_AUTO_ACTION, { id }),
     onMutate: async (id) => {
       await queryClient.cancelQueries({ queryKey });
       const previousData = queryClient.getQueryData<any>(queryKey);
@@ -153,10 +156,10 @@ export const AutopilotDashboardView: React.FC = () => {
         if (!old) return old;
         return {
           ...old,
-          autopilots: {
-            ...old.autopilots,
-            edges: old.autopilots.edges.filter((e: any) => e.node.id !== id),
-            totalCount: Math.max(0, old.autopilots.totalCount - 1),
+          autoActions: {
+            ...old.autoActions,
+            edges: old.autoActions.edges.filter((e: any) => e.node.id !== id),
+            totalCount: Math.max(0, old.autoActions.totalCount - 1),
           }
         };
       });
@@ -167,35 +170,35 @@ export const AutopilotDashboardView: React.FC = () => {
       if (context?.previousData) {
         queryClient.setQueryData(queryKey, context.previousData);
       }
-      console.error('Autopilot deletion failed:', err);
+      console.error('AutoAction deletion failed:', err);
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey });
     },
   });
 
-  const handleToggleActive = (id: string, isActive: boolean) => {
-    toggleMutation.mutate({ id, isActive });
+  const handleToggleActive = (id: string, version: number, isActive: boolean) => {
+    toggleMutation.mutate({ id, version, isActive });
   };
 
-  const handleSaveAutopilot = async () => {
+  const handleSaveAutoAction = async () => {
     queryClient.invalidateQueries({ queryKey });
   };
 
   return (
-    <AutopilotMetadataProvider entityType="task">
-      <AutopilotTriggerProvider initialEntityType="task">
+    <AutoActionMetadataProvider entityType="task">
+      <AutoActionTriggerProvider initialEntityType="task">
         <div className="page-frame min-h-[85vh] flex flex-col">
-          {/* ── Create Autopilot Wizard Modal ── */}
-          <CreateAutopilotModal
+          {/* ── Create AutoAction Wizard Modal ── */}
+          <CreateAutoActionModal
             open={isCreateOpen}
             onClose={() => {
               setIsCreateOpen(false);
-              setEditingAutopilot(null);
+              setEditingAutoAction(null);
             }}
             projectId={projectId}
-            onSave={handleSaveAutopilot}
-            autopilot={editingAutopilot}
+            onSave={handleSaveAutoAction}
+            autoAction={editingAutoAction}
           />
 
           {/* ── Header ── */}
@@ -210,7 +213,7 @@ export const AutopilotDashboardView: React.FC = () => {
                 <Sparkles size={11} className="fill-app-accent" />
                 Workflow Automation
               </div>
-              <h1 className="text-2xl font-semibold tracking-tight text-app-ink sm:text-3xl">Autopilot</h1>
+              <h1 className="text-2xl font-semibold tracking-tight text-app-ink sm:text-3xl">AutoAction</h1>
               <AnimatePresence mode="wait">
                 {!isLoading && totalCount > 0 && (
                   <motion.p
@@ -230,7 +233,7 @@ export const AutopilotDashboardView: React.FC = () => {
               className="inline-flex items-center gap-2 rounded-full bg-app-accent px-5 py-2.5 text-sm font-semibold text-white shadow-md transition duration-200 hover:bg-app-accent/90 hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 focus:outline-none focus:ring-2 focus:ring-app-accent/30"
             >
               <Plus size={16} />
-              New Autopilot
+              New AutoAction
             </button>
           </motion.div>
 
@@ -238,9 +241,9 @@ export const AutopilotDashboardView: React.FC = () => {
           <div className="flex-1">
             {isLoading ? (
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-                <AutopilotCardSkeleton />
-                <AutopilotCardSkeleton />
-                <AutopilotCardSkeleton />
+                <AutoActionCardSkeleton />
+                <AutoActionCardSkeleton />
+                <AutoActionCardSkeleton />
               </div>
             ) : isError ? (
               <motion.div
@@ -251,7 +254,7 @@ export const AutopilotDashboardView: React.FC = () => {
                 <div className="h-14 w-14 rounded-full bg-app-danger/10 flex items-center justify-center mb-4 text-app-danger">
                   <Zap size={28} />
                 </div>
-                <h3 className="text-base font-semibold text-app-danger">Failed to Synchronize Autopilots</h3>
+                <h3 className="text-base font-semibold text-app-danger">Failed to Synchronize AutoActions</h3>
                 <p className="mt-1.5 text-sm text-app-muted max-w-xs mx-auto">
                   There was a communication breakdown with the server. Please check your active sessions and reload.
                 </p>
@@ -262,14 +265,14 @@ export const AutopilotDashboardView: React.FC = () => {
                   Retry Connection
                 </button>
               </motion.div>
-            ) : autopilots.length === 0 ? (
+            ) : autoActions.length === 0 ? (
               <ZapEmptyState />
             ) : (
-              <AutopilotList
-                autopilots={autopilots}
+              <AutoActionList
+                autoActions={autoActions}
                 onToggle={handleToggleActive}
                 onEdit={(ap) => {
-                  setEditingAutopilot(ap);
+                  setEditingAutoAction(ap);
                   setIsCreateOpen(true);
                 }}
                 onDelete={(id) => deleteMutation.mutate(id)}
@@ -277,7 +280,7 @@ export const AutopilotDashboardView: React.FC = () => {
             )}
           </div>
         </div>
-      </AutopilotTriggerProvider>
-    </AutopilotMetadataProvider>
+      </AutoActionTriggerProvider>
+    </AutoActionMetadataProvider>
   );
 };

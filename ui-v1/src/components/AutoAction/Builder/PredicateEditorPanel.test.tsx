@@ -1,14 +1,14 @@
 import { render, screen } from '@testing-library/react';
 import { PredicateEditorPanel } from './PredicateEditorPanel';
-import { AutopilotTriggerProvider } from '../AutopilotTriggerContext';
-import { AutopilotMetadataProvider } from '../AutopilotMetadataContext';
+import { AutoActionTriggerProvider } from '../AutoActionTriggerContext';
+import { AutoActionMetadataProvider } from '../AutoActionMetadataContext';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { vi } from 'vitest';
 
 vi.mock('../../../hooks/useGraphQLClient', () => ({
   useGraphQLClient: () => ({
     request: vi.fn().mockResolvedValue({
-      autopilotMetadata: {
+      autoActionMetadata: {
         entities: [
           {
             type: 'task',
@@ -35,11 +35,11 @@ const queryClient = new QueryClient({
 
 const wrapper = ({ children }: { children: React.ReactNode }) => (
   <QueryClientProvider client={queryClient}>
-    <AutopilotTriggerProvider initialEntityType="task">
-      <AutopilotMetadataProvider entityType="task">
+    <AutoActionTriggerProvider initialEntityType="task">
+      <AutoActionMetadataProvider entityType="task">
         {children}
-      </AutopilotMetadataProvider>
-    </AutopilotTriggerProvider>
+      </AutoActionMetadataProvider>
+    </AutoActionTriggerProvider>
   </QueryClientProvider>
 );
 

@@ -171,11 +171,11 @@ const projectMembersRoute = createRoute({
   component: lazyRouteComponent(() => import('./ProjectMembersView.lazy.tsx')),
 });
 
-const projectAutopilotRoute = createRoute({
+const projectAutoActionRoute = createRoute({
   getParentRoute: () => projectLayoutRoute,
-  path: 'autopilot',
+  path: 'autoAction',
   component: lazyRouteComponent(
-    () => import('./components/Autopilot/AutopilotDashboardView').then(m => ({ default: m.AutopilotDashboardView }))
+    () => import('./components/AutoAction/AutoActionDashboardView').then(m => ({ default: m.AutoActionDashboardView }))
   ),
 });
 
@@ -247,7 +247,7 @@ export const routeTree = rootRoute.addChildren([
       projectTasksRoute,
       projectTeamsRoute,
       projectMembersRoute,
-      projectAutopilotRoute,
+      projectAutoActionRoute,
       teamDetailRoute,
       taskDetailRoute,
     ]),

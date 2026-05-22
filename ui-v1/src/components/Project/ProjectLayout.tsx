@@ -55,7 +55,7 @@ export const ProjectLayout: React.FC = () => {
     { label: 'Tasks', icon: Kanban, to: '/projects/$projectId/tasks' as const },
     { label: 'Teams', icon: Users, to: '/projects/$projectId/teams' as const },
     { label: 'Members', icon: Users, to: '/projects/$projectId/members' as const },
-    { label: 'Autopilot', icon: Zap, to: '/projects/$projectId/autopilot' as const },
+    { label: 'AutoAction', icon: Zap, to: '/projects/$projectId/autoAction' as const },
   ];
 
   return (

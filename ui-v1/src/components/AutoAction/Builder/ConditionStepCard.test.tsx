@@ -1,10 +1,10 @@
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { ConditionStepCard } from './ConditionStepCard';
-import type { AutopilotCondition } from '../../../gql/graphql';
+import type { AutoActionCondition } from '../../../gql/graphql';
 
 describe('ConditionStepCard', () => {
-  const mockCondition: AutopilotCondition = {
+  const mockCondition: AutoActionCondition = {
     id: 'cond-1',
     name: 'Check Status',
     definition: {

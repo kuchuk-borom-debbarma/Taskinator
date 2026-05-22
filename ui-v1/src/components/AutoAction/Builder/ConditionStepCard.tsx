@@ -1,9 +1,9 @@
 import React from 'react';
 import { GripVertical, Hexagon } from 'lucide-react';
-import type { AutopilotCondition } from '../../../gql/graphql';
+import type { AutoActionCondition } from '../../../gql/graphql';
 
 interface ConditionStepCardProps {
-  condition: AutopilotCondition;
+  condition: AutoActionCondition;
   index: number;
   readOnly?: boolean;
   onEdit?: (index: number) => void;

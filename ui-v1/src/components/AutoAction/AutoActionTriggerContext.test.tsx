@@ -1,17 +1,17 @@
 import { renderHook, act } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
-import { AutopilotTriggerProvider, useAutopilotTrigger } from './AutopilotTriggerContext';
+import { AutoActionTriggerProvider, useAutoActionTrigger } from './AutoActionTriggerContext';
 import React from 'react';
 
 const wrapper = ({ children }: { children: React.ReactNode }) => (
-  <AutopilotTriggerProvider initialEntityType="task">
+  <AutoActionTriggerProvider initialEntityType="task">
     {children}
-  </AutopilotTriggerProvider>
+  </AutoActionTriggerProvider>
 );
 
-describe('AutopilotTriggerContext', () => {
+describe('AutoActionTriggerContext', () => {
   it('tracks selectedEntityType', () => {
-    const { result } = renderHook(() => useAutopilotTrigger(), { wrapper });
+    const { result } = renderHook(() => useAutoActionTrigger(), { wrapper });
 
     expect(result.current.selectedEntityType).toBe('task');
 

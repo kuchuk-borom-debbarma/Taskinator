@@ -6,111 +6,57 @@ import type { FragmentType } from '../../gql';
 import { ConditionBuilderCanvas } from './Builder/ConditionBuilderCanvas';
 import { PipelineEditor } from './Pipeline/PipelineEditor';
 
-export const AutopilotCardFragment = graphql(`
-  fragment AutopilotCardFragment on Autopilot {
+export const AutoActionCardFragment = graphql(`
+  fragment AutoActionCardFragment on AutoAction {
     id
-    fk_project_id
+    name
+    description
     triggers
+    steps
     isActive
-    createdAt
+    isSync
     version
-    pipeline {
-      __typename
-      ... on AutopilotCondition {
-        id
-        name
-        definition {
-          __typename
-          ... on PredicateNode {
-            domain
-            field
-            operator
-            value
-          }
-          ... on AndNode {
-            children {
-              __typename
-            }
-          }
-          ... on OrNode {
-            children {
-              __typename
-            }
-          }
-          ... on NotNode {
-            child {
-              __typename
-            }
-          }
-        }
-      }
-      ... on AutopilotAction {
-        id
-        type
-        params
-      }
-    }
+    createdAt
+    updatedAt
   }
 `);
 
-interface AutopilotCardProps {
-  autopilot: FragmentType<typeof AutopilotCardFragment>;
+interface AutoActionCardProps {
+  autoAction: FragmentType<typeof AutoActionCardFragment>;
   onClick?: () => void;
-  onToggle?: (id: string, isActive: boolean) => void;
-  onEdit?: (autopilot: any) => void;
+  onToggle?: (id: string, version: number, isActive: boolean) => void;
+  onEdit?: (autoAction: any) => void;
   onDelete?: (id: string) => void;
 }
 
-/**
- * Extracts a human-readable summary from the first predicate leaf in the condition tree.
- */
-function extractConditionSummary(node: any): string {
-  if (!node) return '—';
-
-  if (node.__typename === 'PredicateNode') {
-    const field = node.field ?? 'field';
-    const op = node.operator ?? '==';
-    const val = String(node.value ?? '…');
-    return `${field} ${op} ${val}`;
-  }
-
-  // Handle nested nodes if needed, but for summary we usually just look at top level or first child
-  if (node.__typename === 'AndNode' || node.__typename === 'OrNode') {
-    return node.__typename === 'AndNode' ? 'ALL OF...' : 'ANY OF...';
-  }
-
-  if (node.__typename === 'NotNode') {
-    return 'NOT...';
-  }
-
-  return 'Condition';
-}
-
-export const AutopilotCard: React.FC<AutopilotCardProps> = ({ autopilot: fragmentProp, onClick, onToggle, onEdit, onDelete }) => {
-  const autopilot = useFragment(AutopilotCardFragment, fragmentProp);
+export const AutoActionCard: React.FC<AutoActionCardProps> = ({ autoAction: fragmentProp, onClick, onToggle, onEdit, onDelete }) => {
+  const autoAction = useFragment(AutoActionCardFragment, fragmentProp);
   const [expanded, setExpanded] = useState(false);
   const [pipelineExpanded, setPipelineExpanded] = useState(false);
 
-  // Extract first condition and actions from pipeline
-  const conditions = autopilot.pipeline
-    .filter((step): step is any => step.__typename === 'AutopilotCondition')
-    .map(step => step);
+  // In the new schema, 'steps' is a JSON array of PipelineStep
+  const pipeline = (autoAction.steps as any[]) || [];
+
+  const conditions = pipeline
+    .filter((step: any) => step.type === 'condition_action')
+    .map((step: any) => step.condition);
   
-  const actions = autopilot.pipeline
-    .filter((step): step is any => step.__typename === 'AutopilotAction')
-    .map(step => ({
-      id: step.id,
-      type: step.type,
-      config: step.params,
-      position: 0 // Will be handled by index in editor
+  const actions = pipeline
+    .filter((step: any) => step.type === 'action' || step.type === 'condition_action')
+    .map((step: any) => ({
+      id: step.actionId, // Simplified for summary
+      type: step.actionId,
+      config: step.inputs,
+      position: 0 
     }));
 
+  // Simplified summary for the new JSON structure
   const firstCondition = conditions[0];
   const conditionSummary = firstCondition 
-    ? extractConditionSummary(firstCondition.definition) 
-    : 'No conditions';
+    ? 'Condition-driven flow' 
+    : 'Sequential flow';
     
-  const isActive = autopilot.isActive;
+  const isActive = autoAction.isActive;
 
   const handleExpandToggle = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -140,7 +86,7 @@ export const AutopilotCard: React.FC<AutopilotCardProps> = ({ autopilot: fragmen
             }`}
           />
           <span className="text-sm font-semibold text-app-ink line-clamp-1">
-            Autopilot <span className="font-mono text-app-muted">#{autopilot.id.slice(-6)}</span>
+            {autoAction.name} <span className="font-mono text-app-muted">#{autoAction.id.slice(-6)}</span>
           </span>
         </div>
 
@@ -150,10 +96,10 @@ export const AutopilotCard: React.FC<AutopilotCardProps> = ({ autopilot: fragmen
             type="button"
             onClick={(e) => {
               e.stopPropagation();
-              onEdit?.(autopilot);
+              onEdit?.(autoAction);
             }}
             className="rounded-full p-1.5 text-app-muted transition hover:bg-app-line/60 hover:text-app-ink focus:outline-none"
-            title="Edit autopilot rule"
+            title="Edit autoAction rule"
           >
             <Edit2 size={14} />
           </button>
@@ -163,12 +109,12 @@ export const AutopilotCard: React.FC<AutopilotCardProps> = ({ autopilot: fragmen
             type="button"
             onClick={(e) => {
               e.stopPropagation();
-              if (confirm('Are you sure you want to delete this Autopilot rule? This cannot be undone.')) {
-                onDelete?.(autopilot.id);
+              if (confirm('Are you sure you want to delete this AutoAction rule? This cannot be undone.')) {
+                onDelete?.(autoAction.id);
               }
             }}
             className="rounded-full p-1.5 text-app-muted transition hover:bg-app-danger/10 hover:text-app-danger focus:outline-none"
-            title="Delete autopilot rule"
+            title="Delete autoAction rule"
           >
             <Trash2 size={14} />
           </button>
@@ -178,7 +124,7 @@ export const AutopilotCard: React.FC<AutopilotCardProps> = ({ autopilot: fragmen
             type="button"
             onClick={(e) => {
               e.stopPropagation();
-              onToggle?.(autopilot.id, !isActive);
+              onToggle?.(autoAction.id, autoAction.version, !isActive);
             }}
             className="shrink-0 text-app-muted transition hover:text-app-ink focus:outline-none"
             title={isActive ? 'Deactivate rule' : 'Activate rule'}
@@ -194,16 +140,27 @@ export const AutopilotCard: React.FC<AutopilotCardProps> = ({ autopilot: fragmen
 
       {/* Trigger badges */}
       <div className="flex flex-wrap gap-1.5">
-        {autopilot.triggers.map((trigger) => (
+        {(autoAction.triggers as any[]).map((trigger: any) => (
           <span
-            key={trigger}
+            key={typeof trigger === 'string' ? trigger : trigger.type}
             className="inline-flex items-center gap-1 rounded-full bg-app-accent-soft px-2.5 py-0.5 text-xs font-semibold text-app-accent"
           >
             <Zap size={10} />
-            {trigger}
+            {typeof trigger === 'string' ? trigger : trigger.type}
           </span>
         ))}
+        {autoAction.isSync && (
+          <span className="inline-flex items-center gap-1 rounded-full bg-app-success/10 px-2.5 py-0.5 text-xs font-semibold text-app-success">
+            Sync
+          </span>
+        )}
       </div>
+
+      {autoAction.description && (
+        <p className="text-xs text-app-muted line-clamp-2 italic">
+          {autoAction.description}
+        </p>
+      )}
 
       {/* Condition summary (collapsed) */}
       {!expanded && (
@@ -256,7 +213,7 @@ export const AutopilotCard: React.FC<AutopilotCardProps> = ({ autopilot: fragmen
         </div>
 
         <span>
-          {new Date(autopilot.createdAt).toLocaleDateString('en-US', {
+          {new Date(autoAction.createdAt).toLocaleDateString('en-US', {
             month: 'short',
             day: 'numeric',
             year: 'numeric',

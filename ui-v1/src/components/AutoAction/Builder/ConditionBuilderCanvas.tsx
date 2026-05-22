@@ -12,7 +12,7 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
-import type { AutopilotConditionNode } from '../../../api/interfaces/AutopilotAPI';
+import type { AutoActionConditionNode } from '../../../api/interfaces/AutoActionAPI';
 import { conditionTreeToGraph } from './treeSerializer';
 import { graphToConditionTree } from './treeDeserializer';
 import { LogicalNode } from './LogicalNode';
@@ -31,8 +31,8 @@ const nodeTypes = {
 // ─── Props ────────────────────────────────────────────────────────────────────
 
 interface ConditionBuilderCanvasProps {
-  initialCondition: AutopilotConditionNode;
-  onChange?: (condition: AutopilotConditionNode) => void;
+  initialCondition: AutoActionConditionNode;
+  onChange?: (condition: AutoActionConditionNode) => void;
   readOnly?: boolean;
 }
 

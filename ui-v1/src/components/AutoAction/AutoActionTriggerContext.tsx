@@ -9,12 +9,12 @@ interface TriggerState {
   setSelectedEntityType: (type: TriggerEntityType) => void;
 }
 
-const AutopilotTriggerContext = createContext<TriggerState | undefined>(undefined);
+const AutoActionTriggerContext = createContext<TriggerState | undefined>(undefined);
 
-export const useAutopilotTrigger = () => {
-  const context = useContext(AutopilotTriggerContext);
+export const useAutoActionTrigger = () => {
+  const context = useContext(AutoActionTriggerContext);
   if (!context) {
-    throw new Error('useAutopilotTrigger must be used within an AutopilotTriggerProvider');
+    throw new Error('useAutoActionTrigger must be used within an AutoActionTriggerProvider');
   }
   return context;
 };
@@ -26,7 +26,7 @@ interface ProviderProps {
   initialEntityType?: TriggerEntityType;
 }
 
-export const AutopilotTriggerProvider: React.FC<ProviderProps> = ({ 
+export const AutoActionTriggerProvider: React.FC<ProviderProps> = ({ 
   children,
   initialEntityType = 'task'
 }) => {
@@ -38,8 +38,8 @@ export const AutopilotTriggerProvider: React.FC<ProviderProps> = ({
   }), [selectedEntityType]);
 
   return (
-    <AutopilotTriggerContext.Provider value={value}>
+    <AutoActionTriggerContext.Provider value={value}>
       {children}
-    </AutopilotTriggerContext.Provider>
+    </AutoActionTriggerContext.Provider>
   );
 };

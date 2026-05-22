@@ -70,6 +70,24 @@ type Query {
         before: String
     ): TeamMemberConnection!
     """
+    Fetches a single auto action by ID. Returns null if not found or not authorized.
+    """
+    autoAction(id: ID!): AutoAction
+    """
+    Fetches project auto actions using connection pagination.
+    """
+    autoActions(
+        projectId: ID!
+        first: Int
+        after: String
+        last: Int
+        before: String
+    ): AutoActionConnection!
+    """
+    Fetches the dynamic template for an Auto Action scope.
+    """
+    autoActionTemplate(scope: String!, isSync: Boolean): AutoActionTemplate!
+    """
     Fetches a single task by ID. Returns null if not found or not authorized.
     """
     task(id: ID!): Task
@@ -77,21 +95,6 @@ type Query {
     Fetches multiple tasks by ID. Returns only those the user is authorized to view.
     """
     tasks(ids: [ID!]!): [Task!]!
-    """
-    Fetches a paginated list of autopilots for a given project.
-    Requires the caller to be a member of the project.
-    """
-    autopilots(
-        projectId: ID!
-        first: Int
-        after: String
-        last: Int
-        before: String
-    ): AutopilotConnection!
-    """
-    Returns metadata for autopilot discovery (fields, operators, actions).
-    """
-    autopilotMetadata(entityType: String!): AutopilotMetadata!
 }
 
 type Mutation {
@@ -170,25 +173,23 @@ type Mutation {
         name: String!
         version: Int!
     ): UpdateTeamPayload!
+    """
+    Creates an auto action rule.
+    """
+    createAutoAction(input: CreateAutoActionInput!): AutoAction!
+    """
+    Updates an auto action rule using optimistic concurrency.
+    """
+    updateAutoAction(
+        id: ID!
+        version: Int!
+        input: UpdateAutoActionInput!
+    ): AutoAction!
+    """
+    Deletes an auto action rule.
+    """
+    deleteAutoAction(id: ID!): DeleteAutoActionPayload!
     task: TaskMutation!
-    """
-    Creates an autopilot and its associated action pipeline.
-    Requires user authentication.
-    """
-    createAutopilot(input: CreateAutopilotInput!): Autopilot!
-    """
-    Updates an existing autopilot rule.
-    """
-    updateAutopilot(id: ID!, input: UpdateAutopilotInput!): Autopilot!
-    """
-    Activates or deactivates an autopilot rule.
-    Requires user authentication.
-    """
-    toggleAutopilot(id: ID!, isActive: Boolean!): Autopilot!
-    """
-    Deletes an autopilot rule.
-    """
-    deleteAutopilot(id: ID!): Boolean!
 }
 
 """
@@ -675,6 +676,109 @@ type UpdateTeamPayload {
     team: Team
 }
 
+"""
+Template metadata for an Auto Action scope.
+"""
+type AutoActionTemplate {
+    triggers: [AutoActionTriggerTemplate!]!
+    contextFields: [String!]!
+    actions: [AutoActionActionTemplate!]!
+    conditions: [AutoActionConditionTemplate!]!
+}
+
+"""
+Template for an individual trigger.
+"""
+type AutoActionTriggerTemplate {
+    type: String!
+    name: String!
+    description: String!
+    scope: String!
+}
+
+"""
+Template for an individual action.
+"""
+type AutoActionActionTemplate {
+    id: String!
+    name: String!
+    description: String!
+    isSync: Boolean!
+    scope: String!
+    inputSchema: JSON!
+}
+
+"""
+Template for an individual condition predicate.
+"""
+type AutoActionConditionTemplate {
+    type: String!
+    name: String!
+    description: String
+    isSync: Boolean!
+    scope: String!
+    schema: JSON!
+}
+
+scalar JSON
+
+"""
+An automation rule that reacts to project domain events.
+"""
+type AutoAction {
+    id: ID!
+    project: Project!
+    name: String!
+    description: String
+    triggers: JSON!
+    steps: JSON!
+    isActive: Boolean!
+    isSync: Boolean!
+    version: Int!
+    createdAt: String!
+    updatedAt: String
+    createdBy: User!
+    updatedBy: User!
+}
+
+"""
+Relay-style paginated list of auto actions.
+"""
+type AutoActionConnection {
+    edges: [AutoActionEdge!]!
+    pageInfo: PageInfo!
+    totalCount: Int
+}
+
+type AutoActionEdge {
+    node: AutoAction!
+    cursor: String!
+}
+
+input CreateAutoActionInput {
+    projectId: ID!
+    name: String
+    description: String
+    triggers: JSON!
+    steps: JSON!
+    isActive: Boolean
+    isSync: Boolean
+}
+
+input UpdateAutoActionInput {
+    name: String
+    description: String
+    triggers: JSON
+    steps: JSON
+    isActive: Boolean
+    isSync: Boolean
+}
+
+type DeleteAutoActionPayload {
+    success: Boolean!
+    deletedId: ID!
+}
+
 input CreateTaskInput {
     """
     Project to create the task in.
@@ -988,204 +1092,6 @@ Aggregated count of a link label across a set of tasks. Useful for summarising d
 type TaskLabelCount {
     label: String!
     count: Int!
-}
-
-"""
-A JSON blob. Represented as a scalar for flexibility.
-"""
-scalar JSON
-
-"""
-A condition node that forms the condition tree for an autopilot.
-"""
-union ConditionNode = AndNode | OrNode | NotNode | PredicateNode
-
-type AndNode {
-    children: [ConditionNode!]!
-}
-
-type OrNode {
-    children: [ConditionNode!]!
-}
-
-type NotNode {
-    child: ConditionNode!
-}
-
-type PredicateNode {
-    domain: String!
-    field: String!
-    operator: String!
-    value: JSON!
-}
-
-"""
-A condition step in the pipeline.
-"""
-type AutopilotCondition {
-    id: ID!
-    name: String
-    definition: ConditionNode!
-}
-
-"""
-A single action step in an autopilot's execution chain.
-"""
-type AutopilotAction {
-    id: ID!
-    type: String!
-    params: JSON!
-}
-
-"""
-A step in the autopilot pipeline.
-"""
-union PipelineStep = AutopilotCondition | AutopilotAction
-
-"""
-An automated rule that triggers a sequence of actions when conditions are met.
-"""
-type Autopilot {
-    """
-    Unique identifier for the autopilot.
-    """
-    id: ID!
-    """
-    The project this autopilot belongs to.
-    """
-    fk_project_id: ID!
-    """
-    List of event types this autopilot listens to (e.g., ["task.updated"]).
-    """
-    triggers: [String!]!
-    """
-    Whether this autopilot is currently active.
-    """
-    isActive: Boolean!
-    """
-    The ordered sequence of conditions and actions.
-    """
-    pipeline: [PipelineStep!]!
-    """
-    ISO 8601 creation timestamp.
-    """
-    createdAt: String!
-    """
-    Optimistic-concurrency version counter.
-    """
-    version: Int!
-}
-
-"""
-Metadata for building autopilots.
-"""
-type AutopilotMetadata {
-    entities: [AutopilotEntityMetadata!]!
-}
-
-type AutopilotEntityMetadata {
-    type: String!
-    fields: [AutopilotFieldMetadata!]!
-    actions: [AutopilotActionMetadata!]!
-}
-
-type AutopilotFieldMetadata {
-    name: String!
-    type: String!
-    operators: [String!]!
-}
-
-type AutopilotActionMetadata {
-    type: String!
-    parameters: JSON!
-}
-
-"""
-Relay-style paginated list of autopilots.
-"""
-type AutopilotConnection {
-    edges: [AutopilotEdge!]!
-    pageInfo: PageInfo!
-    """
-    Total number of autopilots matching the query, regardless of pagination.
-    """
-    totalCount: Int!
-}
-
-type AutopilotEdge {
-    node: Autopilot!
-    cursor: String!
-}
-
-"""
-Input structure to create a new autopilot rule.
-"""
-input CreateAutopilotInput {
-    projectId: ID!
-    triggers: [String!]!
-    pipeline: [PipelineStepInput!]!
-}
-
-"""
-Input structure to update an existing autopilot rule.
-"""
-input UpdateAutopilotInput {
-    triggers: [String]
-    isActive: Boolean
-    pipeline: [PipelineStepInput!]
-}
-
-"""
-Input for a single step in the pipeline.
-"""
-input PipelineStepInput {
-    condition: AutopilotConditionInput
-    action: AutopilotActionInput
-}
-
-"""
-Input for an individual autopilot condition.
-"""
-input AutopilotConditionInput {
-    name: String
-    definition: ConditionNodeInput!
-}
-
-"""
-Input for an individual autopilot action.
-"""
-input AutopilotActionInput {
-    type: String!
-    params: JSON!
-}
-
-"""
-Input for a recursive condition node.
-"""
-input ConditionNodeInput {
-    and: AndNodeInput
-    or: OrNodeInput
-    not: NotNodeInput
-    predicate: PredicateNodeInput
-}
-
-input AndNodeInput {
-    children: [ConditionNodeInput!]!
-}
-
-input OrNodeInput {
-    children: [ConditionNodeInput!]!
-}
-
-input NotNodeInput {
-    child: ConditionNodeInput!
-}
-
-input PredicateNodeInput {
-    domain: String!
-    field: String!
-    operator: String!
-    value: JSON!
 }
 
 schema {

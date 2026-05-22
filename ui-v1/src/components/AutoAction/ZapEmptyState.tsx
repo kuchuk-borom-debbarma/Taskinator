@@ -17,7 +17,7 @@ export const ZapEmptyState: React.FC<{ onCreateClick?: () => void }> = ({ onCrea
         No automations yet
       </h3>
       <p className="mb-8 max-w-xs text-sm leading-relaxed text-app-muted">
-        Build your first autopilot to automatically update tasks, assign teams, and more — without lifting a finger.
+        Build your first autoAction to automatically update tasks, assign teams, and more — without lifting a finger.
       </p>
 
       <button
@@ -26,7 +26,7 @@ export const ZapEmptyState: React.FC<{ onCreateClick?: () => void }> = ({ onCrea
         className="inline-flex items-center gap-2 rounded-full bg-app-accent px-6 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-app-accent/90 disabled:opacity-50 disabled:cursor-not-allowed"
       >
         <Zap size={16} />
-        Create Autopilot
+        Create AutoAction
       </button>
     </div>
   );

@@ -1,6 +1,6 @@
 import { renderHook, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
-import { AutopilotMetadataProvider, useAutopilotMetadata } from './AutopilotMetadataContext';
+import { AutoActionMetadataProvider, useAutoActionMetadata } from './AutoActionMetadataContext';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
 
@@ -8,7 +8,7 @@ import React from 'react';
 vi.mock('../../hooks/useGraphQLClient', () => ({
   useGraphQLClient: vi.fn(() => ({
     request: vi.fn(async () => ({
-      autopilotMetadata: {
+      autoActionMetadata: {
         entities: [
           {
             type: 'task',
@@ -35,15 +35,15 @@ const queryClient = new QueryClient({
 
 const wrapper = ({ children }: { children: React.ReactNode }) => (
   <QueryClientProvider client={queryClient}>
-    <AutopilotMetadataProvider entityType="task">
+    <AutoActionMetadataProvider entityType="task">
       {children}
-    </AutopilotMetadataProvider>
+    </AutoActionMetadataProvider>
   </QueryClientProvider>
 );
 
-describe('AutopilotMetadataContext', () => {
+describe('AutoActionMetadataContext', () => {
   it('provides metadata after fetching', async () => {
-    const { result } = renderHook(() => useAutopilotMetadata(), { wrapper });
+    const { result } = renderHook(() => useAutoActionMetadata(), { wrapper });
 
     expect(result.current.isLoading).toBe(true);
 
@@ -55,7 +55,7 @@ describe('AutopilotMetadataContext', () => {
   });
 
   it('returns empty array for unknown entity', async () => {
-    const { result } = renderHook(() => useAutopilotMetadata(), { wrapper });
+    const { result } = renderHook(() => useAutoActionMetadata(), { wrapper });
 
     await waitFor(() => expect(result.current.isLoading).toBe(false));
 
