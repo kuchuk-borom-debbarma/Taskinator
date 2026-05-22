@@ -43,35 +43,18 @@ Automate the "busy work" of project management through reliable, transparent, an
 - ✅ [Auto Action Re-sectoring] — Restructure the auto-action module to match the established Controller/Service/Queries pattern; route cross-module operations through service interfaces (v13.0).
 - ✅ [Hide Internal Engines] — Simplify auto-action module structure by hiding internal engines and organizing the internal directory (v14.0).
 - ✓ [Service Layer Isolation] — Enforce strict service layer isolation in all Kafka listeners and smart aggregators by decoupling direct database access (v15.0).
-- [ ] [Auto Action Runtime Integration] — Connect auto-action rules to event consumers and GraphQL APIs with paginated reads, DataLoader batching, and simple service boundaries (v16.0).
+- ✓ [Auto Action Runtime Integration] — Connected auto-action rules to event consumers and GraphQL APIs with paginated reads, DataLoader batching, and simple service boundaries (v16.0).
 - [ ] [Multi-domain Triggers] — Evaluate events crossing project boundaries.
+
 - [ ] [Complex Predicates] — Evaluate conditions referencing recursive parent/child states.
 
-## Current Milestone: v16.0 Auto Action Runtime Integration
+## Current Milestone: v17.0 (Planning)
 
-**Goal:** Wire the auto-action module into the runtime event flow and GraphQL API so rules can be created, listed, loaded efficiently, and triggered when domain events fire.
+**Goal:** TBD
 
-**Target features:**
-- Auto-action consumer triggers rules from domain events.
-- GraphQL auto-action mutations create/update required rule data through service functions.
-- GraphQL auto-action queries expose connection/edge pagination for lists.
-- DataLoader batches nested auto-action GraphQL loads.
-- New service functions keep module boundaries simple, modular, loosely coupled, and easy to follow.
+## Current State (Post-v16.0)
 
-**Implementation constraints:**
-- Keep code modular, simple, and well organized.
-- Prefer small service functions over leaking queries into consumers/resolvers.
-- Follow SOLID where useful, KISS always.
-- Avoid tight coupling between Kafka consumer, GraphQL resolvers, and internal engines.
-
-### Out of Scope
-
-- [Cron-based Triggers] — Reactive/event-driven architecture remains primary focus.
-- [External Service Actions] — Scope confined to internal Taskinator domain mutations.
-
-## Current State (Post-v15.0)
-
-v15.0 Service Layer Isolation is complete. Smart aggregators and aggregated Kafka listener write paths now delegate transaction, idempotency, and domain write orchestration to module service layers. Focused service-isolation tests cover aggregator lifecycle, auth/project/team batch sync, task graph cleanup, task assignment/project cleanup flows, and verification-backed listener boundary audits.
+v16.0 Auto Action Runtime Integration is complete. The auto-action module is now fully wired into the runtime event system through a thin Kafka consumer and service-owned trigger orchestration. The module also exposes a robust GraphQL API with Relay-style connection pagination and DataLoader batching for efficient nested field loading. Boundaries are enforced through a strict public service layer, hiding internal engines and query logic.
 
 ## Key Decisions
 
@@ -96,10 +79,11 @@ v15.0 Service Layer Isolation is complete. Smart aggregators and aggregated Kafk
 | Auto Action Re-sectoring | Service interface + internal Queries/ServiceImpl pattern; task scope goes through taskService not bare db. | **Complete (v13.0)** |
 | Internal Engine Hiding | Organize internal/ into functional sub-folders and hide all execution engines behind the service layer. | **Complete (v14.0)** |
 | Service Layer Isolation | Decouple DB access from listeners/aggregators; enforce delegation to service interfaces or module-internal queries. | **Complete (v15.0)** |
+| Runtime Integration | Thin Kafka consumer + Service orchestration; GraphQL connections + DataLoaders; internal engine/query hiding. | **Complete (v16.0)** |
 
 ## Evolution
 
 This document evolves at phase transitions and milestone boundaries.
 
 ---
-*Last updated: 2026-05-22 — v15.0 milestone complete*
+*Last updated: 2026-05-22 — v16.0 milestone complete*
