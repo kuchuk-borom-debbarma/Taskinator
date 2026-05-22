@@ -1,3 +1,4 @@
+import { db } from '../../../../database/index.js';
 import type {
     AutoAction,
     AutoActionUpdate,
@@ -511,10 +512,29 @@ export class AutoActionServiceImpl implements AutoActionService {
         );
 
         for (const event of events) {
+            const eventId = (event.data as any)?.traceId;
+            if (!eventId) continue;
+
+            const alreadyProcessed = await db
+                .selectFrom('processed_event')
+                .where('event_id', '=', eventId)
+                .where('consumer_group', '=', 'auto-action')
+                .executeTakeFirst();
+            if (alreadyProcessed) {
+                logger.info(
+                    `AutoActionService: Skipping duplicate event ${eventId}`,
+                );
+                continue;
+            }
+
             const normalized = this.normalizeTaskEvent(event);
             if (!normalized) continue;
 
             await this.executeMatchingTaskActions(normalized);
+            await db
+                .insertInto('processed_event')
+                .values({ event_id: eventId, consumer_group: 'auto-action' })
+                .execute();
         }
     }
 

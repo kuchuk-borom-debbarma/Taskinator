@@ -1,12 +1,12 @@
 ---
 gsd_state_version: 1.0
 milestone: v17.0
-milestone_name: TBD
+milestone_name: Auto Action E2E Verification & Reliability
 status: planning
-last_updated: "2026-05-22T07:25:00Z"
+last_updated: "2026-05-22T07:35:00Z"
 last_activity: 2026-05-22
 progress:
-  total_phases: 0
+  total_phases: 2
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
