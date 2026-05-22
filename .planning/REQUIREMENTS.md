@@ -15,23 +15,23 @@
 
 ### GraphQL API
 
-- [ ] **GQL-01**: User can create an auto-action rule through a GraphQL mutation.
-- [ ] **GQL-02**: User can update an auto-action rule through a GraphQL mutation.
-- [ ] **GQL-03**: User can query one auto-action rule by ID through GraphQL.
-- [ ] **GQL-04**: User can list auto-action rules through a connection/edge paginated GraphQL query.
-- [ ] **GQL-05**: GraphQL resolvers delegate domain work to auto-action service functions, not internal queries.
+- [x] **GQL-01**: User can create an auto-action rule through a GraphQL mutation.
+- [x] **GQL-02**: User can update an auto-action rule through a GraphQL mutation.
+- [x] **GQL-03**: User can query one auto-action rule by ID through GraphQL.
+- [x] **GQL-04**: User can list auto-action rules through a connection/edge paginated GraphQL query.
+- [x] **GQL-05**: GraphQL resolvers delegate domain work to auto-action service functions, not internal queries.
 
 ### Pagination & Loading
 
-- [ ] **PAGE-01**: All auto-action list responses use connection/edge pagination.
-- [ ] **PAGE-02**: Auto-action GraphQL nested fields use DataLoader for batched loading.
-- [ ] **PAGE-03**: Auto-action list service returns stable cursors and total pagination metadata where project conventions require it.
+- [x] **PAGE-01**: All auto-action list responses use connection/edge pagination.
+- [x] **PAGE-02**: Auto-action GraphQL nested fields use DataLoader for batched loading.
+- [x] **PAGE-03**: Auto-action list service returns stable cursors and total pagination metadata where project conventions require it.
 
 ### Service Design
 
 - [x] **SVC-01**: Auto-action module exposes service functions needed by consumers and GraphQL without leaking internal engines.
 - [x] **SVC-02**: New service functions stay small, readable, and single-purpose.
-- [ ] **SVC-03**: Auto-action query functions remain internal to the module and are covered by focused tests where behavior is non-trivial.
+- [x] **SVC-03**: Auto-action query functions remain internal to the module and are covered by focused tests where behavior is non-trivial.
 
 ## Future Requirements
 
@@ -59,15 +59,15 @@
 | RUNTIME-04 | Phase 42 | Complete |
 | SVC-01 | Phase 42 | Complete |
 | SVC-02 | Phase 42 | Complete |
-| GQL-01 | Phase 43 | Pending |
-| GQL-02 | Phase 43 | Pending |
-| GQL-03 | Phase 43 | Pending |
-| GQL-04 | Phase 43 | Pending |
-| GQL-05 | Phase 43 | Pending |
-| PAGE-01 | Phase 43 | Pending |
-| PAGE-02 | Phase 43 | Pending |
-| PAGE-03 | Phase 43 | Pending |
-| SVC-03 | Phase 43 | Pending |
+| GQL-01 | Phase 43 | Complete |
+| GQL-02 | Phase 43 | Complete |
+| GQL-03 | Phase 43 | Complete |
+| GQL-04 | Phase 43 | Complete |
+| GQL-05 | Phase 43 | Complete |
+| PAGE-01 | Phase 43 | Complete |
+| PAGE-02 | Phase 43 | Complete |
+| PAGE-03 | Phase 43 | Complete |
+| SVC-03 | Phase 43 | Complete |
 
 **Coverage:**
 - v16 requirements: 15 total
@@ -76,4 +76,4 @@
 
 ---
 *Requirements defined: 2026-05-22*
-*Last updated: 2026-05-22 after Phase 42 execution*
+*Last updated: 2026-05-22 after Phase 43 execution*

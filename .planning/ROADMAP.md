@@ -23,7 +23,7 @@
 | 40. Intra-Module Listener Decoupling | v15.0 | 1/1 | Complete    | 2026-05-22 |
 | 41. Inter-Module Listener Service Delegation | v15.0 | 1/1 | Complete    | 2026-05-22 |
 | 42. Auto Action Event Consumer | v16.0 | 1/1 | Complete | 2026-05-22 |
-| 43. Auto Action GraphQL API | v16.0 | 0/1 | Planned | - |
+| 43. Auto Action GraphQL API | v16.0 | 1/1 | Complete | 2026-05-22 |
 | 38. Hide Internal Engines | v14.0 | 1/1 | ✅ Shipped | 2026-05-21 |
 | 37. Auto Action Re-sectoring | v13.0 | 1/1 | ✅ Shipped | 2026-05-21 |
 
