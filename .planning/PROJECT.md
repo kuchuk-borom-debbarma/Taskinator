@@ -43,8 +43,26 @@ Automate the "busy work" of project management through reliable, transparent, an
 - ✅ [Auto Action Re-sectoring] — Restructure the auto-action module to match the established Controller/Service/Queries pattern; route cross-module operations through service interfaces (v13.0).
 - ✅ [Hide Internal Engines] — Simplify auto-action module structure by hiding internal engines and organizing the internal directory (v14.0).
 - ✓ [Service Layer Isolation] — Enforce strict service layer isolation in all Kafka listeners and smart aggregators by decoupling direct database access (v15.0).
+- [ ] [Auto Action Runtime Integration] — Connect auto-action rules to event consumers and GraphQL APIs with paginated reads, DataLoader batching, and simple service boundaries (v16.0).
 - [ ] [Multi-domain Triggers] — Evaluate events crossing project boundaries.
 - [ ] [Complex Predicates] — Evaluate conditions referencing recursive parent/child states.
+
+## Current Milestone: v16.0 Auto Action Runtime Integration
+
+**Goal:** Wire the auto-action module into the runtime event flow and GraphQL API so rules can be created, listed, loaded efficiently, and triggered when domain events fire.
+
+**Target features:**
+- Auto-action consumer triggers rules from domain events.
+- GraphQL auto-action mutations create/update required rule data through service functions.
+- GraphQL auto-action queries expose connection/edge pagination for lists.
+- DataLoader batches nested auto-action GraphQL loads.
+- New service functions keep module boundaries simple, modular, loosely coupled, and easy to follow.
+
+**Implementation constraints:**
+- Keep code modular, simple, and well organized.
+- Prefer small service functions over leaking queries into consumers/resolvers.
+- Follow SOLID where useful, KISS always.
+- Avoid tight coupling between Kafka consumer, GraphQL resolvers, and internal engines.
 
 ### Out of Scope
 
