@@ -3,6 +3,7 @@ import type {
     AutoActionUpdate,
     NewAutoAction,
 } from '../../database/tables/AutoAction.js';
+import type { DomainEvent } from '../../utils/event-bus';
 import type { EntityScope, ScopeTemplate } from './types.js';
 
 /**
@@ -41,6 +42,11 @@ export interface AutoActionService {
      * Returns undefined if not found.
      */
     getAutoActionById(id: string): Promise<AutoAction | undefined>;
+
+    /**
+     * Handles task domain events and triggers matching Auto Actions.
+     */
+    handleTaskEvents(events: DomainEvent[]): Promise<void>;
 
     /**
      * Builds a dynamic template catalog for a specific scope.

@@ -4,10 +4,12 @@ import type {
     NewAutoAction,
 } from '../../../../database/tables/AutoAction.js';
 import { logger } from '../../../../logger/index.js';
+import type { DomainEvent } from '../../../../utils/event-bus';
+import { KAFKA_EVENTS } from '../../../../utils/event-bus/constants.ts';
 import type { AutoActionService } from '../../AutoActionService.js';
 import {
     autoActionFlowSchema,
-    type EntityScope,
+    EntityScope,
     type ScopeTemplate,
 } from '../../types.js';
 import { executeAutoActionPipeline } from '../execution/executor.js';
@@ -16,11 +18,28 @@ import {
     deleteAutoActionById,
     insertAutoAction,
     selectActiveAutoActionByName,
+    selectActiveAutoActionsForProject,
     selectAutoActionById,
     selectAutoActionsForProject,
     updateAutoActionById,
 } from '../queries/AutoActionQueries.js';
 import { isFlowSyncSafe } from './validation.js';
+
+type TriggerDefinition = {
+    type?: string;
+    triggerType?: string;
+    eventType?: string;
+    scope?: string;
+};
+
+type NormalizedTaskEvent = {
+    triggerType: string;
+    projectId: string;
+    taskId: string;
+    actorId: string;
+    traceId: string;
+    wasSnapshot?: Record<string, any>;
+};
 
 export class AutoActionServiceImpl implements AutoActionService {
     // ─── Private Helpers ────────────────────────────────────────────────────────
@@ -59,6 +78,104 @@ export class AutoActionServiceImpl implements AutoActionService {
                     `Auto action is configured as synchronous but contains asynchronous steps (actions or conditions).`,
                 );
             }
+        }
+    }
+
+    private parseJsonArray(value: unknown): any[] {
+        if (Array.isArray(value)) return value;
+        if (typeof value !== 'string') return [];
+
+        try {
+            const parsed = JSON.parse(value);
+            return Array.isArray(parsed) ? parsed : [];
+        } catch {
+            return [];
+        }
+    }
+
+    private triggerMatches(
+        autoAction: AutoAction,
+        triggerType: string,
+        scope: EntityScope,
+    ): boolean {
+        const triggers = this.parseJsonArray(autoAction.triggers);
+
+        return triggers.some((trigger: TriggerDefinition | string) => {
+            if (typeof trigger === 'string') return trigger === triggerType;
+
+            const candidateType =
+                trigger.type || trigger.triggerType || trigger.eventType;
+            const candidateScope = trigger.scope;
+
+            return (
+                candidateType === triggerType &&
+                (!candidateScope || candidateScope === scope)
+            );
+        });
+    }
+
+    private normalizeTaskEvent(
+        event: DomainEvent,
+    ): NormalizedTaskEvent | undefined {
+        if (
+            event.type !== KAFKA_EVENTS.TASK.CREATED &&
+            event.type !== KAFKA_EVENTS.TASK.UPDATED
+        ) {
+            return undefined;
+        }
+
+        const data = event.data || {};
+        const projectId = data.projectId;
+        const taskId = data.taskId;
+        if (!projectId || !taskId) {
+            logger.warn(
+                `AutoActionService.handleTaskEvents: skipping malformed "${event.type}" event "${event.eventId}"`,
+            );
+            return undefined;
+        }
+
+        return {
+            triggerType: event.type,
+            projectId,
+            taskId,
+            actorId: data.actorId || 'system:auto-action',
+            traceId: data.traceId || event.eventId,
+            wasSnapshot:
+                data.old && typeof data.old === 'object'
+                    ? (data.old as Record<string, any>)
+                    : undefined,
+        };
+    }
+
+    private async executeMatchingTaskActions(
+        normalized: NormalizedTaskEvent,
+    ): Promise<void> {
+        const candidates = await selectActiveAutoActionsForProject(
+            normalized.projectId,
+        );
+        const matches = candidates.filter((autoAction) =>
+            this.triggerMatches(
+                autoAction,
+                normalized.triggerType,
+                EntityScope.TASK,
+            ),
+        );
+
+        if (matches.length === 0) {
+            logger.debug(
+                `AutoActionService.handleTaskEvents: no matches for "${normalized.triggerType}" in project "${normalized.projectId}"`,
+            );
+            return;
+        }
+
+        for (const autoAction of matches) {
+            await this.executePipeline(
+                autoAction.id,
+                normalized.taskId,
+                normalized.actorId,
+                normalized.traceId,
+                normalized.wasSnapshot,
+            );
         }
     }
 
@@ -210,6 +327,21 @@ export class AutoActionServiceImpl implements AutoActionService {
     async getAutoActionById(id: string): Promise<AutoAction | undefined> {
         logger.debug(`AutoActionService.getAutoActionById: fetching "${id}"`);
         return selectAutoActionById(id);
+    }
+
+    async handleTaskEvents(events: DomainEvent[]): Promise<void> {
+        if (events.length === 0) return;
+
+        logger.info(
+            `AutoActionService.handleTaskEvents: processing ${events.length} task event(s)`,
+        );
+
+        for (const event of events) {
+            const normalized = this.normalizeTaskEvent(event);
+            if (!normalized) continue;
+
+            await this.executeMatchingTaskActions(normalized);
+        }
     }
 
     getTemplateForScope(scope: EntityScope, isSync = false): ScopeTemplate {

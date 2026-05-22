@@ -29,6 +29,12 @@ export async function selectAutoActionById(
         .executeTakeFirst();
 }
 
+export async function selectAutoActionForExecution(
+    id: string,
+): Promise<AutoAction | undefined> {
+    return selectAutoActionById(id);
+}
+
 export async function updateAutoActionById(
     id: string,
     patch: Record<string, any>,
@@ -62,6 +68,18 @@ export async function selectAutoActionsForProject(
         .selectFrom('auto_action')
         .selectAll()
         .where('fk_project_id', '=', projectId)
+        .orderBy('created_at', 'asc')
+        .execute();
+}
+
+export async function selectActiveAutoActionsForProject(
+    projectId: string,
+): Promise<AutoAction[]> {
+    return db
+        .selectFrom('auto_action')
+        .selectAll()
+        .where('fk_project_id', '=', projectId)
+        .where('is_active', '=', true)
         .orderBy('created_at', 'asc')
         .execute();
 }

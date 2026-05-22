@@ -1,5 +1,6 @@
 import { logger } from '../logger';
 import { ProjectAggregated_ChangeUserProjectCount } from '../modules/auth/internal/listeners/ProjectAggregated_ChangeUserProjectCount.ts';
+import { AutoActionTaskEventConsumer } from '../modules/auto-action/internal/listeners/AutoActionTaskEventConsumer.ts';
 
 import { ProjectAggregated_ChangeProjectMemberCount } from '../modules/project/internal/listeners/ProjectAggregated_ChangeProjectMemberCount.ts';
 import { ProjectAggregated_DeleteProjectMember } from '../modules/project/internal/listeners/ProjectAggregated_DeleteProjectMember.ts';
@@ -82,6 +83,7 @@ export async function startConsumers() {
         new TaskAggregated_ReachabilitySyncListener();
     const taskBulkReachabilityCleanupListener =
         new TaskAggregated_DeleteTaskReachabilityListener();
+    const autoActionTaskEventConsumer = new AutoActionTaskEventConsumer();
 
     await Promise.all([
         projectAggregator.init(),
@@ -108,6 +110,7 @@ export async function startConsumers() {
         taskLinkCleanupListener.init(),
         taskReachabilitySyncListener.init(),
         taskBulkReachabilityCleanupListener.init(),
+        autoActionTaskEventConsumer.init(),
     ]);
 
     logger.info('[Registry] All domain consumers and listeners initialized');

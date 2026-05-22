@@ -1,9 +1,9 @@
-import { db } from '../../../../database/index.js';
 import { logger } from '../../../../logger/index.js';
 import type { PipelineStep } from '../../types.js';
 import { executeAction } from '../engines/actionEngine.js';
 import { evaluateConditionFromIndex } from '../engines/conditionEngine.js';
 import { fetchContext } from '../engines/contextEngine.js';
+import { selectAutoActionForExecution } from '../queries/AutoActionQueries.js';
 
 /**
  * Cursor for resuming a step mid-execution.
@@ -82,11 +82,7 @@ export async function executeAutoActionPipeline(
     startIndex = 0,
     startCursor?: StepResumeCursor,
 ): Promise<{ completed: boolean; lastProcessedIndex: number }> {
-    const autoAction = await db
-        .selectFrom('auto_action')
-        .selectAll()
-        .where('id', '=', autoActionId)
-        .executeTakeFirst();
+    const autoAction = await selectAutoActionForExecution(autoActionId);
 
     if (!autoAction) {
         throw new Error(`Auto Action "${autoActionId}" not found.`);
