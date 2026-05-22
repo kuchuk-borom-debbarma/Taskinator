@@ -1,3 +1,4 @@
+import * as autoActionLoaders from './autoAction';
 import * as projectLoaders from './project';
 import * as projectMemberLoaders from './projectMember';
 import * as taskLoaders from './task';
@@ -27,6 +28,10 @@ export const createLoaders = (_userId?: string) => {
         projectMember: {
             byId: projectMemberLoaders.byId(),
             byActorIdAndId: projectMemberLoaders.byActorIdAndId(),
+        },
+        autoAction: {
+            byId: autoActionLoaders.byId(),
+            byActorIdAndId: autoActionLoaders.byActorIdAndId(),
         },
     };
 };

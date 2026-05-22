@@ -1,5 +1,7 @@
 import { mergeResolvers } from '@graphql-tools/merge';
 import { authResolvers } from './auth';
+import { autoActionResolvers } from './autoAction';
+import { jsonScalarResolvers } from './jsonScalar';
 import { notificationResolvers } from './notification';
 import { projectResolvers } from './project';
 import { realtimeResolvers } from './realtime';
@@ -13,4 +15,6 @@ export const resolvers = mergeResolvers([
     notificationResolvers,
     realtimeResolvers,
     taskResolvers,
+    jsonScalarResolvers,
+    autoActionResolvers,
 ]);

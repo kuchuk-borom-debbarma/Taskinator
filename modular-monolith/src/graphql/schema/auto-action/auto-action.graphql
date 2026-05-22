@@ -1,0 +1,58 @@
+scalar JSON
+
+"""
+An automation rule that reacts to project domain events.
+"""
+type AutoAction {
+    id: ID!
+    project: Project!
+    name: String!
+    description: String
+    triggers: JSON!
+    steps: JSON!
+    isActive: Boolean!
+    isSync: Boolean!
+    version: Int!
+    createdAt: String!
+    updatedAt: String
+    createdBy: User!
+    updatedBy: User!
+}
+
+"""
+Relay-style paginated list of auto actions.
+"""
+type AutoActionConnection {
+    edges: [AutoActionEdge!]!
+    pageInfo: PageInfo!
+    totalCount: Int
+}
+
+type AutoActionEdge {
+    node: AutoAction!
+    cursor: String!
+}
+
+input CreateAutoActionInput {
+    projectId: ID!
+    name: String
+    description: String
+    triggers: JSON!
+    steps: JSON!
+    isActive: Boolean
+    isSync: Boolean
+}
+
+input UpdateAutoActionInput {
+    name: String
+    description: String
+    triggers: JSON
+    steps: JSON
+    isActive: Boolean
+    isSync: Boolean
+}
+
+type DeleteAutoActionPayload {
+    success: Boolean!
+    deletedId: ID!
+}

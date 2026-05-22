@@ -1,0 +1,38 @@
+extend type Query {
+    """
+    Fetches a single auto action by ID. Returns null if not found or not authorized.
+    """
+    autoAction(id: ID!): AutoAction
+
+    """
+    Fetches project auto actions using connection pagination.
+    """
+    autoActions(
+        projectId: ID!
+        first: Int
+        after: String
+        last: Int
+        before: String
+    ): AutoActionConnection!
+}
+
+extend type Mutation {
+    """
+    Creates an auto action rule.
+    """
+    createAutoAction(input: CreateAutoActionInput!): AutoAction!
+
+    """
+    Updates an auto action rule using optimistic concurrency.
+    """
+    updateAutoAction(
+        id: ID!
+        version: Int!
+        input: UpdateAutoActionInput!
+    ): AutoAction!
+
+    """
+    Deletes an auto action rule.
+    """
+    deleteAutoAction(id: ID!): DeleteAutoActionPayload!
+}

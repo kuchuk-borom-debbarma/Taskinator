@@ -3,8 +3,30 @@ import type {
     AutoActionUpdate,
     NewAutoAction,
 } from '../../database/tables/AutoAction.js';
+import type { Connection, PaginationParams } from '../../types/pagination.ts';
 import type { DomainEvent } from '../../utils/event-bus';
 import type { EntityScope, ScopeTemplate } from './types.js';
+
+export type AutoActionConnection = Connection<AutoAction>;
+
+export interface CreateAutoActionForActorInput {
+    projectId: string;
+    name?: string;
+    description?: string | null;
+    triggers?: any[];
+    steps?: any[];
+    isActive?: boolean;
+    isSync?: boolean;
+}
+
+export interface UpdateAutoActionForActorInput {
+    name?: string;
+    description?: string | null;
+    triggers?: any[];
+    steps?: any[];
+    isActive?: boolean;
+    isSync?: boolean;
+}
 
 /**
  * Public service interface for the Auto Action module.
@@ -42,6 +64,60 @@ export interface AutoActionService {
      * Returns undefined if not found.
      */
     getAutoActionById(id: string): Promise<AutoAction | undefined>;
+
+    /**
+     * Retrieves Auto Actions by IDs.
+     * Internal use only — callers must establish authorization first.
+     */
+    getAutoActionsByIds(ids: string[]): Promise<AutoAction[]>;
+
+    /**
+     * Retrieves a single Auto Action only if the actor can access its project.
+     */
+    getAutoActionForActor(
+        actorId: string,
+        id: string,
+    ): Promise<AutoAction | undefined>;
+
+    /**
+     * Retrieves Auto Actions by IDs, filtered by actor project access.
+     */
+    getAutoActionsForActorByIds(
+        actorId: string,
+        ids: string[],
+    ): Promise<AutoAction[]>;
+
+    /**
+     * Retrieves project Auto Actions as a Relay-style connection.
+     */
+    getAutoActionsForProjectConnection(
+        actorId: string,
+        projectId: string,
+        pagination?: PaginationParams,
+    ): Promise<AutoActionConnection>;
+
+    /**
+     * Creates a project Auto Action on behalf of an authorized actor.
+     */
+    createAutoActionForActor(
+        actorId: string,
+        input: CreateAutoActionForActorInput,
+    ): Promise<AutoAction>;
+
+    /**
+     * Updates an Auto Action on behalf of an authorized actor.
+     */
+    updateAutoActionForActor(
+        actorId: string,
+        id: string,
+        expectedVersion: number,
+        input: UpdateAutoActionForActorInput,
+    ): Promise<AutoAction>;
+
+    /**
+     * Deletes an Auto Action on behalf of an authorized actor.
+     */
+    deleteAutoActionForActor(actorId: string, id: string): Promise<void>;
 
     /**
      * Handles task domain events and triggers matching Auto Actions.
