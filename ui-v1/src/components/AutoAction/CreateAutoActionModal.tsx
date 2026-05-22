@@ -146,6 +146,9 @@ const CreateAutoActionModalContent: React.FC<CreateAutoActionModalProps> = ({
   const [error, setError] = useState<string | null>(null);
 
   // Form state
+  const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
+  const [isSync, setIsSync] = useState(false);
   const [triggers, setTriggers] = useState<string[]>([]);
   const [pipeline, setPipeline] = useState<any[]>(INITIAL_PIPELINE);
 
@@ -159,6 +162,9 @@ const CreateAutoActionModalContent: React.FC<CreateAutoActionModalProps> = ({
   useEffect(() => {
     if (open) {
       if (autoAction) {
+        setName(autoAction.name || '');
+        setDescription(autoAction.description || '');
+        setIsSync(autoAction.isSync || false);
         setTriggers(autoAction.triggers || []);
         const mappedPipeline = (autoAction.pipeline || []).map((stepItem: any) => {
           if (stepItem.__typename === 'AutoActionAction') {
@@ -260,15 +266,21 @@ const CreateAutoActionModalContent: React.FC<CreateAutoActionModalProps> = ({
         id: autoAction.id,
         version: autoAction.version,
         input: {
+          name,
+          description,
+          isSync,
           triggers,
-          pipeline: pipelineInput
+          steps: pipelineInput
         }
       });
     } else {
       mutation.mutate({
         projectId,
+        name,
+        description,
+        isSync,
         triggers,
-        pipeline: pipelineInput
+        steps: pipelineInput
       });
     }
   };
@@ -332,56 +344,101 @@ const CreateAutoActionModalContent: React.FC<CreateAutoActionModalProps> = ({
         <div className="flex-1 flex flex-col py-5 min-h-0 overflow-hidden">
           {/* Step 1: Triggers */}
           {step === 'triggers' && (
-            <div className="space-y-4 animate-in fade-in slide-in-from-bottom-2 duration-200 overflow-y-auto pr-2 h-full">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-app-muted">
-                Select when this rule should fire
-              </h4>
-              {isTemplateLoading ? (
-                <div className="flex flex-col gap-3">
-                  {[1, 2, 3].map((i) => (
-                    <div key={i} className="h-20 w-full animate-pulse rounded-2xl bg-app-line/20" />
-                  ))}
+            <div className="space-y-6 animate-in fade-in slide-in-from-bottom-2 duration-200 overflow-y-auto pr-2 h-full">
+              <div className="space-y-4">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-app-muted">
+                  Basic Information
+                </h4>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-app-muted uppercase px-1">Action Name</label>
+                    <input 
+                      type="text"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="e.g., Auto-assign developer"
+                      className="w-full rounded-xl border border-app-line bg-white/85 px-4 py-2.5 text-sm text-app-ink outline-none transition focus:border-app-accent focus:ring-2 focus:ring-app-accent/10"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-bold text-app-muted uppercase px-1">Execution Mode</label>
+                    <button
+                      type="button"
+                      onClick={() => setIsSync(!isSync)}
+                      className={`flex w-full items-center justify-between rounded-xl border px-4 py-2.5 transition ${
+                        isSync ? 'border-app-success/30 bg-app-success/5' : 'border-app-line bg-white/85'
+                      }`}
+                    >
+                      <span className="text-sm font-medium text-app-ink">
+                        {isSync ? 'Synchronous' : 'Asynchronous'}
+                      </span>
+                      <div className={`h-2 w-2 rounded-full ${isSync ? 'bg-app-success shadow-[0_0_8px_rgba(34,197,94,0.5)]' : 'bg-app-neutral'}`} />
+                    </button>
+                  </div>
                 </div>
-              ) : (
-                <div className="grid gap-3">
-                  {triggerOptions.map((opt: any) => {
-                    const isSelected = triggers.includes(opt.type);
-                    return (
-                      <button
-                        key={opt.type}
-                        type="button"
-                        onClick={() => toggleTrigger(opt.type)}
-                        className={`group flex items-start gap-3.5 rounded-2xl border p-4 text-left transition ${
-                          isSelected
-                            ? 'border-app-accent bg-app-accent-soft ring-2 ring-app-accent/10'
-                            : 'border-app-line bg-white/60 hover:border-app-accent/30 hover:bg-white/90'
-                        }`}
-                      >
-                        <div
-                          className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition ${
-                            isSelected ? 'border-app-accent bg-app-accent text-white' : 'border-app-line bg-white group-hover:border-app-accent/50'
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-bold text-app-muted uppercase px-1">Description</label>
+                  <textarea 
+                    value={description}
+                    onChange={(e) => setDescription(e.target.value)}
+                    placeholder="Describe what this automation does..."
+                    rows={2}
+                    className="w-full rounded-xl border border-app-line bg-white/85 px-4 py-2.5 text-sm text-app-ink outline-none transition focus:border-app-accent focus:ring-2 focus:ring-app-accent/10 resize-none"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-app-muted">
+                  Select when this rule should fire
+                </h4>
+                {isTemplateLoading ? (
+                  <div className="flex flex-col gap-3">
+                    {[1, 2, 3].map((i) => (
+                      <div key={i} className="h-20 w-full animate-pulse rounded-2xl bg-app-line/20" />
+                    ))}
+                  </div>
+                ) : (
+                  <div className="grid gap-3">
+                    {triggerOptions.map((opt: any) => {
+                      const isSelected = triggers.includes(opt.type);
+                      return (
+                        <button
+                          key={opt.type}
+                          type="button"
+                          onClick={() => toggleTrigger(opt.type)}
+                          className={`group flex items-start gap-3.5 rounded-2xl border p-4 text-left transition ${
+                            isSelected
+                              ? 'border-app-accent bg-app-accent-soft ring-2 ring-app-accent/10'
+                              : 'border-app-line bg-white/60 hover:border-app-accent/30 hover:bg-white/90'
                           }`}
                         >
-                          {isSelected && (
-                            <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
-                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                            </svg>
-                          )}
-                        </div>
-                        <div>
-                          <p className="text-sm font-semibold text-app-ink">{opt.name}</p>
-                          <p className="mt-1 text-xs leading-relaxed text-app-muted">{opt.description}</p>
-                        </div>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-              {triggers.length === 0 && (
-                <p className="text-xs italic text-app-muted text-center mt-3">
-                  * Select at least one trigger to continue.
-                </p>
-              )}
+                          <div
+                            className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition ${
+                              isSelected ? 'border-app-accent bg-app-accent text-white' : 'border-app-line bg-white group-hover:border-app-accent/50'
+                            }`}
+                          >
+                            {isSelected && (
+                              <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                              </svg>
+                            )}
+                          </div>
+                          <div>
+                            <p className="text-sm font-semibold text-app-ink">{opt.name}</p>
+                            <p className="mt-1 text-xs leading-relaxed text-app-muted">{opt.description}</p>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+                {triggers.length === 0 && (
+                  <p className="text-xs italic text-app-muted text-center mt-3">
+                    * Select at least one trigger to continue.
+                  </p>
+                )}
+              </div>
             </div>
           )}
 
