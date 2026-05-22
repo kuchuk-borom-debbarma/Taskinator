@@ -12,15 +12,15 @@
 - ✅ **v12.0 Tied Rule Orchestration** — Phase 36 (shipped 2026-05-21) [.planning/v12.0-MILESTONE-AUDIT.md]
 - ✅ **v13.0 Auto Action Re-sectoring** — Phase 37 (shipped 2026-05-21) [.planning/milestones/v13.0-ROADMAP.md]
 - ✅ **v14.0 Hide Internal Engines** — Phase 38 (shipped 2026-05-21) [.planning/milestones/v14.0-ROADMAP.md]
-- 🔄 **v15.0 Service Layer Isolation** — Phases 39-41 (Planned) [.planning/milestones/v15.0-ROADMAP.md]
+- ✅ **v15.0 Service Layer Isolation** — Phases 39-41 (shipped 2026-05-22) [.planning/milestones/v15.0-ROADMAP.md]
 
 ## Progress
 
 | Phase | Milestone | Plans Complete | Status | Completed |
 |---|---|---|---|---|
 | 39. Smart Aggregator Isolation | v15.0 | 7/7 | Complete    | 2026-05-22 |
-| 40. Intra-Module Listener Decoupling | v15.0 | 0/1 | ⏳ Pending | - |
-| 41. Inter-Module Listener Service Delegation | v15.0 | 0/1 | ⏳ Pending | - |
+| 40. Intra-Module Listener Decoupling | v15.0 | 1/1 | Complete    | 2026-05-22 |
+| 41. Inter-Module Listener Service Delegation | v15.0 | 1/1 | Complete    | 2026-05-22 |
 | 38. Hide Internal Engines | v14.0 | 1/1 | ✅ Shipped | 2026-05-21 |
 | 37. Auto Action Re-sectoring | v13.0 | 1/1 | ✅ Shipped | 2026-05-21 |
 
@@ -38,3 +38,17 @@
 - [x] 39-05-PLAN.md — Team Module Isolation
 - [x] 39-06-PLAN.md — Task Module - Reachability & Graph
 - [x] 39-07-PLAN.md — Task Module - Assignments & Project Deletions
+
+### Phase 40: Intra-Module Listener Decoupling
+**Goal:** Verify module listeners no longer own raw SQL or direct database write logic.
+**Requirements:** R2
+
+**Plans:**
+- [x] 40-01-PLAN.md — Intra-Module Listener Decoupling Audit
+
+### Phase 41: Inter-Module Listener Service Delegation
+**Goal:** Verify listener write paths respect module boundaries through service delegation.
+**Requirements:** R3, R4
+
+**Plans:**
+- [x] 41-01-PLAN.md — Inter-Module Listener Delegation Audit

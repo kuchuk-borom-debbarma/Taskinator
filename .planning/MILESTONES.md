@@ -1,12 +1,20 @@
 # Milestones
 
-## v15.0 Service Layer Isolation (Planned: 2026-05-21)
+## v15.0 Service Layer Isolation (Shipped: 2026-05-22)
 
-**Goals:**
-- Enforce strict Service Layer isolation across all Kafka listeners and smart aggregators.
-- Decouple listeners and aggregators from direct database access (`db`).
-- Delegate domain mutations to internal `queries/` or public `service/` interfaces.
-- Ensure services manage their own transactions for cleaner module boundaries.
+**Phases completed:** 3 phases, 9 plans, 20 tasks
+
+**Key accomplishments:**
+
+- Generic AggregatorService now owns atomic claim-fold-outbox processing, with ProjectEvents_BatchAggregator refactored onto the shared service.
+- Task and Team smart aggregators now share AggregatorService for atomic batch processing while preserving their domain-specific folding logic.
+- AuthService now handles aggregated user project count synchronization behind the service boundary, with the Kafka listener reduced to delegation.
+- ProjectService now owns project aggregate listener writes for counts and memberships, with project listeners reduced to service delegation.
+- TeamService now owns team aggregate listener writes for counts, project-driven purges, and team membership purges, with team listeners reduced to service delegation.
+- TaskService now owns task graph listener writes for reachability sync, task link cleanup, and chunked reachability cleanup.
+- TaskService now owns the remaining task cleanup and assignment listener writes, completing task module listener delegation.
+- Phase 40 is closed as an audit-backed gap closure: module listeners have no direct database, raw SQL, or query-builder mutation usage and delegate event batches to module services.
+- Phase 41 is closed as an audit-backed gap closure: listener write paths delegate to module services, with transaction/idempotency ownership kept inside services.
 
 ---
 
@@ -15,6 +23,7 @@
 **Phases completed:** 1 phase, 1 plan, 7 tasks
 
 **Key accomplishments:**
+
 - **Dynamic Database Context Resolver Registry**: Designed a generic resolver structure to fetch database entities for any scope and built the central `ContextResolverRegistry`.
 - **Advanced Snapshot Merging**: Implemented dynamic wasSnapshot overlays in `scopes/task/context.ts` mapping and normalizing snake_case, camelCase GraphQL aliases, and explicit keys.
 - **Strict Zod Type-Safety**: Leveraged schema validation checks via Zod to enforce runtime type compliance prior to AST condition check evaluation.
@@ -27,6 +36,7 @@
 **Phases completed:** 1 phase, 1 plan, 7 tasks
 
 **Key accomplishments:**
+
 - **Decoupled Engines Implementation**: Created `conditionEngine.ts` and `actionEngine.ts` to manage stateless AST evaluation and validation-backed action execution completely independently.
 - **Optimistic Concurrency & OCC**: Integrated fresh-fetching and optimistic concurrency locking guarantees inside action execution flows.
 - **Decoupled Testing**: Rewrote the entire module unit tests to fully assert separate engines independently, with 23/23 tests passing.
@@ -38,6 +48,7 @@
 **Phases completed:** 3 phases, 3 plans, 3 tasks
 
 **Key accomplishments:**
+
 - **Transition-Focused Condition Nodes**: Replaced generic comparison operators with 10 strict, transition-focused predicates (`TaskFieldChangedTo`, `TaskTeamAssigned`, etc.) ensuring robust event trigger checking.
 - **Dynamic Condition Registry**: Created a registerable `ConditionDefinition` interface to support dynamic, multi-scope trigger, action, and condition registration.
 - **Decoupled Template Serialization**: Extracted all frontend template compilation into an isolated `template.ts` module, completely eliminating circular dependencies between the global registry and task schemas.
@@ -49,6 +60,7 @@
 **Phases completed:** 2 phases, 4 plans, 6 tasks
 
 **Key accomplishments:**
+
 - **CTE Bulk Outbox Writes**: Enabled single-query heterogeneous updates and outbox writing inside a single database transaction, optimized for 10k RPS.
 - **Asynchronous Depth Guards**: Integrated TraceId + depth propagation across recursive event flows and Kafka listeners, blocking loop execution with a strict maximum boundary of 50 depth hops.
 

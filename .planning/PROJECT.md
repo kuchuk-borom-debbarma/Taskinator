@@ -42,7 +42,7 @@ Automate the "busy work" of project management through reliable, transparent, an
 - ✓ [Tied Rule Orchestration] — Tie independent triggers, conditions, actions, and context resolvers together into unified execution rules (v12.0).
 - ✅ [Auto Action Re-sectoring] — Restructure the auto-action module to match the established Controller/Service/Queries pattern; route cross-module operations through service interfaces (v13.0).
 - ✅ [Hide Internal Engines] — Simplify auto-action module structure by hiding internal engines and organizing the internal directory (v14.0).
-- [ ] [Service Layer Isolation] — Enforce strict service layer isolation in all Kafka listeners and smart aggregators by decoupling direct database access (v15.0).
+- ✓ [Service Layer Isolation] — Enforce strict service layer isolation in all Kafka listeners and smart aggregators by decoupling direct database access (v15.0).
 - [ ] [Multi-domain Triggers] — Evaluate events crossing project boundaries.
 - [ ] [Complex Predicates] — Evaluate conditions referencing recursive parent/child states.
 
@@ -51,9 +51,9 @@ Automate the "busy work" of project management through reliable, transparent, an
 - [Cron-based Triggers] — Reactive/event-driven architecture remains primary focus.
 - [External Service Actions] — Scope confined to internal Taskinator domain mutations.
 
-## Current State (Post-Phase 39)
+## Current State (Post-v15.0)
 
-Phase 39 of v15.0 is complete. Smart aggregators and aggregated Kafka listener write paths now delegate transaction, idempotency, and domain write orchestration to module service layers. Focused service-isolation tests cover aggregator lifecycle, auth/project/team batch sync, task graph cleanup, and task assignment/project cleanup flows.
+v15.0 Service Layer Isolation is complete. Smart aggregators and aggregated Kafka listener write paths now delegate transaction, idempotency, and domain write orchestration to module service layers. Focused service-isolation tests cover aggregator lifecycle, auth/project/team batch sync, task graph cleanup, task assignment/project cleanup flows, and verification-backed listener boundary audits.
 
 ## Key Decisions
 
@@ -77,11 +77,11 @@ Phase 39 of v15.0 is complete. Smart aggregators and aggregated Kafka listener w
 | Tied Rule Orchestration | Sequential pipeline executor binding context, conditions, and actions; persistent prev_ columns for concurrent-safe transition state; condition splitting for future async chunking. | **Complete (v12.0)** |
 | Auto Action Re-sectoring | Service interface + internal Queries/ServiceImpl pattern; task scope goes through taskService not bare db. | **Complete (v13.0)** |
 | Internal Engine Hiding | Organize internal/ into functional sub-folders and hide all execution engines behind the service layer. | **Complete (v14.0)** |
-| Service Layer Isolation | Decouple DB access from listeners/aggregators; enforce delegation to service interfaces or module-internal queries. | **Phase 39 Complete (v15.0)** |
+| Service Layer Isolation | Decouple DB access from listeners/aggregators; enforce delegation to service interfaces or module-internal queries. | **Complete (v15.0)** |
 
 ## Evolution
 
 This document evolves at phase transitions and milestone boundaries.
 
 ---
-*Last updated: 2026-05-22 — Phase 39 complete; v15.0 continues with Phases 40-41*
+*Last updated: 2026-05-22 — v15.0 milestone complete*

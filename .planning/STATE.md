@@ -2,21 +2,22 @@
 gsd_state_version: 1.0
 milestone: v15.0
 milestone_name: Service Layer Isolation
-status: in_progress
-last_updated: "2026-05-21T20:00:25.235Z"
+status: Awaiting next milestone
+last_updated: "2026-05-22T06:40:42.657Z"
+last_activity: 2026-05-22 — Milestone v15.0 completed and archived
 progress:
   total_phases: 3
-  completed_phases: 1
+  completed_phases: 3
   total_plans: 9
-  completed_plans: 7
-  percent: 78
+  completed_plans: 9
+  percent: 100
 ---
 
 # Project State
 
 ## Current Milestone: v15.0 Service Layer Isolation
 
-## Current Phase: Phase 40: Intra-Module Listener Decoupling
+## Current Phase: v15.0 archived
 
 ## Recent Progress
 
@@ -31,11 +32,25 @@ progress:
 - Completed Phase 39 Plan 39-06: Task Module - Reachability & Graph.
 - Completed Phase 39 Plan 39-07: Task Module - Assignments & Project Deletions.
 - Completed Phase 39 verification and marked Smart Aggregator Isolation complete.
+- Completed Phase 40 verification and marked Intra-Module Listener Decoupling complete.
+- Completed Phase 41 verification and marked Inter-Module Listener Service Delegation complete.
+- Closed v15.0 milestone audit gaps and marked milestone ready to archive.
 
 ## Known Issues
 
-- Phases 40 and 41 remain pending in v15.0.
+- None for v15.0 milestone closure.
 
 ## Next Steps
 
-- Start Phase 40: Intra-Module Listener Decoupling.
+- Start the next milestone with `$gsd-new-milestone`.
+
+## Current Position
+
+Phase: Milestone v15.0 complete
+Plan: —
+Status: Awaiting next milestone
+Last activity: 2026-05-22 — Milestone v15.0 completed and archived
+
+## Operator Next Steps
+
+- Start the next milestone with /gsd-new-milestone
