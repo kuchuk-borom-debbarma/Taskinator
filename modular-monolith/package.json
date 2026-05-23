@@ -41,9 +41,9 @@
         "jest": "^30.3.0",
         "jsonwebtoken": "^9.0.3",
         "kafkajs": "^2.2.4",
-        "kysely": "^0.28.14",
+        "kysely": "^0.28.17",
         "lodash": "^4.17.23",
-        "pg": "^8.20.0",
+        "pg": "^8.21.0",
         "safe-stable-stringify": "^2.5.0",
         "uuid": "^13.0.0",
         "winston": "^3.19.0"

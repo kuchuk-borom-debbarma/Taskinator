@@ -688,6 +688,7 @@ export class AutoActionServiceImpl implements AutoActionService {
         wasSnapshot: any,
         startIndex = 0,
         startCursor?: any,
+        maxSteps?: number,
     ): Promise<any> {
         return executeAutoActionPipeline(
             autoActionId,
@@ -697,6 +698,7 @@ export class AutoActionServiceImpl implements AutoActionService {
             wasSnapshot,
             startIndex,
             startCursor,
+            maxSteps,
         );
     }
 }

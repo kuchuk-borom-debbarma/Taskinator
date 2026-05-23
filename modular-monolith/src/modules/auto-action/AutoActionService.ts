@@ -149,5 +149,6 @@ export interface AutoActionService {
         wasSnapshot: any,
         startIndex?: number,
         startCursor?: any,
+        maxSteps?: number,
     ): Promise<any>;
 }

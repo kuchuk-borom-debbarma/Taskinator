@@ -1,0 +1,13 @@
+{
+    "workflow": {
+        "mode": "auto",
+        "research": true,
+        "requirements": true,
+        "roadmap": true
+    },
+    "preferences": {
+        "testing": "E2E Heavy",
+        "execution": "Kafka Native",
+        "migration": "Fresh Start"
+    }
+}
