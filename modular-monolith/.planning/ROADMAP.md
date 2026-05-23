@@ -3,13 +3,12 @@
 ## Phase 1: Database & Schema Evolution
 **Plans:** 1 plan
 
-- [ ] 01-01-PLAN.md — Create behavior_rule table and wipe legacy auto_action data.
+- [x] 01-01-PLAN.md — Create behavior_rule table and wipe legacy auto_action data.
 
 ## Phase 2: Pre-Action Guards (Preventive)
-- [ ] Implement guard hook pipeline in `TaskServiceImpl`.
-- [ ] Add `PARENT_DELETE_GUARD` logic.
-- [ ] Add `BLOCKER_SAFETY_GUARD` logic.
-- [ ] Add `MEMBER_ASSIGNMENT_GUARD` logic.
+**Plans:** 1 plan
+
+- [ ] 02-01-PLAN.md — Implement guard hook pipeline, logic for PARENT_DELETE_GUARD, BLOCKER_SAFETY_GUARD, and MEMBER_ASSIGNMENT_GUARD.
 
 ## Phase 3: Post-Action Cascades (Reactive)
 - [ ] Refactor `AutoActionTaskEventConsumer` to use CWB rules.

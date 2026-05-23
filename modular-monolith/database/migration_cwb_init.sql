@@ -28,5 +28,10 @@ CREATE TABLE IF NOT EXISTS behavior_rule (
 CREATE INDEX IF NOT EXISTS idx_behavior_rule_project ON behavior_rule(fk_project_id);
 CREATE INDEX IF NOT EXISTS idx_behavior_rule_task ON behavior_rule(fk_task_id) WHERE fk_task_id IS NOT NULL;
 
--- Wipe legacy auto_action data
-TRUNCATE TABLE auto_action CASCADE;
+-- Wipe legacy auto_action data safely
+DO $$ 
+BEGIN 
+    IF EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'auto_action') THEN
+        EXECUTE 'TRUNCATE TABLE auto_action CASCADE';
+    END IF;
+END $$;
