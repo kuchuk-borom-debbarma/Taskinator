@@ -55,4 +55,63 @@ export interface TaskAPI {
     links: TaskLink[],
     pageInfo: PageInfo,
   }>;
+
+  getBehaviorSettingsCatalog(projectId: string): Promise<BehaviorSettingsCatalog>;
+  getBehaviorRules(projectId: string): Promise<BehaviorRule[]>;
+  createBehaviorRule(input: CreateBehaviorRuleInput): Promise<BehaviorRule>;
+  updateBehaviorRule(id: string, version: number, input: UpdateBehaviorRuleInput): Promise<BehaviorRule>;
+  deleteBehaviorRule(id: string): Promise<boolean>;
 }
+
+export interface BehaviorSetting {
+  id: string;
+  name: string;
+  description: string;
+  category: 'GUARD' | 'CASCADE' | 'AUTOMATION';
+  defaultValue: boolean;
+}
+
+export interface BehaviorSettingsCatalog {
+  settings: BehaviorSetting[];
+}
+
+export interface BehaviorRule {
+  id: string;
+  name: string;
+  isActive: boolean;
+  behaviorType: string;
+  fkTaskId: string | null;
+  criteriaField: string | null;
+  criteriaOperator: string | null;
+  criteriaValue: string | null;
+  actionMessage: string | null;
+  actionValue: string | null;
+  version: number;
+  createdAt: string;
+  updatedAt: string | null;
+}
+
+export interface CreateBehaviorRuleInput {
+  projectId: string;
+  name: string;
+  behaviorType: string;
+  isActive?: boolean;
+  fkTaskId?: string | null;
+  criteriaField?: string | null;
+  criteriaOperator?: string | null;
+  criteriaValue?: string | null;
+  actionMessage?: string | null;
+  actionValue?: string | null;
+}
+
+export interface UpdateBehaviorRuleInput {
+  name?: string;
+  isActive?: boolean;
+  fkTaskId?: string | null;
+  criteriaField?: string | null;
+  criteriaOperator?: string | null;
+  criteriaValue?: string | null;
+  actionMessage?: string | null;
+  actionValue?: string | null;
+}
+

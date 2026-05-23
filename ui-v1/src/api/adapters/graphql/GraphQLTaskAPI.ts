@@ -1,4 +1,4 @@
-import type { TaskAPI } from '../../interfaces/TaskAPI';
+import type { TaskAPI, BehaviorRule, BehaviorSettingsCatalog, CreateBehaviorRuleInput, UpdateBehaviorRuleInput } from '../../interfaces/TaskAPI';
 import type { PageInfo, PaginationArgs, ProjectTask, TaskLink, NeighbourDirection } from '../../types';
 import { AuthenticationError } from '../../errors';
 
@@ -369,5 +369,102 @@ export class GraphQLTaskAPI implements TaskAPI {
       depthLimit,
       pagination
     );
+  }
+
+  async getBehaviorSettingsCatalog(projectId: string): Promise<BehaviorSettingsCatalog> {
+    const data = await this.query<any>(gql`
+      query GetBehaviorSettingsCatalog($projectId: ID!) {
+        behaviorSettingsCatalog(projectId: $projectId) {
+          settings {
+            id
+            name
+            description
+            category
+            defaultValue
+          }
+        }
+      }
+    `, { projectId });
+    return data.behaviorSettingsCatalog;
+  }
+
+  async getBehaviorRules(projectId: string): Promise<BehaviorRule[]> {
+    const data = await this.query<any>(gql`
+      query GetBehaviorRules($projectId: ID!) {
+        behaviorRules(projectId: $projectId) {
+          id
+          name
+          isActive
+          behaviorType
+          fkTaskId
+          criteriaField
+          criteriaOperator
+          criteriaValue
+          actionMessage
+          actionValue
+          version
+          createdAt
+          updatedAt
+        }
+      }
+    `, { projectId });
+    return data.behaviorRules;
+  }
+
+  async createBehaviorRule(input: CreateBehaviorRuleInput): Promise<BehaviorRule> {
+    const data = await this.query<any>(gql`
+      mutation CreateBehaviorRule($input: CreateBehaviorRuleInput!) {
+        createBehaviorRule(input: $input) {
+          id
+          name
+          isActive
+          behaviorType
+          fkTaskId
+          criteriaField
+          criteriaOperator
+          criteriaValue
+          actionMessage
+          actionValue
+          version
+          createdAt
+          updatedAt
+        }
+      }
+    `, { input });
+    return data.createBehaviorRule;
+  }
+
+  async updateBehaviorRule(id: string, version: number, input: UpdateBehaviorRuleInput): Promise<BehaviorRule> {
+    const data = await this.query<any>(gql`
+      mutation UpdateBehaviorRule($id: ID!, $version: Int!, $input: UpdateBehaviorRuleInput!) {
+        updateBehaviorRule(id: $id, version: $version, input: $input) {
+          id
+          name
+          isActive
+          behaviorType
+          fkTaskId
+          criteriaField
+          criteriaOperator
+          criteriaValue
+          actionMessage
+          actionValue
+          version
+          createdAt
+          updatedAt
+        }
+      }
+    `, { id, version, input });
+    return data.updateBehaviorRule;
+  }
+
+  async deleteBehaviorRule(id: string): Promise<boolean> {
+    const data = await this.query<any>(gql`
+      mutation DeleteBehaviorRule($id: ID!) {
+        deleteBehaviorRule(id: $id) {
+          success
+        }
+      }
+    `, { id });
+    return data.deleteBehaviorRule.success;
   }
 }
