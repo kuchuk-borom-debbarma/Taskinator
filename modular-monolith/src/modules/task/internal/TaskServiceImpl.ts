@@ -21,6 +21,7 @@ import type {
     TaskReachabilityLinkChange,
     TaskService,
 } from '../TaskService.ts';
+import { guardService } from './GuardService.ts';
 import {
     BULK_DELETE_CHUNK_SIZE,
     contractTaskReachability,
@@ -171,6 +172,9 @@ export class TaskServiceImpl implements TaskService {
         ) {
             throw new Error('Task title must be between 3 and 255 characters.');
         }
+
+        await guardService.evaluateGuards('update', param);
+
         const result = await updateTask(param);
 
         // SYNC ORCHESTRATION (ORCH-01)
@@ -207,6 +211,9 @@ export class TaskServiceImpl implements TaskService {
         logger.info(
             `TaskService.deleteTask started for ${param.taskId} by ${param.actorId}`,
         );
+
+        await guardService.evaluateGuards('delete', param);
+
         const result = await deleteTask(param);
         logger.info(`TaskService.deleteTask successful: ${param.taskId}`);
         return result;
