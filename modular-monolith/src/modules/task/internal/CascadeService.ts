@@ -22,7 +22,7 @@ export class CascadeService {
                     .selectFrom('task_link')
                     .select('target_task_id')
                     .where('source_task_id', '=', taskId)
-                    .where('label', '=', 'BLOCKER')
+                    .where('label', '=', 'blocks')
                     .where((eb) =>
                         eb.not(
                             eb.exists(
@@ -38,7 +38,7 @@ export class CascadeService {
                                         '=',
                                         'task_link.target_task_id',
                                     )
-                                    .where('tl2.label', '=', 'BLOCKER')
+                                    .where('tl2.label', '=', 'blocks')
                                     .where('tl2.source_task_id', '!=', taskId)
                                     .where('pt2.status', '!=', 'DONE'),
                             ),

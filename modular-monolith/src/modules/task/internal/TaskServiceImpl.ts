@@ -141,6 +141,8 @@ export class TaskServiceImpl implements TaskService {
                 teamId: result.teamId,
                 memberId: result.memberId,
                 title: result.title,
+                status: result.status,
+                priority: result.priority,
                 actorId: param.actorId,
                 traceId: param.traceId,
             },
@@ -188,6 +190,7 @@ export class TaskServiceImpl implements TaskService {
                 memberId: result.memberId,
                 title: result.title,
                 status: result.status,
+                priority: result.priority,
                 actorId: param.actorId,
                 traceId: param.traceId,
                 old: {
@@ -195,6 +198,7 @@ export class TaskServiceImpl implements TaskService {
                     memberId: (result as any).prev_member_id,
                     title: (result as any).prev_title,
                     status: (result as any).prev_status,
+                    priority: (result as any).prev_priority,
                 },
             },
         });
@@ -215,6 +219,16 @@ export class TaskServiceImpl implements TaskService {
         await guardService.evaluateGuards('delete', param);
 
         const result = await deleteTask(param);
+
+        await syncActionRegistry.executeHandlers('task.deleted', {
+            type: KAFKA_EVENTS.TASK.DELETED,
+            data: {
+                taskId: param.taskId,
+                projectId: param.projectId,
+                actorId: param.actorId,
+            },
+        });
+
         logger.info(`TaskService.deleteTask successful: ${param.taskId}`);
         return result;
     }

@@ -18,7 +18,10 @@ function matchesCriteria(taskData: any, rule: BehaviorRule): boolean {
         return true;
     }
 
-    const taskValue = taskData[rule.criteria_field];
+    // Handle both flat data (created) and old/new state (updated)
+    const currentData = taskData.new ?? taskData;
+    const taskValue = currentData[rule.criteria_field];
+
     if (taskValue === undefined) {
         return false;
     }

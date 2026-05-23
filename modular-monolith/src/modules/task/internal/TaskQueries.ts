@@ -697,6 +697,8 @@ export const insertTask = async (param: {
                     'teamId', "teamId",
                     'memberId', "memberId",
                     'title', title,
+                    'status', status,
+                    'priority', priority,
                     'actorId', ${param.actorId}::text,
                     'traceId', ${param.traceId}::text
                 )
@@ -766,7 +768,7 @@ export const updateTask = async (param: {
 
     const result = await sql<Task>`
         WITH old_state AS (
-            SELECT fk_team_id, fk_member_id, title, status 
+            SELECT fk_team_id, fk_member_id, title, status, priority
             FROM project_task 
             WHERE id = ${param.taskId}::uuid
         ),
@@ -853,13 +855,15 @@ export const updateTask = async (param: {
                         'teamId', o.fk_team_id,
                         'memberId', o.fk_member_id,
                         'title', o.title,
-                        'status', o.status
+                        'status', o.status,
+                        'priority', o.priority
                     ),
                     'new', jsonb_build_object(
                         'teamId', u."teamId",
                         'memberId', u."memberId",
                         'title', u.title,
-                        'status', u.status
+                        'status', u.status,
+                        'priority', u.priority
                     ),
                     'actorId', ${param.actorId}::text,
                     'traceId', ${param.traceId}::text
