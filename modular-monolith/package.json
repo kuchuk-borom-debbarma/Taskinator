@@ -52,7 +52,7 @@
         "format": "biome check --write --unsafe .",
         "clean-format": "biome check --write --unsafe .",
         "check-types": "bun x tsc --noEmit",
-        "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand --testMatch=\"**/*.test.ts\"",
+        "test": "node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand --testMatch=\"<rootDir>/src/modules/**/*.test.ts\"",
         "test:e2e": "bun run test:e2e:open && bun run test:e2e:run ; bun run test:e2e:close",
         "test:e2e:open": "bun run test:e2e:up && DB_PORT=5435 bun run src/tests/e2e/scripts/apply-schema.ts",
         "test:e2e:run": "DB_PORT=5435 KAFKA_BROKERS=localhost:9094 REDIS_URL=redis://localhost:6380 bun test src/tests/e2e --concurrency 1",

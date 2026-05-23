@@ -1,12 +1,11 @@
 import { logger } from '../logger';
 import { ProjectAggregated_ChangeUserProjectCount } from '../modules/auth/internal/listeners/ProjectAggregated_ChangeUserProjectCount.ts';
-import { AutoActionTaskEventConsumer } from '../modules/auto-action/internal/listeners/AutoActionTaskEventConsumer.ts';
-
 import { ProjectAggregated_ChangeProjectMemberCount } from '../modules/project/internal/listeners/ProjectAggregated_ChangeProjectMemberCount.ts';
 import { ProjectAggregated_DeleteProjectMember } from '../modules/project/internal/listeners/ProjectAggregated_DeleteProjectMember.ts';
 import { ProjectAggregated_RemoveProjectMember } from '../modules/project/internal/listeners/ProjectAggregated_RemoveProjectMember.ts';
 import { TaskAggregated_SyncProjectTaskCountListener } from '../modules/project/internal/listeners/TaskAggregated_SyncProjectTaskCountListener.ts';
 import { TeamAggregated_SyncProjectTeamCountListener } from '../modules/project/internal/listeners/TeamAggregated_SyncProjectTeamCountListener.ts';
+import { BehaviorTaskEventConsumer } from '../modules/task/internal/listeners/BehaviorTaskEventConsumer.ts';
 import { ProjectAggregated_DeleteProjectReachability } from '../modules/task/internal/listeners/ProjectAggregated_DeleteProjectReachability.ts';
 import { ProjectAggregated_DeleteProjectTask } from '../modules/task/internal/listeners/ProjectAggregated_DeleteProjectTask.ts';
 import { ProjectAggregated_DeleteProjectTaskLink } from '../modules/task/internal/listeners/ProjectAggregated_DeleteProjectTaskLink.ts';
@@ -83,7 +82,7 @@ export async function startConsumers() {
         new TaskAggregated_ReachabilitySyncListener();
     const taskBulkReachabilityCleanupListener =
         new TaskAggregated_DeleteTaskReachabilityListener();
-    const autoActionTaskEventConsumer = new AutoActionTaskEventConsumer();
+    const behaviorTaskEventConsumer = new BehaviorTaskEventConsumer();
 
     await Promise.all([
         projectAggregator.init(),
@@ -110,7 +109,7 @@ export async function startConsumers() {
         taskLinkCleanupListener.init(),
         taskReachabilitySyncListener.init(),
         taskBulkReachabilityCleanupListener.init(),
-        autoActionTaskEventConsumer.init(),
+        behaviorTaskEventConsumer.init(),
     ]);
 
     logger.info('[Registry] All domain consumers and listeners initialized');

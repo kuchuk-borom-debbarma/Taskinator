@@ -1,6 +1,25 @@
+import type {
+    BehaviorRule,
+    BehaviorRuleUpdate,
+    NewBehaviorRule,
+} from '../../database/tables/BehaviorRule.ts';
 import type { PaginationParams as SharedPaginationParams } from '../../types/pagination.ts';
 import type { DomainEvent } from '../../utils/event-bus';
 import type { BaseService } from './index.ts';
+
+export type { BehaviorRule, BehaviorRuleUpdate, NewBehaviorRule };
+
+export type BehaviorSetting = {
+    id: string;
+    name: string;
+    description: string;
+    category: 'GUARD' | 'CASCADE' | 'AUTOMATION';
+    defaultValue: boolean;
+};
+
+export type BehaviorSettingsCatalog = {
+    settings: BehaviorSetting[];
+};
 
 export type TaskStatus = string;
 
@@ -221,6 +240,36 @@ export interface TaskService extends BaseService {
     handleUnassignMemberFromTeamTasks(
         events: DomainEvent<{ teamId: string; userIds: string[] }>[],
     ): Promise<void>;
+
+    // Configurable Workspace Behaviors (CWB) Management
+    createBehaviorRule(
+        actorId: string,
+        rule: Omit<NewBehaviorRule, 'created_by' | 'updated_by'>,
+    ): Promise<BehaviorRule>;
+
+    updateBehaviorRule(
+        actorId: string,
+        id: string,
+        patch: Omit<BehaviorRuleUpdate, 'updated_by'>,
+        expectedVersion: number,
+    ): Promise<BehaviorRule>;
+
+    deleteBehaviorRule(actorId: string, id: string): Promise<void>;
+
+    getBehaviorRuleById(
+        actorId: string,
+        id: string,
+    ): Promise<BehaviorRule | undefined>;
+
+    getBehaviorRulesForProject(
+        actorId: string,
+        projectId: string,
+    ): Promise<BehaviorRule[]>;
+
+    getBehaviorSettingsCatalog(
+        actorId: string,
+        projectId: string,
+    ): Promise<BehaviorSettingsCatalog>;
 }
 
 // ─── Neighbourhood (Radial Graph View) ──────────────────────────────────────

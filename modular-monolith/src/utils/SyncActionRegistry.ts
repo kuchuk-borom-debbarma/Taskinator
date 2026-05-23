@@ -1,4 +1,4 @@
-import { logger } from '../logger/index.js';
+import { logger } from '../logger/index.ts';
 
 /**
  * A lightweight registry for synchronous side-effects that need to run in the request lifecycle.

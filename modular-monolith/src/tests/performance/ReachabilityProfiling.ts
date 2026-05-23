@@ -43,8 +43,8 @@ async function setupDeepGraph(
             const parentIdx = d * tasksPerLevel + i;
             const childIdx = (d + 1) * tasksPerLevel + i;
             if (parentIdx < taskIds.length && childIdx < taskIds.length) {
-                const sourceId = taskIds[parentIdx];
-                const targetId = taskIds[childIdx];
+                const sourceId = taskIds[parentIdx]!;
+                const targetId = taskIds[childIdx]!;
 
                 // Insert link
                 await db
@@ -93,7 +93,7 @@ async function runProfiling() {
     console.log(
         'Test 1: Reachability Descendant Lookup (Ancestors -> Descendants)',
     );
-    const rootTaskId = taskIds[0];
+    const rootTaskId = taskIds[0]!;
     const startReach = performance.now();
     const descendants = await db
         .selectFrom('task_reachability')
@@ -111,7 +111,7 @@ async function runProfiling() {
     const result = await db
         .selectFrom('task_link')
         .select('target_task_id')
-        .where('source_task_id', '=', taskIds[0])
+        .where('source_task_id', '=', taskIds[0]!)
         .where('label', '=', 'blocks')
         .where((eb) =>
             eb.not(
@@ -129,7 +129,7 @@ async function runProfiling() {
                             'task_link.target_task_id',
                         )
                         .where('tl2.label', '=', 'blocks')
-                        .where('tl2.source_task_id', '!=', taskIds[0])
+                        .where('tl2.source_task_id', '!=', taskIds[0]!)
                         .where('pt2.status', '!=', 'DONE'),
                 ),
             ),

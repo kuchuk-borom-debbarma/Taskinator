@@ -292,6 +292,29 @@ export const taskResolvers = {
         },
     },
 
+    BehaviorRule: {
+        id: (parent: any) => parent.id,
+        project: (parent: any, _args: any, context: GraphQLContext) => {
+            if (!context.userId) throw new UnauthorizedError();
+            return context.loaders.project.byActorIdAndId.load({
+                actorId: context.userId,
+                id: parent.fk_project_id,
+            });
+        },
+        name: (parent: any) => parent.name,
+        isActive: (parent: any) => parent.is_active,
+        behaviorType: (parent: any) => parent.behavior_type,
+        fkTaskId: (parent: any) => parent.fk_task_id,
+        criteriaField: (parent: any) => parent.criteria_field,
+        criteriaOperator: (parent: any) => parent.criteria_operator,
+        criteriaValue: (parent: any) => parent.criteria_value,
+        actionMessage: (parent: any) => parent.action_message,
+        actionValue: (parent: any) => parent.action_value,
+        version: (parent: any) => parent.version,
+        createdAt: (parent: any) => parent.created_at.toISOString(),
+        updatedAt: (parent: any) => parent.updated_at?.toISOString() || null,
+    },
+
     Query: {
         task: (
             _parent: any,
@@ -317,10 +340,90 @@ export const taskResolvers = {
                 (res): res is Task => res !== null && !(res instanceof Error),
             );
         },
+        behaviorSettingsCatalog: async (
+            _parent: any,
+            { projectId }: { projectId: string },
+            context: GraphQLContext,
+        ) => {
+            if (!context.userId) throw new UnauthorizedError();
+            return taskService.getBehaviorSettingsCatalog(
+                context.userId,
+                projectId,
+            );
+        },
+        behaviorRule: async (
+            _parent: any,
+            { id }: { id: string },
+            context: GraphQLContext,
+        ) => {
+            if (!context.userId) throw new UnauthorizedError();
+            return taskService.getBehaviorRuleById(context.userId, id);
+        },
+        behaviorRules: async (
+            _parent: any,
+            { projectId }: { projectId: string },
+            context: GraphQLContext,
+        ) => {
+            if (!context.userId) throw new UnauthorizedError();
+            return taskService.getBehaviorRulesForProject(
+                context.userId,
+                projectId,
+            );
+        },
     },
 
     Mutation: {
         task: () => ({}),
+        createBehaviorRule: async (
+            _parent: any,
+            { input }: { input: any },
+            context: GraphQLContext,
+        ) => {
+            if (!context.userId) throw new UnauthorizedError();
+            return taskService.createBehaviorRule(context.userId, {
+                fk_project_id: input.projectId,
+                name: input.name,
+                behavior_type: input.behaviorType,
+                is_active: input.isActive ?? true,
+                fk_task_id: input.fkTaskId ?? null,
+                criteria_field: input.criteriaField ?? null,
+                criteria_operator: input.criteriaOperator ?? null,
+                criteria_value: input.criteriaValue ?? null,
+                action_message: input.actionMessage ?? null,
+                action_value: input.actionValue ?? null,
+            });
+        },
+        updateBehaviorRule: async (
+            _parent: any,
+            { id, version, input }: { id: string; version: number; input: any },
+            context: GraphQLContext,
+        ) => {
+            if (!context.userId) throw new UnauthorizedError();
+            return taskService.updateBehaviorRule(
+                context.userId,
+                id,
+                {
+                    name: input.name,
+                    is_active: input.isActive,
+                    fk_task_id: input.fkTaskId,
+                    criteria_field: input.criteriaField,
+                    criteria_operator: input.criteriaOperator,
+                    criteria_value: input.criteriaValue,
+                    action_message: input.actionMessage,
+                    action_value: input.actionValue,
+                },
+                version,
+            );
+        },
+        deleteBehaviorRule: async (
+            _parent: any,
+            { id }: { id: string },
+            context: GraphQLContext,
+        ) => {
+            if (!context.userId) throw new UnauthorizedError();
+            await taskService.deleteBehaviorRule(context.userId, id);
+            return { success: true, deletedId: id };
+        },
     },
 
     TaskMutation: {

@@ -1,4 +1,4 @@
-import { db } from '../../../database/index.js';
+import { db } from '../../../database/index.ts';
 import { ValidationError } from '../../../graphql/errors.ts';
 import {
     checkActiveSubtasks,

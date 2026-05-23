@@ -1,5 +1,5 @@
 import { sql } from 'kysely';
-import { db } from '../../../database/index.js';
+import { db } from '../../../database/index.ts';
 
 /**
  * Efficiency-optimized DB checks for guards.

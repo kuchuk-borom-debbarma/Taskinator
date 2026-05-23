@@ -1,5 +1,5 @@
-import { db } from '../../../database/index.js';
-import { logger } from '../../../logger/index.js';
+import { db } from '../../../database/index.ts';
+import { logger } from '../../../logger/index.ts';
 import {
     KAFKA_EVENTS,
     KAFKA_TOPICS,
@@ -7,11 +7,16 @@ import {
 import { claimEventsAtomic } from '../../../utils/event-bus/idempotency.ts';
 import type { DomainEvent } from '../../../utils/event-bus/index.js';
 import { appendEventsToOutbox } from '../../../utils/event-bus/OutboxQueries.ts';
-import { syncActionRegistry } from '../../../utils/SyncActionRegistry.js';
+import { syncActionRegistry } from '../../../utils/SyncActionRegistry.ts';
+import { projectService } from '../../project/index.ts';
 import type {
+    BehaviorRule,
+    BehaviorRuleUpdate,
+    BehaviorSettingsCatalog,
     GetNeighbourhoodParam,
     GetTaskLinksParam,
     LinkConnection,
+    NewBehaviorRule,
     PaginationParams,
     Task,
     TaskConnection,
@@ -21,7 +26,15 @@ import type {
     TaskReachabilityLinkChange,
     TaskService,
 } from '../TaskService.ts';
+import {
+    deleteBehaviorRuleById,
+    insertBehaviorRule,
+    selectBehaviorRuleById,
+    selectBehaviorRulesForProject,
+    updateBehaviorRuleById,
+} from './BehaviorRuleQueries.ts';
 import { guardService } from './GuardService.ts';
+
 import {
     BULK_DELETE_CHUNK_SIZE,
     contractTaskReachability,
@@ -694,6 +707,153 @@ export class TaskServiceImpl implements TaskService {
             teamId,
             userIds: Array.from(userIdsSet),
         }));
+    }
+
+    private async assertActorCanAccessProject(
+        actorId: string,
+        projectId: string,
+    ): Promise<void> {
+        if (actorId.startsWith('system:')) {
+            return;
+        }
+        const projects = await projectService.getProjectsByActorIdAndProjectIds(
+            actorId,
+            [projectId],
+        );
+        if (projects.length === 0) {
+            throw new Error(
+                `Actor "${actorId}" is not authorized for project "${projectId}".`,
+            );
+        }
+    }
+
+    async createBehaviorRule(
+        actorId: string,
+        rule: Omit<NewBehaviorRule, 'created_by' | 'updated_by'>,
+    ): Promise<BehaviorRule> {
+        await this.assertActorCanAccessProject(actorId, rule.fk_project_id);
+        return insertBehaviorRule(rule as NewBehaviorRule, actorId);
+    }
+
+    async updateBehaviorRule(
+        actorId: string,
+        id: string,
+        patch: Omit<BehaviorRuleUpdate, 'updated_by'>,
+        expectedVersion: number,
+    ): Promise<BehaviorRule> {
+        const current = await selectBehaviorRuleById(id);
+        if (!current) {
+            throw new Error(`Behavior Rule "${id}" not found.`);
+        }
+        await this.assertActorCanAccessProject(actorId, current.fk_project_id);
+        return updateBehaviorRuleById(
+            id,
+            patch as BehaviorRuleUpdate,
+            expectedVersion,
+            actorId,
+        );
+    }
+
+    async deleteBehaviorRule(actorId: string, id: string): Promise<void> {
+        const current = await selectBehaviorRuleById(id);
+        if (!current) {
+            throw new Error(`Behavior Rule "${id}" not found.`);
+        }
+        await this.assertActorCanAccessProject(actorId, current.fk_project_id);
+        await deleteBehaviorRuleById(id);
+    }
+
+    async getBehaviorRuleById(
+        actorId: string,
+        id: string,
+    ): Promise<BehaviorRule | undefined> {
+        const rule = await selectBehaviorRuleById(id);
+        if (!rule) return undefined;
+        await this.assertActorCanAccessProject(actorId, rule.fk_project_id);
+        return rule;
+    }
+
+    async getBehaviorRulesForProject(
+        actorId: string,
+        projectId: string,
+    ): Promise<BehaviorRule[]> {
+        await this.assertActorCanAccessProject(actorId, projectId);
+        return selectBehaviorRulesForProject(projectId);
+    }
+
+    async getBehaviorSettingsCatalog(
+        actorId: string,
+        projectId: string,
+    ): Promise<BehaviorSettingsCatalog> {
+        await this.assertActorCanAccessProject(actorId, projectId);
+        return {
+            settings: [
+                {
+                    id: 'BLOCKER_RESOLUTION',
+                    name: 'Auto-resolve Blockers',
+                    description:
+                        'Automatically resolves blocking tasks when their dependants are resolved.',
+                    category: 'CASCADE',
+                    defaultValue: true,
+                },
+                {
+                    id: 'PARENT_DELETE_GUARD',
+                    name: 'Parent Delete Guard',
+                    description:
+                        'Prevents deletion of parent tasks if they have active subtasks.',
+                    category: 'GUARD',
+                    defaultValue: true,
+                },
+                {
+                    id: 'PRIORITY_CASCADE',
+                    name: 'Priority Cascade',
+                    description:
+                        'Cascades priority changes from parent to subtasks.',
+                    category: 'CASCADE',
+                    defaultValue: false,
+                },
+                {
+                    id: 'TEAM_CASCADE',
+                    name: 'Team Cascade',
+                    description:
+                        'Cascades team assignment changes from parent to subtasks.',
+                    category: 'CASCADE',
+                    defaultValue: false,
+                },
+                {
+                    id: 'BLOCKER_SAFETY_GUARD',
+                    name: 'Blocker Safety Guard',
+                    description:
+                        'Prevents moving a task to "Done" if it still has active blockers.',
+                    category: 'GUARD',
+                    defaultValue: true,
+                },
+                {
+                    id: 'MEMBER_ASSIGNMENT_GUARD',
+                    name: 'Member Assignment Guard',
+                    description:
+                        "Ensures assigned members belong to the task's team.",
+                    category: 'GUARD',
+                    defaultValue: true,
+                },
+                {
+                    id: 'CASCADE_DELETE',
+                    name: 'Cascade Delete',
+                    description:
+                        'Automatically deletes subtasks when the parent is deleted.',
+                    category: 'CASCADE',
+                    defaultValue: false,
+                },
+                {
+                    id: 'AUTO_NOTIFY',
+                    name: 'Auto Notifications',
+                    description:
+                        'Sends notifications when task status changes.',
+                    category: 'AUTOMATION',
+                    defaultValue: true,
+                },
+            ],
+        };
     }
 
     async init(): Promise<void> {

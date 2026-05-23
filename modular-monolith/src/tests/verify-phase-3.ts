@@ -1,7 +1,7 @@
 import { createProject, createUser } from '../__tests__/helpers/factories.ts';
 import { db } from '../database/index.ts';
 import { logger } from '../logger/index.ts';
-import { AutoActionTaskEventConsumer } from '../modules/auto-action/internal/listeners/AutoActionTaskEventConsumer.ts';
+import { BehaviorTaskEventConsumer } from '../modules/task/internal/listeners/BehaviorTaskEventConsumer.ts';
 import { expandTaskReachability } from '../modules/task/internal/TaskQueries.ts';
 import { TaskServiceImpl } from '../modules/task/internal/TaskServiceImpl.ts';
 import { KAFKA_EVENTS } from '../utils/event-bus/constants.ts';
@@ -12,7 +12,7 @@ async function run() {
     const user = await createUser();
     const project = await createProject(user.id);
     const taskService = new TaskServiceImpl();
-    const consumer = new AutoActionTaskEventConsumer();
+    const consumer = new BehaviorTaskEventConsumer();
 
     // 1. Setup Tasks for CASCADE_DELETE
     const parentDelete = await taskService.createTask({
@@ -213,7 +213,7 @@ async function run() {
         projectId: project.id,
         sourceTaskId: blockerTask.id,
         targetTaskId: blockedTask.id,
-        label: 'BLOCKER',
+        label: 'blocks',
     });
 
     await db
