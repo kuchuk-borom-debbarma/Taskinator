@@ -1,22 +1,43 @@
-# Validation: Phase 2 - Pre-Action Guards (Preventive)
+# Phase 2 Validation: Pre-Action Guards
 
-## Requirements Coverage
+## Requirement Coverage
 
-| ID | Requirement | Evidence | Status |
-|----|-------------|----------|--------|
-| REQ-1.2 | Pre-Action Guards | `src/modules/task/internal/GuardService.ts` | 🟡 PENDING |
-| REQ-1.2 | PARENT_DELETE_GUARD | `src/tests/verify-phase-2.ts` | 🟡 PENDING |
-| REQ-1.2 | BLOCKER_SAFETY_GUARD | `src/tests/verify-phase-2.ts` | 🟡 PENDING |
-| REQ-1.2 | MEMBER_ASSIGNMENT_GUARD | `src/modules/task/internal/GuardService.ts` | 🟡 PENDING |
+| ID | Requirement | Status | Evidence |
+|----|-------------|--------|----------|
+| REQ-1.2 | Implement Pre-Action Guards (Preventive) | PASSED | `src/tests/verify-phase-2.ts` successful execution |
 
-## Verification Results
+## Guard Scenarios Verified
 
-- [ ] **Guard Pipeline:** Hooks successfully integrated into `TaskServiceImpl.deleteTask` and `TaskServiceImpl.updateTask`.
-- [ ] **Parent Delete Guard:** Confirmed that tasks with active subtasks cannot be deleted.
-- [ ] **Blocker Safety Guard:** Confirmed that tasks with incomplete blockers cannot transition to `IN_PROGRESS`.
-- [ ] **Error Handling:** `ValidationError` is correctly thrown with the message from the behavior rule.
-- [ ] **Type Safety:** Guard checks are correctly integrated with Kysely types.
+### 1. PARENT_DELETE_GUARD
+- **Scenario:** Attempt to delete a parent task that has active subtasks.
+- **Expected:** Blocked with `ValidationError`.
+- **Result:** PASSED.
 
-## Evidence Logs
-- Test Output: `[Tests] Running verify-phase-2.ts...`
-- Validation Output: `[Verification] Phase 2 guards are operational.`
+### 2. BLOCKER_SAFETY_GUARD
+- **Scenario:** Attempt to transition a task to `IN_PROGRESS` when it has incomplete blockers.
+- **Expected:** Blocked with `ValidationError`.
+- **Result:** PASSED.
+
+### 3. MEMBER_ASSIGNMENT_GUARD
+- **Scenario:** Attempt to assign a member to a task that is not associated with any team.
+- **Expected:** Blocked with `ValidationError`.
+- **Result:** PASSED.
+
+## Test Evidence
+
+```
+[INFO] 2026-05-23T09:43:27.380Z - Starting Phase 2 Verification...
+...
+[INFO] 2026-05-23T09:43:27.427Z - Testing PARENT_DELETE_GUARD...
+[INFO] 2026-05-23T09:43:27.430Z - PASSED: PARENT_DELETE_GUARD blocked deletion correctly
+[INFO] 2026-05-23T09:43:27.430Z - Testing BLOCKER_SAFETY_GUARD...
+[INFO] 2026-05-23T09:43:27.436Z - PASSED: BLOCKER_SAFETY_GUARD blocked status update correctly
+[INFO] 2026-05-23T09:43:27.436Z - Testing MEMBER_ASSIGNMENT_GUARD...
+[INFO] 2026-05-23T09:43:27.439Z - PASSED: MEMBER_ASSIGNMENT_GUARD blocked assignment correctly
+[INFO] 2026-05-23T09:43:27.439Z - Phase 2 Verification PASSED
+```
+
+## Codesize Impact
+- New logic contained in `GuardService` and `GuardQueries`.
+- Minimal hooks added to `TaskServiceImpl`.
+- O(log N) query performance maintained via existing indexes.
