@@ -2,6 +2,7 @@ import { Kysely, PostgresDialect } from 'kysely';
 import { Pool } from 'pg';
 import { logger } from '../logger';
 import type { AutoActionTable } from './tables/AutoAction.ts';
+import type { BehaviorRuleTable } from './tables/BehaviorRule.ts';
 import type { OutboxEventTable } from './tables/OutboxEvent.ts';
 import type { ProcessedEventTable } from './tables/ProcessedEvent.ts';
 import type { ProjectMemberTable, ProjectTable } from './tables/Project.ts';
@@ -16,6 +17,7 @@ import type { PendingUserTable, UserTable } from './tables/User.ts';
 
 export interface Database {
     auto_action: AutoActionTable;
+    behavior_rule: BehaviorRuleTable;
     project: ProjectTable;
     project_member: ProjectMemberTable;
     project_team: ProjectTeamTable;
