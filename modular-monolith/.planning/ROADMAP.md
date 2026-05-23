@@ -8,7 +8,7 @@
 ## Phase 2: Pre-Action Guards (Preventive)
 **Plans:** 1 plan
 
-- [ ] 02-01-PLAN.md — Implement guard hook pipeline, logic for PARENT_DELETE_GUARD, BLOCKER_SAFETY_GUARD, and MEMBER_ASSIGNMENT_GUARD.
+- [x] 02-01-PLAN.md — Implement guard hook pipeline, logic for PARENT_DELETE_GUARD, BLOCKER_SAFETY_GUARD, and MEMBER_ASSIGNMENT_GUARD.
 
 ## Phase 3: Post-Action Cascades (Reactive)
 - [ ] Refactor `AutoActionTaskEventConsumer` to use CWB rules.
