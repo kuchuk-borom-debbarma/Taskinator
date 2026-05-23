@@ -4,8 +4,7 @@ import type {
     NewAutoAction,
 } from '../../database/tables/AutoAction.js';
 import type { Connection, PaginationParams } from '../../types/pagination.ts';
-import type { DomainEvent } from '../../utils/event-bus';
-import type { EntityScope, ScopeTemplate } from './types.js';
+import type { BehaviorSettingsCatalog } from './types.js';
 
 export type AutoActionConnection = Connection<AutoAction>;
 
@@ -120,35 +119,9 @@ export interface AutoActionService {
     deleteAutoActionForActor(actorId: string, id: string): Promise<void>;
 
     /**
-     * Handles task domain events and triggers matching Auto Actions.
+     * Retrieves the catalog of available behaviors and their settings.
      */
-    handleTaskEvents(events: DomainEvent[]): Promise<void>;
-
-    /**
-     * Handles sync task domain events. Executes matching sync-only auto-actions.
-     * Guaranteed to return only after all sync actions are attempted.
-     * Failures in individual actions are logged but do not propagate.
-     */
-    handleSyncTaskEvents(event: DomainEvent): Promise<void>;
-
-    /**
-     * Builds a dynamic template catalog for a specific scope.
-     * Filters actions and conditions depending on the sync/async bounds if requested.
-     */
-    getTemplateForScope(scope: EntityScope, isSync?: boolean): ScopeTemplate;
-
-    /**
-     * Executes an auto-action pipeline for a specific entity.
-     * Supports suspendable execution with startIndex and startCursor.
-     */
-    executePipeline(
-        autoActionId: string,
-        entityId: string,
-        actorId: string,
-        traceId: string,
-        wasSnapshot: any,
-        startIndex?: number,
-        startCursor?: any,
-        maxSteps?: number,
-    ): Promise<any>;
+    getBehaviorSettingsCatalog(
+        projectId: string,
+    ): Promise<BehaviorSettingsCatalog>;
 }

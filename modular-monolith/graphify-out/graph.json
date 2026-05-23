@@ -278,7 +278,7 @@
             "source_file": "jest.config.js",
             "source_location": "L1",
             "id": "jest_config_js",
-            "community": 41,
+            "community": 43,
             "norm_label": "jest.config.js"
         },
         {
@@ -287,7 +287,7 @@
             "source_file": "test_http.ts",
             "source_location": "L1",
             "id": "test_http_ts",
-            "community": 32,
+            "community": 34,
             "norm_label": "test_http.ts"
         },
         {
@@ -296,7 +296,7 @@
             "source_file": "test_http.ts",
             "source_location": "L3",
             "id": "modular_monolith_test_http_test",
-            "community": 32,
+            "community": 34,
             "norm_label": "test()"
         },
         {
@@ -305,7 +305,7 @@
             "source_file": "seed.ts",
             "source_location": "L1",
             "id": "seed_ts",
-            "community": 11,
+            "community": 12,
             "norm_label": "seed.ts"
         },
         {
@@ -314,7 +314,7 @@
             "source_file": "seed.ts",
             "source_location": "L380",
             "id": "modular_monolith_seed_pick",
-            "community": 11,
+            "community": 12,
             "norm_label": "pick()"
         },
         {
@@ -323,7 +323,7 @@
             "source_file": "seed.ts",
             "source_location": "L384",
             "id": "modular_monolith_seed_pickweighted",
-            "community": 11,
+            "community": 12,
             "norm_label": "pickweighted()"
         },
         {
@@ -332,7 +332,7 @@
             "source_file": "seed.ts",
             "source_location": "L394",
             "id": "modular_monolith_seed_randomint",
-            "community": 11,
+            "community": 12,
             "norm_label": "randomint()"
         },
         {
@@ -341,7 +341,7 @@
             "source_file": "seed.ts",
             "source_location": "L398",
             "id": "modular_monolith_seed_esc",
-            "community": 11,
+            "community": 12,
             "norm_label": "esc()"
         },
         {
@@ -350,7 +350,7 @@
             "source_file": "seed.ts",
             "source_location": "L401",
             "id": "modular_monolith_seed_elapsed",
-            "community": 11,
+            "community": 12,
             "norm_label": "elapsed()"
         },
         {
@@ -359,7 +359,7 @@
             "source_file": "seed.ts",
             "source_location": "L405",
             "id": "modular_monolith_seed_generateusername",
-            "community": 11,
+            "community": 12,
             "norm_label": "generateusername()"
         },
         {
@@ -368,7 +368,7 @@
             "source_file": "seed.ts",
             "source_location": "L409",
             "id": "modular_monolith_seed_generateemail",
-            "community": 11,
+            "community": 12,
             "norm_label": "generateemail()"
         },
         {
@@ -377,7 +377,7 @@
             "source_file": "seed.ts",
             "source_location": "L420",
             "id": "modular_monolith_seed_generatetasktitle",
-            "community": 11,
+            "community": 12,
             "norm_label": "generatetasktitle()"
         },
         {
@@ -386,7 +386,7 @@
             "source_file": "seed.ts",
             "source_location": "L423",
             "id": "modular_monolith_seed_generateteamname",
-            "community": 11,
+            "community": 12,
             "norm_label": "generateteamname()"
         },
         {
@@ -395,7 +395,7 @@
             "source_file": "seed.ts",
             "source_location": "L433",
             "id": "modular_monolith_seed_bulkinsert",
-            "community": 11,
+            "community": 12,
             "norm_label": "bulkinsert()"
         },
         {
@@ -404,7 +404,7 @@
             "source_file": "seed.ts",
             "source_location": "L475",
             "id": "modular_monolith_seed_buildforestlinks",
-            "community": 11,
+            "community": 12,
             "norm_label": "buildforestlinks()"
         },
         {
@@ -413,7 +413,7 @@
             "source_file": "seed.ts",
             "source_location": "L541",
             "id": "modular_monolith_seed_seed",
-            "community": 11,
+            "community": 12,
             "norm_label": "seed()"
         },
         {
@@ -422,7 +422,7 @@
             "source_file": "list-tables.ts",
             "source_location": "L1",
             "id": "list_tables_ts",
-            "community": 1,
+            "community": 3,
             "norm_label": "list-tables.ts"
         },
         {
@@ -431,7 +431,7 @@
             "source_file": "list-tables.ts",
             "source_location": "L4",
             "id": "modular_monolith_list_tables_list",
-            "community": 1,
+            "community": 3,
             "norm_label": "list()"
         },
         {
@@ -440,7 +440,7 @@
             "source_file": "scratch-db-check.ts",
             "source_location": "L1",
             "id": "scratch_db_check_ts",
-            "community": 33,
+            "community": 35,
             "norm_label": "scratch-db-check.ts"
         },
         {
@@ -449,7 +449,7 @@
             "source_file": "scratch-db-check.ts",
             "source_location": "L4",
             "id": "modular_monolith_scratch_db_check_check",
-            "community": 33,
+            "community": 35,
             "norm_label": "check()"
         },
         {
@@ -458,7 +458,7 @@
             "source_file": "scratch-debug-tasks.ts",
             "source_location": "L1",
             "id": "scratch_debug_tasks_ts",
-            "community": 34,
+            "community": 36,
             "norm_label": "scratch-debug-tasks.ts"
         },
         {
@@ -467,7 +467,7 @@
             "source_file": "scratch-debug-tasks.ts",
             "source_location": "L4",
             "id": "modular_monolith_scratch_debug_tasks_checktasks",
-            "community": 34,
+            "community": 36,
             "norm_label": "checktasks()"
         },
         {
@@ -521,7 +521,7 @@
             "source_file": "coverage/lcov-report/prettify.js",
             "source_location": "L1",
             "id": "coverage_lcov_report_prettify_js",
-            "community": 12,
+            "community": 13,
             "norm_label": "prettify.js"
         },
         {
@@ -530,7 +530,7 @@
             "source_file": "coverage/lcov-report/prettify.js",
             "source_location": "L60",
             "id": "lcov_report_prettify_k",
-            "community": 12,
+            "community": 13,
             "norm_label": "k()"
         },
         {
@@ -539,7 +539,7 @@
             "source_file": "coverage/lcov-report/prettify.js",
             "source_location": "L256",
             "id": "lcov_report_prettify_a",
-            "community": 12,
+            "community": 13,
             "norm_label": "a()"
         },
         {
@@ -548,7 +548,7 @@
             "source_file": "coverage/lcov-report/prettify.js",
             "source_location": "L311",
             "id": "lcov_report_prettify_b",
-            "community": 12,
+            "community": 13,
             "norm_label": "b()"
         },
         {
@@ -557,7 +557,7 @@
             "source_file": "coverage/lcov-report/prettify.js",
             "source_location": "L320",
             "id": "lcov_report_prettify_o",
-            "community": 12,
+            "community": 13,
             "norm_label": "o()"
         },
         {
@@ -566,7 +566,7 @@
             "source_file": "coverage/lcov-report/prettify.js",
             "source_location": "L337",
             "id": "lcov_report_prettify_g",
-            "community": 12,
+            "community": 13,
             "norm_label": "g()"
         },
         {
@@ -575,7 +575,7 @@
             "source_file": "coverage/lcov-report/prettify.js",
             "source_location": "L426",
             "id": "lcov_report_prettify_i",
-            "community": 12,
+            "community": 13,
             "norm_label": "i()"
         },
         {
@@ -584,7 +584,7 @@
             "source_file": "coverage/lcov-report/prettify.js",
             "source_location": "L527",
             "id": "lcov_report_prettify_q",
-            "community": 12,
+            "community": 13,
             "norm_label": "q()"
         },
         {
@@ -593,7 +593,7 @@
             "source_file": "coverage/lcov-report/prettify.js",
             "source_location": "L635",
             "id": "lcov_report_prettify_d",
-            "community": 12,
+            "community": 13,
             "norm_label": "d()"
         },
         {
@@ -602,7 +602,7 @@
             "source_file": "coverage/lcov-report/prettify.js",
             "source_location": "L705",
             "id": "lcov_report_prettify_c",
-            "community": 12,
+            "community": 13,
             "norm_label": "c()"
         },
         {
@@ -611,7 +611,7 @@
             "source_file": "coverage/lcov-report/prettify.js",
             "source_location": "L845",
             "id": "lcov_report_prettify_y",
-            "community": 12,
+            "community": 13,
             "norm_label": "y()"
         },
         {
@@ -620,7 +620,7 @@
             "source_file": "coverage/lcov-report/sorter.js",
             "source_location": "L1",
             "id": "coverage_lcov_report_sorter_js",
-            "community": 10,
+            "community": 11,
             "norm_label": "sorter.js"
         },
         {
@@ -629,7 +629,7 @@
             "source_file": "coverage/lcov-report/sorter.js",
             "source_location": "L10",
             "id": "lcov_report_sorter_gettable",
-            "community": 10,
+            "community": 11,
             "norm_label": "gettable()"
         },
         {
@@ -638,7 +638,7 @@
             "source_file": "coverage/lcov-report/sorter.js",
             "source_location": "L14",
             "id": "lcov_report_sorter_gettableheader",
-            "community": 10,
+            "community": 11,
             "norm_label": "gettableheader()"
         },
         {
@@ -647,7 +647,7 @@
             "source_file": "coverage/lcov-report/sorter.js",
             "source_location": "L18",
             "id": "lcov_report_sorter_gettablebody",
-            "community": 10,
+            "community": 11,
             "norm_label": "gettablebody()"
         },
         {
@@ -656,7 +656,7 @@
             "source_file": "coverage/lcov-report/sorter.js",
             "source_location": "L22",
             "id": "lcov_report_sorter_getnthcolumn",
-            "community": 10,
+            "community": 11,
             "norm_label": "getnthcolumn()"
         },
         {
@@ -665,7 +665,7 @@
             "source_file": "coverage/lcov-report/sorter.js",
             "source_location": "L26",
             "id": "lcov_report_sorter_onfilterinput",
-            "community": 10,
+            "community": 11,
             "norm_label": "onfilterinput()"
         },
         {
@@ -674,7 +674,7 @@
             "source_file": "coverage/lcov-report/sorter.js",
             "source_location": "L58",
             "id": "lcov_report_sorter_addsearchbox",
-            "community": 10,
+            "community": 11,
             "norm_label": "addsearchbox()"
         },
         {
@@ -683,7 +683,7 @@
             "source_file": "coverage/lcov-report/sorter.js",
             "source_location": "L66",
             "id": "lcov_report_sorter_loadcolumns",
-            "community": 10,
+            "community": 11,
             "norm_label": "loadcolumns()"
         },
         {
@@ -692,7 +692,7 @@
             "source_file": "coverage/lcov-report/sorter.js",
             "source_location": "L90",
             "id": "lcov_report_sorter_loadrowdata",
-            "community": 10,
+            "community": 11,
             "norm_label": "loadrowdata()"
         },
         {
@@ -701,7 +701,7 @@
             "source_file": "coverage/lcov-report/sorter.js",
             "source_location": "L109",
             "id": "lcov_report_sorter_loaddata",
-            "community": 10,
+            "community": 11,
             "norm_label": "loaddata()"
         },
         {
@@ -710,7 +710,7 @@
             "source_file": "coverage/lcov-report/sorter.js",
             "source_location": "L118",
             "id": "lcov_report_sorter_sortbyindex",
-            "community": 10,
+            "community": 11,
             "norm_label": "sortbyindex()"
         },
         {
@@ -719,7 +719,7 @@
             "source_file": "coverage/lcov-report/sorter.js",
             "source_location": "L147",
             "id": "lcov_report_sorter_removesortindicators",
-            "community": 10,
+            "community": 11,
             "norm_label": "removesortindicators()"
         },
         {
@@ -728,7 +728,7 @@
             "source_file": "coverage/lcov-report/sorter.js",
             "source_location": "L155",
             "id": "lcov_report_sorter_addsortindicators",
-            "community": 10,
+            "community": 11,
             "norm_label": "addsortindicators()"
         },
         {
@@ -737,7 +737,7 @@
             "source_file": "coverage/lcov-report/sorter.js",
             "source_location": "L161",
             "id": "lcov_report_sorter_enableui",
-            "community": 10,
+            "community": 11,
             "norm_label": "enableui()"
         },
         {
@@ -746,7 +746,7 @@
             "source_file": "src/app.ts",
             "source_location": "L1",
             "id": "src_app_ts",
-            "community": 7,
+            "community": 0,
             "norm_label": "app.ts"
         },
         {
@@ -755,7 +755,7 @@
             "source_file": "src/app.ts",
             "source_location": "L23",
             "id": "src_app_bootstrap",
-            "community": 7,
+            "community": 0,
             "norm_label": "bootstrap()"
         },
         {
@@ -764,7 +764,7 @@
             "source_file": "src/app.ts",
             "source_location": "L57",
             "id": "src_app_shutdown",
-            "community": 7,
+            "community": 8,
             "norm_label": "shutdown()"
         },
         {
@@ -773,7 +773,7 @@
             "source_file": "src/index.ts",
             "source_location": "L1",
             "id": "src_index_ts",
-            "community": 7,
+            "community": 0,
             "norm_label": "index.ts"
         },
         {
@@ -782,7 +782,7 @@
             "source_file": "src/index.ts",
             "source_location": "L7",
             "id": "src_index_start",
-            "community": 7,
+            "community": 0,
             "norm_label": "start()"
         },
         {
@@ -791,7 +791,7 @@
             "source_file": "src/instrumentation.ts",
             "source_location": "L1",
             "id": "src_instrumentation_ts",
-            "community": 42,
+            "community": 44,
             "norm_label": "instrumentation.ts"
         },
         {
@@ -800,7 +800,7 @@
             "source_file": "src/database/runMigration.ts",
             "source_location": "L1",
             "id": "src_database_runmigration_ts",
-            "community": 1,
+            "community": 3,
             "norm_label": "runmigration.ts"
         },
         {
@@ -809,7 +809,7 @@
             "source_file": "src/database/runMigration.ts",
             "source_location": "L4",
             "id": "database_runmigration_run",
-            "community": 1,
+            "community": 3,
             "norm_label": "run()"
         },
         {
@@ -818,7 +818,7 @@
             "source_file": "src/database/runCwbMigration.ts",
             "source_location": "L1",
             "id": "src_database_runcwbmigration_ts",
-            "community": 1,
+            "community": 3,
             "norm_label": "runcwbmigration.ts"
         },
         {
@@ -827,7 +827,7 @@
             "source_file": "src/database/runCwbMigration.ts",
             "source_location": "L6",
             "id": "database_runcwbmigration_run",
-            "community": 1,
+            "community": 3,
             "norm_label": "run()"
         },
         {
@@ -836,7 +836,7 @@
             "source_file": "src/database/index.ts",
             "source_location": "L1",
             "id": "src_database_index_ts",
-            "community": 1,
+            "community": 3,
             "norm_label": "index.ts"
         },
         {
@@ -845,7 +845,7 @@
             "source_file": "src/database/tables/BehaviorRule.ts",
             "source_location": "L1",
             "id": "src_database_tables_behaviorrule_ts",
-            "community": 1,
+            "community": 0,
             "norm_label": "behaviorrule.ts"
         },
         {
@@ -854,7 +854,7 @@
             "source_file": "src/database/tables/Project.ts",
             "source_location": "L1",
             "id": "src_database_tables_project_ts",
-            "community": 1,
+            "community": 3,
             "norm_label": "project.ts"
         },
         {
@@ -863,7 +863,7 @@
             "source_file": "src/database/tables/ProjectTask.ts",
             "source_location": "L1",
             "id": "src_database_tables_projecttask_ts",
-            "community": 1,
+            "community": 3,
             "norm_label": "projecttask.ts"
         },
         {
@@ -872,7 +872,7 @@
             "source_file": "src/database/tables/ProcessedEvent.ts",
             "source_location": "L1",
             "id": "src_database_tables_processedevent_ts",
-            "community": 1,
+            "community": 3,
             "norm_label": "processedevent.ts"
         },
         {
@@ -881,7 +881,7 @@
             "source_file": "src/database/tables/ProjectTeam.ts",
             "source_location": "L1",
             "id": "src_database_tables_projectteam_ts",
-            "community": 1,
+            "community": 3,
             "norm_label": "projectteam.ts"
         },
         {
@@ -890,7 +890,7 @@
             "source_file": "src/database/tables/TaskLink.ts",
             "source_location": "L1",
             "id": "src_database_tables_tasklink_ts",
-            "community": 1,
+            "community": 3,
             "norm_label": "tasklink.ts"
         },
         {
@@ -899,7 +899,7 @@
             "source_file": "src/database/tables/AutoAction.ts",
             "source_location": "L1",
             "id": "src_database_tables_autoaction_ts",
-            "community": 3,
+            "community": 4,
             "norm_label": "autoaction.ts"
         },
         {
@@ -908,7 +908,7 @@
             "source_file": "src/database/tables/TaskReachability.ts",
             "source_location": "L1",
             "id": "src_database_tables_taskreachability_ts",
-            "community": 1,
+            "community": 3,
             "norm_label": "taskreachability.ts"
         },
         {
@@ -917,7 +917,7 @@
             "source_file": "src/database/tables/User.ts",
             "source_location": "L1",
             "id": "src_database_tables_user_ts",
-            "community": 1,
+            "community": 3,
             "norm_label": "user.ts"
         },
         {
@@ -926,7 +926,7 @@
             "source_file": "src/database/tables/OutboxEvent.ts",
             "source_location": "L1",
             "id": "src_database_tables_outboxevent_ts",
-            "community": 1,
+            "community": 3,
             "norm_label": "outboxevent.ts"
         },
         {
@@ -935,7 +935,7 @@
             "source_file": "src/types/pagination.ts",
             "source_location": "L1",
             "id": "src_types_pagination_ts",
-            "community": 3,
+            "community": 2,
             "norm_label": "pagination.ts"
         },
         {
@@ -944,7 +944,7 @@
             "source_file": "src/logger/index.ts",
             "source_location": "L1",
             "id": "src_logger_index_ts",
-            "community": 4,
+            "community": 6,
             "norm_label": "index.ts"
         },
         {
@@ -953,7 +953,7 @@
             "source_file": "src/logger/index.ts",
             "source_location": "L8",
             "id": "logger_index_loggerimpl",
-            "community": 4,
+            "community": 6,
             "norm_label": "loggerimpl"
         },
         {
@@ -962,7 +962,7 @@
             "source_file": "src/logger/index.ts",
             "source_location": "L9",
             "id": "logger_index_loggerimpl_debug",
-            "community": 4,
+            "community": 6,
             "norm_label": ".debug()"
         },
         {
@@ -971,7 +971,7 @@
             "source_file": "src/logger/index.ts",
             "source_location": "L21",
             "id": "logger_index_loggerimpl_info",
-            "community": 4,
+            "community": 6,
             "norm_label": ".info()"
         },
         {
@@ -980,7 +980,7 @@
             "source_file": "src/logger/index.ts",
             "source_location": "L25",
             "id": "logger_index_loggerimpl_warn",
-            "community": 4,
+            "community": 6,
             "norm_label": ".warn()"
         },
         {
@@ -989,7 +989,7 @@
             "source_file": "src/logger/index.ts",
             "source_location": "L32",
             "id": "logger_index_loggerimpl_error",
-            "community": 4,
+            "community": 6,
             "norm_label": ".error()"
         },
         {
@@ -998,7 +998,7 @@
             "source_file": "src/redis/index.ts",
             "source_location": "L1",
             "id": "src_redis_index_ts",
-            "community": 7,
+            "community": 8,
             "norm_label": "index.ts"
         },
         {
@@ -1007,7 +1007,7 @@
             "source_file": "src/redis/index.ts",
             "source_location": "L14",
             "id": "redis_index_createclient",
-            "community": 7,
+            "community": 8,
             "norm_label": "createclient()"
         },
         {
@@ -1016,7 +1016,7 @@
             "source_file": "src/redis/index.ts",
             "source_location": "L22",
             "id": "redis_index_getredispublisher",
-            "community": 7,
+            "community": 8,
             "norm_label": "getredispublisher()"
         },
         {
@@ -1025,7 +1025,7 @@
             "source_file": "src/redis/index.ts",
             "source_location": "L29",
             "id": "redis_index_getredissubscriber",
-            "community": 7,
+            "community": 8,
             "norm_label": "getredissubscriber()"
         },
         {
@@ -1034,7 +1034,7 @@
             "source_file": "src/redis/index.ts",
             "source_location": "L39",
             "id": "redis_index_stopredis",
-            "community": 7,
+            "community": 8,
             "norm_label": "stopredis()"
         },
         {
@@ -1043,7 +1043,7 @@
             "source_file": "src/redis/RealtimeRedisBridge.ts",
             "source_location": "L1",
             "id": "src_redis_realtimeredisbridge_ts",
-            "community": 7,
+            "community": 8,
             "norm_label": "realtimeredisbridge.ts"
         },
         {
@@ -1052,7 +1052,7 @@
             "source_file": "src/redis/RealtimeRedisBridge.ts",
             "source_location": "L13",
             "id": "redis_realtimeredisbridge_startredisbridge",
-            "community": 7,
+            "community": 8,
             "norm_label": "startredisbridge()"
         },
         {
@@ -1079,7 +1079,7 @@
             "source_file": "src/tests/verify-phase-1.ts",
             "source_location": "L1",
             "id": "src_tests_verify_phase_1_ts",
-            "community": 1,
+            "community": 3,
             "norm_label": "verify-phase-1.ts"
         },
         {
@@ -1088,8 +1088,26 @@
             "source_file": "src/tests/verify-phase-1.ts",
             "source_location": "L4",
             "id": "tests_verify_phase_1_verify",
-            "community": 1,
+            "community": 3,
             "norm_label": "verify()"
+        },
+        {
+            "label": "verify-phase-3.ts",
+            "file_type": "code",
+            "source_file": "src/tests/verify-phase-3.ts",
+            "source_location": "L1",
+            "id": "src_tests_verify_phase_3_ts",
+            "community": 0,
+            "norm_label": "verify-phase-3.ts"
+        },
+        {
+            "label": "run()",
+            "file_type": "code",
+            "source_file": "src/tests/verify-phase-3.ts",
+            "source_location": "L10",
+            "id": "tests_verify_phase_3_run",
+            "community": 6,
+            "norm_label": "run()"
         },
         {
             "label": "verify-phase-2.ts",
@@ -1097,7 +1115,7 @@
             "source_file": "src/tests/verify-phase-2.ts",
             "source_location": "L1",
             "id": "src_tests_verify_phase_2_ts",
-            "community": 4,
+            "community": 6,
             "norm_label": "verify-phase-2.ts"
         },
         {
@@ -1106,7 +1124,7 @@
             "source_file": "src/tests/verify-phase-2.ts",
             "source_location": "L12",
             "id": "tests_verify_phase_2_run",
-            "community": 8,
+            "community": 6,
             "norm_label": "run()"
         },
         {
@@ -1115,7 +1133,7 @@
             "source_file": "src/tests/e2e/example.test.ts",
             "source_location": "L1",
             "id": "src_tests_e2e_example_test_ts",
-            "community": 1,
+            "community": 3,
             "norm_label": "example.test.ts"
         },
         {
@@ -1124,7 +1142,7 @@
             "source_file": "src/tests/e2e/auth/auth.sign-in.test.ts",
             "source_location": "L1",
             "id": "src_tests_e2e_auth_auth_sign_in_test_ts",
-            "community": 1,
+            "community": 3,
             "norm_label": "auth.sign-in.test.ts"
         },
         {
@@ -1133,7 +1151,7 @@
             "source_file": "src/tests/e2e/auth/mutation.ts",
             "source_location": "L1",
             "id": "src_tests_e2e_auth_mutation_ts",
-            "community": 1,
+            "community": 3,
             "norm_label": "mutation.ts"
         },
         {
@@ -1142,7 +1160,7 @@
             "source_file": "src/tests/e2e/auth/auth.query.test.ts",
             "source_location": "L1",
             "id": "src_tests_e2e_auth_auth_query_test_ts",
-            "community": 1,
+            "community": 3,
             "norm_label": "auth.query.test.ts"
         },
         {
@@ -1151,7 +1169,7 @@
             "source_file": "src/tests/e2e/auth/query.ts",
             "source_location": "L1",
             "id": "src_tests_e2e_auth_query_ts",
-            "community": 1,
+            "community": 3,
             "norm_label": "query.ts"
         },
         {
@@ -1160,7 +1178,7 @@
             "source_file": "src/tests/e2e/project/project.stress.query.test.ts",
             "source_location": "L1",
             "id": "src_tests_e2e_project_project_stress_query_test_ts",
-            "community": 1,
+            "community": 3,
             "norm_label": "project.stress.query.test.ts"
         },
         {
@@ -1169,7 +1187,7 @@
             "source_file": "src/tests/e2e/project/project.query.single.test.ts",
             "source_location": "L1",
             "id": "src_tests_e2e_project_project_query_single_test_ts",
-            "community": 1,
+            "community": 3,
             "norm_label": "project.query.single.test.ts"
         },
         {
@@ -1178,7 +1196,7 @@
             "source_file": "src/tests/e2e/project/project.stress.member.test.ts",
             "source_location": "L1",
             "id": "src_tests_e2e_project_project_stress_member_test_ts",
-            "community": 1,
+            "community": 3,
             "norm_label": "project.stress.member.test.ts"
         },
         {
@@ -1187,7 +1205,7 @@
             "source_file": "src/tests/e2e/project/project.update.test.ts",
             "source_location": "L1",
             "id": "src_tests_e2e_project_project_update_test_ts",
-            "community": 1,
+            "community": 3,
             "norm_label": "project.update.test.ts"
         },
         {
@@ -1196,7 +1214,7 @@
             "source_file": "src/tests/e2e/project/project.member.add.test.ts",
             "source_location": "L1",
             "id": "src_tests_e2e_project_project_member_add_test_ts",
-            "community": 1,
+            "community": 3,
             "norm_label": "project.member.add.test.ts"
         },
         {
@@ -1205,7 +1223,7 @@
             "source_file": "src/tests/e2e/project/project.stress.volume.test.ts",
             "source_location": "L1",
             "id": "src_tests_e2e_project_project_stress_volume_test_ts",
-            "community": 1,
+            "community": 3,
             "norm_label": "project.stress.volume.test.ts"
         },
         {
@@ -1214,7 +1232,7 @@
             "source_file": "src/tests/e2e/project/project.delete.test.ts",
             "source_location": "L1",
             "id": "src_tests_e2e_project_project_delete_test_ts",
-            "community": 1,
+            "community": 3,
             "norm_label": "project.delete.test.ts"
         },
         {
@@ -1223,7 +1241,7 @@
             "source_file": "src/tests/e2e/project/project.stress.create.test.ts",
             "source_location": "L1",
             "id": "src_tests_e2e_project_project_stress_create_test_ts",
-            "community": 1,
+            "community": 3,
             "norm_label": "project.stress.create.test.ts"
         },
         {
@@ -1232,7 +1250,7 @@
             "source_file": "src/tests/e2e/project/project.member.remove.test.ts",
             "source_location": "L1",
             "id": "src_tests_e2e_project_project_member_remove_test_ts",
-            "community": 1,
+            "community": 3,
             "norm_label": "project.member.remove.test.ts"
         },
         {
@@ -1241,7 +1259,7 @@
             "source_file": "src/tests/e2e/project/mutation.ts",
             "source_location": "L1",
             "id": "src_tests_e2e_project_mutation_ts",
-            "community": 1,
+            "community": 3,
             "norm_label": "mutation.ts"
         },
         {
@@ -1250,7 +1268,7 @@
             "source_file": "src/tests/e2e/project/project.query.reachability.test.ts",
             "source_location": "L1",
             "id": "src_tests_e2e_project_project_query_reachability_test_ts",
-            "community": 1,
+            "community": 3,
             "norm_label": "project.query.reachability.test.ts"
         },
         {
@@ -1259,7 +1277,7 @@
             "source_file": "src/tests/e2e/project/query.ts",
             "source_location": "L1",
             "id": "src_tests_e2e_project_query_ts",
-            "community": 1,
+            "community": 3,
             "norm_label": "query.ts"
         },
         {
@@ -1268,7 +1286,7 @@
             "source_file": "src/tests/e2e/project/project.query.member_connection.test.ts",
             "source_location": "L1",
             "id": "src_tests_e2e_project_project_query_member_connection_test_ts",
-            "community": 1,
+            "community": 3,
             "norm_label": "project.query.member_connection.test.ts"
         },
         {
@@ -1277,7 +1295,7 @@
             "source_file": "src/tests/e2e/project/project.query.batch.test.ts",
             "source_location": "L1",
             "id": "src_tests_e2e_project_project_query_batch_test_ts",
-            "community": 1,
+            "community": 3,
             "norm_label": "project.query.batch.test.ts"
         },
         {
@@ -1286,7 +1304,7 @@
             "source_file": "src/tests/e2e/project/project.create.test.ts",
             "source_location": "L1",
             "id": "src_tests_e2e_project_project_create_test_ts",
-            "community": 1,
+            "community": 3,
             "norm_label": "project.create.test.ts"
         },
         {
@@ -1295,7 +1313,7 @@
             "source_file": "src/tests/e2e/project/project.query.connection.test.ts",
             "source_location": "L1",
             "id": "src_tests_e2e_project_project_query_connection_test_ts",
-            "community": 1,
+            "community": 3,
             "norm_label": "project.query.connection.test.ts"
         },
         {
@@ -1304,7 +1322,7 @@
             "source_file": "src/tests/e2e/team/team.create.test.ts",
             "source_location": "L1",
             "id": "src_tests_e2e_team_team_create_test_ts",
-            "community": 1,
+            "community": 3,
             "norm_label": "team.create.test.ts"
         },
         {
@@ -1313,7 +1331,7 @@
             "source_file": "src/tests/e2e/team/team.member.remove.test.ts",
             "source_location": "L1",
             "id": "src_tests_e2e_team_team_member_remove_test_ts",
-            "community": 1,
+            "community": 3,
             "norm_label": "team.member.remove.test.ts"
         },
         {
@@ -1322,7 +1340,7 @@
             "source_file": "src/tests/e2e/team/team.member.add.test.ts",
             "source_location": "L1",
             "id": "src_tests_e2e_team_team_member_add_test_ts",
-            "community": 1,
+            "community": 3,
             "norm_label": "team.member.add.test.ts"
         },
         {
@@ -1331,7 +1349,7 @@
             "source_file": "src/tests/e2e/team/team.delete.test.ts",
             "source_location": "L1",
             "id": "src_tests_e2e_team_team_delete_test_ts",
-            "community": 1,
+            "community": 3,
             "norm_label": "team.delete.test.ts"
         },
         {
@@ -1340,7 +1358,7 @@
             "source_file": "src/tests/e2e/team/mutation.ts",
             "source_location": "L1",
             "id": "src_tests_e2e_team_mutation_ts",
-            "community": 1,
+            "community": 3,
             "norm_label": "mutation.ts"
         },
         {
@@ -1349,7 +1367,7 @@
             "source_file": "src/tests/e2e/team/team.stress.test.ts",
             "source_location": "L1",
             "id": "src_tests_e2e_team_team_stress_test_ts",
-            "community": 1,
+            "community": 3,
             "norm_label": "team.stress.test.ts"
         },
         {
@@ -1358,7 +1376,7 @@
             "source_file": "src/tests/e2e/team/query.ts",
             "source_location": "L1",
             "id": "src_tests_e2e_team_query_ts",
-            "community": 1,
+            "community": 3,
             "norm_label": "query.ts"
         },
         {
@@ -1367,7 +1385,7 @@
             "source_file": "src/tests/e2e/team/team.update.test.ts",
             "source_location": "L1",
             "id": "src_tests_e2e_team_team_update_test_ts",
-            "community": 1,
+            "community": 3,
             "norm_label": "team.update.test.ts"
         },
         {
@@ -1376,7 +1394,7 @@
             "source_file": "src/tests/e2e/scripts/wipe-schema.ts",
             "source_location": "L1",
             "id": "src_tests_e2e_scripts_wipe_schema_ts",
-            "community": 1,
+            "community": 3,
             "norm_label": "wipe-schema.ts"
         },
         {
@@ -1385,7 +1403,7 @@
             "source_file": "src/tests/e2e/scripts/wipe-schema.ts",
             "source_location": "L3",
             "id": "scripts_wipe_schema_wipeschema",
-            "community": 1,
+            "community": 3,
             "norm_label": "wipeschema()"
         },
         {
@@ -1394,7 +1412,7 @@
             "source_file": "src/tests/e2e/scripts/add-users.ts",
             "source_location": "L1",
             "id": "src_tests_e2e_scripts_add_users_ts",
-            "community": 27,
+            "community": 29,
             "norm_label": "add-users.ts"
         },
         {
@@ -1403,7 +1421,7 @@
             "source_file": "src/tests/e2e/scripts/add-users.ts",
             "source_location": "L7",
             "id": "scripts_add_users_getlettersequence",
-            "community": 27,
+            "community": 29,
             "norm_label": "getlettersequence()"
         },
         {
@@ -1412,7 +1430,7 @@
             "source_file": "src/tests/e2e/scripts/add-users.ts",
             "source_location": "L17",
             "id": "scripts_add_users_addusers",
-            "community": 27,
+            "community": 29,
             "norm_label": "addusers()"
         },
         {
@@ -1421,7 +1439,7 @@
             "source_file": "src/tests/e2e/scripts/volume-seed.ts",
             "source_location": "L1",
             "id": "src_tests_e2e_scripts_volume_seed_ts",
-            "community": 9,
+            "community": 10,
             "norm_label": "volume-seed.ts"
         },
         {
@@ -1430,7 +1448,7 @@
             "source_file": "src/tests/e2e/scripts/volume-seed.ts",
             "source_location": "L438",
             "id": "scripts_volume_seed_pick",
-            "community": 9,
+            "community": 10,
             "norm_label": "pick()"
         },
         {
@@ -1439,7 +1457,7 @@
             "source_file": "src/tests/e2e/scripts/volume-seed.ts",
             "source_location": "L441",
             "id": "scripts_volume_seed_randomint",
-            "community": 9,
+            "community": 10,
             "norm_label": "randomint()"
         },
         {
@@ -1448,7 +1466,7 @@
             "source_file": "src/tests/e2e/scripts/volume-seed.ts",
             "source_location": "L444",
             "id": "scripts_volume_seed_elapsed",
-            "community": 9,
+            "community": 10,
             "norm_label": "elapsed()"
         },
         {
@@ -1457,7 +1475,7 @@
             "source_file": "src/tests/e2e/scripts/volume-seed.ts",
             "source_location": "L447",
             "id": "scripts_volume_seed_esc",
-            "community": 9,
+            "community": 10,
             "norm_label": "esc()"
         },
         {
@@ -1466,7 +1484,7 @@
             "source_file": "src/tests/e2e/scripts/volume-seed.ts",
             "source_location": "L451",
             "id": "scripts_volume_seed_pickweighted",
-            "community": 9,
+            "community": 10,
             "norm_label": "pickweighted()"
         },
         {
@@ -1475,7 +1493,7 @@
             "source_file": "src/tests/e2e/scripts/volume-seed.ts",
             "source_location": "L462",
             "id": "scripts_volume_seed_samplen",
-            "community": 9,
+            "community": 10,
             "norm_label": "samplen()"
         },
         {
@@ -1484,7 +1502,7 @@
             "source_file": "src/tests/e2e/scripts/volume-seed.ts",
             "source_location": "L472",
             "id": "scripts_volume_seed_generateemail",
-            "community": 9,
+            "community": 10,
             "norm_label": "generateemail()"
         },
         {
@@ -1493,7 +1511,7 @@
             "source_file": "src/tests/e2e/scripts/volume-seed.ts",
             "source_location": "L476",
             "id": "scripts_volume_seed_generateusername",
-            "community": 9,
+            "community": 10,
             "norm_label": "generateusername()"
         },
         {
@@ -1502,7 +1520,7 @@
             "source_file": "src/tests/e2e/scripts/volume-seed.ts",
             "source_location": "L479",
             "id": "scripts_volume_seed_generateprojectname",
-            "community": 9,
+            "community": 10,
             "norm_label": "generateprojectname()"
         },
         {
@@ -1511,7 +1529,7 @@
             "source_file": "src/tests/e2e/scripts/volume-seed.ts",
             "source_location": "L482",
             "id": "scripts_volume_seed_generateteamname",
-            "community": 9,
+            "community": 10,
             "norm_label": "generateteamname()"
         },
         {
@@ -1520,7 +1538,7 @@
             "source_file": "src/tests/e2e/scripts/volume-seed.ts",
             "source_location": "L485",
             "id": "scripts_volume_seed_generatetasktitle",
-            "community": 9,
+            "community": 10,
             "norm_label": "generatetasktitle()"
         },
         {
@@ -1529,7 +1547,7 @@
             "source_file": "src/tests/e2e/scripts/volume-seed.ts",
             "source_location": "L488",
             "id": "scripts_volume_seed_generatetaskdesc",
-            "community": 9,
+            "community": 10,
             "norm_label": "generatetaskdesc()"
         },
         {
@@ -1538,7 +1556,7 @@
             "source_file": "src/tests/e2e/scripts/volume-seed.ts",
             "source_location": "L495",
             "id": "scripts_volume_seed_gql",
-            "community": 9,
+            "community": 10,
             "norm_label": "gql()"
         },
         {
@@ -1547,7 +1565,7 @@
             "source_file": "src/tests/e2e/scripts/volume-seed.ts",
             "source_location": "L520",
             "id": "scripts_volume_seed_plimit",
-            "community": 9,
+            "community": 10,
             "norm_label": "plimit()"
         },
         {
@@ -1556,7 +1574,7 @@
             "source_file": "src/tests/e2e/scripts/volume-seed.ts",
             "source_location": "L556",
             "id": "scripts_volume_seed_seed",
-            "community": 9,
+            "community": 10,
             "norm_label": "seed()"
         },
         {
@@ -1565,7 +1583,7 @@
             "source_file": "src/tests/e2e/scripts/apply-schema.ts",
             "source_location": "L1",
             "id": "src_tests_e2e_scripts_apply_schema_ts",
-            "community": 1,
+            "community": 3,
             "norm_label": "apply-schema.ts"
         },
         {
@@ -1574,7 +1592,7 @@
             "source_file": "src/tests/e2e/scripts/apply-schema.ts",
             "source_location": "L5",
             "id": "scripts_apply_schema_applyschema",
-            "community": 1,
+            "community": 3,
             "norm_label": "applyschema()"
         },
         {
@@ -1583,7 +1601,7 @@
             "source_file": "src/tests/e2e/task/task.link.delete.test.ts",
             "source_location": "L1",
             "id": "src_tests_e2e_task_task_link_delete_test_ts",
-            "community": 1,
+            "community": 3,
             "norm_label": "task.link.delete.test.ts"
         },
         {
@@ -1592,7 +1610,7 @@
             "source_file": "src/tests/e2e/task/task.create.test.ts",
             "source_location": "L1",
             "id": "src_tests_e2e_task_task_create_test_ts",
-            "community": 1,
+            "community": 3,
             "norm_label": "task.create.test.ts"
         },
         {
@@ -1601,7 +1619,7 @@
             "source_file": "src/tests/e2e/task/task.stress.concurrency.test.ts",
             "source_location": "L1",
             "id": "src_tests_e2e_task_task_stress_concurrency_test_ts",
-            "community": 1,
+            "community": 3,
             "norm_label": "task.stress.concurrency.test.ts"
         },
         {
@@ -1610,7 +1628,7 @@
             "source_file": "src/tests/e2e/task/task.link.update.test.ts",
             "source_location": "L1",
             "id": "src_tests_e2e_task_task_link_update_test_ts",
-            "community": 1,
+            "community": 3,
             "norm_label": "task.link.update.test.ts"
         },
         {
@@ -1619,7 +1637,7 @@
             "source_file": "src/tests/e2e/task/task.stress.reachability.test.ts",
             "source_location": "L1",
             "id": "src_tests_e2e_task_task_stress_reachability_test_ts",
-            "community": 1,
+            "community": 3,
             "norm_label": "task.stress.reachability.test.ts"
         },
         {
@@ -1628,7 +1646,7 @@
             "source_file": "src/tests/e2e/task/task.link.create.test.ts",
             "source_location": "L1",
             "id": "src_tests_e2e_task_task_link_create_test_ts",
-            "community": 1,
+            "community": 3,
             "norm_label": "task.link.create.test.ts"
         },
         {
@@ -1637,7 +1655,7 @@
             "source_file": "src/tests/e2e/task/task.neighbour-links.test.ts",
             "source_location": "L1",
             "id": "src_tests_e2e_task_task_neighbour_links_test_ts",
-            "community": 1,
+            "community": 3,
             "norm_label": "task.neighbour-links.test.ts"
         },
         {
@@ -1646,7 +1664,7 @@
             "source_file": "src/tests/e2e/task/task.neighbour-links.test.ts",
             "source_location": "L78",
             "id": "task_task_neighbour_links_test_createtask",
-            "community": 1,
+            "community": 3,
             "norm_label": "createtask()"
         },
         {
@@ -1655,7 +1673,7 @@
             "source_file": "src/tests/e2e/task/task.neighbour-links.test.ts",
             "source_location": "L95",
             "id": "task_task_neighbour_links_test_createlink",
-            "community": 1,
+            "community": 3,
             "norm_label": "createlink()"
         },
         {
@@ -1664,7 +1682,7 @@
             "source_file": "src/tests/e2e/task/mutation.ts",
             "source_location": "L1",
             "id": "src_tests_e2e_task_mutation_ts",
-            "community": 1,
+            "community": 3,
             "norm_label": "mutation.ts"
         },
         {
@@ -1673,7 +1691,7 @@
             "source_file": "src/tests/e2e/task/task.delete.test.ts",
             "source_location": "L1",
             "id": "src_tests_e2e_task_task_delete_test_ts",
-            "community": 1,
+            "community": 3,
             "norm_label": "task.delete.test.ts"
         },
         {
@@ -1682,7 +1700,7 @@
             "source_file": "src/tests/e2e/task/task.update.test.ts",
             "source_location": "L1",
             "id": "src_tests_e2e_task_task_update_test_ts",
-            "community": 1,
+            "community": 3,
             "norm_label": "task.update.test.ts"
         },
         {
@@ -1691,7 +1709,7 @@
             "source_file": "src/tests/e2e/helpers/request.ts",
             "source_location": "L1",
             "id": "src_tests_e2e_helpers_request_ts",
-            "community": 1,
+            "community": 3,
             "norm_label": "request.ts"
         },
         {
@@ -1700,7 +1718,7 @@
             "source_file": "src/tests/e2e/helpers/request.ts",
             "source_location": "L15",
             "id": "helpers_request_gqlrequest",
-            "community": 1,
+            "community": 3,
             "norm_label": "gqlrequest()"
         },
         {
@@ -1709,7 +1727,7 @@
             "source_file": "src/tests/e2e/helpers/server.ts",
             "source_location": "L1",
             "id": "src_tests_e2e_helpers_server_ts",
-            "community": 1,
+            "community": 3,
             "norm_label": "server.ts"
         },
         {
@@ -1718,7 +1736,7 @@
             "source_file": "src/tests/e2e/helpers/server.ts",
             "source_location": "L9",
             "id": "helpers_server_bootstrape2e",
-            "community": 7,
+            "community": 0,
             "norm_label": "bootstrape2e()"
         },
         {
@@ -1727,7 +1745,7 @@
             "source_file": "src/tests/e2e/helpers/server.ts",
             "source_location": "L13",
             "id": "helpers_server_teardowne2e",
-            "community": 7,
+            "community": 8,
             "norm_label": "teardowne2e()"
         },
         {
@@ -1736,7 +1754,7 @@
             "source_file": "src/utils/SyncActionRegistry.ts",
             "source_location": "L1",
             "id": "src_utils_syncactionregistry_ts",
-            "community": 4,
+            "community": 6,
             "norm_label": "syncactionregistry.ts"
         },
         {
@@ -1745,7 +1763,7 @@
             "source_file": "src/utils/SyncActionRegistry.ts",
             "source_location": "L9",
             "id": "utils_syncactionregistry_syncactionregistry",
-            "community": 4,
+            "community": 6,
             "norm_label": "syncactionregistry"
         },
         {
@@ -1754,7 +1772,7 @@
             "source_file": "src/utils/SyncActionRegistry.ts",
             "source_location": "L15",
             "id": "utils_syncactionregistry_syncactionregistry_registerhandler",
-            "community": 4,
+            "community": 6,
             "norm_label": ".registerhandler()"
         },
         {
@@ -1763,7 +1781,7 @@
             "source_file": "src/utils/SyncActionRegistry.ts",
             "source_location": "L28",
             "id": "utils_syncactionregistry_syncactionregistry_executehandlers",
-            "community": 4,
+            "community": 6,
             "norm_label": ".executehandlers()"
         },
         {
@@ -1781,7 +1799,7 @@
             "source_file": "src/utils/utils.ts",
             "source_location": "L1",
             "id": "src_utils_utils_ts",
-            "community": 3,
+            "community": 1,
             "norm_label": "utils.ts"
         },
         {
@@ -1790,7 +1808,7 @@
             "source_file": "src/utils/utils.ts",
             "source_location": "L1",
             "id": "utils_utils_gettimestring",
-            "community": 3,
+            "community": 7,
             "norm_label": "gettimestring()"
         },
         {
@@ -1799,7 +1817,7 @@
             "source_file": "src/utils/utils.ts",
             "source_location": "L5",
             "id": "utils_utils_gettime",
-            "community": 3,
+            "community": 1,
             "norm_label": "gettime()"
         },
         {
@@ -1808,7 +1826,7 @@
             "source_file": "src/utils/utils.ts",
             "source_location": "L9",
             "id": "utils_utils_encodecursor",
-            "community": 2,
+            "community": 1,
             "norm_label": "encodecursor()"
         },
         {
@@ -1817,7 +1835,7 @@
             "source_file": "src/utils/utils.ts",
             "source_location": "L18",
             "id": "utils_utils_decodecursor",
-            "community": 2,
+            "community": 1,
             "norm_label": "decodecursor()"
         },
         {
@@ -1853,7 +1871,7 @@
             "source_file": "src/utils/event-bus/KafkaBus.ts",
             "source_location": "L8",
             "id": "event_bus_kafkabus_kafkabus",
-            "community": 14,
+            "community": 15,
             "norm_label": "kafkabus"
         },
         {
@@ -1862,7 +1880,7 @@
             "source_file": "src/utils/event-bus/KafkaBus.ts",
             "source_location": "L16",
             "id": "event_bus_kafkabus_kafkabus_constructor",
-            "community": 14,
+            "community": 15,
             "norm_label": ".constructor()"
         },
         {
@@ -1871,7 +1889,7 @@
             "source_file": "src/utils/event-bus/KafkaBus.ts",
             "source_location": "L25",
             "id": "event_bus_kafkabus_kafkabus_init",
-            "community": 14,
+            "community": 15,
             "norm_label": ".init()"
         },
         {
@@ -1880,7 +1898,7 @@
             "source_file": "src/utils/event-bus/KafkaBus.ts",
             "source_location": "L51",
             "id": "event_bus_kafkabus_kafkabus_destroy",
-            "community": 14,
+            "community": 15,
             "norm_label": ".destroy()"
         },
         {
@@ -1889,7 +1907,7 @@
             "source_file": "src/utils/event-bus/KafkaBus.ts",
             "source_location": "L58",
             "id": "event_bus_kafkabus_kafkabus_publish",
-            "community": 14,
+            "community": 15,
             "norm_label": ".publish()"
         },
         {
@@ -1898,7 +1916,7 @@
             "source_file": "src/utils/event-bus/KafkaBus.ts",
             "source_location": "L73",
             "id": "event_bus_kafkabus_kafkabus_subscribe",
-            "community": 14,
+            "community": 15,
             "norm_label": ".subscribe()"
         },
         {
@@ -1907,7 +1925,7 @@
             "source_file": "src/utils/event-bus/KafkaBus.ts",
             "source_location": "L83",
             "id": "event_bus_kafkabus_kafkabus_emit",
-            "community": 14,
+            "community": 15,
             "norm_label": ".emit()"
         },
         {
@@ -1916,7 +1934,7 @@
             "source_file": "src/utils/event-bus/KafkaBus.ts",
             "source_location": "L94",
             "id": "event_bus_kafkabus_kafkabus_createconsumer",
-            "community": 14,
+            "community": 15,
             "norm_label": ".createconsumer()"
         },
         {
@@ -1925,7 +1943,7 @@
             "source_file": "src/utils/event-bus/KafkaBus.ts",
             "source_location": "L174",
             "id": "event_bus_kafkabus_kafkabus_executehandlers",
-            "community": 14,
+            "community": 15,
             "norm_label": ".executehandlers()"
         },
         {
@@ -1961,7 +1979,7 @@
             "source_file": "src/utils/event-bus/OutboxRelay.ts",
             "source_location": "L1",
             "id": "src_utils_event_bus_outboxrelay_ts",
-            "community": 7,
+            "community": 8,
             "norm_label": "outboxrelay.ts"
         },
         {
@@ -1970,7 +1988,7 @@
             "source_file": "src/utils/event-bus/OutboxRelay.ts",
             "source_location": "L12",
             "id": "event_bus_outboxrelay_fetchpendingevents",
-            "community": 7,
+            "community": 8,
             "norm_label": "fetchpendingevents()"
         },
         {
@@ -1979,7 +1997,7 @@
             "source_file": "src/utils/event-bus/OutboxRelay.ts",
             "source_location": "L26",
             "id": "event_bus_outboxrelay_dispatchtoeventbus",
-            "community": 7,
+            "community": 8,
             "norm_label": "dispatchtoeventbus()"
         },
         {
@@ -1988,7 +2006,7 @@
             "source_file": "src/utils/event-bus/OutboxRelay.ts",
             "source_location": "L72",
             "id": "event_bus_outboxrelay_clearprocessedevents",
-            "community": 7,
+            "community": 8,
             "norm_label": "clearprocessedevents()"
         },
         {
@@ -1997,7 +2015,7 @@
             "source_file": "src/utils/event-bus/OutboxRelay.ts",
             "source_location": "L79",
             "id": "event_bus_outboxrelay_processoutboxbatch",
-            "community": 7,
+            "community": 8,
             "norm_label": "processoutboxbatch()"
         },
         {
@@ -2006,7 +2024,7 @@
             "source_file": "src/utils/event-bus/OutboxRelay.ts",
             "source_location": "L104",
             "id": "event_bus_outboxrelay_setuplistener",
-            "community": 7,
+            "community": 8,
             "norm_label": "setuplistener()"
         },
         {
@@ -2015,7 +2033,7 @@
             "source_file": "src/utils/event-bus/OutboxRelay.ts",
             "source_location": "L155",
             "id": "event_bus_outboxrelay_reconnectlistener",
-            "community": 7,
+            "community": 8,
             "norm_label": "reconnectlistener()"
         },
         {
@@ -2024,7 +2042,7 @@
             "source_file": "src/utils/event-bus/OutboxRelay.ts",
             "source_location": "L169",
             "id": "event_bus_outboxrelay_poll",
-            "community": 7,
+            "community": 8,
             "norm_label": "poll()"
         },
         {
@@ -2033,7 +2051,7 @@
             "source_file": "src/utils/event-bus/OutboxRelay.ts",
             "source_location": "L184",
             "id": "event_bus_outboxrelay_startoutboxrelay",
-            "community": 7,
+            "community": 8,
             "norm_label": "startoutboxrelay()"
         },
         {
@@ -2042,7 +2060,7 @@
             "source_file": "src/utils/event-bus/OutboxRelay.ts",
             "source_location": "L197",
             "id": "event_bus_outboxrelay_stopoutboxrelay",
-            "community": 7,
+            "community": 8,
             "norm_label": "stopoutboxrelay()"
         },
         {
@@ -2060,7 +2078,7 @@
             "source_file": "src/utils/event-bus/MemoryBus.ts",
             "source_location": "L5",
             "id": "event_bus_memorybus_memorybus",
-            "community": 0,
+            "community": 22,
             "norm_label": "memorybus"
         },
         {
@@ -2069,7 +2087,7 @@
             "source_file": "src/utils/event-bus/MemoryBus.ts",
             "source_location": "L8",
             "id": "event_bus_memorybus_memorybus_init",
-            "community": 0,
+            "community": 22,
             "norm_label": ".init()"
         },
         {
@@ -2078,7 +2096,7 @@
             "source_file": "src/utils/event-bus/MemoryBus.ts",
             "source_location": "L10",
             "id": "event_bus_memorybus_memorybus_destroy",
-            "community": 0,
+            "community": 22,
             "norm_label": ".destroy()"
         },
         {
@@ -2087,7 +2105,7 @@
             "source_file": "src/utils/event-bus/MemoryBus.ts",
             "source_location": "L14",
             "id": "event_bus_memorybus_memorybus_publish",
-            "community": 0,
+            "community": 22,
             "norm_label": ".publish()"
         },
         {
@@ -2096,7 +2114,7 @@
             "source_file": "src/utils/event-bus/MemoryBus.ts",
             "source_location": "L32",
             "id": "event_bus_memorybus_memorybus_subscribe",
-            "community": 0,
+            "community": 22,
             "norm_label": ".subscribe()"
         },
         {
@@ -2141,7 +2159,7 @@
             "source_file": "src/utils/event-bus/idempotency.ts",
             "source_location": "L35",
             "id": "event_bus_idempotency_createevent",
-            "community": 3,
+            "community": 7,
             "norm_label": "createevent()"
         },
         {
@@ -2168,7 +2186,7 @@
             "source_file": "src/__tests__/Idempotency.eda.test.ts",
             "source_location": "L1",
             "id": "src_tests_idempotency_eda_test_ts",
-            "community": 1,
+            "community": 3,
             "norm_label": "idempotency.eda.test.ts"
         },
         {
@@ -2177,7 +2195,7 @@
             "source_file": "src/__tests__/OutboxRelay.eda.test.ts",
             "source_location": "L1",
             "id": "src_tests_outboxrelay_eda_test_ts",
-            "community": 1,
+            "community": 3,
             "norm_label": "outboxrelay.eda.test.ts"
         },
         {
@@ -2186,7 +2204,7 @@
             "source_file": "src/__tests__/PerformanceOverhaul.test.ts",
             "source_location": "L1",
             "id": "src_tests_performanceoverhaul_test_ts",
-            "community": 1,
+            "community": 3,
             "norm_label": "performanceoverhaul.test.ts"
         },
         {
@@ -2195,7 +2213,7 @@
             "source_file": "src/__tests__/PerformanceOverhaul.test.ts",
             "source_location": "L17",
             "id": "tests_performanceoverhaul_test_robustcleanup",
-            "community": 1,
+            "community": 3,
             "norm_label": "robustcleanup()"
         },
         {
@@ -2204,7 +2222,7 @@
             "source_file": "src/__tests__/helpers/waitFor.ts",
             "source_location": "L1",
             "id": "src_tests_helpers_waitfor_ts",
-            "community": 1,
+            "community": 3,
             "norm_label": "waitfor.ts"
         },
         {
@@ -2213,7 +2231,7 @@
             "source_file": "src/__tests__/helpers/waitFor.ts",
             "source_location": "L5",
             "id": "helpers_waitfor_waitfor",
-            "community": 1,
+            "community": 3,
             "norm_label": "waitfor()"
         },
         {
@@ -2222,7 +2240,7 @@
             "source_file": "src/__tests__/helpers/factories.ts",
             "source_location": "L1",
             "id": "src_tests_helpers_factories_ts",
-            "community": 8,
+            "community": 6,
             "norm_label": "factories.ts"
         },
         {
@@ -2231,7 +2249,7 @@
             "source_file": "src/__tests__/helpers/factories.ts",
             "source_location": "L13",
             "id": "helpers_factories_createuser",
-            "community": 8,
+            "community": 6,
             "norm_label": "createuser()"
         },
         {
@@ -2240,7 +2258,7 @@
             "source_file": "src/__tests__/helpers/factories.ts",
             "source_location": "L35",
             "id": "helpers_factories_createproject",
-            "community": 8,
+            "community": 6,
             "norm_label": "createproject()"
         },
         {
@@ -2249,7 +2267,7 @@
             "source_file": "src/__tests__/helpers/factories.ts",
             "source_location": "L76",
             "id": "helpers_factories_addprojectmember",
-            "community": 8,
+            "community": 6,
             "norm_label": "addprojectmember()"
         },
         {
@@ -2258,7 +2276,7 @@
             "source_file": "src/__tests__/helpers/factories.ts",
             "source_location": "L104",
             "id": "helpers_factories_createteam",
-            "community": 8,
+            "community": 6,
             "norm_label": "createteam()"
         },
         {
@@ -2267,7 +2285,7 @@
             "source_file": "src/__tests__/helpers/factories.ts",
             "source_location": "L129",
             "id": "helpers_factories_addteammember",
-            "community": 8,
+            "community": 6,
             "norm_label": "addteammember()"
         },
         {
@@ -2276,7 +2294,7 @@
             "source_file": "src/__tests__/helpers/db.ts",
             "source_location": "L1",
             "id": "src_tests_helpers_db_ts",
-            "community": 1,
+            "community": 3,
             "norm_label": "db.ts"
         },
         {
@@ -2285,7 +2303,7 @@
             "source_file": "src/__tests__/helpers/db.ts",
             "source_location": "L7",
             "id": "helpers_db_cleanupdb",
-            "community": 1,
+            "community": 3,
             "norm_label": "cleanupdb()"
         },
         {
@@ -2294,7 +2312,7 @@
             "source_file": "src/__tests__/helpers/db.ts",
             "source_location": "L22",
             "id": "helpers_db_destroydb",
-            "community": 1,
+            "community": 3,
             "norm_label": "destroydb()"
         },
         {
@@ -2312,7 +2330,7 @@
             "source_file": "src/kafka/registry.ts",
             "source_location": "L34",
             "id": "kafka_registry_startconsumers",
-            "community": 7,
+            "community": 0,
             "norm_label": "startconsumers()"
         },
         {
@@ -2438,7 +2456,7 @@
             "source_file": "src/graphql/schema.ts",
             "source_location": "L1",
             "id": "src_graphql_schema_ts",
-            "community": 28,
+            "community": 30,
             "norm_label": "schema.ts"
         },
         {
@@ -2447,7 +2465,7 @@
             "source_file": "src/graphql/errors.ts",
             "source_location": "L1",
             "id": "src_graphql_errors_ts",
-            "community": 3,
+            "community": 2,
             "norm_label": "errors.ts"
         },
         {
@@ -2456,7 +2474,7 @@
             "source_file": "src/graphql/errors.ts",
             "source_location": "L3",
             "id": "graphql_errors_unauthorizederror",
-            "community": 3,
+            "community": 2,
             "norm_label": "unauthorizederror"
         },
         {
@@ -2465,7 +2483,7 @@
             "source_file": "src/graphql/errors.ts",
             "source_location": "L4",
             "id": "graphql_errors_unauthorizederror_constructor",
-            "community": 3,
+            "community": 2,
             "norm_label": ".constructor()"
         },
         {
@@ -2474,7 +2492,7 @@
             "source_file": "src/graphql/errors.ts",
             "source_location": "L14",
             "id": "graphql_errors_forbiddenerror",
-            "community": 3,
+            "community": 2,
             "norm_label": "forbiddenerror"
         },
         {
@@ -2483,7 +2501,7 @@
             "source_file": "src/graphql/errors.ts",
             "source_location": "L15",
             "id": "graphql_errors_forbiddenerror_constructor",
-            "community": 3,
+            "community": 2,
             "norm_label": ".constructor()"
         },
         {
@@ -2492,7 +2510,7 @@
             "source_file": "src/graphql/errors.ts",
             "source_location": "L25",
             "id": "graphql_errors_notfounderror",
-            "community": 3,
+            "community": 2,
             "norm_label": "notfounderror"
         },
         {
@@ -2501,7 +2519,7 @@
             "source_file": "src/graphql/errors.ts",
             "source_location": "L26",
             "id": "graphql_errors_notfounderror_constructor",
-            "community": 3,
+            "community": 2,
             "norm_label": ".constructor()"
         },
         {
@@ -2510,7 +2528,7 @@
             "source_file": "src/graphql/errors.ts",
             "source_location": "L36",
             "id": "graphql_errors_validationerror",
-            "community": 3,
+            "community": 2,
             "norm_label": "validationerror"
         },
         {
@@ -2519,7 +2537,7 @@
             "source_file": "src/graphql/errors.ts",
             "source_location": "L37",
             "id": "graphql_errors_validationerror_constructor",
-            "community": 3,
+            "community": 2,
             "norm_label": ".constructor()"
         },
         {
@@ -2528,7 +2546,7 @@
             "source_file": "src/graphql/errors.ts",
             "source_location": "L47",
             "id": "graphql_errors_mutationfailederror",
-            "community": 3,
+            "community": 2,
             "norm_label": "mutationfailederror"
         },
         {
@@ -2537,7 +2555,7 @@
             "source_file": "src/graphql/errors.ts",
             "source_location": "L48",
             "id": "graphql_errors_mutationfailederror_constructor",
-            "community": 3,
+            "community": 2,
             "norm_label": ".constructor()"
         },
         {
@@ -2546,7 +2564,7 @@
             "source_file": "src/graphql/errors.ts",
             "source_location": "L57",
             "id": "graphql_errors_conflicterror",
-            "community": 3,
+            "community": 2,
             "norm_label": "conflicterror"
         },
         {
@@ -2555,7 +2573,7 @@
             "source_file": "src/graphql/errors.ts",
             "source_location": "L58",
             "id": "graphql_errors_conflicterror_constructor",
-            "community": 3,
+            "community": 2,
             "norm_label": ".constructor()"
         },
         {
@@ -2564,7 +2582,7 @@
             "source_file": "src/graphql/pubsub.ts",
             "source_location": "L1",
             "id": "src_graphql_pubsub_ts",
-            "community": 43,
+            "community": 45,
             "norm_label": "pubsub.ts"
         },
         {
@@ -2573,7 +2591,7 @@
             "source_file": "src/graphql/generate-schema.ts",
             "source_location": "L1",
             "id": "src_graphql_generate_schema_ts",
-            "community": 28,
+            "community": 30,
             "norm_label": "generate-schema.ts"
         },
         {
@@ -2582,7 +2600,7 @@
             "source_file": "src/graphql/generate-schema.ts",
             "source_location": "L9",
             "id": "graphql_generate_schema_generateschema",
-            "community": 28,
+            "community": 30,
             "norm_label": "generateschema()"
         },
         {
@@ -2591,7 +2609,7 @@
             "source_file": "src/graphql/context.ts",
             "source_location": "L1",
             "id": "src_graphql_context_ts",
-            "community": 3,
+            "community": 2,
             "norm_label": "context.ts"
         },
         {
@@ -2600,7 +2618,7 @@
             "source_file": "src/graphql/context.ts",
             "source_location": "L9",
             "id": "graphql_context_createcontext",
-            "community": 3,
+            "community": 2,
             "norm_label": "createcontext()"
         },
         {
@@ -2609,7 +2627,7 @@
             "source_file": "src/graphql/index.ts",
             "source_location": "L1",
             "id": "src_graphql_index_ts",
-            "community": 1,
+            "community": 3,
             "norm_label": "index.ts"
         },
         {
@@ -2618,7 +2636,7 @@
             "source_file": "src/graphql/dls/project.ts",
             "source_location": "L1",
             "id": "src_graphql_dls_project_ts",
-            "community": 29,
+            "community": 31,
             "norm_label": "project.ts"
         },
         {
@@ -2627,7 +2645,7 @@
             "source_file": "src/graphql/dls/project.ts",
             "source_location": "L9",
             "id": "dls_project_byid",
-            "community": 29,
+            "community": 31,
             "norm_label": "byid()"
         },
         {
@@ -2636,7 +2654,7 @@
             "source_file": "src/graphql/dls/project.ts",
             "source_location": "L23",
             "id": "dls_project_byactoridandid",
-            "community": 29,
+            "community": 31,
             "norm_label": "byactoridandid()"
         },
         {
@@ -2645,7 +2663,7 @@
             "source_file": "src/graphql/dls/projectMember.ts",
             "source_location": "L1",
             "id": "src_graphql_dls_projectmember_ts",
-            "community": 30,
+            "community": 32,
             "norm_label": "projectmember.ts"
         },
         {
@@ -2654,7 +2672,7 @@
             "source_file": "src/graphql/dls/projectMember.ts",
             "source_location": "L8",
             "id": "dls_projectmember_byid",
-            "community": 30,
+            "community": 32,
             "norm_label": "byid()"
         },
         {
@@ -2663,7 +2681,7 @@
             "source_file": "src/graphql/dls/projectMember.ts",
             "source_location": "L24",
             "id": "dls_projectmember_byactoridandid",
-            "community": 30,
+            "community": 32,
             "norm_label": "byactoridandid()"
         },
         {
@@ -2672,7 +2690,7 @@
             "source_file": "src/graphql/dls/autoAction.ts",
             "source_location": "L1",
             "id": "src_graphql_dls_autoaction_ts",
-            "community": 3,
+            "community": 4,
             "norm_label": "autoaction.ts"
         },
         {
@@ -2681,7 +2699,7 @@
             "source_file": "src/graphql/dls/autoAction.ts",
             "source_location": "L5",
             "id": "dls_autoaction_byid",
-            "community": 3,
+            "community": 4,
             "norm_label": "byid()"
         },
         {
@@ -2690,7 +2708,7 @@
             "source_file": "src/graphql/dls/autoAction.ts",
             "source_location": "L19",
             "id": "dls_autoaction_byactoridandid",
-            "community": 3,
+            "community": 4,
             "norm_label": "byactoridandid()"
         },
         {
@@ -2726,7 +2744,7 @@
             "source_file": "src/graphql/dls/index.ts",
             "source_location": "L1",
             "id": "src_graphql_dls_index_ts",
-            "community": 3,
+            "community": 2,
             "norm_label": "index.ts"
         },
         {
@@ -2735,7 +2753,7 @@
             "source_file": "src/graphql/dls/index.ts",
             "source_location": "L11",
             "id": "dls_index_createloaders",
-            "community": 3,
+            "community": 2,
             "norm_label": "createloaders()"
         },
         {
@@ -2744,7 +2762,7 @@
             "source_file": "src/graphql/dls/user.ts",
             "source_location": "L1",
             "id": "src_graphql_dls_user_ts",
-            "community": 35,
+            "community": 37,
             "norm_label": "user.ts"
         },
         {
@@ -2753,7 +2771,7 @@
             "source_file": "src/graphql/dls/user.ts",
             "source_location": "L7",
             "id": "dls_user_byid",
-            "community": 35,
+            "community": 37,
             "norm_label": "byid()"
         },
         {
@@ -2789,7 +2807,7 @@
             "source_file": "src/graphql/resolvers/project.ts",
             "source_location": "L1",
             "id": "src_graphql_resolvers_project_ts",
-            "community": 3,
+            "community": 2,
             "norm_label": "project.ts"
         },
         {
@@ -2798,7 +2816,7 @@
             "source_file": "src/graphql/resolvers/autoAction.ts",
             "source_location": "L1",
             "id": "src_graphql_resolvers_autoaction_ts",
-            "community": 3,
+            "community": 2,
             "norm_label": "autoaction.ts"
         },
         {
@@ -2807,7 +2825,7 @@
             "source_file": "src/graphql/resolvers/autoAction.ts",
             "source_location": "L37",
             "id": "resolvers_autoaction_requireuserid",
-            "community": 3,
+            "community": 2,
             "norm_label": "requireuserid()"
         },
         {
@@ -2816,7 +2834,7 @@
             "source_file": "src/graphql/resolvers/autoAction.ts",
             "source_location": "L44",
             "id": "resolvers_autoaction_mapmutationerror",
-            "community": 3,
+            "community": 2,
             "norm_label": "mapmutationerror()"
         },
         {
@@ -2825,7 +2843,7 @@
             "source_file": "src/graphql/resolvers/team.ts",
             "source_location": "L1",
             "id": "src_graphql_resolvers_team_ts",
-            "community": 3,
+            "community": 2,
             "norm_label": "team.ts"
         },
         {
@@ -2834,7 +2852,7 @@
             "source_file": "src/graphql/resolvers/jsonScalar.ts",
             "source_location": "L1",
             "id": "src_graphql_resolvers_jsonscalar_ts",
-            "community": 36,
+            "community": 38,
             "norm_label": "jsonscalar.ts"
         },
         {
@@ -2843,7 +2861,7 @@
             "source_file": "src/graphql/resolvers/jsonScalar.ts",
             "source_location": "L3",
             "id": "resolvers_jsonscalar_parseliteral",
-            "community": 36,
+            "community": 38,
             "norm_label": "parseliteral()"
         },
         {
@@ -2852,7 +2870,7 @@
             "source_file": "src/graphql/resolvers/notification.ts",
             "source_location": "L1",
             "id": "src_graphql_resolvers_notification_ts",
-            "community": 3,
+            "community": 2,
             "norm_label": "notification.ts"
         },
         {
@@ -2861,7 +2879,7 @@
             "source_file": "src/graphql/resolvers/realtime.ts",
             "source_location": "L1",
             "id": "src_graphql_resolvers_realtime_ts",
-            "community": 3,
+            "community": 2,
             "norm_label": "realtime.ts"
         },
         {
@@ -2870,7 +2888,7 @@
             "source_file": "src/graphql/resolvers/index.ts",
             "source_location": "L1",
             "id": "src_graphql_resolvers_index_ts",
-            "community": 3,
+            "community": 2,
             "norm_label": "index.ts"
         },
         {
@@ -2879,7 +2897,7 @@
             "source_file": "src/graphql/resolvers/task.ts",
             "source_location": "L1",
             "id": "src_graphql_resolvers_task_ts",
-            "community": 3,
+            "community": 2,
             "norm_label": "task.ts"
         },
         {
@@ -2888,7 +2906,7 @@
             "source_file": "src/graphql/resolvers/auth.ts",
             "source_location": "L1",
             "id": "src_graphql_resolvers_auth_ts",
-            "community": 3,
+            "community": 2,
             "norm_label": "auth.ts"
         },
         {
@@ -2897,7 +2915,7 @@
             "source_file": "src/modules/auth/AuthService.ts",
             "source_location": "L1",
             "id": "src_modules_auth_authservice_ts",
-            "community": 0,
+            "community": 2,
             "norm_label": "authservice.ts"
         },
         {
@@ -2915,7 +2933,7 @@
             "source_file": "src/modules/auth/auth.middleware.ts",
             "source_location": "L1",
             "id": "src_modules_auth_auth_middleware_ts",
-            "community": 37,
+            "community": 39,
             "norm_label": "auth.middleware.ts"
         },
         {
@@ -2924,7 +2942,7 @@
             "source_file": "src/modules/auth/auth.middleware.ts",
             "source_location": "L10",
             "id": "auth_auth_middleware_requireauth",
-            "community": 37,
+            "community": 39,
             "norm_label": "requireauth()"
         },
         {
@@ -2942,7 +2960,7 @@
             "source_file": "src/modules/auth/internal/AuthServiceImpl.ts",
             "source_location": "L24",
             "id": "internal_authserviceimpl_authserviceimpl",
-            "community": 15,
+            "community": 16,
             "norm_label": "authserviceimpl"
         },
         {
@@ -2951,7 +2969,7 @@
             "source_file": "src/modules/auth/internal/AuthServiceImpl.ts",
             "source_location": "L25",
             "id": "internal_authserviceimpl_authserviceimpl_init",
-            "community": 15,
+            "community": 16,
             "norm_label": ".init()"
         },
         {
@@ -2960,7 +2978,7 @@
             "source_file": "src/modules/auth/internal/AuthServiceImpl.ts",
             "source_location": "L29",
             "id": "internal_authserviceimpl_authserviceimpl_destroy",
-            "community": 15,
+            "community": 16,
             "norm_label": ".destroy()"
         },
         {
@@ -2969,7 +2987,7 @@
             "source_file": "src/modules/auth/internal/AuthServiceImpl.ts",
             "source_location": "L33",
             "id": "internal_authserviceimpl_authserviceimpl_startsignup",
-            "community": 15,
+            "community": 16,
             "norm_label": ".startsignup()"
         },
         {
@@ -2978,7 +2996,7 @@
             "source_file": "src/modules/auth/internal/AuthServiceImpl.ts",
             "source_location": "L57",
             "id": "internal_authserviceimpl_authserviceimpl_finishsignup",
-            "community": 15,
+            "community": 16,
             "norm_label": ".finishsignup()"
         },
         {
@@ -2987,7 +3005,7 @@
             "source_file": "src/modules/auth/internal/AuthServiceImpl.ts",
             "source_location": "L96",
             "id": "internal_authserviceimpl_authserviceimpl_signin",
-            "community": 15,
+            "community": 16,
             "norm_label": ".signin()"
         },
         {
@@ -2996,7 +3014,7 @@
             "source_file": "src/modules/auth/internal/AuthServiceImpl.ts",
             "source_location": "L128",
             "id": "internal_authserviceimpl_authserviceimpl_searchusers",
-            "community": 15,
+            "community": 16,
             "norm_label": ".searchusers()"
         },
         {
@@ -3005,7 +3023,7 @@
             "source_file": "src/modules/auth/internal/AuthServiceImpl.ts",
             "source_location": "L196",
             "id": "internal_authserviceimpl_authserviceimpl_getusersbyids",
-            "community": 15,
+            "community": 16,
             "norm_label": ".getusersbyids()"
         },
         {
@@ -3014,7 +3032,7 @@
             "source_file": "src/modules/auth/internal/AuthServiceImpl.ts",
             "source_location": "L207",
             "id": "internal_authserviceimpl_authserviceimpl_handleuserprojectcountsync",
-            "community": 15,
+            "community": 16,
             "norm_label": ".handleuserprojectcountsync()"
         },
         {
@@ -3041,7 +3059,7 @@
             "source_file": "src/modules/auth/internal/__tests__/AuthServiceBatch.test.ts",
             "source_location": "L1",
             "id": "src_modules_auth_internal_tests_authservicebatch_test_ts",
-            "community": 38,
+            "community": 40,
             "norm_label": "authservicebatch.test.ts"
         },
         {
@@ -3050,7 +3068,7 @@
             "source_file": "src/modules/auth/internal/__tests__/AuthServiceBatch.test.ts",
             "source_location": "L36",
             "id": "tests_authservicebatch_test_makeevent",
-            "community": 38,
+            "community": 40,
             "norm_label": "makeevent()"
         },
         {
@@ -3095,7 +3113,7 @@
             "source_file": "src/modules/external-notification/ExternalNotificationService.ts",
             "source_location": "L1",
             "id": "src_modules_external_notification_externalnotificationservice_ts",
-            "community": 7,
+            "community": 17,
             "norm_label": "externalnotificationservice.ts"
         },
         {
@@ -3104,7 +3122,7 @@
             "source_file": "src/modules/external-notification/index.ts",
             "source_location": "L1",
             "id": "src_modules_external_notification_index_ts",
-            "community": 7,
+            "community": 17,
             "norm_label": "index.ts"
         },
         {
@@ -3113,7 +3131,7 @@
             "source_file": "src/modules/external-notification/internal/ExternalNotificationServiceImpl.ts",
             "source_location": "L1",
             "id": "src_modules_external_notification_internal_externalnotificationserviceimpl_ts",
-            "community": 7,
+            "community": 17,
             "norm_label": "externalnotificationserviceimpl.ts"
         },
         {
@@ -3122,7 +3140,7 @@
             "source_file": "src/modules/external-notification/internal/ExternalNotificationServiceImpl.ts",
             "source_location": "L4",
             "id": "internal_externalnotificationserviceimpl_externalnotificationserviceimpl",
-            "community": 7,
+            "community": 17,
             "norm_label": "externalnotificationserviceimpl"
         },
         {
@@ -3131,7 +3149,7 @@
             "source_file": "src/modules/external-notification/internal/ExternalNotificationServiceImpl.ts",
             "source_location": "L7",
             "id": "internal_externalnotificationserviceimpl_externalnotificationserviceimpl_init",
-            "community": 7,
+            "community": 17,
             "norm_label": ".init()"
         },
         {
@@ -3140,7 +3158,7 @@
             "source_file": "src/modules/external-notification/internal/ExternalNotificationServiceImpl.ts",
             "source_location": "L11",
             "id": "internal_externalnotificationserviceimpl_externalnotificationserviceimpl_destroy",
-            "community": 7,
+            "community": 17,
             "norm_label": ".destroy()"
         },
         {
@@ -3149,7 +3167,7 @@
             "source_file": "src/modules/external-notification/internal/ExternalNotificationServiceImpl.ts",
             "source_location": "L15",
             "id": "internal_externalnotificationserviceimpl_externalnotificationserviceimpl_sendsignupemail",
-            "community": 7,
+            "community": 17,
             "norm_label": ".sendsignupemail()"
         },
         {
@@ -3158,7 +3176,7 @@
             "source_file": "src/modules/external-notification/internal/ExternalNotificationServiceImpl.ts",
             "source_location": "L19",
             "id": "internal_externalnotificationserviceimpl_externalnotificationserviceimpl_sendnotification",
-            "community": 7,
+            "community": 17,
             "norm_label": ".sendnotification()"
         },
         {
@@ -3167,7 +3185,7 @@
             "source_file": "src/modules/external-notification/internal/ExternalNotificationServiceImpl.ts",
             "source_location": "L30",
             "id": "internal_externalnotificationserviceimpl_externalnotificationserviceimpl_sendnotificationbatch",
-            "community": 7,
+            "community": 17,
             "norm_label": ".sendnotificationbatch()"
         },
         {
@@ -3176,7 +3194,7 @@
             "source_file": "src/modules/project/ProjectService.ts",
             "source_location": "L1",
             "id": "src_modules_project_projectservice_ts",
-            "community": 3,
+            "community": 2,
             "norm_label": "projectservice.ts"
         },
         {
@@ -3185,7 +3203,7 @@
             "source_file": "src/modules/project/index.ts",
             "source_location": "L1",
             "id": "src_modules_project_index_ts",
-            "community": 3,
+            "community": 2,
             "norm_label": "index.ts"
         },
         {
@@ -3194,7 +3212,7 @@
             "source_file": "src/modules/project/internal/ProjectServiceImpl.ts",
             "source_location": "L1",
             "id": "src_modules_project_internal_projectserviceimpl_ts",
-            "community": 3,
+            "community": 2,
             "norm_label": "projectserviceimpl.ts"
         },
         {
@@ -3203,7 +3221,7 @@
             "source_file": "src/modules/project/internal/ProjectServiceImpl.ts",
             "source_location": "L23",
             "id": "internal_projectserviceimpl_projectserviceimpl",
-            "community": 8,
+            "community": 9,
             "norm_label": "projectserviceimpl"
         },
         {
@@ -3212,7 +3230,7 @@
             "source_file": "src/modules/project/internal/ProjectServiceImpl.ts",
             "source_location": "L24",
             "id": "internal_projectserviceimpl_projectserviceimpl_getprojectsofuser",
-            "community": 8,
+            "community": 9,
             "norm_label": ".getprojectsofuser()"
         },
         {
@@ -3221,7 +3239,7 @@
             "source_file": "src/modules/project/internal/ProjectServiceImpl.ts",
             "source_location": "L43",
             "id": "internal_projectserviceimpl_projectserviceimpl_getprojectmembers",
-            "community": 8,
+            "community": 9,
             "norm_label": ".getprojectmembers()"
         },
         {
@@ -3230,7 +3248,7 @@
             "source_file": "src/modules/project/internal/ProjectServiceImpl.ts",
             "source_location": "L58",
             "id": "internal_projectserviceimpl_projectserviceimpl_getprojectmembersbyids",
-            "community": 8,
+            "community": 9,
             "norm_label": ".getprojectmembersbyids()"
         },
         {
@@ -3239,7 +3257,7 @@
             "source_file": "src/modules/project/internal/ProjectServiceImpl.ts",
             "source_location": "L67",
             "id": "internal_projectserviceimpl_projectserviceimpl_getprojectmembersbyactoridandids",
-            "community": 8,
+            "community": 9,
             "norm_label": ".getprojectmembersbyactoridandids()"
         },
         {
@@ -3248,7 +3266,7 @@
             "source_file": "src/modules/project/internal/ProjectServiceImpl.ts",
             "source_location": "L77",
             "id": "internal_projectserviceimpl_projectserviceimpl_getprojectsbyids",
-            "community": 8,
+            "community": 9,
             "norm_label": ".getprojectsbyids()"
         },
         {
@@ -3257,7 +3275,7 @@
             "source_file": "src/modules/project/internal/ProjectServiceImpl.ts",
             "source_location": "L84",
             "id": "internal_projectserviceimpl_projectserviceimpl_getprojectsbyactoridandprojectids",
-            "community": 8,
+            "community": 9,
             "norm_label": ".getprojectsbyactoridandprojectids()"
         },
         {
@@ -3266,7 +3284,7 @@
             "source_file": "src/modules/project/internal/ProjectServiceImpl.ts",
             "source_location": "L94",
             "id": "internal_projectserviceimpl_projectserviceimpl_destroy",
-            "community": 8,
+            "community": 9,
             "norm_label": ".destroy()"
         },
         {
@@ -3275,7 +3293,7 @@
             "source_file": "src/modules/project/internal/ProjectServiceImpl.ts",
             "source_location": "L99",
             "id": "internal_projectserviceimpl_projectserviceimpl_init",
-            "community": 8,
+            "community": 9,
             "norm_label": ".init()"
         },
         {
@@ -3284,7 +3302,7 @@
             "source_file": "src/modules/project/internal/ProjectServiceImpl.ts",
             "source_location": "L104",
             "id": "internal_projectserviceimpl_projectserviceimpl_createproject",
-            "community": 8,
+            "community": 6,
             "norm_label": ".createproject()"
         },
         {
@@ -3293,7 +3311,7 @@
             "source_file": "src/modules/project/internal/ProjectServiceImpl.ts",
             "source_location": "L136",
             "id": "internal_projectserviceimpl_projectserviceimpl_updateproject",
-            "community": 8,
+            "community": 9,
             "norm_label": ".updateproject()"
         },
         {
@@ -3302,7 +3320,7 @@
             "source_file": "src/modules/project/internal/ProjectServiceImpl.ts",
             "source_location": "L167",
             "id": "internal_projectserviceimpl_projectserviceimpl_deleteprojects",
-            "community": 8,
+            "community": 9,
             "norm_label": ".deleteprojects()"
         },
         {
@@ -3311,7 +3329,7 @@
             "source_file": "src/modules/project/internal/ProjectServiceImpl.ts",
             "source_location": "L181",
             "id": "internal_projectserviceimpl_projectserviceimpl_addprojectmembers",
-            "community": 8,
+            "community": 9,
             "norm_label": ".addprojectmembers()"
         },
         {
@@ -3320,7 +3338,7 @@
             "source_file": "src/modules/project/internal/ProjectServiceImpl.ts",
             "source_location": "L194",
             "id": "internal_projectserviceimpl_projectserviceimpl_removeprojectmembers",
-            "community": 8,
+            "community": 9,
             "norm_label": ".removeprojectmembers()"
         },
         {
@@ -3329,7 +3347,7 @@
             "source_file": "src/modules/project/internal/ProjectServiceImpl.ts",
             "source_location": "L207",
             "id": "internal_projectserviceimpl_projectserviceimpl_handleprojectmembercountsync",
-            "community": 8,
+            "community": 9,
             "norm_label": ".handleprojectmembercountsync()"
         },
         {
@@ -3338,7 +3356,7 @@
             "source_file": "src/modules/project/internal/ProjectServiceImpl.ts",
             "source_location": "L218",
             "id": "internal_projectserviceimpl_projectserviceimpl_handlesyncprojecttaskcount",
-            "community": 8,
+            "community": 9,
             "norm_label": ".handlesyncprojecttaskcount()"
         },
         {
@@ -3347,7 +3365,7 @@
             "source_file": "src/modules/project/internal/ProjectServiceImpl.ts",
             "source_location": "L229",
             "id": "internal_projectserviceimpl_projectserviceimpl_handlesyncprojectteamcount",
-            "community": 8,
+            "community": 9,
             "norm_label": ".handlesyncprojectteamcount()"
         },
         {
@@ -3356,7 +3374,7 @@
             "source_file": "src/modules/project/internal/ProjectServiceImpl.ts",
             "source_location": "L240",
             "id": "internal_projectserviceimpl_projectserviceimpl_handleremoveprojectmember",
-            "community": 8,
+            "community": 9,
             "norm_label": ".handleremoveprojectmember()"
         },
         {
@@ -3365,7 +3383,7 @@
             "source_file": "src/modules/project/internal/ProjectServiceImpl.ts",
             "source_location": "L277",
             "id": "internal_projectserviceimpl_projectserviceimpl_handledeleteprojectmember",
-            "community": 8,
+            "community": 9,
             "norm_label": ".handledeleteprojectmember()"
         },
         {
@@ -3374,7 +3392,7 @@
             "source_file": "src/modules/project/internal/ProjectServiceImpl.ts",
             "source_location": "L303",
             "id": "internal_projectserviceimpl_projectserviceimpl_handleprojectcountsync",
-            "community": 8,
+            "community": 9,
             "norm_label": ".handleprojectcountsync()"
         },
         {
@@ -3383,7 +3401,7 @@
             "source_file": "src/modules/project/internal/ProjectQueries.ts",
             "source_location": "L1",
             "id": "src_modules_project_internal_projectqueries_ts",
-            "community": 3,
+            "community": 1,
             "norm_label": "projectqueries.ts"
         },
         {
@@ -3392,7 +3410,7 @@
             "source_file": "src/modules/project/internal/ProjectQueries.ts",
             "source_location": "L8",
             "id": "internal_projectqueries_insertproject",
-            "community": 3,
+            "community": 1,
             "norm_label": "insertproject()"
         },
         {
@@ -3401,7 +3419,7 @@
             "source_file": "src/modules/project/internal/ProjectQueries.ts",
             "source_location": "L49",
             "id": "internal_projectqueries_updateproject",
-            "community": 3,
+            "community": 1,
             "norm_label": "updateproject()"
         },
         {
@@ -3410,7 +3428,7 @@
             "source_file": "src/modules/project/internal/ProjectQueries.ts",
             "source_location": "L99",
             "id": "internal_projectqueries_deleteprojects",
-            "community": 3,
+            "community": 1,
             "norm_label": "deleteprojects()"
         },
         {
@@ -3419,7 +3437,7 @@
             "source_file": "src/modules/project/internal/ProjectQueries.ts",
             "source_location": "L135",
             "id": "internal_projectqueries_insertprojectmembers",
-            "community": 3,
+            "community": 1,
             "norm_label": "insertprojectmembers()"
         },
         {
@@ -3428,7 +3446,7 @@
             "source_file": "src/modules/project/internal/ProjectQueries.ts",
             "source_location": "L183",
             "id": "internal_projectqueries_deleteprojectmembers",
-            "community": 3,
+            "community": 1,
             "norm_label": "deleteprojectmembers()"
         },
         {
@@ -3437,7 +3455,7 @@
             "source_file": "src/modules/project/internal/ProjectQueries.ts",
             "source_location": "L230",
             "id": "internal_projectqueries_getprojects",
-            "community": 2,
+            "community": 1,
             "norm_label": "getprojects()"
         },
         {
@@ -3446,7 +3464,7 @@
             "source_file": "src/modules/project/internal/ProjectQueries.ts",
             "source_location": "L342",
             "id": "internal_projectqueries_getprojectmembers",
-            "community": 2,
+            "community": 1,
             "norm_label": "getprojectmembers()"
         },
         {
@@ -3455,7 +3473,7 @@
             "source_file": "src/modules/project/internal/ProjectQueries.ts",
             "source_location": "L431",
             "id": "internal_projectqueries_getprojectmembersbyids",
-            "community": 3,
+            "community": 1,
             "norm_label": "getprojectmembersbyids()"
         },
         {
@@ -3464,7 +3482,7 @@
             "source_file": "src/modules/project/internal/ProjectQueries.ts",
             "source_location": "L452",
             "id": "internal_projectqueries_getprojectmembersbyactoridandids",
-            "community": 3,
+            "community": 1,
             "norm_label": "getprojectmembersbyactoridandids()"
         },
         {
@@ -3473,7 +3491,7 @@
             "source_file": "src/modules/project/internal/ProjectQueries.ts",
             "source_location": "L480",
             "id": "internal_projectqueries_getprojectsbyids",
-            "community": 3,
+            "community": 1,
             "norm_label": "getprojectsbyids()"
         },
         {
@@ -3482,7 +3500,7 @@
             "source_file": "src/modules/project/internal/ProjectQueries.ts",
             "source_location": "L505",
             "id": "internal_projectqueries_getprojectsbyactoridandprojectids",
-            "community": 3,
+            "community": 1,
             "norm_label": "getprojectsbyactoridandprojectids()"
         },
         {
@@ -3491,7 +3509,7 @@
             "source_file": "src/modules/project/internal/ProjectQueries.ts",
             "source_location": "L539",
             "id": "internal_projectqueries_updateprojectteamcountsbulk",
-            "community": 3,
+            "community": 1,
             "norm_label": "updateprojectteamcountsbulk()"
         },
         {
@@ -3500,7 +3518,7 @@
             "source_file": "src/modules/project/internal/ProjectQueries.ts",
             "source_location": "L560",
             "id": "internal_projectqueries_updateprojectmembercountsbulk",
-            "community": 3,
+            "community": 1,
             "norm_label": "updateprojectmembercountsbulk()"
         },
         {
@@ -3509,7 +3527,7 @@
             "source_file": "src/modules/project/internal/ProjectQueries.ts",
             "source_location": "L581",
             "id": "internal_projectqueries_updateprojecttaskcountsbulk",
-            "community": 3,
+            "community": 1,
             "norm_label": "updateprojecttaskcountsbulk()"
         },
         {
@@ -3518,7 +3536,7 @@
             "source_file": "src/modules/project/internal/ProjectQueries.ts",
             "source_location": "L605",
             "id": "internal_projectqueries_purgeprojectcoreandmembersbyprojectids",
-            "community": 3,
+            "community": 1,
             "norm_label": "purgeprojectcoreandmembersbyprojectids()"
         },
         {
@@ -3527,7 +3545,7 @@
             "source_file": "src/modules/project/internal/ProjectQueries.ts",
             "source_location": "L623",
             "id": "internal_projectqueries_incrementuserprojectcountsbulk",
-            "community": 3,
+            "community": 1,
             "norm_label": "incrementuserprojectcountsbulk()"
         },
         {
@@ -3536,7 +3554,7 @@
             "source_file": "src/modules/project/internal/ProjectQueries.ts",
             "source_location": "L646",
             "id": "internal_projectqueries_incrementprojectmembercountsbulk",
-            "community": 3,
+            "community": 1,
             "norm_label": "incrementprojectmembercountsbulk()"
         },
         {
@@ -3545,7 +3563,7 @@
             "source_file": "src/modules/project/internal/ProjectQueries.ts",
             "source_location": "L676",
             "id": "internal_projectqueries_purgeprojectmembersbatch",
-            "community": 3,
+            "community": 1,
             "norm_label": "purgeprojectmembersbatch()"
         },
         {
@@ -3554,7 +3572,7 @@
             "source_file": "src/modules/project/internal/ProjectQueries.ts",
             "source_location": "L706",
             "id": "internal_projectqueries_purgeprojectmembersbyprojectidsbatch",
-            "community": 3,
+            "community": 1,
             "norm_label": "purgeprojectmembersbyprojectidsbatch()"
         },
         {
@@ -3563,7 +3581,7 @@
             "source_file": "src/modules/project/internal/__tests__/ProjectQueries.test.ts",
             "source_location": "L1",
             "id": "src_modules_project_internal_tests_projectqueries_test_ts",
-            "community": 1,
+            "community": 3,
             "norm_label": "projectqueries.test.ts"
         },
         {
@@ -3572,7 +3590,7 @@
             "source_file": "src/modules/project/internal/__tests__/ProjectServiceBatch.test.ts",
             "source_location": "L1",
             "id": "src_modules_project_internal_tests_projectservicebatch_test_ts",
-            "community": 23,
+            "community": 25,
             "norm_label": "projectservicebatch.test.ts"
         },
         {
@@ -3581,7 +3599,7 @@
             "source_file": "src/modules/project/internal/__tests__/ProjectServiceBatch.test.ts",
             "source_location": "L64",
             "id": "tests_projectservicebatch_test_makedeltaevent",
-            "community": 23,
+            "community": 25,
             "norm_label": "makedeltaevent()"
         },
         {
@@ -3590,7 +3608,7 @@
             "source_file": "src/modules/project/internal/__tests__/ProjectServiceBatch.test.ts",
             "source_location": "L76",
             "id": "tests_projectservicebatch_test_makeremovalevent",
-            "community": 23,
+            "community": 25,
             "norm_label": "makeremovalevent()"
         },
         {
@@ -3599,7 +3617,7 @@
             "source_file": "src/modules/project/internal/__tests__/ProjectServiceBatch.test.ts",
             "source_location": "L88",
             "id": "tests_projectservicebatch_test_makedeleteevent",
-            "community": 23,
+            "community": 25,
             "norm_label": "makedeleteevent()"
         },
         {
@@ -3788,7 +3806,7 @@
             "source_file": "src/modules/team/TeamService.ts",
             "source_location": "L1",
             "id": "src_modules_team_teamservice_ts",
-            "community": 0,
+            "community": 2,
             "norm_label": "teamservice.ts"
         },
         {
@@ -3797,7 +3815,7 @@
             "source_file": "src/modules/team/index.ts",
             "source_location": "L1",
             "id": "src_modules_team_index_ts",
-            "community": 0,
+            "community": 2,
             "norm_label": "index.ts"
         },
         {
@@ -3806,7 +3824,7 @@
             "source_file": "src/modules/team/internal/TeamServiceImpl.ts",
             "source_location": "L1",
             "id": "src_modules_team_internal_teamserviceimpl_ts",
-            "community": 0,
+            "community": 2,
             "norm_label": "teamserviceimpl.ts"
         },
         {
@@ -3815,7 +3833,7 @@
             "source_file": "src/modules/team/internal/TeamServiceImpl.ts",
             "source_location": "L27",
             "id": "internal_teamserviceimpl_teamserviceimpl",
-            "community": 6,
+            "community": 2,
             "norm_label": "teamserviceimpl"
         },
         {
@@ -3824,7 +3842,7 @@
             "source_file": "src/modules/team/internal/TeamServiceImpl.ts",
             "source_location": "L28",
             "id": "internal_teamserviceimpl_teamserviceimpl_getteams",
-            "community": 6,
+            "community": 2,
             "norm_label": ".getteams()"
         },
         {
@@ -3833,7 +3851,7 @@
             "source_file": "src/modules/team/internal/TeamServiceImpl.ts",
             "source_location": "L43",
             "id": "internal_teamserviceimpl_teamserviceimpl_getteammembers",
-            "community": 6,
+            "community": 2,
             "norm_label": ".getteammembers()"
         },
         {
@@ -3842,7 +3860,7 @@
             "source_file": "src/modules/team/internal/TeamServiceImpl.ts",
             "source_location": "L57",
             "id": "internal_teamserviceimpl_teamserviceimpl_searchteamusers",
-            "community": 6,
+            "community": 2,
             "norm_label": ".searchteamusers()"
         },
         {
@@ -3851,7 +3869,7 @@
             "source_file": "src/modules/team/internal/TeamServiceImpl.ts",
             "source_location": "L75",
             "id": "internal_teamserviceimpl_teamserviceimpl_getteamsbyids",
-            "community": 6,
+            "community": 2,
             "norm_label": ".getteamsbyids()"
         },
         {
@@ -3860,7 +3878,7 @@
             "source_file": "src/modules/team/internal/TeamServiceImpl.ts",
             "source_location": "L82",
             "id": "internal_teamserviceimpl_teamserviceimpl_getteamsbyactoridandids",
-            "community": 6,
+            "community": 2,
             "norm_label": ".getteamsbyactoridandids()"
         },
         {
@@ -3869,7 +3887,7 @@
             "source_file": "src/modules/team/internal/TeamServiceImpl.ts",
             "source_location": "L92",
             "id": "internal_teamserviceimpl_teamserviceimpl_createteam",
-            "community": 6,
+            "community": 2,
             "norm_label": ".createteam()"
         },
         {
@@ -3878,7 +3896,7 @@
             "source_file": "src/modules/team/internal/TeamServiceImpl.ts",
             "source_location": "L110",
             "id": "internal_teamserviceimpl_teamserviceimpl_deleteteams",
-            "community": 6,
+            "community": 2,
             "norm_label": ".deleteteams()"
         },
         {
@@ -3887,7 +3905,7 @@
             "source_file": "src/modules/team/internal/TeamServiceImpl.ts",
             "source_location": "L125",
             "id": "internal_teamserviceimpl_teamserviceimpl_addteammembers",
-            "community": 6,
+            "community": 2,
             "norm_label": ".addteammembers()"
         },
         {
@@ -3896,7 +3914,7 @@
             "source_file": "src/modules/team/internal/TeamServiceImpl.ts",
             "source_location": "L141",
             "id": "internal_teamserviceimpl_teamserviceimpl_removeteammembers",
-            "community": 6,
+            "community": 2,
             "norm_label": ".removeteammembers()"
         },
         {
@@ -3905,7 +3923,7 @@
             "source_file": "src/modules/team/internal/TeamServiceImpl.ts",
             "source_location": "L157",
             "id": "internal_teamserviceimpl_teamserviceimpl_updateteam",
-            "community": 6,
+            "community": 2,
             "norm_label": ".updateteam()"
         },
         {
@@ -3914,7 +3932,7 @@
             "source_file": "src/modules/team/internal/TeamServiceImpl.ts",
             "source_location": "L177",
             "id": "internal_teamserviceimpl_teamserviceimpl_handlesyncteammembercount",
-            "community": 6,
+            "community": 2,
             "norm_label": ".handlesyncteammembercount()"
         },
         {
@@ -3923,7 +3941,7 @@
             "source_file": "src/modules/team/internal/TeamServiceImpl.ts",
             "source_location": "L201",
             "id": "internal_teamserviceimpl_teamserviceimpl_handleremoveprojectteammember",
-            "community": 6,
+            "community": 2,
             "norm_label": ".handleremoveprojectteammember()"
         },
         {
@@ -3932,7 +3950,7 @@
             "source_file": "src/modules/team/internal/TeamServiceImpl.ts",
             "source_location": "L243",
             "id": "internal_teamserviceimpl_teamserviceimpl_handledeleteprojectteammember",
-            "community": 6,
+            "community": 2,
             "norm_label": ".handledeleteprojectteammember()"
         },
         {
@@ -3941,7 +3959,7 @@
             "source_file": "src/modules/team/internal/TeamServiceImpl.ts",
             "source_location": "L274",
             "id": "internal_teamserviceimpl_teamserviceimpl_handledeleteprojectteam",
-            "community": 6,
+            "community": 2,
             "norm_label": ".handledeleteprojectteam()"
         },
         {
@@ -3950,7 +3968,7 @@
             "source_file": "src/modules/team/internal/TeamServiceImpl.ts",
             "source_location": "L305",
             "id": "internal_teamserviceimpl_teamserviceimpl_handlepurgeteammemberships",
-            "community": 6,
+            "community": 2,
             "norm_label": ".handlepurgeteammemberships()"
         },
         {
@@ -3959,7 +3977,7 @@
             "source_file": "src/modules/team/internal/TeamServiceImpl.ts",
             "source_location": "L338",
             "id": "internal_teamserviceimpl_teamserviceimpl_handlesyncteamtaskcount",
-            "community": 6,
+            "community": 2,
             "norm_label": ".handlesyncteamtaskcount()"
         },
         {
@@ -3968,7 +3986,7 @@
             "source_file": "src/modules/team/internal/TeamServiceImpl.ts",
             "source_location": "L362",
             "id": "internal_teamserviceimpl_teamserviceimpl_consolidateteamdeltas",
-            "community": 6,
+            "community": 2,
             "norm_label": ".consolidateteamdeltas()"
         },
         {
@@ -3977,7 +3995,7 @@
             "source_file": "src/modules/team/internal/TeamServiceImpl.ts",
             "source_location": "L373",
             "id": "internal_teamserviceimpl_teamserviceimpl_collectprojectids",
-            "community": 6,
+            "community": 2,
             "norm_label": ".collectprojectids()"
         },
         {
@@ -3986,7 +4004,7 @@
             "source_file": "src/modules/team/internal/TeamServiceImpl.ts",
             "source_location": "L381",
             "id": "internal_teamserviceimpl_teamserviceimpl_init",
-            "community": 6,
+            "community": 2,
             "norm_label": ".init()"
         },
         {
@@ -3995,7 +4013,7 @@
             "source_file": "src/modules/team/internal/TeamServiceImpl.ts",
             "source_location": "L385",
             "id": "internal_teamserviceimpl_teamserviceimpl_destroy",
-            "community": 6,
+            "community": 2,
             "norm_label": ".destroy()"
         },
         {
@@ -4004,7 +4022,7 @@
             "source_file": "src/modules/team/internal/TeamQueries.ts",
             "source_location": "L1",
             "id": "src_modules_team_internal_teamqueries_ts",
-            "community": 6,
+            "community": 2,
             "norm_label": "teamqueries.ts"
         },
         {
@@ -4013,7 +4031,7 @@
             "source_file": "src/modules/team/internal/TeamQueries.ts",
             "source_location": "L9",
             "id": "internal_teamqueries_insertteam",
-            "community": 6,
+            "community": 2,
             "norm_label": "insertteam()"
         },
         {
@@ -4022,7 +4040,7 @@
             "source_file": "src/modules/team/internal/TeamQueries.ts",
             "source_location": "L54",
             "id": "internal_teamqueries_getteams",
-            "community": 2,
+            "community": 1,
             "norm_label": "getteams()"
         },
         {
@@ -4031,7 +4049,7 @@
             "source_file": "src/modules/team/internal/TeamQueries.ts",
             "source_location": "L150",
             "id": "internal_teamqueries_getteammembers",
-            "community": 2,
+            "community": 1,
             "norm_label": "getteammembers()"
         },
         {
@@ -4040,7 +4058,7 @@
             "source_file": "src/modules/team/internal/TeamQueries.ts",
             "source_location": "L237",
             "id": "internal_teamqueries_searchteamusers",
-            "community": 2,
+            "community": 1,
             "norm_label": "searchteamusers()"
         },
         {
@@ -4049,7 +4067,7 @@
             "source_file": "src/modules/team/internal/TeamQueries.ts",
             "source_location": "L332",
             "id": "internal_teamqueries_getteamsbyids",
-            "community": 6,
+            "community": 2,
             "norm_label": "getteamsbyids()"
         },
         {
@@ -4058,7 +4076,7 @@
             "source_file": "src/modules/team/internal/TeamQueries.ts",
             "source_location": "L353",
             "id": "internal_teamqueries_getteamsbyactoridandids",
-            "community": 6,
+            "community": 2,
             "norm_label": "getteamsbyactoridandids()"
         },
         {
@@ -4067,7 +4085,7 @@
             "source_file": "src/modules/team/internal/TeamQueries.ts",
             "source_location": "L382",
             "id": "internal_teamqueries_deleteteams",
-            "community": 6,
+            "community": 2,
             "norm_label": "deleteteams()"
         },
         {
@@ -4076,7 +4094,7 @@
             "source_file": "src/modules/team/internal/TeamQueries.ts",
             "source_location": "L424",
             "id": "internal_teamqueries_insertteammembers",
-            "community": 6,
+            "community": 2,
             "norm_label": "insertteammembers()"
         },
         {
@@ -4085,7 +4103,7 @@
             "source_file": "src/modules/team/internal/TeamQueries.ts",
             "source_location": "L486",
             "id": "internal_teamqueries_deleteteammembers",
-            "community": 6,
+            "community": 2,
             "norm_label": "deleteteammembers()"
         },
         {
@@ -4094,7 +4112,7 @@
             "source_file": "src/modules/team/internal/TeamQueries.ts",
             "source_location": "L530",
             "id": "internal_teamqueries_updateteam",
-            "community": 6,
+            "community": 2,
             "norm_label": "updateteam()"
         },
         {
@@ -4103,7 +4121,7 @@
             "source_file": "src/modules/team/internal/TeamQueries.ts",
             "source_location": "L605",
             "id": "internal_teamqueries_deleteteamsbyprojectids",
-            "community": 6,
+            "community": 2,
             "norm_label": "deleteteamsbyprojectids()"
         },
         {
@@ -4112,7 +4130,7 @@
             "source_file": "src/modules/team/internal/TeamQueries.ts",
             "source_location": "L619",
             "id": "internal_teamqueries_deleteprojectteammembersbyprojectids",
-            "community": 6,
+            "community": 2,
             "norm_label": "deleteprojectteammembersbyprojectids()"
         },
         {
@@ -4121,7 +4139,7 @@
             "source_file": "src/modules/team/internal/TeamQueries.ts",
             "source_location": "L633",
             "id": "internal_teamqueries_updateteammembercountsbulk",
-            "community": 6,
+            "community": 2,
             "norm_label": "updateteammembercountsbulk()"
         },
         {
@@ -4130,7 +4148,7 @@
             "source_file": "src/modules/team/internal/TeamQueries.ts",
             "source_location": "L662",
             "id": "internal_teamqueries_removeprojectteammembersbatch",
-            "community": 6,
+            "community": 2,
             "norm_label": "removeprojectteammembersbatch()"
         },
         {
@@ -4139,7 +4157,7 @@
             "source_file": "src/modules/team/internal/TeamQueries.ts",
             "source_location": "L699",
             "id": "internal_teamqueries_updateteamtaskcountsbulk",
-            "community": 6,
+            "community": 2,
             "norm_label": "updateteamtaskcountsbulk()"
         },
         {
@@ -4148,7 +4166,7 @@
             "source_file": "src/modules/team/internal/TeamQueries.ts",
             "source_location": "L724",
             "id": "internal_teamqueries_deleteprojectteammemberbatch",
-            "community": 6,
+            "community": 2,
             "norm_label": "deleteprojectteammemberbatch()"
         },
         {
@@ -4157,7 +4175,7 @@
             "source_file": "src/modules/team/internal/TeamQueries.ts",
             "source_location": "L742",
             "id": "internal_teamqueries_deleteprojectteambatch",
-            "community": 6,
+            "community": 2,
             "norm_label": "deleteprojectteambatch()"
         },
         {
@@ -4166,7 +4184,7 @@
             "source_file": "src/modules/team/internal/TeamQueries.ts",
             "source_location": "L759",
             "id": "internal_teamqueries_incrementteammembercountsbulk",
-            "community": 6,
+            "community": 2,
             "norm_label": "incrementteammembercountsbulk()"
         },
         {
@@ -4175,7 +4193,7 @@
             "source_file": "src/modules/team/internal/TeamQueries.ts",
             "source_location": "L783",
             "id": "internal_teamqueries_incrementprojectteamcountsbulk",
-            "community": 6,
+            "community": 2,
             "norm_label": "incrementprojectteamcountsbulk()"
         },
         {
@@ -4184,7 +4202,7 @@
             "source_file": "src/modules/team/internal/TeamQueries.ts",
             "source_location": "L808",
             "id": "internal_teamqueries_purgeteammembershipsbyteamidsbatch",
-            "community": 6,
+            "community": 2,
             "norm_label": "purgeteammembershipsbyteamidsbatch()"
         },
         {
@@ -4193,7 +4211,7 @@
             "source_file": "src/modules/team/internal/__tests__/TeamServiceBatch.test.ts",
             "source_location": "L1",
             "id": "src_modules_team_internal_tests_teamservicebatch_test_ts",
-            "community": 21,
+            "community": 23,
             "norm_label": "teamservicebatch.test.ts"
         },
         {
@@ -4202,7 +4220,7 @@
             "source_file": "src/modules/team/internal/__tests__/TeamServiceBatch.test.ts",
             "source_location": "L66",
             "id": "tests_teamservicebatch_test_makedeltaevent",
-            "community": 21,
+            "community": 23,
             "norm_label": "makedeltaevent()"
         },
         {
@@ -4211,7 +4229,7 @@
             "source_file": "src/modules/team/internal/__tests__/TeamServiceBatch.test.ts",
             "source_location": "L78",
             "id": "tests_teamservicebatch_test_makeremovalevent",
-            "community": 21,
+            "community": 23,
             "norm_label": "makeremovalevent()"
         },
         {
@@ -4220,7 +4238,7 @@
             "source_file": "src/modules/team/internal/__tests__/TeamServiceBatch.test.ts",
             "source_location": "L90",
             "id": "tests_teamservicebatch_test_makeprojectdeleteevent",
-            "community": 21,
+            "community": 23,
             "norm_label": "makeprojectdeleteevent()"
         },
         {
@@ -4229,7 +4247,7 @@
             "source_file": "src/modules/team/internal/__tests__/TeamServiceBatch.test.ts",
             "source_location": "L101",
             "id": "tests_teamservicebatch_test_maketeamdeleteevent",
-            "community": 21,
+            "community": 23,
             "norm_label": "maketeamdeleteevent()"
         },
         {
@@ -4238,7 +4256,7 @@
             "source_file": "src/modules/team/internal/__tests__/TeamQueries.test.ts",
             "source_location": "L1",
             "id": "src_modules_team_internal_tests_teamqueries_test_ts",
-            "community": 1,
+            "community": 3,
             "norm_label": "teamqueries.test.ts"
         },
         {
@@ -4463,7 +4481,7 @@
             "source_file": "src/modules/auto-action/AutoActionService.ts",
             "source_location": "L1",
             "id": "src_modules_auto_action_autoactionservice_ts",
-            "community": 3,
+            "community": 4,
             "norm_label": "autoactionservice.ts"
         },
         {
@@ -4571,7 +4589,7 @@
             "source_file": "src/modules/auto-action/internal/queries/AutoActionQueries.ts",
             "source_location": "L202",
             "id": "queries_autoactionqueries_selectautoactionsforprojectpage",
-            "community": 2,
+            "community": 1,
             "norm_label": "selectautoactionsforprojectpage()"
         },
         {
@@ -4868,7 +4886,7 @@
             "source_file": "src/modules/auto-action/internal/service/validation.ts",
             "source_location": "L8",
             "id": "service_validation_isconditionsync",
-            "community": 5,
+            "community": 4,
             "norm_label": "isconditionsync()"
         },
         {
@@ -4877,7 +4895,7 @@
             "source_file": "src/modules/auto-action/internal/service/validation.ts",
             "source_location": "L20",
             "id": "service_validation_isflowsync",
-            "community": 5,
+            "community": 4,
             "norm_label": "isflowsync()"
         },
         {
@@ -5133,10 +5151,19 @@
             "norm_label": "autoactiontaskeventconsumer.ts"
         },
         {
+            "label": "matchesCriteria()",
+            "file_type": "code",
+            "source_file": "src/modules/auto-action/internal/listeners/AutoActionTaskEventConsumer.ts",
+            "source_location": "L13",
+            "id": "listeners_autoactiontaskeventconsumer_matchescriteria",
+            "community": 0,
+            "norm_label": "matchescriteria()"
+        },
+        {
             "label": "AutoActionTaskEventConsumer",
             "file_type": "code",
             "source_file": "src/modules/auto-action/internal/listeners/AutoActionTaskEventConsumer.ts",
-            "source_location": "L10",
+            "source_location": "L45",
             "id": "listeners_autoactiontaskeventconsumer_autoactiontaskeventconsumer",
             "community": 0,
             "norm_label": "autoactiontaskeventconsumer"
@@ -5145,7 +5172,7 @@
             "label": ".init()",
             "file_type": "code",
             "source_file": "src/modules/auto-action/internal/listeners/AutoActionTaskEventConsumer.ts",
-            "source_location": "L11",
+            "source_location": "L46",
             "id": "listeners_autoactiontaskeventconsumer_autoactiontaskeventconsumer_init",
             "community": 0,
             "norm_label": ".init()"
@@ -5154,7 +5181,7 @@
             "label": ".handleTaskEvents()",
             "file_type": "code",
             "source_file": "src/modules/auto-action/internal/listeners/AutoActionTaskEventConsumer.ts",
-            "source_location": "L37",
+            "source_location": "L73",
             "id": "listeners_autoactiontaskeventconsumer_autoactiontaskeventconsumer_handletaskevents",
             "community": 0,
             "norm_label": ".handletaskevents()"
@@ -5183,7 +5210,7 @@
             "source_file": "src/modules/auto-action/__tests__/AutoActionGraphql.test.ts",
             "source_location": "L1",
             "id": "src_modules_auto_action_tests_autoactiongraphql_test_ts",
-            "community": 3,
+            "community": 4,
             "norm_label": "autoactiongraphql.test.ts"
         },
         {
@@ -5192,7 +5219,7 @@
             "source_file": "src/modules/auto-action/__tests__/AutoActionGraphql.test.ts",
             "source_location": "L52",
             "id": "tests_autoactiongraphql_test_createautoaction",
-            "community": 3,
+            "community": 4,
             "norm_label": "createautoaction()"
         },
         {
@@ -5201,7 +5228,7 @@
             "source_file": "src/modules/auto-action/__tests__/AutoActionGraphql.test.ts",
             "source_location": "L71",
             "id": "tests_autoactiongraphql_test_createcontext",
-            "community": 3,
+            "community": 4,
             "norm_label": "createcontext()"
         },
         {
@@ -5210,7 +5237,7 @@
             "source_file": "src/modules/auto-action/__tests__/AutoActionRuntime.test.ts",
             "source_location": "L1",
             "id": "src_modules_auto_action_tests_autoactionruntime_test_ts",
-            "community": 0,
+            "community": 4,
             "norm_label": "autoactionruntime.test.ts"
         },
         {
@@ -5219,7 +5246,7 @@
             "source_file": "src/modules/auto-action/__tests__/AutoActionRuntime.test.ts",
             "source_location": "L50",
             "id": "tests_autoactionruntime_test_createevent",
-            "community": 0,
+            "community": 4,
             "norm_label": "createevent()"
         },
         {
@@ -5228,7 +5255,7 @@
             "source_file": "src/modules/auto-action/__tests__/AutoActionRuntime.test.ts",
             "source_location": "L60",
             "id": "tests_autoactionruntime_test_createautoaction",
-            "community": 0,
+            "community": 4,
             "norm_label": "createautoaction()"
         },
         {
@@ -5237,7 +5264,7 @@
             "source_file": "src/modules/auto-action/__tests__/AutoActionE2E.test.ts",
             "source_location": "L1",
             "id": "src_modules_auto_action_tests_autoactione2e_test_ts",
-            "community": 44,
+            "community": 46,
             "norm_label": "autoactione2e.test.ts"
         },
         {
@@ -5426,7 +5453,7 @@
             "source_file": "src/modules/task/TaskService.ts",
             "source_location": "L1",
             "id": "src_modules_task_taskservice_ts",
-            "community": 3,
+            "community": 2,
             "norm_label": "taskservice.ts"
         },
         {
@@ -5444,7 +5471,7 @@
             "source_file": "src/modules/task/internal/TaskServiceImpl.ts",
             "source_location": "L1",
             "id": "src_modules_task_internal_taskserviceimpl_ts",
-            "community": 4,
+            "community": 6,
             "norm_label": "taskserviceimpl.ts"
         },
         {
@@ -5453,7 +5480,7 @@
             "source_file": "src/modules/task/internal/TaskServiceImpl.ts",
             "source_location": "L54",
             "id": "internal_taskserviceimpl_taskserviceimpl",
-            "community": 2,
+            "community": 1,
             "norm_label": "taskserviceimpl"
         },
         {
@@ -5462,7 +5489,7 @@
             "source_file": "src/modules/task/internal/TaskServiceImpl.ts",
             "source_location": "L55",
             "id": "internal_taskserviceimpl_taskserviceimpl_gettasks",
-            "community": 2,
+            "community": 1,
             "norm_label": ".gettasks()"
         },
         {
@@ -5471,7 +5498,7 @@
             "source_file": "src/modules/task/internal/TaskServiceImpl.ts",
             "source_location": "L66",
             "id": "internal_taskserviceimpl_taskserviceimpl_gettasksbyids",
-            "community": 2,
+            "community": 1,
             "norm_label": ".gettasksbyids()"
         },
         {
@@ -5480,7 +5507,7 @@
             "source_file": "src/modules/task/internal/TaskServiceImpl.ts",
             "source_location": "L71",
             "id": "internal_taskserviceimpl_taskserviceimpl_gettasksbyactoridandids",
-            "community": 2,
+            "community": 1,
             "norm_label": ".gettasksbyactoridandids()"
         },
         {
@@ -5489,7 +5516,7 @@
             "source_file": "src/modules/task/internal/TaskServiceImpl.ts",
             "source_location": "L81",
             "id": "internal_taskserviceimpl_taskserviceimpl_gettaskcontextbyid",
-            "community": 2,
+            "community": 1,
             "norm_label": ".gettaskcontextbyid()"
         },
         {
@@ -5498,7 +5525,7 @@
             "source_file": "src/modules/task/internal/TaskServiceImpl.ts",
             "source_location": "L90",
             "id": "internal_taskserviceimpl_taskserviceimpl_gettasklinks",
-            "community": 2,
+            "community": 1,
             "norm_label": ".gettasklinks()"
         },
         {
@@ -5507,7 +5534,7 @@
             "source_file": "src/modules/task/internal/TaskServiceImpl.ts",
             "source_location": "L107",
             "id": "internal_taskserviceimpl_taskserviceimpl_gettaskneighbourhood",
-            "community": 2,
+            "community": 1,
             "norm_label": ".gettaskneighbourhood()"
         },
         {
@@ -5516,7 +5543,7 @@
             "source_file": "src/modules/task/internal/TaskServiceImpl.ts",
             "source_location": "L116",
             "id": "internal_taskserviceimpl_taskserviceimpl_createtask",
-            "community": 2,
+            "community": 1,
             "norm_label": ".createtask()"
         },
         {
@@ -5525,7 +5552,7 @@
             "source_file": "src/modules/task/internal/TaskServiceImpl.ts",
             "source_location": "L153",
             "id": "internal_taskserviceimpl_taskserviceimpl_updatetask",
-            "community": 2,
+            "community": 1,
             "norm_label": ".updatetask()"
         },
         {
@@ -5534,7 +5561,7 @@
             "source_file": "src/modules/task/internal/TaskServiceImpl.ts",
             "source_location": "L206",
             "id": "internal_taskserviceimpl_taskserviceimpl_deletetask",
-            "community": 2,
+            "community": 1,
             "norm_label": ".deletetask()"
         },
         {
@@ -5543,7 +5570,7 @@
             "source_file": "src/modules/task/internal/TaskServiceImpl.ts",
             "source_location": "L222",
             "id": "internal_taskserviceimpl_taskserviceimpl_createtasklink",
-            "community": 2,
+            "community": 1,
             "norm_label": ".createtasklink()"
         },
         {
@@ -5552,7 +5579,7 @@
             "source_file": "src/modules/task/internal/TaskServiceImpl.ts",
             "source_location": "L237",
             "id": "internal_taskserviceimpl_taskserviceimpl_deletetasklink",
-            "community": 2,
+            "community": 1,
             "norm_label": ".deletetasklink()"
         },
         {
@@ -5561,7 +5588,7 @@
             "source_file": "src/modules/task/internal/TaskServiceImpl.ts",
             "source_location": "L250",
             "id": "internal_taskserviceimpl_taskserviceimpl_updatetasklink",
-            "community": 2,
+            "community": 1,
             "norm_label": ".updatetasklink()"
         },
         {
@@ -5570,7 +5597,7 @@
             "source_file": "src/modules/task/internal/TaskServiceImpl.ts",
             "source_location": "L266",
             "id": "internal_taskserviceimpl_taskserviceimpl_getprojectlinks",
-            "community": 2,
+            "community": 1,
             "norm_label": ".getprojectlinks()"
         },
         {
@@ -5579,7 +5606,7 @@
             "source_file": "src/modules/task/internal/TaskServiceImpl.ts",
             "source_location": "L277",
             "id": "internal_taskserviceimpl_taskserviceimpl_handletaskreachabilitysync",
-            "community": 2,
+            "community": 1,
             "norm_label": ".handletaskreachabilitysync()"
         },
         {
@@ -5588,7 +5615,7 @@
             "source_file": "src/modules/task/internal/TaskServiceImpl.ts",
             "source_location": "L335",
             "id": "internal_taskserviceimpl_taskserviceimpl_handledeletetasklinks",
-            "community": 2,
+            "community": 1,
             "norm_label": ".handledeletetasklinks()"
         },
         {
@@ -5597,7 +5624,7 @@
             "source_file": "src/modules/task/internal/TaskServiceImpl.ts",
             "source_location": "L359",
             "id": "internal_taskserviceimpl_taskserviceimpl_handledeletetaskreachability",
-            "community": 2,
+            "community": 1,
             "norm_label": ".handledeletetaskreachability()"
         },
         {
@@ -5606,7 +5633,7 @@
             "source_file": "src/modules/task/internal/TaskServiceImpl.ts",
             "source_location": "L412",
             "id": "internal_taskserviceimpl_taskserviceimpl_handleunassignprojecttaskmember",
-            "community": 2,
+            "community": 1,
             "norm_label": ".handleunassignprojecttaskmember()"
         },
         {
@@ -5615,7 +5642,7 @@
             "source_file": "src/modules/task/internal/TaskServiceImpl.ts",
             "source_location": "L443",
             "id": "internal_taskserviceimpl_taskserviceimpl_handledeleteprojecttask",
-            "community": 2,
+            "community": 1,
             "norm_label": ".handledeleteprojecttask()"
         },
         {
@@ -5624,7 +5651,7 @@
             "source_file": "src/modules/task/internal/TaskServiceImpl.ts",
             "source_location": "L485",
             "id": "internal_taskserviceimpl_taskserviceimpl_handledeleteprojecttasklink",
-            "community": 2,
+            "community": 1,
             "norm_label": ".handledeleteprojecttasklink()"
         },
         {
@@ -5633,7 +5660,7 @@
             "source_file": "src/modules/task/internal/TaskServiceImpl.ts",
             "source_location": "L527",
             "id": "internal_taskserviceimpl_taskserviceimpl_handledeleteprojectreachability",
-            "community": 2,
+            "community": 1,
             "norm_label": ".handledeleteprojectreachability()"
         },
         {
@@ -5642,7 +5669,7 @@
             "source_file": "src/modules/task/internal/TaskServiceImpl.ts",
             "source_location": "L569",
             "id": "internal_taskserviceimpl_taskserviceimpl_handleorphanteamtasks",
-            "community": 2,
+            "community": 1,
             "norm_label": ".handleorphanteamtasks()"
         },
         {
@@ -5651,7 +5678,7 @@
             "source_file": "src/modules/task/internal/TaskServiceImpl.ts",
             "source_location": "L600",
             "id": "internal_taskserviceimpl_taskserviceimpl_handleunassignmemberfromteamtasks",
-            "community": 2,
+            "community": 1,
             "norm_label": ".handleunassignmemberfromteamtasks()"
         },
         {
@@ -5660,7 +5687,7 @@
             "source_file": "src/modules/task/internal/TaskServiceImpl.ts",
             "source_location": "L625",
             "id": "internal_taskserviceimpl_taskserviceimpl_collecttaskids",
-            "community": 2,
+            "community": 1,
             "norm_label": ".collecttaskids()"
         },
         {
@@ -5669,7 +5696,7 @@
             "source_file": "src/modules/task/internal/TaskServiceImpl.ts",
             "source_location": "L633",
             "id": "internal_taskserviceimpl_taskserviceimpl_collectprojectids",
-            "community": 2,
+            "community": 1,
             "norm_label": ".collectprojectids()"
         },
         {
@@ -5678,7 +5705,7 @@
             "source_file": "src/modules/task/internal/TaskServiceImpl.ts",
             "source_location": "L641",
             "id": "internal_taskserviceimpl_taskserviceimpl_collectteamids",
-            "community": 2,
+            "community": 1,
             "norm_label": ".collectteamids()"
         },
         {
@@ -5687,7 +5714,7 @@
             "source_file": "src/modules/task/internal/TaskServiceImpl.ts",
             "source_location": "L649",
             "id": "internal_taskserviceimpl_taskserviceimpl_consolidateprojectuserdeltas",
-            "community": 2,
+            "community": 1,
             "norm_label": ".consolidateprojectuserdeltas()"
         },
         {
@@ -5696,7 +5723,7 @@
             "source_file": "src/modules/task/internal/TaskServiceImpl.ts",
             "source_location": "L668",
             "id": "internal_taskserviceimpl_taskserviceimpl_consolidateteamuserdeltas",
-            "community": 2,
+            "community": 1,
             "norm_label": ".consolidateteamuserdeltas()"
         },
         {
@@ -5705,7 +5732,7 @@
             "source_file": "src/modules/task/internal/TaskServiceImpl.ts",
             "source_location": "L685",
             "id": "internal_taskserviceimpl_taskserviceimpl_init",
-            "community": 2,
+            "community": 1,
             "norm_label": ".init()"
         },
         {
@@ -5714,8 +5741,62 @@
             "source_file": "src/modules/task/internal/TaskServiceImpl.ts",
             "source_location": "L689",
             "id": "internal_taskserviceimpl_taskserviceimpl_destroy",
-            "community": 2,
+            "community": 1,
             "norm_label": ".destroy()"
+        },
+        {
+            "label": "CascadeService.ts",
+            "file_type": "code",
+            "source_file": "src/modules/task/internal/CascadeService.ts",
+            "source_location": "L1",
+            "id": "src_modules_task_internal_cascadeservice_ts",
+            "community": 0,
+            "norm_label": "cascadeservice.ts"
+        },
+        {
+            "label": "CascadeService",
+            "file_type": "code",
+            "source_file": "src/modules/task/internal/CascadeService.ts",
+            "source_location": "L4",
+            "id": "internal_cascadeservice_cascadeservice",
+            "community": 21,
+            "norm_label": "cascadeservice"
+        },
+        {
+            "label": ".resolveBlockers()",
+            "file_type": "code",
+            "source_file": "src/modules/task/internal/CascadeService.ts",
+            "source_location": "L5",
+            "id": "internal_cascadeservice_cascadeservice_resolveblockers",
+            "community": 21,
+            "norm_label": ".resolveblockers()"
+        },
+        {
+            "label": ".cascadePriority()",
+            "file_type": "code",
+            "source_file": "src/modules/task/internal/CascadeService.ts",
+            "source_location": "L52",
+            "id": "internal_cascadeservice_cascadeservice_cascadepriority",
+            "community": 21,
+            "norm_label": ".cascadepriority()"
+        },
+        {
+            "label": ".cascadeTeam()",
+            "file_type": "code",
+            "source_file": "src/modules/task/internal/CascadeService.ts",
+            "source_location": "L78",
+            "id": "internal_cascadeservice_cascadeservice_cascadeteam",
+            "community": 21,
+            "norm_label": ".cascadeteam()"
+        },
+        {
+            "label": ".cascadeDelete()",
+            "file_type": "code",
+            "source_file": "src/modules/task/internal/CascadeService.ts",
+            "source_location": "L104",
+            "id": "internal_cascadeservice_cascadeservice_cascadedelete",
+            "community": 21,
+            "norm_label": ".cascadedelete()"
         },
         {
             "label": "GuardQueries.ts",
@@ -5723,7 +5804,7 @@
             "source_file": "src/modules/task/internal/GuardQueries.ts",
             "source_location": "L1",
             "id": "src_modules_task_internal_guardqueries_ts",
-            "community": 17,
+            "community": 6,
             "norm_label": "guardqueries.ts"
         },
         {
@@ -5732,7 +5813,7 @@
             "source_file": "src/modules/task/internal/GuardQueries.ts",
             "source_location": "L13",
             "id": "internal_guardqueries_checkactivesubtasks",
-            "community": 17,
+            "community": 6,
             "norm_label": "checkactivesubtasks()"
         },
         {
@@ -5741,7 +5822,7 @@
             "source_file": "src/modules/task/internal/GuardQueries.ts",
             "source_location": "L31",
             "id": "internal_guardqueries_checkincompleteblockers",
-            "community": 17,
+            "community": 6,
             "norm_label": "checkincompleteblockers()"
         },
         {
@@ -5750,7 +5831,7 @@
             "source_file": "src/modules/task/internal/GuardQueries.ts",
             "source_location": "L51",
             "id": "internal_guardqueries_checkteamassignment",
-            "community": 17,
+            "community": 6,
             "norm_label": "checkteamassignment()"
         },
         {
@@ -5759,7 +5840,7 @@
             "source_file": "src/modules/task/internal/TaskQueries.ts",
             "source_location": "L1",
             "id": "src_modules_task_internal_taskqueries_ts",
-            "community": 2,
+            "community": 1,
             "norm_label": "taskqueries.ts"
         },
         {
@@ -5768,7 +5849,7 @@
             "source_file": "src/modules/task/internal/TaskQueries.ts",
             "source_location": "L18",
             "id": "internal_taskqueries_gettaskspage",
-            "community": 2,
+            "community": 1,
             "norm_label": "gettaskspage()"
         },
         {
@@ -5777,7 +5858,7 @@
             "source_file": "src/modules/task/internal/TaskQueries.ts",
             "source_location": "L127",
             "id": "internal_taskqueries_gettasksbyids",
-            "community": 2,
+            "community": 1,
             "norm_label": "gettasksbyids()"
         },
         {
@@ -5786,7 +5867,7 @@
             "source_file": "src/modules/task/internal/TaskQueries.ts",
             "source_location": "L158",
             "id": "internal_taskqueries_gettasksbyactoridandids",
-            "community": 2,
+            "community": 1,
             "norm_label": "gettasksbyactoridandids()"
         },
         {
@@ -5795,7 +5876,7 @@
             "source_file": "src/modules/task/internal/TaskQueries.ts",
             "source_location": "L198",
             "id": "internal_taskqueries_gettasklinkspage",
-            "community": 2,
+            "community": 1,
             "norm_label": "gettasklinkspage()"
         },
         {
@@ -5804,7 +5885,7 @@
             "source_file": "src/modules/task/internal/TaskQueries.ts",
             "source_location": "L303",
             "id": "internal_taskqueries_gettaskneighbourlinkspage",
-            "community": 2,
+            "community": 1,
             "norm_label": "gettaskneighbourlinkspage()"
         },
         {
@@ -5813,7 +5894,7 @@
             "source_file": "src/modules/task/internal/TaskQueries.ts",
             "source_location": "L502",
             "id": "internal_taskqueries_getprojecttasklinkspage",
-            "community": 2,
+            "community": 1,
             "norm_label": "getprojecttasklinkspage()"
         },
         {
@@ -5822,7 +5903,7 @@
             "source_file": "src/modules/task/internal/TaskQueries.ts",
             "source_location": "L588",
             "id": "internal_taskqueries_getneighbourhood",
-            "community": 2,
+            "community": 1,
             "norm_label": "getneighbourhood()"
         },
         {
@@ -5831,7 +5912,7 @@
             "source_file": "src/modules/task/internal/TaskQueries.ts",
             "source_location": "L630",
             "id": "internal_taskqueries_inserttask",
-            "community": 2,
+            "community": 1,
             "norm_label": "inserttask()"
         },
         {
@@ -5840,7 +5921,7 @@
             "source_file": "src/modules/task/internal/TaskQueries.ts",
             "source_location": "L718",
             "id": "internal_taskqueries_updatetask",
-            "community": 2,
+            "community": 1,
             "norm_label": "updatetask()"
         },
         {
@@ -5849,7 +5930,7 @@
             "source_file": "src/modules/task/internal/TaskQueries.ts",
             "source_location": "L906",
             "id": "internal_taskqueries_deletetask",
-            "community": 2,
+            "community": 1,
             "norm_label": "deletetask()"
         },
         {
@@ -5858,7 +5939,7 @@
             "source_file": "src/modules/task/internal/TaskQueries.ts",
             "source_location": "L955",
             "id": "internal_taskqueries_inserttasklink",
-            "community": 2,
+            "community": 1,
             "norm_label": "inserttasklink()"
         },
         {
@@ -5867,7 +5948,7 @@
             "source_file": "src/modules/task/internal/TaskQueries.ts",
             "source_location": "L1029",
             "id": "internal_taskqueries_deletetasklink",
-            "community": 2,
+            "community": 1,
             "norm_label": "deletetasklink()"
         },
         {
@@ -5876,7 +5957,7 @@
             "source_file": "src/modules/task/internal/TaskQueries.ts",
             "source_location": "L1083",
             "id": "internal_taskqueries_updatetasklink",
-            "community": 2,
+            "community": 1,
             "norm_label": "updatetasklink()"
         },
         {
@@ -5885,7 +5966,7 @@
             "source_file": "src/modules/task/internal/TaskQueries.ts",
             "source_location": "L1170",
             "id": "internal_taskqueries_deleteprojecttasksbyprojectids",
-            "community": 2,
+            "community": 1,
             "norm_label": "deleteprojecttasksbyprojectids()"
         },
         {
@@ -5894,7 +5975,7 @@
             "source_file": "src/modules/task/internal/TaskQueries.ts",
             "source_location": "L1184",
             "id": "internal_taskqueries_deleteprojecttasklinksbyprojectids",
-            "community": 2,
+            "community": 1,
             "norm_label": "deleteprojecttasklinksbyprojectids()"
         },
         {
@@ -5903,7 +5984,7 @@
             "source_file": "src/modules/task/internal/TaskQueries.ts",
             "source_location": "L1198",
             "id": "internal_taskqueries_unassigntasksbyteamids",
-            "community": 2,
+            "community": 1,
             "norm_label": "unassigntasksbyteamids()"
         },
         {
@@ -5912,7 +5993,7 @@
             "source_file": "src/modules/task/internal/TaskQueries.ts",
             "source_location": "L1221",
             "id": "internal_taskqueries_unassignmembersfromprojecttasksbatch",
-            "community": 2,
+            "community": 1,
             "norm_label": "unassignmembersfromprojecttasksbatch()"
         },
         {
@@ -5921,7 +6002,7 @@
             "source_file": "src/modules/task/internal/TaskQueries.ts",
             "source_location": "L1253",
             "id": "internal_taskqueries_unassignteammembersfromtasksbatch",
-            "community": 2,
+            "community": 1,
             "norm_label": "unassignteammembersfromtasksbatch()"
         },
         {
@@ -5930,7 +6011,7 @@
             "source_file": "src/modules/task/internal/TaskQueries.ts",
             "source_location": "L1280",
             "id": "internal_taskqueries_deletetasklinksbytaskids",
-            "community": 2,
+            "community": 1,
             "norm_label": "deletetasklinksbytaskids()"
         },
         {
@@ -5939,7 +6020,7 @@
             "source_file": "src/modules/task/internal/TaskQueries.ts",
             "source_location": "L1292",
             "id": "internal_taskqueries_deletereachabilitybytaskids",
-            "community": 2,
+            "community": 1,
             "norm_label": "deletereachabilitybytaskids()"
         },
         {
@@ -5948,7 +6029,7 @@
             "source_file": "src/modules/task/internal/TaskQueries.ts",
             "source_location": "L1307",
             "id": "internal_taskqueries_updatetaskdirectlinkcountsbatch",
-            "community": 2,
+            "community": 1,
             "norm_label": "updatetaskdirectlinkcountsbatch()"
         },
         {
@@ -5957,7 +6038,7 @@
             "source_file": "src/modules/task/internal/TaskQueries.ts",
             "source_location": "L1343",
             "id": "internal_taskqueries_updatetasklinkcountsbatch",
-            "community": 2,
+            "community": 1,
             "norm_label": "updatetasklinkcountsbatch()"
         },
         {
@@ -5966,7 +6047,7 @@
             "source_file": "src/modules/task/internal/TaskQueries.ts",
             "source_location": "L1373",
             "id": "internal_taskqueries_purgetaskdatabyprojectids",
-            "community": 2,
+            "community": 1,
             "norm_label": "purgetaskdatabyprojectids()"
         },
         {
@@ -5975,7 +6056,7 @@
             "source_file": "src/modules/task/internal/TaskQueries.ts",
             "source_location": "L1398",
             "id": "internal_taskqueries_purgelocaltaskdatabytaskids",
-            "community": 2,
+            "community": 1,
             "norm_label": "purgelocaltaskdatabytaskids()"
         },
         {
@@ -5984,7 +6065,7 @@
             "source_file": "src/modules/task/internal/TaskQueries.ts",
             "source_location": "L1431",
             "id": "internal_taskqueries_unassignprojecttaskmembersbatch",
-            "community": 2,
+            "community": 1,
             "norm_label": "unassignprojecttaskmembersbatch()"
         },
         {
@@ -5993,7 +6074,7 @@
             "source_file": "src/modules/task/internal/TaskQueries.ts",
             "source_location": "L1477",
             "id": "internal_taskqueries_deleteprojecttaskschunk",
-            "community": 2,
+            "community": 1,
             "norm_label": "deleteprojecttaskschunk()"
         },
         {
@@ -6002,7 +6083,7 @@
             "source_file": "src/modules/task/internal/TaskQueries.ts",
             "source_location": "L1501",
             "id": "internal_taskqueries_deleteprojecttasklinkschunk",
-            "community": 2,
+            "community": 1,
             "norm_label": "deleteprojecttasklinkschunk()"
         },
         {
@@ -6011,7 +6092,7 @@
             "source_file": "src/modules/task/internal/TaskQueries.ts",
             "source_location": "L1530",
             "id": "internal_taskqueries_deleteprojecttaskreachabilitychunk",
-            "community": 2,
+            "community": 1,
             "norm_label": "deleteprojecttaskreachabilitychunk()"
         },
         {
@@ -6020,7 +6101,7 @@
             "source_file": "src/modules/task/internal/TaskQueries.ts",
             "source_location": "L1556",
             "id": "internal_taskqueries_incrementprojecttaskcountsbulk",
-            "community": 2,
+            "community": 1,
             "norm_label": "incrementprojecttaskcountsbulk()"
         },
         {
@@ -6029,7 +6110,7 @@
             "source_file": "src/modules/task/internal/TaskQueries.ts",
             "source_location": "L1580",
             "id": "internal_taskqueries_findlinksfortaskrepair",
-            "community": 2,
+            "community": 1,
             "norm_label": "findlinksfortaskrepair()"
         },
         {
@@ -6038,7 +6119,7 @@
             "source_file": "src/modules/task/internal/TaskQueries.ts",
             "source_location": "L1600",
             "id": "internal_taskqueries_unassignmembersfromteamtasksbatch",
-            "community": 2,
+            "community": 1,
             "norm_label": "unassignmembersfromteamtasksbatch()"
         },
         {
@@ -6047,7 +6128,7 @@
             "source_file": "src/modules/task/internal/TaskQueries.ts",
             "source_location": "L1624",
             "id": "internal_taskqueries_orphantasksbyteamidsbatch",
-            "community": 2,
+            "community": 1,
             "norm_label": "orphantasksbyteamidsbatch()"
         },
         {
@@ -6056,7 +6137,7 @@
             "source_file": "src/modules/task/internal/TaskQueries.ts",
             "source_location": "L1648",
             "id": "internal_taskqueries_expandtaskreachability",
-            "community": 2,
+            "community": 1,
             "norm_label": "expandtaskreachability()"
         },
         {
@@ -6065,7 +6146,7 @@
             "source_file": "src/modules/task/internal/TaskQueries.ts",
             "source_location": "L1686",
             "id": "internal_taskqueries_synctaskgraphcounters",
-            "community": 2,
+            "community": 1,
             "norm_label": "synctaskgraphcounters()"
         },
         {
@@ -6074,7 +6155,7 @@
             "source_file": "src/modules/task/internal/TaskQueries.ts",
             "source_location": "L1717",
             "id": "internal_taskqueries_contracttaskreachability",
-            "community": 2,
+            "community": 1,
             "norm_label": "contracttaskreachability()"
         },
         {
@@ -6083,7 +6164,7 @@
             "source_file": "src/modules/task/internal/TaskQueries.ts",
             "source_location": "L1787",
             "id": "internal_taskqueries_deletetaskreachabilitychunk",
-            "community": 2,
+            "community": 1,
             "norm_label": "deletetaskreachabilitychunk()"
         },
         {
@@ -6092,7 +6173,7 @@
             "source_file": "src/modules/task/internal/TaskQueries.ts",
             "source_location": "L1818",
             "id": "internal_taskqueries_repairtaskreachabilityforprojects",
-            "community": 2,
+            "community": 1,
             "norm_label": "repairtaskreachabilityforprojects()"
         },
         {
@@ -6101,7 +6182,7 @@
             "source_file": "src/modules/task/internal/TaskQueries.ts",
             "source_location": "L1862",
             "id": "internal_taskqueries_gettaskcontextbyid",
-            "community": 2,
+            "community": 1,
             "norm_label": "gettaskcontextbyid()"
         },
         {
@@ -6110,7 +6191,7 @@
             "source_file": "src/modules/task/internal/GuardService.ts",
             "source_location": "L1",
             "id": "src_modules_task_internal_guardservice_ts",
-            "community": 17,
+            "community": 6,
             "norm_label": "guardservice.ts"
         },
         {
@@ -6119,7 +6200,7 @@
             "source_file": "src/modules/task/internal/GuardService.ts",
             "source_location": "L13",
             "id": "internal_guardservice_guardservice",
-            "community": 17,
+            "community": 6,
             "norm_label": "guardservice"
         },
         {
@@ -6128,7 +6209,7 @@
             "source_file": "src/modules/task/internal/GuardService.ts",
             "source_location": "L18",
             "id": "internal_guardservice_guardservice_evaluateguards",
-            "community": 17,
+            "community": 6,
             "norm_label": ".evaluateguards()"
         },
         {
@@ -6137,7 +6218,7 @@
             "source_file": "src/modules/task/internal/__tests__/TaskServiceGraph.test.ts",
             "source_location": "L1",
             "id": "src_modules_task_internal_tests_taskservicegraph_test_ts",
-            "community": 3,
+            "community": 2,
             "norm_label": "taskservicegraph.test.ts"
         },
         {
@@ -6146,7 +6227,7 @@
             "source_file": "src/modules/task/internal/__tests__/TaskServiceGraph.test.ts",
             "source_location": "L82",
             "id": "tests_taskservicegraph_test_makereachabilityevent",
-            "community": 3,
+            "community": 2,
             "norm_label": "makereachabilityevent()"
         },
         {
@@ -6155,7 +6236,7 @@
             "source_file": "src/modules/task/internal/__tests__/TaskServiceGraph.test.ts",
             "source_location": "L97",
             "id": "tests_taskservicegraph_test_maketaskidsevent",
-            "community": 3,
+            "community": 2,
             "norm_label": "maketaskidsevent()"
         },
         {
@@ -6164,7 +6245,7 @@
             "source_file": "src/modules/task/internal/__tests__/TaskServiceCleanup.test.ts",
             "source_location": "L1",
             "id": "src_modules_task_internal_tests_taskservicecleanup_test_ts",
-            "community": 22,
+            "community": 24,
             "norm_label": "taskservicecleanup.test.ts"
         },
         {
@@ -6173,7 +6254,7 @@
             "source_file": "src/modules/task/internal/__tests__/TaskServiceCleanup.test.ts",
             "source_location": "L83",
             "id": "tests_taskservicecleanup_test_makeprojectuserevent",
-            "community": 22,
+            "community": 24,
             "norm_label": "makeprojectuserevent()"
         },
         {
@@ -6182,7 +6263,7 @@
             "source_file": "src/modules/task/internal/__tests__/TaskServiceCleanup.test.ts",
             "source_location": "L95",
             "id": "tests_taskservicecleanup_test_makeprojectidsevent",
-            "community": 22,
+            "community": 24,
             "norm_label": "makeprojectidsevent()"
         },
         {
@@ -6191,7 +6272,7 @@
             "source_file": "src/modules/task/internal/__tests__/TaskServiceCleanup.test.ts",
             "source_location": "L106",
             "id": "tests_taskservicecleanup_test_maketeamidsevent",
-            "community": 22,
+            "community": 24,
             "norm_label": "maketeamidsevent()"
         },
         {
@@ -6200,7 +6281,7 @@
             "source_file": "src/modules/task/internal/__tests__/TaskServiceCleanup.test.ts",
             "source_location": "L117",
             "id": "tests_taskservicecleanup_test_maketeamuserevent",
-            "community": 22,
+            "community": 24,
             "norm_label": "maketeamuserevent()"
         },
         {
@@ -6533,7 +6614,7 @@
             "source_file": "src/modules/internal-notification/InternalNotificationService.ts",
             "source_location": "L1",
             "id": "src_modules_internal_notification_internalnotificationservice_ts",
-            "community": 3,
+            "community": 7,
             "norm_label": "internalnotificationservice.ts"
         },
         {
@@ -6542,7 +6623,7 @@
             "source_file": "src/modules/internal-notification/index.ts",
             "source_location": "L1",
             "id": "src_modules_internal_notification_index_ts",
-            "community": 3,
+            "community": 7,
             "norm_label": "index.ts"
         },
         {
@@ -6551,7 +6632,7 @@
             "source_file": "src/modules/internal-notification/internal/InternalNotificationQueries.ts",
             "source_location": "L1",
             "id": "src_modules_internal_notification_internal_internalnotificationqueries_ts",
-            "community": 3,
+            "community": 7,
             "norm_label": "internalnotificationqueries.ts"
         },
         {
@@ -6560,7 +6641,7 @@
             "source_file": "src/modules/internal-notification/internal/InternalNotificationQueries.ts",
             "source_location": "L14",
             "id": "internal_internalnotificationqueries_insertnotificationsbatch",
-            "community": 3,
+            "community": 7,
             "norm_label": "insertnotificationsbatch()"
         },
         {
@@ -6569,7 +6650,7 @@
             "source_file": "src/modules/internal-notification/internal/InternalNotificationQueries.ts",
             "source_location": "L50",
             "id": "internal_internalnotificationqueries_insertnotification",
-            "community": 3,
+            "community": 7,
             "norm_label": "insertnotification()"
         },
         {
@@ -6578,7 +6659,7 @@
             "source_file": "src/modules/internal-notification/internal/InternalNotificationQueries.ts",
             "source_location": "L70",
             "id": "internal_internalnotificationqueries_getnotifications",
-            "community": 2,
+            "community": 1,
             "norm_label": "getnotifications()"
         },
         {
@@ -6587,7 +6668,7 @@
             "source_file": "src/modules/internal-notification/internal/InternalNotificationQueries.ts",
             "source_location": "L150",
             "id": "internal_internalnotificationqueries_markasread",
-            "community": 3,
+            "community": 7,
             "norm_label": "markasread()"
         },
         {
@@ -6596,7 +6677,7 @@
             "source_file": "src/modules/internal-notification/internal/InternalNotificationQueries.ts",
             "source_location": "L159",
             "id": "internal_internalnotificationqueries_markallasread",
-            "community": 3,
+            "community": 7,
             "norm_label": "markallasread()"
         },
         {
@@ -6605,7 +6686,7 @@
             "source_file": "src/modules/internal-notification/internal/InternalNotificationQueries.ts",
             "source_location": "L168",
             "id": "internal_internalnotificationqueries_getunreadcount",
-            "community": 3,
+            "community": 7,
             "norm_label": "getunreadcount()"
         },
         {
@@ -6614,7 +6695,7 @@
             "source_file": "src/modules/internal-notification/internal/InternalNotificationServiceImpl.ts",
             "source_location": "L1",
             "id": "src_modules_internal_notification_internal_internalnotificationserviceimpl_ts",
-            "community": 3,
+            "community": 7,
             "norm_label": "internalnotificationserviceimpl.ts"
         },
         {
@@ -6623,7 +6704,7 @@
             "source_file": "src/modules/internal-notification/internal/InternalNotificationServiceImpl.ts",
             "source_location": "L11",
             "id": "internal_internalnotificationserviceimpl_internalnotificationserviceimpl",
-            "community": 16,
+            "community": 7,
             "norm_label": "internalnotificationserviceimpl"
         },
         {
@@ -6632,7 +6713,7 @@
             "source_file": "src/modules/internal-notification/internal/InternalNotificationServiceImpl.ts",
             "source_location": "L14",
             "id": "internal_internalnotificationserviceimpl_internalnotificationserviceimpl_createnotification",
-            "community": 16,
+            "community": 7,
             "norm_label": ".createnotification()"
         },
         {
@@ -6641,7 +6722,7 @@
             "source_file": "src/modules/internal-notification/internal/InternalNotificationServiceImpl.ts",
             "source_location": "L23",
             "id": "internal_internalnotificationserviceimpl_internalnotificationserviceimpl_createnotificationsbatch",
-            "community": 16,
+            "community": 7,
             "norm_label": ".createnotificationsbatch()"
         },
         {
@@ -6650,7 +6731,7 @@
             "source_file": "src/modules/internal-notification/internal/InternalNotificationServiceImpl.ts",
             "source_location": "L32",
             "id": "internal_internalnotificationserviceimpl_internalnotificationserviceimpl_markasread",
-            "community": 16,
+            "community": 7,
             "norm_label": ".markasread()"
         },
         {
@@ -6659,7 +6740,7 @@
             "source_file": "src/modules/internal-notification/internal/InternalNotificationServiceImpl.ts",
             "source_location": "L39",
             "id": "internal_internalnotificationserviceimpl_internalnotificationserviceimpl_markallasread",
-            "community": 16,
+            "community": 7,
             "norm_label": ".markallasread()"
         },
         {
@@ -6668,7 +6749,7 @@
             "source_file": "src/modules/internal-notification/internal/InternalNotificationServiceImpl.ts",
             "source_location": "L46",
             "id": "internal_internalnotificationserviceimpl_internalnotificationserviceimpl_getnotifications",
-            "community": 16,
+            "community": 7,
             "norm_label": ".getnotifications()"
         },
         {
@@ -6677,7 +6758,7 @@
             "source_file": "src/modules/internal-notification/internal/InternalNotificationServiceImpl.ts",
             "source_location": "L60",
             "id": "internal_internalnotificationserviceimpl_internalnotificationserviceimpl_getunreadcount",
-            "community": 16,
+            "community": 7,
             "norm_label": ".getunreadcount()"
         },
         {
@@ -6686,7 +6767,7 @@
             "source_file": "src/modules/internal-notification/internal/InternalNotificationServiceImpl.ts",
             "source_location": "L64",
             "id": "internal_internalnotificationserviceimpl_internalnotificationserviceimpl_init",
-            "community": 16,
+            "community": 7,
             "norm_label": ".init()"
         },
         {
@@ -6695,7 +6776,7 @@
             "source_file": "src/modules/internal-notification/internal/InternalNotificationServiceImpl.ts",
             "source_location": "L69",
             "id": "internal_internalnotificationserviceimpl_internalnotificationserviceimpl_destroy",
-            "community": 16,
+            "community": 7,
             "norm_label": ".destroy()"
         },
         {
@@ -6720,7 +6801,7 @@
             "captured_at": null,
             "author": null,
             "contributor": null,
-            "community": 39,
+            "community": 41,
             "norm_label": "frontend design philosophy",
             "id": "docs_15_frontend_design_philosophy"
         },
@@ -6733,7 +6814,7 @@
             "captured_at": null,
             "author": null,
             "contributor": null,
-            "community": 39,
+            "community": 41,
             "norm_label": "task read api",
             "id": "docs_14_task_read_api"
         },
@@ -6746,7 +6827,7 @@
             "captured_at": null,
             "author": null,
             "contributor": null,
-            "community": 45,
+            "community": 47,
             "norm_label": "future backend features",
             "id": "docs_future_backend_features"
         },
@@ -6759,7 +6840,7 @@
             "captured_at": null,
             "author": null,
             "contributor": null,
-            "community": 46,
+            "community": 48,
             "norm_label": "internal notification service design",
             "id": "docs_8_internal_notification_service_design"
         },
@@ -6772,7 +6853,7 @@
             "captured_at": null,
             "author": null,
             "contributor": null,
-            "community": 31,
+            "community": 33,
             "norm_label": "data lifecycle & event flows",
             "id": "docs_18_data_lifecycle_event_flows"
         },
@@ -6785,7 +6866,7 @@
             "captured_at": null,
             "author": null,
             "contributor": null,
-            "community": 31,
+            "community": 33,
             "norm_label": "explicit kafka architecture",
             "id": "docs_17_explicit_kafka_architecture"
         },
@@ -6837,7 +6918,7 @@
             "captured_at": null,
             "author": null,
             "contributor": null,
-            "community": 31,
+            "community": 33,
             "norm_label": "smart event processing",
             "id": "docs_5_smart_event_processing"
         },
@@ -6863,7 +6944,7 @@
             "captured_at": null,
             "author": null,
             "contributor": null,
-            "community": 47,
+            "community": 49,
             "norm_label": "project automations: conditions & actions",
             "id": "docs_automation_engine_3_project"
         },
@@ -6889,7 +6970,7 @@
             "captured_at": null,
             "author": null,
             "contributor": null,
-            "community": 48,
+            "community": 50,
             "norm_label": "team automations: conditions & actions",
             "id": "docs_automation_engine_4_team"
         },
@@ -6915,7 +6996,7 @@
             "captured_at": null,
             "author": null,
             "contributor": null,
-            "community": 24,
+            "community": 26,
             "norm_label": "automation architecture: action handler",
             "id": "docs_automation_engine_architecture_4_action_handler"
         },
@@ -6928,7 +7009,7 @@
             "captured_at": null,
             "author": null,
             "contributor": null,
-            "community": 24,
+            "community": 26,
             "norm_label": "automation architecture: execution flow",
             "id": "docs_automation_engine_architecture_5_execution_flow"
         },
@@ -6941,7 +7022,7 @@
             "captured_at": null,
             "author": null,
             "contributor": null,
-            "community": 24,
+            "community": 26,
             "norm_label": "automation architecture: module",
             "id": "docs_automation_engine_architecture_2_module"
         },
@@ -6954,7 +7035,7 @@
             "captured_at": null,
             "author": null,
             "contributor": null,
-            "community": 24,
+            "community": 26,
             "norm_label": "automation architecture: condition evaluation",
             "id": "docs_automation_engine_architecture_3_condition_evaluation"
         },
@@ -6967,7 +7048,7 @@
             "captured_at": null,
             "author": null,
             "contributor": null,
-            "community": 49,
+            "community": 51,
             "norm_label": "e2e testing guide",
             "id": "src_tests_e2e_instructions"
         },
@@ -6980,7 +7061,7 @@
             "captured_at": null,
             "author": null,
             "contributor": null,
-            "community": 50,
+            "community": 52,
             "norm_label": "project module readme",
             "id": "src_modules_project_readme"
         },
@@ -6993,7 +7074,7 @@
             "captured_at": null,
             "author": null,
             "contributor": null,
-            "community": 51,
+            "community": 53,
             "norm_label": "team module readme",
             "id": "src_modules_team_readme"
         },
@@ -7006,7 +7087,7 @@
             "captured_at": null,
             "author": null,
             "contributor": null,
-            "community": 13,
+            "community": 14,
             "norm_label": "taskinator system",
             "id": "sys_taskinator"
         },
@@ -7019,7 +7100,7 @@
             "captured_at": null,
             "author": null,
             "contributor": null,
-            "community": 13,
+            "community": 14,
             "norm_label": "event-driven architecture",
             "id": "arch_eda"
         },
@@ -7032,7 +7113,7 @@
             "captured_at": null,
             "author": null,
             "contributor": null,
-            "community": 13,
+            "community": 14,
             "norm_label": "transactional outbox pattern",
             "id": "pat_outbox"
         },
@@ -7045,7 +7126,7 @@
             "captured_at": null,
             "author": null,
             "contributor": null,
-            "community": 25,
+            "community": 27,
             "norm_label": "task reachability engine",
             "id": "eng_reachability"
         },
@@ -7058,7 +7139,7 @@
             "captured_at": null,
             "author": null,
             "contributor": null,
-            "community": 25,
+            "community": 27,
             "norm_label": "closure table pattern",
             "id": "pat_closure_table"
         },
@@ -7071,7 +7152,7 @@
             "captured_at": null,
             "author": null,
             "contributor": null,
-            "community": 25,
+            "community": 27,
             "norm_label": "radial task graph (neural lattice)",
             "id": "ui_radial_task_graph"
         },
@@ -7084,7 +7165,7 @@
             "captured_at": null,
             "author": null,
             "contributor": null,
-            "community": 13,
+            "community": 14,
             "norm_label": "redis targeted routing",
             "id": "arch_targeted_routing"
         },
@@ -7097,7 +7178,7 @@
             "captured_at": null,
             "author": null,
             "contributor": null,
-            "community": 13,
+            "community": 14,
             "norm_label": "task deletion architecture",
             "id": "arch_deletion"
         },
@@ -7110,7 +7191,7 @@
             "captured_at": null,
             "author": null,
             "contributor": null,
-            "community": 52,
+            "community": 54,
             "norm_label": "optimistic locking",
             "id": "pat_optimistic_locking"
         },
@@ -7123,7 +7204,7 @@
             "captured_at": null,
             "author": null,
             "contributor": null,
-            "community": 53,
+            "community": 55,
             "norm_label": "cte-based authorization",
             "id": "pat_cte_auth"
         },
@@ -7136,7 +7217,7 @@
             "captured_at": null,
             "author": null,
             "contributor": null,
-            "community": 25,
+            "community": 27,
             "norm_label": "taskinator frontend (ui-v1)",
             "id": "sys_ui_v1"
         },
@@ -7149,7 +7230,7 @@
             "captured_at": null,
             "author": null,
             "contributor": null,
-            "community": 13,
+            "community": 14,
             "norm_label": "materialized paths",
             "id": "pat_materialized_paths"
         },
@@ -7162,7 +7243,7 @@
             "captured_at": null,
             "author": null,
             "contributor": null,
-            "community": 13,
+            "community": 14,
             "norm_label": "kafka backbone",
             "id": "sys_kafka"
         },
@@ -7175,7 +7256,7 @@
             "captured_at": null,
             "author": null,
             "contributor": null,
-            "community": 13,
+            "community": 14,
             "norm_label": "redis routing mesh",
             "id": "sys_redis"
         },
@@ -7188,7 +7269,7 @@
             "captured_at": null,
             "author": null,
             "contributor": null,
-            "community": 13,
+            "community": 14,
             "norm_label": "idempotency engine",
             "id": "pat_idempotency"
         },
@@ -7201,7 +7282,7 @@
             "captured_at": null,
             "author": null,
             "contributor": null,
-            "community": 13,
+            "community": 14,
             "norm_label": "unified event stream",
             "id": "ui_unified_event_stream"
         },
@@ -7214,7 +7295,7 @@
             "captured_at": null,
             "author": null,
             "contributor": null,
-            "community": 54,
+            "community": 56,
             "norm_label": "graphql dataloaders",
             "id": "lib_dataloader"
         },
@@ -7227,7 +7308,7 @@
             "captured_at": null,
             "author": null,
             "contributor": null,
-            "community": 55,
+            "community": 57,
             "norm_label": "trigger service",
             "id": "sys_trigger_service"
         },
@@ -7240,7 +7321,7 @@
             "captured_at": null,
             "author": null,
             "contributor": null,
-            "community": 40,
+            "community": 42,
             "norm_label": "recursive event loops",
             "id": "pat_recursive_event_loops"
         },
@@ -7253,7 +7334,7 @@
             "captured_at": null,
             "author": null,
             "contributor": null,
-            "community": 40,
+            "community": 42,
             "norm_label": "origin tracking (system actor)",
             "id": "pat_origin_tracking"
         },
@@ -7261,7 +7342,7 @@
             "label": "PR.md",
             "file_type": "document",
             "source_file": "PR.md",
-            "community": 26,
+            "community": 28,
             "norm_label": "pr.md",
             "id": "pr_doc"
         },
@@ -7269,7 +7350,7 @@
             "label": "README.md",
             "file_type": "document",
             "source_file": "README.md",
-            "community": 56,
+            "community": 58,
             "norm_label": "readme.md",
             "id": "readme_doc"
         },
@@ -7277,7 +7358,7 @@
             "label": "Closure Table Engine",
             "file_type": "document",
             "source_file": "PR.md",
-            "community": 26,
+            "community": 28,
             "norm_label": "closure table engine",
             "id": "closure_table_engine"
         },
@@ -7285,7 +7366,7 @@
             "label": "Reactive Outbox Relay",
             "file_type": "document",
             "source_file": "PR.md",
-            "community": 26,
+            "community": 28,
             "norm_label": "reactive outbox relay",
             "id": "outbox_relay_reactive"
         },
@@ -7293,7 +7374,7 @@
             "label": "E2E Testing Framework",
             "file_type": "document",
             "source_file": "PR.md",
-            "community": 26,
+            "community": 28,
             "norm_label": "e2e testing framework",
             "id": "e2e_testing_framework"
         }
@@ -8598,8 +8679,20 @@
         {
             "relation": "imports_from",
             "confidence": "EXTRACTED",
+            "source_file": "src/tests/verify-phase-3.ts",
+            "source_location": "L2",
+            "weight": 1.0,
+            "_src": "src_tests_verify_phase_3_ts",
+            "_tgt": "src_database_index_ts",
+            "source": "src_database_index_ts",
+            "target": "src_tests_verify_phase_3_ts",
+            "confidence_score": 1.0
+        },
+        {
+            "relation": "imports_from",
+            "confidence": "EXTRACTED",
             "source_file": "src/tests/verify-phase-2.ts",
-            "source_location": "L3",
+            "source_location": "L2",
             "weight": 1.0,
             "_src": "src_tests_verify_phase_2_ts",
             "_tgt": "src_database_index_ts",
@@ -9138,6 +9231,18 @@
         {
             "relation": "imports_from",
             "confidence": "EXTRACTED",
+            "source_file": "src/modules/auto-action/internal/listeners/AutoActionTaskEventConsumer.ts",
+            "source_location": "L9",
+            "weight": 1.0,
+            "_src": "src_modules_auto_action_internal_listeners_autoactiontaskeventconsumer_ts",
+            "_tgt": "src_database_index_ts",
+            "source": "src_database_index_ts",
+            "target": "src_modules_auto_action_internal_listeners_autoactiontaskeventconsumer_ts",
+            "confidence_score": 1.0
+        },
+        {
+            "relation": "imports_from",
+            "confidence": "EXTRACTED",
             "source_file": "src/modules/auto-action/__tests__/autoAction.test.ts",
             "source_location": "L2",
             "weight": 1.0,
@@ -9229,6 +9334,18 @@
             "_tgt": "src_database_index_ts",
             "source": "src_database_index_ts",
             "target": "src_modules_task_internal_guardservice_ts",
+            "confidence_score": 1.0
+        },
+        {
+            "relation": "imports_from",
+            "confidence": "EXTRACTED",
+            "source_file": "src/modules/auto-action/internal/listeners/AutoActionTaskEventConsumer.ts",
+            "source_location": "L11",
+            "weight": 1.0,
+            "_src": "src_modules_auto_action_internal_listeners_autoactiontaskeventconsumer_ts",
+            "_tgt": "src_database_tables_behaviorrule_ts",
+            "source": "src_database_tables_behaviorrule_ts",
+            "target": "src_modules_auto_action_internal_listeners_autoactiontaskeventconsumer_ts",
             "confidence_score": 1.0
         },
         {
@@ -9558,6 +9675,18 @@
         {
             "relation": "imports_from",
             "confidence": "EXTRACTED",
+            "source_file": "src/tests/verify-phase-3.ts",
+            "source_location": "L3",
+            "weight": 1.0,
+            "_src": "src_tests_verify_phase_3_ts",
+            "_tgt": "src_logger_index_ts",
+            "source": "src_logger_index_ts",
+            "target": "src_tests_verify_phase_3_ts",
+            "confidence_score": 1.0
+        },
+        {
+            "relation": "imports_from",
+            "confidence": "EXTRACTED",
             "source_file": "src/tests/verify-phase-2.ts",
             "source_location": "L4",
             "weight": 1.0,
@@ -9822,20 +9951,116 @@
         {
             "relation": "imports_from",
             "confidence": "EXTRACTED",
-            "source_file": "src/tests/verify-phase-2.ts",
+            "source_file": "src/tests/verify-phase-3.ts",
             "source_location": "L1",
             "weight": 1.0,
-            "_src": "src_tests_verify_phase_2_ts",
+            "_src": "src_tests_verify_phase_3_ts",
+            "_tgt": "src_tests_helpers_factories_ts",
+            "source": "src_tests_verify_phase_3_ts",
+            "target": "src_tests_helpers_factories_ts",
+            "confidence_score": 1.0
+        },
+        {
+            "relation": "imports_from",
+            "confidence": "EXTRACTED",
+            "source_file": "src/tests/verify-phase-3.ts",
+            "source_location": "L4",
+            "weight": 1.0,
+            "_src": "src_tests_verify_phase_3_ts",
+            "_tgt": "src_modules_task_internal_taskqueries_ts",
+            "source": "src_tests_verify_phase_3_ts",
+            "target": "src_modules_task_internal_taskqueries_ts",
+            "confidence_score": 1.0
+        },
+        {
+            "relation": "imports_from",
+            "confidence": "EXTRACTED",
+            "source_file": "src/tests/verify-phase-3.ts",
+            "source_location": "L5",
+            "weight": 1.0,
+            "_src": "src_tests_verify_phase_3_ts",
             "_tgt": "src_modules_task_internal_taskserviceimpl_ts",
-            "source": "src_tests_verify_phase_2_ts",
+            "source": "src_tests_verify_phase_3_ts",
             "target": "src_modules_task_internal_taskserviceimpl_ts",
             "confidence_score": 1.0
         },
         {
             "relation": "imports_from",
             "confidence": "EXTRACTED",
+            "source_file": "src/tests/verify-phase-3.ts",
+            "source_location": "L6",
+            "weight": 1.0,
+            "_src": "src_tests_verify_phase_3_ts",
+            "_tgt": "src_modules_auto_action_internal_listeners_autoactiontaskeventconsumer_ts",
+            "source": "src_tests_verify_phase_3_ts",
+            "target": "src_modules_auto_action_internal_listeners_autoactiontaskeventconsumer_ts",
+            "confidence_score": 1.0
+        },
+        {
+            "relation": "imports_from",
+            "confidence": "EXTRACTED",
+            "source_file": "src/tests/verify-phase-3.ts",
+            "source_location": "L7",
+            "weight": 1.0,
+            "_src": "src_tests_verify_phase_3_ts",
+            "_tgt": "src_utils_event_bus_constants_ts",
+            "source": "src_tests_verify_phase_3_ts",
+            "target": "src_utils_event_bus_constants_ts",
+            "confidence_score": 1.0
+        },
+        {
+            "relation": "imports_from",
+            "confidence": "EXTRACTED",
+            "source_file": "src/tests/verify-phase-3.ts",
+            "source_location": "L8",
+            "weight": 1.0,
+            "_src": "src_tests_verify_phase_3_ts",
+            "_tgt": "src_modules_task_internal_cascadeservice_ts",
+            "source": "src_tests_verify_phase_3_ts",
+            "target": "src_modules_task_internal_cascadeservice_ts",
+            "confidence_score": 1.0
+        },
+        {
+            "relation": "contains",
+            "confidence": "EXTRACTED",
+            "source_file": "src/tests/verify-phase-3.ts",
+            "source_location": "L10",
+            "weight": 1.0,
+            "_src": "src_tests_verify_phase_3_ts",
+            "_tgt": "tests_verify_phase_3_run",
+            "source": "src_tests_verify_phase_3_ts",
+            "target": "tests_verify_phase_3_run",
+            "confidence_score": 1.0
+        },
+        {
+            "relation": "calls",
+            "confidence": "INFERRED",
+            "confidence_score": 0.8,
+            "source_file": "src/tests/verify-phase-3.ts",
+            "source_location": "L13",
+            "weight": 1.0,
+            "_src": "tests_verify_phase_3_run",
+            "_tgt": "helpers_factories_createuser",
+            "source": "tests_verify_phase_3_run",
+            "target": "helpers_factories_createuser"
+        },
+        {
+            "relation": "calls",
+            "confidence": "INFERRED",
+            "confidence_score": 0.8,
+            "source_file": "src/tests/verify-phase-3.ts",
+            "source_location": "L14",
+            "weight": 1.0,
+            "_src": "tests_verify_phase_3_run",
+            "_tgt": "internal_projectserviceimpl_projectserviceimpl_createproject",
+            "source": "tests_verify_phase_3_run",
+            "target": "internal_projectserviceimpl_projectserviceimpl_createproject"
+        },
+        {
+            "relation": "imports_from",
+            "confidence": "EXTRACTED",
             "source_file": "src/tests/verify-phase-2.ts",
-            "source_location": "L2",
+            "source_location": "L1",
             "weight": 1.0,
             "_src": "src_tests_verify_phase_2_ts",
             "_tgt": "src_tests_helpers_factories_ts",
@@ -9847,7 +10072,7 @@
             "relation": "imports_from",
             "confidence": "EXTRACTED",
             "source_file": "src/tests/verify-phase-2.ts",
-            "source_location": "L5",
+            "source_location": "L3",
             "weight": 1.0,
             "_src": "src_tests_verify_phase_2_ts",
             "_tgt": "src_graphql_errors_ts",
@@ -9859,12 +10084,24 @@
             "relation": "imports_from",
             "confidence": "EXTRACTED",
             "source_file": "src/tests/verify-phase-2.ts",
-            "source_location": "L6",
+            "source_location": "L5",
             "weight": 1.0,
             "_src": "src_tests_verify_phase_2_ts",
             "_tgt": "src_modules_task_internal_taskqueries_ts",
             "source": "src_tests_verify_phase_2_ts",
             "target": "src_modules_task_internal_taskqueries_ts",
+            "confidence_score": 1.0
+        },
+        {
+            "relation": "imports_from",
+            "confidence": "EXTRACTED",
+            "source_file": "src/tests/verify-phase-2.ts",
+            "source_location": "L6",
+            "weight": 1.0,
+            "_src": "src_tests_verify_phase_2_ts",
+            "_tgt": "src_modules_task_internal_taskserviceimpl_ts",
+            "source": "src_tests_verify_phase_2_ts",
+            "target": "src_modules_task_internal_taskserviceimpl_ts",
             "confidence_score": 1.0
         },
         {
@@ -19754,10 +19991,34 @@
             "confidence_score": 1.0
         },
         {
-            "relation": "contains",
+            "relation": "imports_from",
             "confidence": "EXTRACTED",
             "source_file": "src/modules/auto-action/internal/listeners/AutoActionTaskEventConsumer.ts",
             "source_location": "L10",
+            "weight": 1.0,
+            "_src": "src_modules_auto_action_internal_listeners_autoactiontaskeventconsumer_ts",
+            "_tgt": "src_modules_task_internal_cascadeservice_ts",
+            "source": "src_modules_auto_action_internal_listeners_autoactiontaskeventconsumer_ts",
+            "target": "src_modules_task_internal_cascadeservice_ts",
+            "confidence_score": 1.0
+        },
+        {
+            "relation": "contains",
+            "confidence": "EXTRACTED",
+            "source_file": "src/modules/auto-action/internal/listeners/AutoActionTaskEventConsumer.ts",
+            "source_location": "L13",
+            "weight": 1.0,
+            "_src": "src_modules_auto_action_internal_listeners_autoactiontaskeventconsumer_ts",
+            "_tgt": "listeners_autoactiontaskeventconsumer_matchescriteria",
+            "source": "src_modules_auto_action_internal_listeners_autoactiontaskeventconsumer_ts",
+            "target": "listeners_autoactiontaskeventconsumer_matchescriteria",
+            "confidence_score": 1.0
+        },
+        {
+            "relation": "contains",
+            "confidence": "EXTRACTED",
+            "source_file": "src/modules/auto-action/internal/listeners/AutoActionTaskEventConsumer.ts",
+            "source_location": "L45",
             "weight": 1.0,
             "_src": "src_modules_auto_action_internal_listeners_autoactiontaskeventconsumer_ts",
             "_tgt": "listeners_autoactiontaskeventconsumer_autoactiontaskeventconsumer",
@@ -19766,10 +20027,22 @@
             "confidence_score": 1.0
         },
         {
+            "relation": "calls",
+            "confidence": "EXTRACTED",
+            "source_file": "src/modules/auto-action/internal/listeners/AutoActionTaskEventConsumer.ts",
+            "source_location": "L96",
+            "weight": 1.0,
+            "_src": "listeners_autoactiontaskeventconsumer_autoactiontaskeventconsumer_handletaskevents",
+            "_tgt": "listeners_autoactiontaskeventconsumer_matchescriteria",
+            "source": "listeners_autoactiontaskeventconsumer_matchescriteria",
+            "target": "listeners_autoactiontaskeventconsumer_autoactiontaskeventconsumer_handletaskevents",
+            "confidence_score": 1.0
+        },
+        {
             "relation": "method",
             "confidence": "EXTRACTED",
             "source_file": "src/modules/auto-action/internal/listeners/AutoActionTaskEventConsumer.ts",
-            "source_location": "L11",
+            "source_location": "L46",
             "weight": 1.0,
             "_src": "listeners_autoactiontaskeventconsumer_autoactiontaskeventconsumer",
             "_tgt": "listeners_autoactiontaskeventconsumer_autoactiontaskeventconsumer_init",
@@ -19781,7 +20054,7 @@
             "relation": "method",
             "confidence": "EXTRACTED",
             "source_file": "src/modules/auto-action/internal/listeners/AutoActionTaskEventConsumer.ts",
-            "source_location": "L37",
+            "source_location": "L73",
             "weight": 1.0,
             "_src": "listeners_autoactiontaskeventconsumer_autoactiontaskeventconsumer",
             "_tgt": "listeners_autoactiontaskeventconsumer_autoactiontaskeventconsumer_handletaskevents",
@@ -20920,6 +21193,66 @@
         {
             "relation": "contains",
             "confidence": "EXTRACTED",
+            "source_file": "src/modules/task/internal/CascadeService.ts",
+            "source_location": "L4",
+            "weight": 1.0,
+            "_src": "src_modules_task_internal_cascadeservice_ts",
+            "_tgt": "internal_cascadeservice_cascadeservice",
+            "source": "src_modules_task_internal_cascadeservice_ts",
+            "target": "internal_cascadeservice_cascadeservice",
+            "confidence_score": 1.0
+        },
+        {
+            "relation": "method",
+            "confidence": "EXTRACTED",
+            "source_file": "src/modules/task/internal/CascadeService.ts",
+            "source_location": "L5",
+            "weight": 1.0,
+            "_src": "internal_cascadeservice_cascadeservice",
+            "_tgt": "internal_cascadeservice_cascadeservice_resolveblockers",
+            "source": "internal_cascadeservice_cascadeservice",
+            "target": "internal_cascadeservice_cascadeservice_resolveblockers",
+            "confidence_score": 1.0
+        },
+        {
+            "relation": "method",
+            "confidence": "EXTRACTED",
+            "source_file": "src/modules/task/internal/CascadeService.ts",
+            "source_location": "L52",
+            "weight": 1.0,
+            "_src": "internal_cascadeservice_cascadeservice",
+            "_tgt": "internal_cascadeservice_cascadeservice_cascadepriority",
+            "source": "internal_cascadeservice_cascadeservice",
+            "target": "internal_cascadeservice_cascadeservice_cascadepriority",
+            "confidence_score": 1.0
+        },
+        {
+            "relation": "method",
+            "confidence": "EXTRACTED",
+            "source_file": "src/modules/task/internal/CascadeService.ts",
+            "source_location": "L78",
+            "weight": 1.0,
+            "_src": "internal_cascadeservice_cascadeservice",
+            "_tgt": "internal_cascadeservice_cascadeservice_cascadeteam",
+            "source": "internal_cascadeservice_cascadeservice",
+            "target": "internal_cascadeservice_cascadeservice_cascadeteam",
+            "confidence_score": 1.0
+        },
+        {
+            "relation": "method",
+            "confidence": "EXTRACTED",
+            "source_file": "src/modules/task/internal/CascadeService.ts",
+            "source_location": "L104",
+            "weight": 1.0,
+            "_src": "internal_cascadeservice_cascadeservice",
+            "_tgt": "internal_cascadeservice_cascadeservice_cascadedelete",
+            "source": "internal_cascadeservice_cascadeservice",
+            "target": "internal_cascadeservice_cascadeservice_cascadedelete",
+            "confidence_score": 1.0
+        },
+        {
+            "relation": "contains",
+            "confidence": "EXTRACTED",
             "source_file": "src/modules/task/internal/GuardQueries.ts",
             "source_location": "L13",
             "weight": 1.0,
@@ -20972,8 +21305,8 @@
             "source_file": "src/modules/task/internal/GuardService.ts",
             "source_location": "L47",
             "weight": 1.0,
-            "_src": "internal_guardservice_guardservice_evaluateguards",
-            "_tgt": "internal_guardqueries_checkactivesubtasks",
+            "_src": "internal_guardqueries_checkactivesubtasks",
+            "_tgt": "internal_guardservice_guardservice_evaluateguards",
             "source": "internal_guardqueries_checkactivesubtasks",
             "target": "internal_guardservice_guardservice_evaluateguards"
         },
@@ -20984,8 +21317,8 @@
             "source_file": "src/modules/task/internal/GuardService.ts",
             "source_location": "L61",
             "weight": 1.0,
-            "_src": "internal_guardservice_guardservice_evaluateguards",
-            "_tgt": "internal_guardqueries_checkincompleteblockers",
+            "_src": "internal_guardqueries_checkincompleteblockers",
+            "_tgt": "internal_guardservice_guardservice_evaluateguards",
             "source": "internal_guardqueries_checkincompleteblockers",
             "target": "internal_guardservice_guardservice_evaluateguards"
         },
@@ -20996,8 +21329,8 @@
             "source_file": "src/modules/task/internal/GuardService.ts",
             "source_location": "L83",
             "weight": 1.0,
-            "_src": "internal_guardservice_guardservice_evaluateguards",
-            "_tgt": "internal_guardqueries_checkteamassignment",
+            "_src": "internal_guardqueries_checkteamassignment",
+            "_tgt": "internal_guardservice_guardservice_evaluateguards",
             "source": "internal_guardqueries_checkteamassignment",
             "target": "internal_guardservice_guardservice_evaluateguards"
         },

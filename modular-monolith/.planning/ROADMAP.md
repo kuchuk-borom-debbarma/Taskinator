@@ -11,18 +11,18 @@
 - [x] 02-01-PLAN.md — Implement guard hook pipeline, logic for PARENT_DELETE_GUARD, BLOCKER_SAFETY_GUARD, and MEMBER_ASSIGNMENT_GUARD.
 
 ## Phase 3: Post-Action Cascades (Reactive)
-- [ ] Refactor `AutoActionTaskEventConsumer` to use CWB rules.
-- [ ] Implement `matchesCriteria` helper.
-- [ ] Implement `BLOCKER_RESOLUTION` cascade.
-- [ ] Implement `PRIORITY_CASCADE` and `TEAM_CASCADE`.
-- [ ] Implement `CASCADE_DELETE`.
+**Plans:** 2 plans
+
+- [x] 03-01-PLAN.md — Implement CascadeService.
+- [x] 03-02-PLAN.md — Refactor AutoActionTaskEventConsumer and verify.
 
 ## Phase 4: UI Metadata & Cleanup
-- [ ] Implement `getBehaviorSettingsCatalog` in `AutoActionService`.
-- [ ] Delete legacy AST files and unused executors.
-- [ ] Expose new service via GraphQL (if applicable).
+**Plans:** 2 plans
+
+- [x] 04-01-PLAN.md — Implement behavior settings catalog and cleanup legacy executors.
+- [x] 04-02-PLAN.md — Expose behavior catalog via GraphQL.
 
 ## Phase 5: Verification & Hardening
-- [ ] Add E2E tests for all Guard scenarios.
-- [ ] Add E2E tests for all Cascade scenarios.
-- [ ] Performance profiling of Kysely relationship queries.
+**Plans:** 1 plan
+
+- [ ] 05-01-PLAN.md — Standardize labels, implement E2E integration tests, and profile graph performance.

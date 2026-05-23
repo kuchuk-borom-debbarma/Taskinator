@@ -301,22 +301,4 @@ describe('AutoAction GraphQL API wiring', () => {
             endCursor: null,
         });
     });
-
-    it('delegates autoActionTemplate query to service', async () => {
-        const getTemplateMock = mock(async () => ({
-            triggers: [],
-            contextFields: [],
-            actions: [],
-            conditions: [],
-        }));
-        autoActionService.getTemplateForScope = getTemplateMock as any;
-
-        await autoActionResolvers.Query.autoActionTemplate(
-            null,
-            { scope: 'TASK', isSync: true },
-            createContext(),
-        );
-
-        expect(getTemplateMock).toHaveBeenCalledWith('TASK', true);
-    });
 });

@@ -16,9 +16,9 @@ extend type Query {
     ): AutoActionConnection!
 
     """
-    Fetches the dynamic template for an Auto Action scope.
+    Returns the catalog of available CWB behaviors for a project.
     """
-    autoActionTemplate(scope: String!, isSync: Boolean): AutoActionTemplate!
+    behaviorSettingsCatalog(projectId: ID!): BehaviorSettingsCatalog!
 }
 
 extend type Mutation {

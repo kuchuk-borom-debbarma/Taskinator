@@ -56,3 +56,27 @@ type DeleteAutoActionPayload {
     success: Boolean!
     deletedId: ID!
 }
+
+"""
+A catalog of available behaviors and their metadata for the UI.
+"""
+type BehaviorSettingsCatalog {
+    settings: [BehaviorSetting!]!
+}
+
+"""
+Metadata about a specific CWB behavior.
+"""
+type BehaviorSetting {
+    id: ID!
+    name: String!
+    description: String!
+    category: BehaviorCategory!
+    defaultValue: Boolean!
+}
+
+enum BehaviorCategory {
+    GUARD
+    CASCADE
+    AUTOMATION
+}

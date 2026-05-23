@@ -109,14 +109,13 @@ export const autoActionResolvers = {
                 pagination,
             );
         },
-        autoActionTemplate: (
+        behaviorSettingsCatalog: async (
             _parent: any,
-            { scope, isSync }: { scope: string; isSync?: boolean },
+            { projectId }: { projectId: string },
             context: GraphQLContext,
         ) => {
             requireUserId(context);
-            // The service handles scope validation and template generation
-            return autoActionService.getTemplateForScope(scope as any, isSync);
+            return autoActionService.getBehaviorSettingsCatalog(projectId);
         },
     },
 

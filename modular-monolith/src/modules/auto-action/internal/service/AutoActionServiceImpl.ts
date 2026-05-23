@@ -1,4 +1,3 @@
-import { db } from '../../../../database/index.js';
 import type {
     AutoAction,
     AutoActionUpdate,
@@ -6,12 +5,6 @@ import type {
 } from '../../../../database/tables/AutoAction.js';
 import { logger } from '../../../../logger/index.js';
 import type { PaginationParams } from '../../../../types/pagination.ts';
-import {
-    KAFKA_EVENTS,
-    KAFKA_TOPICS,
-} from '../../../../utils/event-bus/constants.ts';
-import type { DomainEvent } from '../../../../utils/event-bus/index.js';
-import { appendEventsToOutbox } from '../../../../utils/event-bus/OutboxQueries.js';
 import { encodeCursor } from '../../../../utils/utils.ts';
 import { projectService } from '../../../project/index.js';
 import type {
@@ -22,58 +15,22 @@ import type {
 } from '../../AutoActionService.js';
 import {
     autoActionFlowSchema,
-    EntityScope,
-    type ScopeTemplate,
+    type BehaviorSettingsCatalog,
 } from '../../types.js';
-import { executeAutoActionPipeline } from '../execution/executor.js';
-import { getTemplateForScope } from '../execution/template.js';
 import {
     deleteAutoActionById,
     insertAutoAction,
-    isEventProcessed,
-    markEventProcessed,
     selectActiveAutoActionByName,
-    selectActiveAutoActionsForProject,
     selectAutoActionById,
     selectAutoActionsByIds,
     selectAutoActionsForProject,
     selectAutoActionsForProjectPage,
     updateAutoActionById,
 } from '../queries/AutoActionQueries.js';
-import { isFlowSync } from './validation.js';
-
-type TriggerDefinition = {
-    type?: string;
-    triggerType?: string;
-    eventType?: string;
-    scope?: string;
-};
-
-type NormalizedTaskEvent = {
-    triggerType: string;
-    projectId: string;
-    taskId: string;
-    actorId: string;
-    traceId: string;
-    autoActionId?: string;
-    wasSnapshot?: Record<string, any>;
-    startIndex?: number;
-    startCursor?: any;
-};
 
 /**
- * AutoActionServiceImpl: The central brain of the Automation Engine.
- *
- * This service handles two distinct execution paths:
- * 1. Synchronous (Sync): Executes rules within the primary request lifecycle (e.g., during task creation).
- *    - Uses "Log and Proceed" fault tolerance: primary operations must NOT fail if automation fails.
- *    - Limited to top 10 rules to protect API latency.
- *
- * 2. Asynchronous (Async): Executes rules in the background via Kafka domain events.
- *    - Supports "Resumable Pipelines": execution is chunked into 5-step batches.
- *    - If a batch is incomplete, it emits a CONTINUE event to resume later via a cursor.
- *
- * All mutations (create/update/delete) are performed using Single-Query CTEs with outbox signaling.
+ * AutoActionServiceImpl: Handles CRUD operations for AutoActions.
+ * Legacy AST execution has been removed in favor of CWB (Condition-Wait-Behavior) rules.
  */
 export class AutoActionServiceImpl implements AutoActionService {
     // ─── Private Helpers ────────────────────────────────────────────────────────
@@ -102,214 +59,8 @@ export class AutoActionServiceImpl implements AutoActionService {
     /**
      * Validates the structure and sync-safety of the pipeline steps.
      */
-    private validatePipeline(steps: any, isSync: boolean): void {
-        const parsedSteps = autoActionFlowSchema.parse(steps);
-
-        if (isSync) {
-            const syncSafe = isFlowSync(parsedSteps);
-            if (!syncSafe) {
-                throw new Error(
-                    `Auto action is configured as synchronous but contains asynchronous steps (actions or conditions).`,
-                );
-            }
-        }
-    }
-
-    private parseJsonArray(value: unknown): any[] {
-        if (Array.isArray(value)) return value;
-        if (typeof value !== 'string') return [];
-
-        try {
-            const parsed = JSON.parse(value);
-            return Array.isArray(parsed) ? parsed : [];
-        } catch {
-            return [];
-        }
-    }
-
-    private triggerMatches(
-        autoAction: AutoAction,
-        triggerType: string,
-        scope: EntityScope,
-    ): boolean {
-        const triggers = this.parseJsonArray(autoAction.triggers);
-
-        return triggers.some((trigger: TriggerDefinition | string) => {
-            if (typeof trigger === 'string') return trigger === triggerType;
-
-            const candidateType =
-                trigger.type || trigger.triggerType || trigger.eventType;
-            const candidateScope = trigger.scope;
-
-            return (
-                candidateType === triggerType &&
-                (!candidateScope || candidateScope === scope)
-            );
-        });
-    }
-
-    /**
-     * Normalizes disparate domain events into a standard internal format.
-     * Handles Task Lifecycle events and Pipeline Continuation events.
-     * This ensures the rest of the engine (conditions/actions) always sees consistent data.
-     */
-    private normalizeTaskEvent(
-        event: DomainEvent,
-    ): NormalizedTaskEvent | undefined {
-        if (
-            event.type !== KAFKA_EVENTS.TASK.CREATED &&
-            event.type !== KAFKA_EVENTS.TASK.UPDATED &&
-            event.type !== KAFKA_EVENTS.PIPELINE.CONTINUE
-        ) {
-            return undefined;
-        }
-
-        const data = event.data || {};
-
-        // Special handling for resume events
-        if (event.type === KAFKA_EVENTS.PIPELINE.CONTINUE) {
-            return {
-                triggerType: event.type,
-                projectId: data.projectId,
-                taskId: data.entityId, // resume events use entityId
-                actorId: data.actorId || 'system:auto-action',
-                traceId: data.traceId || event.eventId,
-                autoActionId: data.autoActionId,
-                wasSnapshot: data.wasSnapshot,
-                startIndex: data.startIndex,
-                startCursor: data.startCursor,
-            };
-        }
-
-        const projectId = data.projectId;
-        const taskId = data.taskId;
-        if (!projectId || !taskId) {
-            logger.warn(
-                `AutoActionService.handleTaskEvents: skipping malformed "${event.type}" event "${event.eventId}"`,
-            );
-            return undefined;
-        }
-
-        return {
-            triggerType: event.type,
-            projectId,
-            taskId,
-            actorId: data.actorId || 'system:auto-action',
-            traceId: data.traceId || event.eventId,
-            wasSnapshot:
-                data.old && typeof data.old === 'object'
-                    ? (data.old as Record<string, any>)
-                    : undefined,
-        };
-    }
-
-    /**
-     * The core dispatcher for automation rules.
-     * Filters rules by trigger type and sync/async preference, then executes pipelines.
-     *
-     * @param normalized Standardized event data
-     * @param isSyncOnly If true, only executes rules marked is_sync: true
-     * @param isAsyncOnly If true, only executes rules marked is_sync: false
-     */
-    private async executeMatchingTaskActions(
-        normalized: NormalizedTaskEvent,
-        isSyncOnly = false,
-        isAsyncOnly = false,
-    ): Promise<void> {
-        const candidates = await selectActiveAutoActionsForProject(
-            normalized.projectId,
-        );
-
-        let matches: AutoAction[] = [];
-
-        // RES-02: Support Resume Events
-        if (normalized.triggerType === KAFKA_EVENTS.PIPELINE.CONTINUE) {
-            const data = normalized as any;
-            if (data.autoActionId) {
-                const targeted = candidates.find(
-                    (a) => a.id === data.autoActionId,
-                );
-                if (targeted) matches = [targeted];
-            }
-        } else {
-            matches = candidates.filter((autoAction) =>
-                this.triggerMatches(
-                    autoAction,
-                    normalized.triggerType,
-                    EntityScope.TASK,
-                ),
-            );
-        }
-
-        if (isSyncOnly) {
-            matches = matches.filter((a) => a.is_sync);
-            // ORCH-03: Execution Guards - limit sync actions to top 10
-            if (matches.length > 10) {
-                logger.warn(
-                    `AutoActionService: Truncating sync actions for task ${normalized.taskId} from ${matches.length} to 10 to protect API latency.`,
-                );
-                matches = matches.slice(0, 10);
-            }
-        }
-
-        if (isAsyncOnly) {
-            matches = matches.filter((a) => !a.is_sync);
-        }
-
-        if (matches.length === 0) {
-            logger.debug(
-                `AutoActionService: no matches for "${normalized.triggerType}" in project "${normalized.projectId}" (syncOnly: ${isSyncOnly}, asyncOnly: ${isAsyncOnly})`,
-            );
-            return;
-        }
-
-        for (const autoAction of matches) {
-            try {
-                const result = await this.executePipeline(
-                    autoAction.id,
-                    normalized.taskId,
-                    normalized.actorId,
-                    normalized.traceId,
-                    normalized.wasSnapshot,
-                    normalized.startIndex || 0,
-                    normalized.startCursor,
-                    isSyncOnly ? 10 : 5, // Limit steps per run: 10 for sync, 5 for async
-                );
-
-                if (!result.completed) {
-                    logger.info(
-                        `AutoActionService: Pipeline "${autoAction.name}" (${autoAction.id}) is incomplete (stopped at index ${result.lastProcessedIndex}). Re-emitting resume event.`,
-                    );
-
-                    await appendEventsToOutbox(db, [
-                        {
-                            kafka_topic: KAFKA_TOPICS.AUTO_ACTION,
-                            kafka_key: normalized.projectId,
-                            payload: {
-                                type: KAFKA_EVENTS.PIPELINE.CONTINUE,
-                                autoActionId: autoAction.id,
-                                entityId: normalized.taskId,
-                                projectId: normalized.projectId,
-                                actorId: normalized.actorId,
-                                traceId: normalized.traceId,
-                                wasSnapshot: normalized.wasSnapshot,
-                                startIndex: result.lastProcessedIndex + 1,
-                            },
-                        },
-                    ]);
-                }
-            } catch (err) {
-                if (isSyncOnly) {
-                    // ORCH-02: Log and Proceed Fault Tolerance
-                    logger.error(
-                        `AutoActionService: Sync AutoAction "${autoAction.name}" (${autoAction.id}) failed for task ${normalized.taskId}. Log and Proceed.`,
-                        err,
-                    );
-                } else {
-                    throw err;
-                }
-            }
-        }
+    private validatePipeline(steps: any): void {
+        autoActionFlowSchema.parse(steps);
     }
 
     private async assertActorCanAccessProject(
@@ -386,7 +137,7 @@ export class AutoActionServiceImpl implements AutoActionService {
         const rawSteps = data.steps;
         const steps =
             typeof rawSteps === 'string' ? JSON.parse(rawSteps) : rawSteps;
-        this.validatePipeline(steps || [], isSync);
+        this.validatePipeline(steps || []);
 
         const insertPayload = {
             ...data,
@@ -461,7 +212,7 @@ export class AutoActionServiceImpl implements AutoActionService {
             typeof rawSteps === 'string' ? JSON.parse(rawSteps) : rawSteps;
 
         if (data.steps !== undefined || data.is_sync !== undefined) {
-            this.validatePipeline(steps || [], newIsSync);
+            this.validatePipeline(steps || []);
         }
 
         const updatePayload = {
@@ -626,80 +377,77 @@ export class AutoActionServiceImpl implements AutoActionService {
         await this.deleteAutoAction(id);
     }
 
-    /**
-     * Entry point for ASYNC background execution (Kafka Consumer).
-     * Processes batches of events and filters out already-processed traceIds for idempotency.
-     * Only triggers rules marked as is_sync: false.
-     */
-    async handleTaskEvents(events: DomainEvent[]): Promise<void> {
-        if (events.length === 0) return;
-
-        logger.info(
-            `AutoActionService.handleTaskEvents: processing ${events.length} task event(s)`,
-        );
-
-        for (const event of events) {
-            const eventId = (event.data as any)?.traceId;
-            if (!eventId) continue;
-
-            const alreadyProcessed = await isEventProcessed(eventId);
-            if (alreadyProcessed) {
-                logger.info(
-                    `AutoActionService: Skipping duplicate event ${eventId}`,
-                );
-                continue;
-            }
-
-            const normalized = this.normalizeTaskEvent(event);
-            if (!normalized) continue;
-
-            // Kafka handler should ONLY execute ASYNC actions.
-            // Sync actions are now handled in the request lifecycle (Phase 47).
-            await this.executeMatchingTaskActions(normalized, false, true);
-            await markEventProcessed(eventId);
-        }
-    }
-
-    /**
-     * Entry point for SYNC request-lifecycle execution (Service Hook).
-     * Runs immediately during Task mutations. Failure is absorbed to protect the primary operation.
-     * Only triggers rules marked as is_sync: true.
-     */
-    async handleSyncTaskEvents(event: DomainEvent): Promise<void> {
-        const normalized = this.normalizeTaskEvent(event);
-        if (!normalized) return;
-
-        logger.debug(
-            `AutoActionService.handleSyncTaskEvents: processing sync actions for task ${normalized.taskId}`,
-        );
-
-        await this.executeMatchingTaskActions(normalized, true, false);
-    }
-
-    getTemplateForScope(scope: EntityScope, isSync = false): ScopeTemplate {
-        return getTemplateForScope(scope, isSync);
-    }
-
-    async executePipeline(
-        autoActionId: string,
-        entityId: string,
-        actorId: string,
-        traceId: string,
-        wasSnapshot: any,
-        startIndex = 0,
-        startCursor?: any,
-        maxSteps?: number,
-    ): Promise<any> {
-        return executeAutoActionPipeline(
-            autoActionId,
-            entityId,
-            actorId,
-            traceId,
-            wasSnapshot,
-            startIndex,
-            startCursor,
-            maxSteps,
-        );
+    async getBehaviorSettingsCatalog(
+        _projectId: string,
+    ): Promise<BehaviorSettingsCatalog> {
+        return {
+            settings: [
+                {
+                    id: 'BLOCKER_RESOLUTION',
+                    name: 'Auto-resolve Blockers',
+                    description:
+                        'Automatically resolves blocking tasks when their dependants are resolved.',
+                    category: 'CASCADE',
+                    defaultValue: true,
+                },
+                {
+                    id: 'PARENT_DELETE_GUARD',
+                    name: 'Parent Delete Guard',
+                    description:
+                        'Prevents deletion of parent tasks if they have active subtasks.',
+                    category: 'GUARD',
+                    defaultValue: true,
+                },
+                {
+                    id: 'PRIORITY_CASCADE',
+                    name: 'Priority Cascade',
+                    description:
+                        'Cascades priority changes from parent to subtasks.',
+                    category: 'CASCADE',
+                    defaultValue: false,
+                },
+                {
+                    id: 'TEAM_CASCADE',
+                    name: 'Team Cascade',
+                    description:
+                        'Cascades team assignment changes from parent to subtasks.',
+                    category: 'CASCADE',
+                    defaultValue: false,
+                },
+                {
+                    id: 'BLOCKER_SAFETY_GUARD',
+                    name: 'Blocker Safety Guard',
+                    description:
+                        'Prevents moving a task to "Done" if it still has active blockers.',
+                    category: 'GUARD',
+                    defaultValue: true,
+                },
+                {
+                    id: 'MEMBER_ASSIGNMENT_GUARD',
+                    name: 'Member Assignment Guard',
+                    description:
+                        "Ensures assigned members belong to the task's team.",
+                    category: 'GUARD',
+                    defaultValue: true,
+                },
+                {
+                    id: 'CASCADE_DELETE',
+                    name: 'Cascade Delete',
+                    description:
+                        'Automatically deletes subtasks when the parent is deleted.',
+                    category: 'CASCADE',
+                    defaultValue: false,
+                },
+                {
+                    id: 'AUTO_NOTIFY',
+                    name: 'Auto Notifications',
+                    description:
+                        'Sends notifications when task status changes.',
+                    category: 'AUTOMATION',
+                    defaultValue: true,
+                },
+            ],
+        };
     }
 }
 //TODO CTE for single query db
