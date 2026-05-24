@@ -81,9 +81,7 @@ describe('AggregatorService', () => {
     it('should call folder callback with unprocessed events and append results to outbox', async () => {
         const unprocessed = [events[0]!];
         mockClaimEventsAtomic.mockResolvedValue(unprocessed);
-        const outboxEntries: OutboxEntry[] = [
-            { kafka_topic: 't1', payload: {} },
-        ];
+        const outboxEntries: OutboxEntry[] = [{ stream: 't1', payload: {} }];
         const folder = jest.fn<(events: DomainEvent[]) => OutboxEntry[]>(
             () => outboxEntries,
         );
@@ -124,7 +122,7 @@ describe('AggregatorService', () => {
     it('should rollback transaction if outbox append fails', async () => {
         mockClaimEventsAtomic.mockResolvedValue([events[0]!]);
         const folder = jest.fn<(events: DomainEvent[]) => OutboxEntry[]>(() => [
-            { kafka_topic: 't1', payload: {} },
+            { stream: 't1', payload: {} },
         ]);
         mockAppendEventsToOutbox.mockRejectedValue(new Error('Outbox failed'));
 

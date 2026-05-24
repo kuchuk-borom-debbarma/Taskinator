@@ -2,8 +2,8 @@ import { logger } from '../../../../infra/logger';
 import eventBus from '../../../../infra/utils/EventBus.ts';
 import type { DomainEvent } from '../../../../infra/utils/event-bus';
 import {
-    KAFKA_EVENTS,
-    KAFKA_TOPICS,
+    EVENT_STREAMS,
+    EVENT_TYPES,
 } from '../../../../infra/utils/event-bus/constants.ts';
 import { taskService } from '../../index.ts';
 import type { TaskReachabilityLinkChange } from '../../TaskService.ts';
@@ -23,10 +23,10 @@ export class TaskAggregated_ReachabilitySyncListener {
         logger.info('[Task -> Reachability Listener] Initializing');
 
         await eventBus.subscribe(
-            KAFKA_TOPICS.TASK_AGGREGATED,
+            EVENT_STREAMS.TASK_AGGREGATED,
             'task-reachability-sync-group',
             {
-                [KAFKA_EVENTS.TASK_AGGREGATED.SYNC_TASK_REACHABILITY]:
+                [EVENT_TYPES.TASK_AGGREGATED.SYNC_TASK_REACHABILITY]:
                     this.handleSync.bind(this),
             },
             { batch: true },

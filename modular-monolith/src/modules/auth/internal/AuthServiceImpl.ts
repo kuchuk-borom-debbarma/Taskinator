@@ -15,8 +15,8 @@ const JWT_SECRET = process.env.JWT_SECRET || 'super-secret-jwt-key';
 
 import { sql } from 'kysely';
 import {
-    KAFKA_EVENTS,
-    KAFKA_TOPICS,
+    EVENT_STREAMS,
+    EVENT_TYPES,
 } from '../../../infra/utils/event-bus/constants.ts';
 import { claimEventsAtomic } from '../../../infra/utils/event-bus/idempotency.ts';
 import { updateUserProjectCountsBulk } from './AuthQueries.ts';
@@ -40,11 +40,11 @@ export class AuthServiceImpl implements AuthService {
                 VALUES (${uid}::uuid, ${data.email}::text, ${data.username}::text, ${password_hash}::text)
                 RETURNING *
             )
-            INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
-            SELECT ${KAFKA_TOPICS.AUTH}::text,
+            INSERT INTO outbox_events (stream, stream_key, payload)
+            SELECT ${EVENT_STREAMS.AUTH}::text,
                    ${uid}::text,
                    jsonb_build_object(
-                       'type', ${KAFKA_EVENTS.AUTH.USER_CREATED}::text,
+                       'type', ${EVENT_TYPES.AUTH.USER_CREATED}::text,
                        'email', email,
                        'uid', id
                    )
@@ -69,11 +69,11 @@ export class AuthServiceImpl implements AuthService {
                     RETURNING *
                 ),
                 inserted_outbox AS (
-                    INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
-                    SELECT ${KAFKA_TOPICS.AUTH},
+                    INSERT INTO outbox_events (stream, stream_key, payload)
+                    SELECT ${EVENT_STREAMS.AUTH},
                            id::text,
                            jsonb_build_object(
-                               'type', ${KAFKA_EVENTS.AUTH.USER_CREATED},
+                               'type', ${EVENT_TYPES.AUTH.USER_CREATED},
                                'email', email,
                                'uid', id
                            )

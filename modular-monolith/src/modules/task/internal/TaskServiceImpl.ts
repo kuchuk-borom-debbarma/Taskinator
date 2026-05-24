@@ -7,8 +7,8 @@ import {
 } from '../../../infra/graphql/errors.ts';
 import { logger } from '../../../infra/logger/index.ts';
 import {
-    KAFKA_EVENTS,
-    KAFKA_TOPICS,
+    EVENT_STREAMS,
+    EVENT_TYPES,
 } from '../../../infra/utils/event-bus/constants.ts';
 import { claimEventsAtomic } from '../../../infra/utils/event-bus/idempotency.ts';
 import type { DomainEvent } from '../../../infra/utils/event-bus/index.js';
@@ -165,7 +165,7 @@ export class TaskServiceImpl implements TaskService {
         // Trigger synchronous auto-actions immediately in the request lifecycle.
         // The registry ensures decoupling while allowing side-effects to run before the response.
         await syncActionRegistry.executeHandlers('task.created', {
-            type: KAFKA_EVENTS.TASK.CREATED,
+            type: EVENT_TYPES.TASK.CREATED,
             data: {
                 taskId: result.id,
                 projectId: result.projectId,
@@ -213,7 +213,7 @@ export class TaskServiceImpl implements TaskService {
         // SYNC ORCHESTRATION (ORCH-01)
         // Passes both 'current' and 'old' (snapshot) state to allow transition-based predicates.
         await syncActionRegistry.executeHandlers('task.updated', {
-            type: KAFKA_EVENTS.TASK.UPDATED,
+            type: EVENT_TYPES.TASK.UPDATED,
             data: {
                 taskId: result.id,
                 projectId: result.projectId,
@@ -372,7 +372,7 @@ export class TaskServiceImpl implements TaskService {
         const result = await deleteTask(param);
 
         await syncActionRegistry.executeHandlers('task.deleted', {
-            type: KAFKA_EVENTS.TASK.DELETED,
+            type: EVENT_TYPES.TASK.DELETED,
             data: {
                 taskId: param.taskId,
                 projectId: param.projectId,
@@ -554,9 +554,9 @@ export class TaskServiceImpl implements TaskService {
                 );
                 await appendEventsToOutbox(trx, [
                     {
-                        kafka_topic: KAFKA_TOPICS.TASK_AGGREGATED,
+                        stream: EVENT_STREAMS.TASK_AGGREGATED,
                         payload: {
-                            type: KAFKA_EVENTS.TASK_AGGREGATED
+                            type: EVENT_TYPES.TASK_AGGREGATED
                                 .DELETE_TASK_REACHABILITY_CHUNK,
                             taskIds,
                         },
@@ -635,9 +635,9 @@ export class TaskServiceImpl implements TaskService {
                 );
                 await appendEventsToOutbox(trx, [
                     {
-                        kafka_topic: KAFKA_TOPICS.PROJECT_AGGREGATED,
+                        stream: EVENT_STREAMS.PROJECT_AGGREGATED,
                         payload: {
-                            type: KAFKA_EVENTS.PROJECT_AGGREGATED
+                            type: EVENT_TYPES.PROJECT_AGGREGATED
                                 .DELETE_PROJECT_TASK_CHUNK,
                             projectIds,
                         },
@@ -677,9 +677,9 @@ export class TaskServiceImpl implements TaskService {
                 );
                 await appendEventsToOutbox(trx, [
                     {
-                        kafka_topic: KAFKA_TOPICS.PROJECT_AGGREGATED,
+                        stream: EVENT_STREAMS.PROJECT_AGGREGATED,
                         payload: {
-                            type: KAFKA_EVENTS.PROJECT_AGGREGATED
+                            type: EVENT_TYPES.PROJECT_AGGREGATED
                                 .DELETE_PROJECT_TASK_LINK_CHUNK,
                             projectIds,
                         },
@@ -719,9 +719,9 @@ export class TaskServiceImpl implements TaskService {
                 );
                 await appendEventsToOutbox(trx, [
                     {
-                        kafka_topic: KAFKA_TOPICS.PROJECT_AGGREGATED,
+                        stream: EVENT_STREAMS.PROJECT_AGGREGATED,
                         payload: {
-                            type: KAFKA_EVENTS.PROJECT_AGGREGATED
+                            type: EVENT_TYPES.PROJECT_AGGREGATED
                                 .DELETE_PROJECT_TASK_REACHABILITY_CHUNK,
                             projectIds,
                         },

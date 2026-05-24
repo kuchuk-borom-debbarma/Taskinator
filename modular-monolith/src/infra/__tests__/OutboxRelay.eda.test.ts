@@ -21,7 +21,7 @@ import {
 } from '@jest/globals';
 import { db } from '../database/index.ts';
 import eventBus from '../utils/EventBus.ts';
-import { KAFKA_EVENTS, KAFKA_TOPICS } from '../utils/event-bus/constants.ts';
+import { EVENT_STREAMS, EVENT_TYPES } from '../utils/event-bus/constants.ts';
 import {
     startOutboxRelay,
     stopOutboxRelay,
@@ -50,10 +50,10 @@ describe('OutboxRelay — EDA Integration (MemoryBus)', () => {
         await db
             .insertInto('outbox_events')
             .values({
-                kafka_topic: KAFKA_TOPICS.PROJECT,
-                kafka_key: 'test-project-id',
+                stream: EVENT_STREAMS.PROJECT,
+                stream_key: 'test-project-id',
                 payload: {
-                    type: KAFKA_EVENTS.PROJECT.CREATED,
+                    type: EVENT_TYPES.PROJECT.CREATED,
                     projectId: 'test-project-id',
                     userId: 'u1',
                     name: 'P',
@@ -68,8 +68,8 @@ describe('OutboxRelay — EDA Integration (MemoryBus)', () => {
 
         await waitFor(async () => {
             expect(publishSpy).toHaveBeenCalledWith(
-                KAFKA_TOPICS.PROJECT,
-                KAFKA_EVENTS.PROJECT.CREATED,
+                EVENT_STREAMS.PROJECT,
+                EVENT_TYPES.PROJECT.CREATED,
                 expect.arrayContaining([
                     expect.objectContaining({ key: 'test-project-id' }),
                 ]),
@@ -94,26 +94,26 @@ describe('OutboxRelay — EDA Integration (MemoryBus)', () => {
             .insertInto('outbox_events')
             .values([
                 {
-                    kafka_topic: KAFKA_TOPICS.PROJECT,
-                    kafka_key: 'p1',
+                    stream: EVENT_STREAMS.PROJECT,
+                    stream_key: 'p1',
                     payload: {
-                        type: KAFKA_EVENTS.PROJECT.CREATED,
+                        type: EVENT_TYPES.PROJECT.CREATED,
                         id: 'p1',
                     } as any,
                     status: 'PENDING',
                 },
                 {
-                    kafka_topic: KAFKA_TOPICS.PROJECT,
-                    kafka_key: 'p2',
+                    stream: EVENT_STREAMS.PROJECT,
+                    stream_key: 'p2',
                     payload: {
-                        type: KAFKA_EVENTS.PROJECT.CREATED,
+                        type: EVENT_TYPES.PROJECT.CREATED,
                         id: 'p2',
                     } as any,
                     status: 'PENDING',
                 },
                 {
-                    kafka_topic: 'another-topic',
-                    kafka_key: 't1',
+                    stream: 'another-topic',
+                    stream_key: 't1',
                     payload: { type: 'another.event', id: 't1' } as any,
                     status: 'PENDING',
                 },
@@ -139,14 +139,14 @@ describe('OutboxRelay — EDA Integration (MemoryBus)', () => {
                 .map((c) => `${c.topic}|${c.type}`)
                 .sort();
             expect(topicTypeKeys).toContain(
-                `${KAFKA_TOPICS.PROJECT}|${KAFKA_EVENTS.PROJECT.CREATED}`,
+                `${EVENT_STREAMS.PROJECT}|${EVENT_TYPES.PROJECT.CREATED}`,
             );
             expect(topicTypeKeys).toContain('another-topic|another.event');
 
             const projectCreatedCall = calls.find(
                 (c) =>
-                    c.topic === KAFKA_TOPICS.PROJECT &&
-                    c.type === KAFKA_EVENTS.PROJECT.CREATED,
+                    c.topic === EVENT_STREAMS.PROJECT &&
+                    c.type === EVENT_TYPES.PROJECT.CREATED,
             );
             expect(projectCreatedCall?.payloads).toHaveLength(2);
         });
@@ -178,9 +178,9 @@ describe('OutboxRelay — EDA Integration (MemoryBus)', () => {
     it('processes only up to 100 events per poll cycle (batch limit)', async () => {
         // Insert 120 outbox events
         const events = Array.from({ length: 120 }, (_, i) => ({
-            kafka_topic: KAFKA_TOPICS.PROJECT,
-            kafka_key: `p${i}`,
-            payload: { type: KAFKA_EVENTS.PROJECT.CREATED, id: `p${i}` } as any,
+            stream: EVENT_STREAMS.PROJECT,
+            stream_key: `p${i}`,
+            payload: { type: EVENT_TYPES.PROJECT.CREATED, id: `p${i}` } as any,
             status: 'PENDING',
         }));
         await db.insertInto('outbox_events').values(events).execute();

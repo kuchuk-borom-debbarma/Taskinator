@@ -1,12 +1,7 @@
+import { startConsumers } from './infra/events/consumers/registry.ts';
 import { yoga } from './infra/graphql';
-import { startConsumers } from './infra/kafka/registry.ts';
+import { infra } from './infra/index.ts';
 import { logger } from './infra/logger';
-import { stopRedis } from './infra/redis/index';
-import eventBus from './infra/utils/EventBus';
-import {
-    startOutboxRelay,
-    stopOutboxRelay,
-} from './infra/utils/event-bus/OutboxRelay';
 import { authService } from './modules/auth/index.ts';
 import { projectService } from './modules/project';
 import { teamService } from './modules/team';
@@ -25,7 +20,7 @@ export async function bootstrap(
     if (!options.silent) logger.info('[App] Starting Taskinator System...');
 
     // 1. Infrastructure
-    await eventBus.init();
+    await infra.init();
 
     // 2. Domain Services & Consumers
     await Promise.all([
@@ -36,7 +31,7 @@ export async function bootstrap(
     ]);
 
     // 3. Background Processing
-    startOutboxRelay();
+    infra.eventRelay.start();
 
     isRunning = true;
     if (!options.silent) logger.info('[App] System is READY');
@@ -52,9 +47,7 @@ export async function shutdown() {
     if (!isRunning) return;
 
     logger.info('[App] Shutting down...');
-    stopOutboxRelay();
-    await eventBus.destroy();
-    await stopRedis();
+    await infra.destroy();
 
     isRunning = false;
     logger.info('[App] Shutdown complete');

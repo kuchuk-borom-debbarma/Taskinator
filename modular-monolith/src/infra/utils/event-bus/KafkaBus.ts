@@ -1,8 +1,8 @@
 import { context, propagation, trace } from '@opentelemetry/api';
 import { type Consumer, Kafka, Partitioners, type Producer } from 'kafkajs';
 import { logger } from '../../logger';
-import { KAFKA_TOPICS } from './constants.ts';
-import { createEvent } from './idempotency.ts';
+import { EVENT_STREAMS } from './constants.ts';
+import { createEvent } from './eventFactory.ts';
 import type { Bus, DomainEvent } from './types.ts';
 
 export class KafkaBus implements Bus {
@@ -33,7 +33,7 @@ export class KafkaBus implements Bus {
         const admin = this.kafka.admin();
         await admin.connect();
         const existingTopics = await admin.listTopics();
-        const requiredTopics = Object.values(KAFKA_TOPICS) as string[];
+        const requiredTopics = Object.values(EVENT_STREAMS) as string[];
         const topicsToCreate = requiredTopics.filter(
             (t) => !existingTopics.includes(t),
         );
@@ -56,7 +56,7 @@ export class KafkaBus implements Bus {
     }
 
     async publish(
-        topic: string,
+        stream: string,
         type: string,
         payload:
             | { id?: string; key: string | null; data: any }
@@ -64,25 +64,25 @@ export class KafkaBus implements Bus {
     ) {
         const items = Array.isArray(payload) ? payload : [payload];
         logger.debug(
-            `Kafka: Publishing ${items.length} events to topic "${topic}" (Type: ${type})`,
+            `Kafka: Publishing ${items.length} events to stream "${stream}" (Type: ${type})`,
         );
         const events = items.map((i) => createEvent(type, i.key, i.data, i.id));
-        await this.emit(events, topic);
+        await this.emit(events, stream);
     }
 
     async subscribe(
-        topic: string,
+        stream: string,
         groupId: string,
         handlers: Record<string, (data: any) => Promise<void>>,
         options?: { batch?: boolean },
     ) {
-        logger.info(`Kafka: Subscribing to "${topic}" (Group: ${groupId})`);
-        await this.createConsumer(topic, groupId, handlers, options);
+        logger.info(`Kafka: Subscribing to "${stream}" (Group: ${groupId})`);
+        await this.createConsumer(stream, groupId, handlers, options);
     }
 
-    private async emit(events: DomainEvent[], topic: string) {
+    private async emit(events: DomainEvent[], stream: string) {
         await this.producer.send({
-            topic,
+            topic: stream,
             messages: events.map((e) => {
                 const headers: Record<string, string> = {};
                 propagation.inject(context.active(), headers);
@@ -92,14 +92,14 @@ export class KafkaBus implements Bus {
     }
 
     private async createConsumer(
-        topic: string,
+        stream: string,
         groupId: string,
         handlers: Record<string, (data: any) => Promise<void>>,
         options?: { batch?: boolean },
     ) {
         const consumer = this.kafka.consumer({ groupId });
         await consumer.connect();
-        await consumer.subscribe({ topic, fromBeginning: false });
+        await consumer.subscribe({ topic: stream, fromBeginning: false });
 
         await consumer.run({
             eachBatch: async ({
@@ -112,7 +112,7 @@ export class KafkaBus implements Bus {
                 if (batch.messages.length === 0) return;
 
                 logger.debug(
-                    `Kafka Consumer [${groupId}]: Received batch of ${batch.messages.length} from "${topic}"`,
+                    `Kafka Consumer [${groupId}]: Received batch of ${batch.messages.length} from "${stream}"`,
                 );
 
                 const firstMessageHeaders = batch.messages[0]?.headers || {};
@@ -124,7 +124,7 @@ export class KafkaBus implements Bus {
                 await context.with(parentContext, async () => {
                     const tracer = trace.getTracer('kafkajs-consumer');
                     await tracer.startActiveSpan(
-                        `process batch ${topic}`,
+                        `process batch ${stream}`,
                         {},
                         async (span) => {
                             try {
@@ -139,7 +139,7 @@ export class KafkaBus implements Bus {
 
                                 if (allEvents.length > 0) {
                                     logger.info(
-                                        `Kafka Consumer [${groupId}]: Processing ${allEvents.length} relevant events from "${topic}"`,
+                                        `Kafka Consumer [${groupId}]: Processing ${allEvents.length} relevant events from "${stream}"`,
                                     );
                                     await this.executeHandlers(
                                         allEvents,

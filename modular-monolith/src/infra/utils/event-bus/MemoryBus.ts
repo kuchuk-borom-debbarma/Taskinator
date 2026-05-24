@@ -1,5 +1,5 @@
 import { EventEmitter } from 'node:events';
-import { createEvent } from './idempotency.ts';
+import { createEvent } from './eventFactory.ts';
 import type { Bus } from './types.ts';
 
 export class MemoryBus implements Bus {
@@ -12,7 +12,7 @@ export class MemoryBus implements Bus {
     }
 
     async publish(
-        topic: string,
+        stream: string,
         type: string,
         payload:
             | { id?: string; key: string | null; data: any }
@@ -23,21 +23,21 @@ export class MemoryBus implements Bus {
         // Emit with a small async delay to simulate Kafka's async delivery
         for (const e of events) {
             setTimeout(() => {
-                this.emitter.emit(`${topic}:${e.type}`, e);
-                this.emitter.emit(`${topic}:*`, e); // Support wildcard listeners
+                this.emitter.emit(`${stream}:${e.type}`, e);
+                this.emitter.emit(`${stream}:*`, e);
             }, 10);
         }
     }
 
     async subscribe(
-        topic: string,
+        stream: string,
         _groupId: string,
         handlers: Record<string, (data: any) => Promise<void>>,
         options?: { batch?: boolean },
     ) {
         for (const [eventType, handler] of Object.entries(handlers)) {
             let processingQueue: Promise<void> = Promise.resolve();
-            this.emitter.on(`${topic}:${eventType}`, (e) => {
+            this.emitter.on(`${stream}:${eventType}`, (e) => {
                 processingQueue = processingQueue.then(async () => {
                     try {
                         if (options?.batch) {

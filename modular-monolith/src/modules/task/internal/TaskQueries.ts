@@ -2,8 +2,8 @@ import { type ExpressionBuilder, sql, type Transaction } from 'kysely';
 import { type Database, db } from '../../../infra/database';
 import { ConflictError, NotFoundError } from '../../../infra/graphql/errors.ts';
 import {
-    KAFKA_EVENTS,
-    KAFKA_TOPICS,
+    EVENT_STREAMS,
+    EVENT_TYPES,
 } from '../../../infra/utils/event-bus/constants.ts';
 import { decodeCursor, encodeCursor } from '../../../infra/utils/utils.ts';
 import type {
@@ -703,7 +703,7 @@ export const insertTask = async (param: {
                 outgoing_label_counts AS "outgoingLabelCounts"
         ),
         inserted_outbox AS (
-            INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
+            INSERT INTO outbox_events (stream, stream_key, payload)
             SELECT 
                 'task-events',
                 "projectId"::text,
@@ -860,7 +860,7 @@ export const updateTask = async (param: {
                 outgoing_label_counts AS "outgoingLabelCounts"
         ),
         inserted_outbox AS (
-            INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
+            INSERT INTO outbox_events (stream, stream_key, payload)
             SELECT 
                 'task-events',
                 u."projectId"::text,
@@ -947,7 +947,7 @@ export const deleteTask = async (param: {
             RETURNING id, fk_project_id, fk_team_id
         ),
         inserted_outbox AS (
-            INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
+            INSERT INTO outbox_events (stream, stream_key, payload)
             SELECT 
                 'task-events',
                 fk_project_id::text,
@@ -1011,12 +1011,12 @@ export const insertTaskLink = async (param: {
                 created_at
         ),
         inserted_outbox AS (
-            INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
+            INSERT INTO outbox_events (stream, stream_key, payload)
             SELECT 
-                ${KAFKA_TOPICS.TASK},
+                ${EVENT_STREAMS.TASK},
                 fk_project_id::text,
                 jsonb_build_object(
-                    'type', ${KAFKA_EVENTS.TASK_LINK.CREATED}::text,
+                    'type', ${EVENT_TYPES.TASK_LINK.CREATED}::text,
                     'linkId', id,
                     'projectId', fk_project_id,
                     'sourceTaskId', source_task_id,
@@ -1074,12 +1074,12 @@ export const deleteTaskLink = async (param: {
                 target_task_id
         ),
         inserted_outbox AS (
-            INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
+            INSERT INTO outbox_events (stream, stream_key, payload)
             SELECT 
-                ${KAFKA_TOPICS.TASK},
+                ${EVENT_STREAMS.TASK},
                 fk_project_id::text,
                 jsonb_build_object(
-                    'type', ${KAFKA_EVENTS.TASK_LINK.DELETED}::text,
+                    'type', ${EVENT_TYPES.TASK_LINK.DELETED}::text,
                     'linkId', id,
                     'projectId', fk_project_id,
                     'sourceTaskId', source_task_id,
@@ -1150,12 +1150,12 @@ export const updateTaskLink = async (param: {
                 created_at
         ),
         inserted_outbox AS (
-            INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
+            INSERT INTO outbox_events (stream, stream_key, payload)
             SELECT 
-                ${KAFKA_TOPICS.TASK},
+                ${EVENT_STREAMS.TASK},
                 fk_project_id::text,
                 jsonb_build_object(
-                    'type', ${KAFKA_EVENTS.TASK_LINK.UPDATED}::text,
+                    'type', ${EVENT_TYPES.TASK_LINK.UPDATED}::text,
                     'linkId', id,
                     'projectId', fk_project_id,
                     'oldSourceTaskId', (SELECT source_task_id FROM current_link),

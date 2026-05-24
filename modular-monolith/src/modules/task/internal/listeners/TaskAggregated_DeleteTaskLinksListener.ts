@@ -1,7 +1,7 @@
 import { logger } from '../../../../infra/logger';
 import eventBus from '../../../../infra/utils/EventBus.ts';
 import type { DomainEvent } from '../../../../infra/utils/event-bus';
-import { KAFKA_EVENTS, KAFKA_TOPICS } from '../../../../infra/utils/event-bus';
+import { EVENT_STREAMS, EVENT_TYPES } from '../../../../infra/utils/event-bus';
 import { taskService } from '../../index.ts';
 
 /**
@@ -15,10 +15,10 @@ export class TaskAggregated_DeleteTaskLinksListener {
         );
 
         await eventBus.subscribe(
-            KAFKA_TOPICS.TASK_AGGREGATED,
+            EVENT_STREAMS.TASK_AGGREGATED,
             'task-link-cleanup-group',
             {
-                [KAFKA_EVENTS.TASK_AGGREGATED.DELETE_TASK_LINKS]:
+                [EVENT_TYPES.TASK_AGGREGATED.DELETE_TASK_LINKS]:
                     this.handleTaskLinksDeleted.bind(this),
             },
             { batch: true },

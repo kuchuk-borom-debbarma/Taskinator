@@ -125,7 +125,7 @@ Introduce a simple synchronous pre-action hook pipeline directly in `TaskService
 
 ### Step 2: Post-Event Cascade Consumer
 Refactor the background consumer `AutoActionTaskEventConsumer.ts`:
-*   Listen for `KAFKA_EVENTS.TASK.UPDATED` and `KAFKA_EVENTS.TASK.CREATED`.
+*   Listen for `EVENT_TYPES.TASK.UPDATED` and `EVENT_TYPES.TASK.CREATED`.
 *   Fetch active cascading rules (`BLOCKER_RESOLUTION`, `PRIORITY_CASCADE`, `TEAM_CASCADE`) for the project.
 *   Evaluate the simple criteria (e.g. check if `task.priority` matches the rule's criteria) using a clean helper:
     ```typescript

@@ -1,7 +1,7 @@
 import { sql, type Transaction } from 'kysely';
 import { type Database, db } from '../../../infra/database';
 import type { PaginationParams } from '../../../infra/types/pagination.ts';
-import { KAFKA_EVENTS, KAFKA_TOPICS } from '../../../infra/utils/event-bus';
+import { EVENT_STREAMS, EVENT_TYPES } from '../../../infra/utils/event-bus';
 import { decodeCursor, encodeCursor } from '../../../infra/utils/utils.ts';
 import type { Project, ProjectMember } from '../ProjectService.ts';
 
@@ -28,12 +28,12 @@ export async function insertProject(param: {
                 teams_count AS "teamsCount"
         ),
         inserted_outbox AS (
-            INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
+            INSERT INTO outbox_events (stream, stream_key, payload)
             SELECT 
-                ${KAFKA_TOPICS.PROJECT},
+                ${EVENT_STREAMS.PROJECT},
                 id::text,
                 jsonb_build_object(
-                    'type', ${KAFKA_EVENTS.PROJECT.CREATED}::text,
+                    'type', ${EVENT_TYPES.PROJECT.CREATED}::text,
                     'projectId', id,
                     'userId', "userId",
                     'name', name
@@ -78,12 +78,12 @@ export async function updateProject(param: {
                 teams_count AS "teamsCount"
         ),
         inserted_outbox AS (
-            INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
+            INSERT INTO outbox_events (stream, stream_key, payload)
             SELECT 
-                ${KAFKA_TOPICS.PROJECT},
+                ${EVENT_STREAMS.PROJECT},
                 id::text,
                 jsonb_build_object(
-                    'type', ${KAFKA_EVENTS.PROJECT.UPDATED}::text,
+                    'type', ${EVENT_TYPES.PROJECT.UPDATED}::text,
                     'projectId', id,
                     'actorId', ${param.actorId}::text,
                     'name', name
@@ -111,12 +111,12 @@ export async function deleteProjects(param: {
             RETURNING id, name, fk_user_id AS "userId"
         ),
         inserted_outbox AS (
-            INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
+            INSERT INTO outbox_events (stream, stream_key, payload)
             SELECT 
-                ${KAFKA_TOPICS.PROJECT},
+                ${EVENT_STREAMS.PROJECT},
                 id::text,
                 jsonb_build_object(
-                    'type', ${KAFKA_EVENTS.PROJECT.DELETED}::text,
+                    'type', ${EVENT_TYPES.PROJECT.DELETED}::text,
                     'projectId', id,
                     'userId', "userId",
                     'name', name
@@ -162,12 +162,12 @@ export async function insertProjectMembers(param: {
             RETURNING id, fk_project_id AS "projectId", fk_user_id AS "userId"
         ),
         inserted_outbox AS (
-            INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
+            INSERT INTO outbox_events (stream, stream_key, payload)
             SELECT 
-                ${KAFKA_TOPICS.PROJECT},
+                ${EVENT_STREAMS.PROJECT},
                 "projectId"::text,
                 jsonb_build_object(
-                    'type', ${KAFKA_EVENTS.PROJECT.MEMBERS_ADDED}::text,
+                    'type', ${EVENT_TYPES.PROJECT.MEMBERS_ADDED}::text,
                     'projectId', "projectId",
                     'addedUserIds', (SELECT json_agg("userId") FROM inserted_members),
                     'actorId', ${param.actorId}::text
@@ -209,12 +209,12 @@ export async function deleteProjectMembers(param: {
             RETURNING id, fk_project_id AS "projectId", fk_user_id AS "userId"
         ),
         inserted_outbox AS (
-            INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
+            INSERT INTO outbox_events (stream, stream_key, payload)
             SELECT 
-                ${KAFKA_TOPICS.PROJECT},
+                ${EVENT_STREAMS.PROJECT},
                 "projectId"::text,
                 jsonb_build_object(
-                    'type', ${KAFKA_EVENTS.PROJECT.MEMBERS_REMOVED}::text,
+                    'type', ${EVENT_TYPES.PROJECT.MEMBERS_REMOVED}::text,
                     'projectId', "projectId",
                     'removedUserIds', (SELECT json_agg("userId") FROM deleted_members),
                     'actorId', ${param.actorId}::text

@@ -1,7 +1,7 @@
 import { logger } from '../../../../infra/logger';
 import eventBus from '../../../../infra/utils/EventBus.ts';
 import type { DomainEvent } from '../../../../infra/utils/event-bus';
-import { KAFKA_EVENTS, KAFKA_TOPICS } from '../../../../infra/utils/event-bus';
+import { EVENT_STREAMS, EVENT_TYPES } from '../../../../infra/utils/event-bus';
 import { authService } from '../../index.ts';
 
 /**
@@ -17,10 +17,10 @@ export class ProjectAggregated_ChangeUserProjectCount {
         );
 
         await eventBus.subscribe(
-            KAFKA_TOPICS.PROJECT_AGGREGATED,
+            EVENT_STREAMS.PROJECT_AGGREGATED,
             'auth-project-aggregator-group',
             {
-                [KAFKA_EVENTS.PROJECT_AGGREGATED.CHANGE_USER_PROJECT_COUNT]:
+                [EVENT_TYPES.PROJECT_AGGREGATED.CHANGE_USER_PROJECT_COUNT]:
                     this.handleAggregatedCounts.bind(this),
             },
             { batch: true },

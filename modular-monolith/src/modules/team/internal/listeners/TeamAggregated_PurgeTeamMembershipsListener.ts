@@ -1,8 +1,8 @@
 import { logger } from '../../../../infra/logger';
 import eventBus from '../../../../infra/utils/EventBus.ts';
 import {
-    KAFKA_EVENTS,
-    KAFKA_TOPICS,
+    EVENT_STREAMS,
+    EVENT_TYPES,
 } from '../../../../infra/utils/event-bus/constants.ts';
 import type { DomainEvent } from '../../../../infra/utils/event-bus/types.ts';
 import { teamService } from '../../index.ts';
@@ -19,10 +19,10 @@ export class TeamAggregated_PurgeTeamMembershipsListener {
         );
 
         await eventBus.subscribe(
-            KAFKA_TOPICS.TEAM_AGGREGATED,
+            EVENT_STREAMS.TEAM_AGGREGATED,
             'team-membership-purge-group',
             {
-                [KAFKA_EVENTS.TEAM_AGGREGATED.PURGE_TEAM_MEMBERSHIPS]:
+                [EVENT_TYPES.TEAM_AGGREGATED.PURGE_TEAM_MEMBERSHIPS]:
                     this.handlePurgeTeamMemberships.bind(this),
             },
             { batch: true },

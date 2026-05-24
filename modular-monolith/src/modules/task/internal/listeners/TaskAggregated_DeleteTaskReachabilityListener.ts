@@ -1,8 +1,8 @@
 import { logger } from '../../../../infra/logger';
 import eventBus from '../../../../infra/utils/EventBus.ts';
 import {
-    KAFKA_EVENTS,
-    KAFKA_TOPICS,
+    EVENT_STREAMS,
+    EVENT_TYPES,
 } from '../../../../infra/utils/event-bus/constants.ts';
 import type { DomainEvent } from '../../../../infra/utils/event-bus/types.ts';
 import { taskService } from '../../index.ts';
@@ -30,14 +30,14 @@ export class TaskAggregated_DeleteTaskReachabilityListener {
         );
 
         await eventBus.subscribe(
-            KAFKA_TOPICS.TASK_AGGREGATED,
+            EVENT_STREAMS.TASK_AGGREGATED,
             'task-bulk-reachability-group',
             {
                 // Initial trigger from the Task aggregator
-                [KAFKA_EVENTS.TASK_AGGREGATED.DELETE_TASK_REACHABILITY]:
+                [EVENT_TYPES.TASK_AGGREGATED.DELETE_TASK_REACHABILITY]:
                     this.handleBulkDelete.bind(this),
                 // Self-signaling continuation when a chunk finishes but rows remain
-                [KAFKA_EVENTS.TASK_AGGREGATED.DELETE_TASK_REACHABILITY_CHUNK]:
+                [EVENT_TYPES.TASK_AGGREGATED.DELETE_TASK_REACHABILITY_CHUNK]:
                     this.handleBulkDelete.bind(this),
             },
             { batch: true },

@@ -1,7 +1,7 @@
 import { logger } from '../../../../infra/logger';
 import eventBus from '../../../../infra/utils/EventBus.ts';
 import type { DomainEvent } from '../../../../infra/utils/event-bus';
-import { KAFKA_EVENTS, KAFKA_TOPICS } from '../../../../infra/utils/event-bus';
+import { EVENT_STREAMS, EVENT_TYPES } from '../../../../infra/utils/event-bus';
 import { projectService } from '../../index.ts';
 
 /**
@@ -15,10 +15,10 @@ export class TaskAggregated_SyncProjectTaskCountListener {
         );
 
         await eventBus.subscribe(
-            KAFKA_TOPICS.TASK_AGGREGATED,
+            EVENT_STREAMS.TASK_AGGREGATED,
             'project-task-count-group',
             {
-                [KAFKA_EVENTS.TASK_AGGREGATED.SYNC_PROJECT_TASK_COUNT]:
+                [EVENT_TYPES.TASK_AGGREGATED.SYNC_PROJECT_TASK_COUNT]:
                     this.handleTaskCountsChanged.bind(this),
             },
             { batch: true },

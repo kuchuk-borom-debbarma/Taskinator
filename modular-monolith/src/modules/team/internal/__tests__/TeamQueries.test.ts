@@ -99,7 +99,7 @@ describe('TeamQueries — Integration (Real DB + wCTE)', () => {
 
             // Verify outbox
             const outbox =
-                await sql<any>`SELECT * FROM outbox_events WHERE kafka_topic = 'team-events'`.execute(
+                await sql<any>`SELECT * FROM outbox_events WHERE stream = 'team-events'`.execute(
                     db,
                 );
             expect(outbox.rows).toHaveLength(1);
@@ -148,7 +148,7 @@ describe('TeamQueries — Integration (Real DB + wCTE)', () => {
             expect(remaining.teams).toHaveLength(0);
 
             const outbox =
-                await sql<any>`SELECT * FROM outbox_events WHERE kafka_topic = 'team-events'`.execute(
+                await sql<any>`SELECT * FROM outbox_events WHERE stream = 'team-events'`.execute(
                     db,
                 );
             expect(outbox.rows).toHaveLength(2);
@@ -176,7 +176,7 @@ describe('TeamQueries — Integration (Real DB + wCTE)', () => {
             expect(members.members).toHaveLength(2);
 
             const outbox =
-                await sql<any>`SELECT * FROM outbox_events WHERE kafka_topic = 'team-events'`.execute(
+                await sql<any>`SELECT * FROM outbox_events WHERE stream = 'team-events'`.execute(
                     db,
                 );
             expect(outbox.rows).toHaveLength(1);
@@ -204,7 +204,7 @@ describe('TeamQueries — Integration (Real DB + wCTE)', () => {
             expect(members.members).toHaveLength(0);
 
             const outbox =
-                await sql<any>`SELECT * FROM outbox_events WHERE kafka_topic = 'team-events'`.execute(
+                await sql<any>`SELECT * FROM outbox_events WHERE stream = 'team-events'`.execute(
                     db,
                 );
             expect(outbox.rows).toHaveLength(1);
@@ -227,7 +227,7 @@ describe('TeamQueries — Integration (Real DB + wCTE)', () => {
             expect(updated.version).toBe(team.version + 1);
 
             const outbox =
-                await sql<any>`SELECT * FROM outbox_events WHERE kafka_topic = 'team-events'`.execute(
+                await sql<any>`SELECT * FROM outbox_events WHERE stream = 'team-events'`.execute(
                     db,
                 );
             expect(outbox.rows).toHaveLength(1);

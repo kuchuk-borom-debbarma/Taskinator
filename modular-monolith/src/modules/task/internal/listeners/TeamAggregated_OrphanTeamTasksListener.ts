@@ -1,8 +1,8 @@
 import { logger } from '../../../../infra/logger';
 import eventBus from '../../../../infra/utils/EventBus.ts';
 import {
-    KAFKA_EVENTS,
-    KAFKA_TOPICS,
+    EVENT_STREAMS,
+    EVENT_TYPES,
 } from '../../../../infra/utils/event-bus/constants.ts';
 import type { DomainEvent } from '../../../../infra/utils/event-bus/types.ts';
 import { taskService } from '../../index.ts';
@@ -19,10 +19,10 @@ export class TeamAggregated_OrphanTeamTasksListener {
         );
 
         await eventBus.subscribe(
-            KAFKA_TOPICS.TEAM_AGGREGATED,
+            EVENT_STREAMS.TEAM_AGGREGATED,
             'team-task-orphaning-group',
             {
-                [KAFKA_EVENTS.TEAM_AGGREGATED.ORPHAN_TEAM_TASKS]:
+                [EVENT_TYPES.TEAM_AGGREGATED.ORPHAN_TEAM_TASKS]:
                     this.handleOrphanTeamTasks.bind(this),
             },
             { batch: true },

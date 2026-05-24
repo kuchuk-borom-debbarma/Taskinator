@@ -1,9 +1,7 @@
-export interface OutboxEntry {
-    event_id?: string;
-    kafka_topic: string;
-    kafka_key?: string | null;
-    payload: any;
-}
+import type { OutboxEntry } from '../../contracts/index.ts';
+import { eventStoreProvider } from '../../events/index.ts';
+
+export type { OutboxEntry } from '../../contracts/index.ts';
 
 /**
  * Encapsulates all interactions with the Transactional Outbox.
@@ -13,7 +11,5 @@ export const appendEventsToOutbox = async (
     trx: any,
     entries: OutboxEntry[],
 ): Promise<void> => {
-    if (entries.length === 0) return;
-
-    await trx.insertInto('outbox_events').values(entries).execute();
+    await eventStoreProvider.appendOutboxEvents(trx, entries);
 };

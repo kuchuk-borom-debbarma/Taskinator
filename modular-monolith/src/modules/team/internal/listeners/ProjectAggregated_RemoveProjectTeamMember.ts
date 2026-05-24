@@ -1,8 +1,8 @@
 import { logger } from '../../../../infra/logger';
 import eventBus from '../../../../infra/utils/EventBus.ts';
 import {
-    KAFKA_EVENTS,
-    KAFKA_TOPICS,
+    EVENT_STREAMS,
+    EVENT_TYPES,
 } from '../../../../infra/utils/event-bus/constants.ts';
 import type { DomainEvent } from '../../../../infra/utils/event-bus/types.ts';
 import { teamService } from '../../index.ts';
@@ -19,10 +19,10 @@ export class ProjectAggregated_RemoveProjectTeamMember {
         );
 
         await eventBus.subscribe(
-            KAFKA_TOPICS.PROJECT_AGGREGATED,
+            EVENT_STREAMS.PROJECT_AGGREGATED,
             'team-project-member-purge-group',
             {
-                [KAFKA_EVENTS.PROJECT_AGGREGATED.REMOVE_PROJECT_TEAM_MEMBER]:
+                [EVENT_TYPES.PROJECT_AGGREGATED.REMOVE_PROJECT_TEAM_MEMBER]:
                     this.handleRemoveProjectTeamMember.bind(this),
             },
             { batch: true },

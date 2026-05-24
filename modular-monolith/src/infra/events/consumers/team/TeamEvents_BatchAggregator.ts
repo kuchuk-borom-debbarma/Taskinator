@@ -1,11 +1,11 @@
 import { logger } from '../../../logger';
 import eventBus from '../../../utils/EventBus.ts';
 import {
-    aggregatorService,
     type DomainEvent,
-    KAFKA_EVENTS,
-    KAFKA_TOPICS,
+    EVENT_STREAMS,
+    EVENT_TYPES,
 } from '../../../utils/event-bus';
+import { aggregatorService } from '../../../utils/event-bus/AggregatorService.ts';
 import type { OutboxEntry } from '../../../utils/event-bus/OutboxQueries.ts';
 
 /**
@@ -21,16 +21,16 @@ export class TeamEvents_BatchAggregator {
         logger.info('[TeamEvents -> Aggregator] Initializing Smart Consumer');
 
         await eventBus.subscribe(
-            KAFKA_TOPICS.TEAM,
+            EVENT_STREAMS.TEAM,
             'team-aggregator-group',
             {
-                [KAFKA_EVENTS.TEAM.CREATED]: this.handleTeamBatch.bind(this),
-                [KAFKA_EVENTS.TEAM.DELETED]: this.handleTeamBatch.bind(this),
-                [KAFKA_EVENTS.TEAM.MEMBERS_ADDED]:
+                [EVENT_TYPES.TEAM.CREATED]: this.handleTeamBatch.bind(this),
+                [EVENT_TYPES.TEAM.DELETED]: this.handleTeamBatch.bind(this),
+                [EVENT_TYPES.TEAM.MEMBERS_ADDED]:
                     this.handleTeamBatch.bind(this),
-                [KAFKA_EVENTS.TEAM.MEMBERS_REMOVED]:
+                [EVENT_TYPES.TEAM.MEMBERS_REMOVED]:
                     this.handleTeamBatch.bind(this),
-                [KAFKA_EVENTS.TEAM.UPDATED]: this.handleTeamBatch.bind(this),
+                [EVENT_TYPES.TEAM.UPDATED]: this.handleTeamBatch.bind(this),
             },
             { batch: true },
         );
@@ -77,23 +77,23 @@ export class TeamEvents_BatchAggregator {
                     };
 
                     switch (event.type) {
-                        case KAFKA_EVENTS.TEAM.CREATED:
+                        case EVENT_TYPES.TEAM.CREATED:
                             current.lifecycleBalance += 1;
                             break;
-                        case KAFKA_EVENTS.TEAM.DELETED:
+                        case EVENT_TYPES.TEAM.DELETED:
                             current.lifecycleBalance -= 1;
                             break;
-                        case KAFKA_EVENTS.TEAM.MEMBERS_ADDED:
+                        case EVENT_TYPES.TEAM.MEMBERS_ADDED:
                             current.membershipBalance +=
                                 event.data.addedUserIds?.length || 0;
                             break;
-                        case KAFKA_EVENTS.TEAM.MEMBERS_REMOVED: {
+                        case EVENT_TYPES.TEAM.MEMBERS_REMOVED: {
                             const removed = event.data.removedUserIds || [];
                             current.membershipBalance -= removed.length;
                             current.removedUserIds.push(...removed);
                             break;
                         }
-                        case KAFKA_EVENTS.TEAM.UPDATED:
+                        case EVENT_TYPES.TEAM.UPDATED:
                             // No-op for counts, but could trigger other side effects in future
                             break;
                     }
@@ -144,9 +144,9 @@ export class TeamEvents_BatchAggregator {
                     // [Signal]: SYNC_PROJECT_TEAM_COUNT
                     // [Purpose]: Syncs the denormalized total team count for a project.
                     outboxEntries.push({
-                        kafka_topic: KAFKA_TOPICS.TEAM_AGGREGATED,
+                        stream: EVENT_STREAMS.TEAM_AGGREGATED,
                         payload: {
-                            type: KAFKA_EVENTS.TEAM_AGGREGATED
+                            type: EVENT_TYPES.TEAM_AGGREGATED
                                 .SYNC_PROJECT_TEAM_COUNT,
                             projectId,
                             delta,
@@ -158,9 +158,9 @@ export class TeamEvents_BatchAggregator {
                     // [Signal]: SYNC_TEAM_MEMBER_COUNT
                     // [Purpose]: Syncs the denormalized total member count for a specific team.
                     outboxEntries.push({
-                        kafka_topic: KAFKA_TOPICS.TEAM_AGGREGATED,
+                        stream: EVENT_STREAMS.TEAM_AGGREGATED,
                         payload: {
-                            type: KAFKA_EVENTS.TEAM_AGGREGATED
+                            type: EVENT_TYPES.TEAM_AGGREGATED
                                 .SYNC_TEAM_MEMBER_COUNT,
                             teamId,
                             delta,
@@ -172,9 +172,9 @@ export class TeamEvents_BatchAggregator {
                     // [Signal]: UNASSIGN_MEMBER_FROM_TEAM_TASKS
                     // [Purpose]: Cleanup: Unassigns specific user(s) from any tasks belonging to this team (e.g., when they leave the team).
                     outboxEntries.push({
-                        kafka_topic: KAFKA_TOPICS.TEAM_AGGREGATED,
+                        stream: EVENT_STREAMS.TEAM_AGGREGATED,
                         payload: {
-                            type: KAFKA_EVENTS.TEAM_AGGREGATED
+                            type: EVENT_TYPES.TEAM_AGGREGATED
                                 .UNASSIGN_MEMBER_FROM_TEAM_TASKS,
                             teamId,
                             userIds,
@@ -186,9 +186,9 @@ export class TeamEvents_BatchAggregator {
                     // [Signal]: PURGE_TEAM_MEMBERSHIPS
                     // [Purpose]: Bulk Cleanup: Purges all membership records for the deleted teams.
                     outboxEntries.push({
-                        kafka_topic: KAFKA_TOPICS.TEAM_AGGREGATED,
+                        stream: EVENT_STREAMS.TEAM_AGGREGATED,
                         payload: {
-                            type: KAFKA_EVENTS.TEAM_AGGREGATED
+                            type: EVENT_TYPES.TEAM_AGGREGATED
                                 .PURGE_TEAM_MEMBERSHIPS,
                             teamIds: deletedTeamIds,
                         },
@@ -197,10 +197,9 @@ export class TeamEvents_BatchAggregator {
                     // [Signal]: ORPHAN_TEAM_TASKS
                     // [Purpose]: Cleanup: Removes the team association (fk_team_id -> NULL) for any tasks that belonged to the deleted teams.
                     outboxEntries.push({
-                        kafka_topic: KAFKA_TOPICS.TEAM_AGGREGATED,
+                        stream: EVENT_STREAMS.TEAM_AGGREGATED,
                         payload: {
-                            type: KAFKA_EVENTS.TEAM_AGGREGATED
-                                .ORPHAN_TEAM_TASKS,
+                            type: EVENT_TYPES.TEAM_AGGREGATED.ORPHAN_TEAM_TASKS,
                             teamIds: deletedTeamIds,
                         },
                     });

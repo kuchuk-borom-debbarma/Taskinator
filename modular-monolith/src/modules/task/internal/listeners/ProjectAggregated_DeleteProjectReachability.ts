@@ -1,8 +1,8 @@
 import { logger } from '../../../../infra/logger';
 import eventBus from '../../../../infra/utils/EventBus.ts';
 import {
-    KAFKA_EVENTS,
-    KAFKA_TOPICS,
+    EVENT_STREAMS,
+    EVENT_TYPES,
 } from '../../../../infra/utils/event-bus/constants.ts';
 import type { DomainEvent } from '../../../../infra/utils/event-bus/types.ts';
 import { taskService } from '../../index.ts';
@@ -27,15 +27,15 @@ export class ProjectAggregated_DeleteProjectReachability {
         );
 
         await eventBus.subscribe(
-            KAFKA_TOPICS.PROJECT_AGGREGATED,
+            EVENT_STREAMS.PROJECT_AGGREGATED,
             'task-project-reachability-purge-group',
             {
                 // Initial trigger from the Project aggregator
-                [KAFKA_EVENTS.PROJECT_AGGREGATED
+                [EVENT_TYPES.PROJECT_AGGREGATED
                     .DELETE_PROJECT_TASK_REACHABILITY]:
                     this.handleProjectReachabilityPurge.bind(this),
                 // Self-signaling continuation when a chunk finishes but rows remain
-                [KAFKA_EVENTS.PROJECT_AGGREGATED
+                [EVENT_TYPES.PROJECT_AGGREGATED
                     .DELETE_PROJECT_TASK_REACHABILITY_CHUNK]:
                     this.handleProjectReachabilityPurge.bind(this),
             },

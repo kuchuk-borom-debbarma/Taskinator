@@ -25,7 +25,7 @@ export const insertTeam = async (param: {
             RETURNING id, name, fk_project_id AS "projectId", fk_user_id AS "createdBy", version, created_at AS "createdAt", updated_at AS "updatedAt", members_count AS "membersCount", tasks_count AS "tasksCount"
         ),
         inserted_outbox AS (
-            INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
+            INSERT INTO outbox_events (stream, stream_key, payload)
             SELECT 
                 'team-events',
                 "projectId"::text,
@@ -412,7 +412,7 @@ export const deleteTeams = async (param: {
             RETURNING id, name, fk_project_id AS "projectId"
         ),
         inserted_outbox AS (
-            INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
+            INSERT INTO outbox_events (stream, stream_key, payload)
             SELECT 
                 'team-events',
                 id::text,
@@ -466,7 +466,7 @@ export const insertTeamMembers = async (param: {
             RETURNING fk_user_id
         ),
         inserted_outbox AS (
-            INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
+            INSERT INTO outbox_events (stream, stream_key, payload)
             SELECT 
                 'team-events',
                 ${param.teamId}::text,
@@ -517,7 +517,7 @@ export const deleteTeamMembers = async (param: {
             RETURNING fk_user_id
         ),
         inserted_outbox AS (
-            INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
+            INSERT INTO outbox_events (stream, stream_key, payload)
             SELECT 
                 'team-events',
                 ${param.teamId}::text,
@@ -566,7 +566,7 @@ export const updateTeam = async (param: {
                       members_count AS "membersCount", tasks_count AS "tasksCount"
         ),
         inserted_outbox AS (
-            INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
+            INSERT INTO outbox_events (stream, stream_key, payload)
             SELECT 
                 'team-events',
                 id::text,

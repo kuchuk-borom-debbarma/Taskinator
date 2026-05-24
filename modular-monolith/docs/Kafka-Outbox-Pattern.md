@@ -19,7 +19,7 @@ WITH inserted_task AS (
     VALUES ($1, $2, $3)
     RETURNING *
 )
-INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
+INSERT INTO outbox_events (stream, stream_key, payload)
 SELECT 'task.created', project_id, json_build_object('id', id, 'title', title)
 FROM inserted_task;
 ```

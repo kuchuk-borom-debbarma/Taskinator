@@ -8,10 +8,10 @@ export interface DomainEvent<T = any> {
 
 export interface Bus {
     /**
-     * Publish one or more events. Routing to topics is handled automatically based on type.
+     * Publish one or more events to a logical stream.
      */
     publish(
-        topic: string,
+        stream: string,
         type: string,
         payload:
             | { id?: string; key: string | null; data: any }
@@ -23,7 +23,7 @@ export interface Bus {
      * Idempotency is handled automatically using the eventId.
      */
     subscribe(
-        topic: string,
+        stream: string,
         groupId: string,
         handlers: Record<string, (data: any) => Promise<void>>,
         options?: { batch?: boolean },

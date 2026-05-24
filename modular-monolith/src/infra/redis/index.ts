@@ -1,48 +1,27 @@
-import os from 'node:os';
-import Redis from 'ioredis';
-import { v4 as uuidv4 } from 'uuid';
-import { logger } from '../logger';
+import type { CachePort } from '../contracts/index.ts';
+import { IoredisCacheProvider } from './adapters/IoredisCacheProvider.ts';
 
-// Unique identifier for this specific node instance
-export const INSTANCE_ID = `${os.hostname()}-${uuidv4().substring(0, 8)}`;
+const createCacheProvider = (): CachePort => {
+    const provider = process.env.CACHE_PROVIDER || 'ioredis';
 
-const REDIS_URL = process.env.REDIS_URL || 'redis://localhost:6379';
-
-let publisher: Redis | null = null;
-let subscriber: Redis | null = null;
-
-const createClient = (name: string) => {
-    const client = new Redis(REDIS_URL, {
-        maxRetriesPerRequest: 20,
-    });
-    client.on('error', (err) => logger.error(`[Redis ${name}] Error:`, err));
-    return client;
-};
-
-export const getRedisPublisher = () => {
-    if (!publisher || publisher.status === 'end') {
-        publisher = createClient('Publisher');
+    if (provider === 'ioredis') {
+        return new IoredisCacheProvider(
+            process.env.REDIS_URL || 'redis://localhost:6379',
+        );
     }
-    return publisher;
+
+    throw new Error(`Unsupported CACHE_PROVIDER "${provider}"`);
 };
 
-export const getRedisSubscriber = () => {
-    if (!subscriber || subscriber.status === 'end') {
-        subscriber = createClient('Subscriber');
-    }
-    return subscriber;
-};
+export const cacheProvider = createCacheProvider();
 
-/**
- * Cleanly shuts down Redis connections.
- */
+// Unique identifier for this specific node instance.
+export const INSTANCE_ID = cacheProvider.instanceId;
+
+export const getRedisPublisher = () => cacheProvider.getPublisher();
+
+export const getRedisSubscriber = () => cacheProvider.getSubscriber();
+
 export const stopRedis = async () => {
-    const promises = [];
-    if (publisher && publisher.status !== 'end')
-        promises.push(publisher.quit());
-    if (subscriber && subscriber.status !== 'end')
-        promises.push(subscriber.quit());
-    await Promise.all(promises);
-    publisher = null;
-    subscriber = null;
+    await cacheProvider.destroy?.();
 };

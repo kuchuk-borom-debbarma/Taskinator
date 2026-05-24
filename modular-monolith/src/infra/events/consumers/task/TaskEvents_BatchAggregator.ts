@@ -1,11 +1,11 @@
 import { logger } from '../../../logger';
 import eventBus from '../../../utils/EventBus.ts';
 import {
-    aggregatorService,
     type DomainEvent,
-    KAFKA_EVENTS,
-    KAFKA_TOPICS,
+    EVENT_STREAMS,
+    EVENT_TYPES,
 } from '../../../utils/event-bus';
+import { aggregatorService } from '../../../utils/event-bus/AggregatorService.ts';
 import type { OutboxEntry } from '../../../utils/event-bus/OutboxQueries.ts';
 
 /**
@@ -22,17 +22,17 @@ export class TaskEvents_BatchAggregator {
         logger.info('[TaskEvents -> Aggregator] Initializing Smart Consumer');
 
         await eventBus.subscribe(
-            KAFKA_TOPICS.TASK,
+            EVENT_STREAMS.TASK,
             'task-aggregator-group',
             {
-                [KAFKA_EVENTS.TASK.CREATED]: this.handleTaskBatch.bind(this),
-                [KAFKA_EVENTS.TASK.UPDATED]: this.handleTaskBatch.bind(this),
-                [KAFKA_EVENTS.TASK.DELETED]: this.handleTaskBatch.bind(this),
-                [KAFKA_EVENTS.TASK_LINK.CREATED]:
+                [EVENT_TYPES.TASK.CREATED]: this.handleTaskBatch.bind(this),
+                [EVENT_TYPES.TASK.UPDATED]: this.handleTaskBatch.bind(this),
+                [EVENT_TYPES.TASK.DELETED]: this.handleTaskBatch.bind(this),
+                [EVENT_TYPES.TASK_LINK.CREATED]:
                     this.handleTaskBatch.bind(this),
-                [KAFKA_EVENTS.TASK_LINK.UPDATED]:
+                [EVENT_TYPES.TASK_LINK.UPDATED]:
                     this.handleTaskBatch.bind(this),
-                [KAFKA_EVENTS.TASK_LINK.DELETED]:
+                [EVENT_TYPES.TASK_LINK.DELETED]:
                     this.handleTaskBatch.bind(this),
             },
             { batch: true },
@@ -77,7 +77,7 @@ export class TaskEvents_BatchAggregator {
                     const { projectId, taskId } = data;
 
                     switch (event.type) {
-                        case KAFKA_EVENTS.TASK.CREATED:
+                        case EVENT_TYPES.TASK.CREATED:
                             projectDeltas.set(
                                 projectId,
                                 (projectDeltas.get(projectId) || 0) + 1,
@@ -90,7 +90,7 @@ export class TaskEvents_BatchAggregator {
                             }
                             break;
 
-                        case KAFKA_EVENTS.TASK.DELETED:
+                        case EVENT_TYPES.TASK.DELETED:
                             projectDeltas.set(
                                 projectId,
                                 (projectDeltas.get(projectId) || 0) - 1,
@@ -104,7 +104,7 @@ export class TaskEvents_BatchAggregator {
                             deletedTaskIds.add(taskId);
                             break;
 
-                        case KAFKA_EVENTS.TASK.UPDATED: {
+                        case EVENT_TYPES.TASK.UPDATED: {
                             const { old, new: newState } = data;
 
                             if (!old || !newState) {
@@ -131,7 +131,7 @@ export class TaskEvents_BatchAggregator {
                             break;
                         }
 
-                        case KAFKA_EVENTS.TASK_LINK.CREATED: {
+                        case EVENT_TYPES.TASK_LINK.CREATED: {
                             const key = `${data.sourceTaskId}:${data.targetTaskId}`;
                             const existing = linkDeltas.get(key) || {
                                 delta: 0,
@@ -146,7 +146,7 @@ export class TaskEvents_BatchAggregator {
                             break;
                         }
 
-                        case KAFKA_EVENTS.TASK_LINK.DELETED: {
+                        case EVENT_TYPES.TASK_LINK.DELETED: {
                             const key = `${data.sourceTaskId}:${data.targetTaskId}`;
                             const existing = linkDeltas.get(key) || {
                                 delta: 0,
@@ -161,7 +161,7 @@ export class TaskEvents_BatchAggregator {
                             break;
                         }
 
-                        case KAFKA_EVENTS.TASK_LINK.UPDATED: {
+                        case EVENT_TYPES.TASK_LINK.UPDATED: {
                             const {
                                 projectId,
                                 oldSourceTaskId,
@@ -209,9 +209,9 @@ export class TaskEvents_BatchAggregator {
                     // [Signal]: SYNC_PROJECT_TASK_COUNT
                     // [Purpose]: Syncs the denormalized total task count on the Project entity for high-speed dashboard rendering.
                     outboxEntries.push({
-                        kafka_topic: KAFKA_TOPICS.TASK_AGGREGATED,
+                        stream: EVENT_STREAMS.TASK_AGGREGATED,
                         payload: {
-                            type: KAFKA_EVENTS.TASK_AGGREGATED
+                            type: EVENT_TYPES.TASK_AGGREGATED
                                 .SYNC_PROJECT_TASK_COUNT,
                             projectId,
                             delta,
@@ -225,9 +225,9 @@ export class TaskEvents_BatchAggregator {
                     // [Signal]: SYNC_TEAM_TASK_COUNT
                     // [Purpose]: Syncs the denormalized total task count on the Team entity.
                     outboxEntries.push({
-                        kafka_topic: KAFKA_TOPICS.TASK_AGGREGATED,
+                        stream: EVENT_STREAMS.TASK_AGGREGATED,
                         payload: {
-                            type: KAFKA_EVENTS.TASK_AGGREGATED
+                            type: EVENT_TYPES.TASK_AGGREGATED
                                 .SYNC_TEAM_TASK_COUNT,
                             teamId,
                             delta,
@@ -268,9 +268,9 @@ export class TaskEvents_BatchAggregator {
                     // [Signal]: SYNC_TASK_REACHABILITY
                     // [Purpose]: Updates the transitive closure (reachability) table when task-to-task links are added or removed.
                     outboxEntries.push({
-                        kafka_topic: KAFKA_TOPICS.TASK_AGGREGATED,
+                        stream: EVENT_STREAMS.TASK_AGGREGATED,
                         payload: {
-                            type: KAFKA_EVENTS.TASK_AGGREGATED
+                            type: EVENT_TYPES.TASK_AGGREGATED
                                 .SYNC_TASK_REACHABILITY,
                             projectId,
                             links,
@@ -285,10 +285,9 @@ export class TaskEvents_BatchAggregator {
                     // [Signal]: DELETE_TASK_LINKS
                     // [Purpose]: Cleanup: Purges all direct dependency link records (source/target) involving the deleted tasks.
                     outboxEntries.push({
-                        kafka_topic: KAFKA_TOPICS.TASK_AGGREGATED,
+                        stream: EVENT_STREAMS.TASK_AGGREGATED,
                         payload: {
-                            type: KAFKA_EVENTS.TASK_AGGREGATED
-                                .DELETE_TASK_LINKS,
+                            type: EVENT_TYPES.TASK_AGGREGATED.DELETE_TASK_LINKS,
                             taskIds: ids,
                         },
                     });
@@ -297,9 +296,9 @@ export class TaskEvents_BatchAggregator {
                     // [Purpose]: Massive Cleanup: Triggers the chunked, recursive purge and repair of the graph reachability closure table.
                     // This is a separate, heavy operation that must be handled by the listener
                     outboxEntries.push({
-                        kafka_topic: KAFKA_TOPICS.TASK_AGGREGATED,
+                        stream: EVENT_STREAMS.TASK_AGGREGATED,
                         payload: {
-                            type: KAFKA_EVENTS.TASK_AGGREGATED
+                            type: EVENT_TYPES.TASK_AGGREGATED
                                 .DELETE_TASK_REACHABILITY,
                             taskIds: ids,
                         },

@@ -1,4 +1,4 @@
-export const KAFKA_TOPICS = {
+export const EVENT_STREAMS = {
     PROJECT: 'project-events',
     TEAM: 'team-events',
     AUTH: 'auth-events',
@@ -10,7 +10,7 @@ export const KAFKA_TOPICS = {
 
 // Event type constants — values match exactly what the outbox SQL writes,
 // so there's a single name end-to-end (no translation table needed).
-export const KAFKA_EVENTS = {
+export const EVENT_TYPES = {
     PROJECT: {
         CREATED: 'project.created',
         DELETED: 'project.deleted',

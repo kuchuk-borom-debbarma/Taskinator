@@ -31,7 +31,7 @@ sequenceDiagram
     GraphQL-->>User: 4. HTTP 200 (GraphQL Response - Instant)
     
     Note over DB, Kafka: Transactional Outbox Relay polls & emits
-    Kafka->>Listener: 5. Consume KAFKA_TOPICS.TASK (Batch)
+    Kafka->>Listener: 5. Consume EVENT_STREAMS.TASK (Batch)
     
     rect rgb(240, 245, 255)
         Note over Listener, DB: Match and Spawn Triggers
@@ -40,7 +40,7 @@ sequenceDiagram
         Listener->>DB: 8. CLAIM events & Write trigger outbox events
     end
     
-    Kafka->>Proc: 9. Consume KAFKA_TOPICS.AUTOPILOT (TRIGGER)
+    Kafka->>Proc: 9. Consume EVENT_STREAMS.AUTOPILOT (TRIGGER)
     
     rect rgb(255, 240, 245)
         Note over Proc, Engine: Orchestrate Step Cascade
@@ -163,7 +163,7 @@ This lazy evaluation keeps the initial pipeline activation cost near zero while 
 Autopilot pipelines represent sequential arrays of mixed Conditions and Actions. The processing of these steps is decoupled using Kafka message streams.
 
 ```
-       [Kafka: KAFKA_TOPICS.AUTOPILOT]
+       [Kafka: EVENT_STREAMS.AUTOPILOT]
                      │
          Consume TRIGGER payload
                      │
@@ -257,7 +257,7 @@ updated_task AS (
     WHERE id IN ($7::uuid, $8::uuid)
     RETURNING id, fk_project_id, fk_team_id, fk_member_id, title, status
 )
-INSERT INTO outbox_events (kafka_topic, kafka_key, payload)
+INSERT INTO outbox_events (stream, stream_key, payload)
 SELECT 
     'task-events',
     u.fk_project_id::text,
@@ -304,7 +304,7 @@ To guard against loop crashes, the Autopilot engine implements a **Trace-Level D
     & includes current 'depth' in outbox payload
               │
               ▼
-    Published to Kafka: KAFKA_TOPICS.TASK
+    Published to Kafka: EVENT_STREAMS.TASK
               │
               ▼
     [AutopilotTriggerListener.ts]

@@ -32,8 +32,8 @@ import { logger } from '../../../../infra/logger/index.ts';
 import eventBus from '../../../../infra/utils/EventBus.ts';
 import type { DomainEvent } from '../../../../infra/utils/event-bus';
 import {
-    KAFKA_EVENTS,
-    KAFKA_TOPICS,
+    EVENT_STREAMS,
+    EVENT_TYPES,
 } from '../../../../infra/utils/event-bus/constants.ts';
 import { taskService } from '../../index.ts';
 import type { Task } from '../../TaskService.ts';
@@ -75,11 +75,11 @@ export class TaskAutomationListener {
         logger.info('[Task Automation] Initializing');
 
         await eventBus.subscribe(
-            KAFKA_TOPICS.TASK,
+            EVENT_STREAMS.TASK,
             'task-automation-listener-group',
             {
-                [KAFKA_EVENTS.TASK.UPDATED]: this.handleTaskUpdated.bind(this),
-                [KAFKA_EVENTS.TASK.CREATED]: this.handleTaskCreated.bind(this),
+                [EVENT_TYPES.TASK.UPDATED]: this.handleTaskUpdated.bind(this),
+                [EVENT_TYPES.TASK.CREATED]: this.handleTaskCreated.bind(this),
             },
             { batch: true },
         );
