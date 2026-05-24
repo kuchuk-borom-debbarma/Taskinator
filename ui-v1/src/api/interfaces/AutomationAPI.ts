@@ -16,6 +16,7 @@ export interface TriggerTemplate {
   label: string;
   description: string;
   valueTemplate: ValueTemplate;
+  supportedModes: string[];
   /**
    * Condition type keys that are semantically valid for this trigger.
    * Returned by the catalog; used by the wizard to filter Step 2.
@@ -40,6 +41,7 @@ export interface ActionTemplate {
   label: string;
   description: string;
   valueTemplate: ValueTemplate;
+  supportedModes: string[];
 }
 
 export interface AutomationTemplatesCatalog {

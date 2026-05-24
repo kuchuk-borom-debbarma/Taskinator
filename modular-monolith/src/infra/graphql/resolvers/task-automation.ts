@@ -101,6 +101,7 @@ export const taskAutomationResolvers = {
                             label: 'Status transition (optional — leave blank to match any change)',
                             dynamicOptionsSource: 'PROJECT_STATUSES',
                         },
+                        supportedModes: ['SYNC', 'ASYNC'],
                         ...TRIGGER_COMPATIBILITY.STATUS_CHANGED,
                     },
                     {
@@ -114,6 +115,7 @@ export const taskAutomationResolvers = {
                             inputType: 'NONE',
                             label: 'Descendant status change',
                         },
+                        supportedModes: ['ASYNC'],
                         ...TRIGGER_COMPATIBILITY.DESCENDANT_STATUS_CHANGED,
                     },
                 ],
@@ -177,6 +179,7 @@ export const taskAutomationResolvers = {
                             label: 'Target status',
                             dynamicOptionsSource: 'PROJECT_STATUSES',
                         },
+                        supportedModes: ['SYNC', 'ASYNC'],
                     },
                     {
                         type: 'SET_ASSIGNEE',
@@ -188,6 +191,7 @@ export const taskAutomationResolvers = {
                             inputType: 'TEAM_MEMBER',
                             label: 'Assignee',
                         },
+                        supportedModes: ['SYNC', 'ASYNC'],
                     },
                     {
                         type: 'REJECT_TRANSITION',
@@ -201,6 +205,7 @@ export const taskAutomationResolvers = {
                             placeholder:
                                 'e.g. Finish all subtasks before marking this done.',
                         },
+                        supportedModes: ['SYNC'],
                     },
                 ],
             };

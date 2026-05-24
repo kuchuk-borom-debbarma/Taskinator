@@ -99,11 +99,16 @@ export default function AutomationDashboard() {
   const conditionTemplate = catalog?.conditions.find((entry) => entry.type === draft.conditionType);
   const actionTemplate = catalog?.actions.find((entry) => entry.type === draft.actionType);
 
+  const selectedModeStr = draft.isSync ? 'SYNC' : 'ASYNC';
+
+  const filteredTriggers = catalog
+    ? catalog.triggers.filter((t) => t.supportedModes.includes(selectedModeStr))
+    : [];
+
   /**
-   * Filter conditions and actions to only those compatible with the selected trigger.
-   * Derived from the server-returned compatibleConditions / compatibleActions lists
-   * on TriggerTemplate — no frontend hardcoding required.
-   * Falls back to the full catalog when no trigger is selected yet.
+   * Filter conditions and actions to only those compatible with the selected trigger and mode.
+   * Derived from the server-returned compatibleConditions / compatibleActions / supportedModes lists
+   * — no frontend hardcoding required.
    */
   const filteredConditions = catalog
     ? triggerTemplate
@@ -113,8 +118,10 @@ export default function AutomationDashboard() {
 
   const filteredActions = catalog
     ? triggerTemplate
-      ? catalog.actions.filter((a) => triggerTemplate.compatibleActions.includes(a.type))
-      : catalog.actions
+      ? catalog.actions
+          .filter((a) => triggerTemplate.compatibleActions.includes(a.type))
+          .filter((a) => a.supportedModes.includes(selectedModeStr))
+      : catalog.actions.filter((a) => a.supportedModes.includes(selectedModeStr))
     : [];
 
   const createRule = useMutation({
@@ -360,17 +367,23 @@ export default function AutomationDashboard() {
                 value={draft.isSync ? 'sync' : 'async'}
                 onChange={(e) => {
                   const nextIsSync = e.target.value === 'sync';
+                  const nextModeStr = nextIsSync ? 'SYNC' : 'ASYNC';
                   setDraft((c) => {
-                    const resetTrigger = nextIsSync && c.triggerType === 'DESCENDANT_STATUS_CHANGED';
+                    const currentTrigger = catalog?.triggers.find((t) => t.type === c.triggerType);
+                    const isTriggerCompatible = currentTrigger?.supportedModes.includes(nextModeStr);
+
+                    const currentAction = catalog?.actions.find((a) => a.type === c.actionType);
+                    const isActionCompatible = currentAction?.supportedModes.includes(nextModeStr);
+
                     return {
                       ...c,
                       isSync: nextIsSync,
-                      triggerType: resetTrigger ? '' : c.triggerType,
-                      triggerValue: resetTrigger ? '' : c.triggerValue,
-                      conditionType: resetTrigger ? '' : c.conditionType,
-                      conditionValue: resetTrigger ? '' : c.conditionValue,
-                      actionType: resetTrigger ? '' : c.actionType,
-                      actionValue: resetTrigger ? '' : c.actionValue,
+                      triggerType: isTriggerCompatible ? c.triggerType : '',
+                      triggerValue: isTriggerCompatible ? c.triggerValue : '',
+                      conditionType: isTriggerCompatible ? c.conditionType : '',
+                      conditionValue: isTriggerCompatible ? c.conditionValue : '',
+                      actionType: isActionCompatible ? c.actionType : '',
+                      actionValue: isActionCompatible ? c.actionValue : '',
                     };
                   });
                 }}
@@ -389,13 +402,7 @@ export default function AutomationDashboard() {
             <TemplatePicker
               label="When"
               value={draft.triggerType}
-              options={catalog.triggers.filter((t) => {
-                if (draft.isSync) {
-                  // Descendant status changes is strictly async-only
-                  return t.type !== 'DESCENDANT_STATUS_CHANGED';
-                }
-                return true;
-              })}
+              options={filteredTriggers}
               onChange={(triggerType) => {
                 const newTrigger = catalog.triggers.find((t) => t.type === triggerType);
                 const compatConditions = newTrigger?.compatibleConditions ?? [];

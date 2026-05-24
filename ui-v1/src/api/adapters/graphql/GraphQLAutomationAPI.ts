@@ -31,6 +31,7 @@ const CATALOG_FIELDS = `
     type
     label
     description
+    supportedModes
     compatibleConditions
     compatibleActions
     valueTemplate {
@@ -57,6 +58,7 @@ const CATALOG_FIELDS = `
     type
     label
     description
+    supportedModes
     valueTemplate {
       inputType
       label
