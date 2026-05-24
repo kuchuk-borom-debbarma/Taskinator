@@ -1,0 +1,111 @@
+enum InputType {
+    SELECT
+    TEXT
+    NUMBER
+    NONE
+}
+
+type AutomationOption {
+    value: String!
+    label: String!
+}
+
+type ValueTemplate {
+    inputType: InputType!
+    label: String!
+    placeholder: String
+    staticOptions: [AutomationOption!]
+    dynamicOptionsSource: String
+}
+
+type TriggerTemplate {
+    type: String!
+    label: String!
+    description: String!
+    valueTemplate: ValueTemplate!
+}
+
+type ConditionTemplate {
+    type: String!
+    label: String!
+    description: String!
+    valueTemplate: ValueTemplate!
+}
+
+type ActionTemplate {
+    type: String!
+    label: String!
+    description: String!
+    valueTemplate: ValueTemplate!
+}
+
+type AutomationTemplatesCatalog {
+    triggers: [TriggerTemplate!]!
+    conditions: [ConditionTemplate!]!
+    actions: [ActionTemplate!]!
+}
+
+type TaskAutomationRule {
+    id: ID!
+    projectId: ID!
+    name: String!
+    isActive: Boolean!
+    isSync: Boolean!
+    triggerType: String!
+    triggerValue: String
+    conditionType: String!
+    conditionValue: String
+    actionType: String!
+    actionValue: String
+    version: Int!
+}
+
+input CreateTaskAutomationRuleInput {
+    projectId: ID!
+    name: String!
+    isSync: Boolean!
+    triggerType: String!
+    triggerValue: String
+    conditionType: String!
+    conditionValue: String
+    actionType: String!
+    actionValue: String
+}
+
+input UpdateTaskAutomationRuleInput {
+    projectId: ID!
+    ruleId: ID!
+    version: Int!
+    name: String
+    isActive: Boolean
+    isSync: Boolean
+    triggerType: String
+    triggerValue: String
+    conditionType: String
+    conditionValue: String
+    actionType: String
+    actionValue: String
+}
+
+type DeleteAutomationRuleResult {
+    success: Boolean!
+    ruleId: ID!
+}
+
+extend type Query {
+    automationTemplatesCatalog(projectId: ID!): AutomationTemplatesCatalog!
+    taskAutomationRules(projectId: ID!): [TaskAutomationRule!]!
+}
+
+extend type Mutation {
+    createTaskAutomationRule(
+        input: CreateTaskAutomationRuleInput!
+    ): TaskAutomationRule!
+    updateTaskAutomationRule(
+        input: UpdateTaskAutomationRuleInput!
+    ): TaskAutomationRule!
+    deleteTaskAutomationRule(
+        projectId: ID!
+        ruleId: ID!
+    ): DeleteAutomationRuleResult!
+}

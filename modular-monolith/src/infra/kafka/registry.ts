@@ -11,6 +11,7 @@ import { ProjectAggregated_UnassignProjectTaskMember } from '../../modules/task/
 import { TaskAggregated_DeleteTaskLinksListener } from '../../modules/task/internal/listeners/TaskAggregated_DeleteTaskLinksListener.ts';
 import { TaskAggregated_DeleteTaskReachabilityListener } from '../../modules/task/internal/listeners/TaskAggregated_DeleteTaskReachabilityListener.ts';
 import { TaskAggregated_ReachabilitySyncListener } from '../../modules/task/internal/listeners/TaskAggregated_ReachabilitySyncListener.ts';
+import { TaskAutomationListener } from '../../modules/task/internal/listeners/TaskAutomationListener.ts';
 import { TeamAggregated_OrphanTeamTasksListener } from '../../modules/task/internal/listeners/TeamAggregated_OrphanTeamTasksListener.ts';
 import { TeamAggregated_UnassignMemberFromTeamTasksListener } from '../../modules/task/internal/listeners/TeamAggregated_UnassignMemberFromTeamTasksListener.ts';
 import { ProjectAggregated_DeleteProjectTeam } from '../../modules/team/internal/listeners/ProjectAggregated_DeleteProjectTeam.ts';
@@ -81,6 +82,7 @@ export async function startConsumers() {
         new TaskAggregated_ReachabilitySyncListener();
     const taskBulkReachabilityCleanupListener =
         new TaskAggregated_DeleteTaskReachabilityListener();
+    const taskAutomationListener = new TaskAutomationListener();
 
     await Promise.all([
         projectAggregator.init(),
@@ -107,6 +109,7 @@ export async function startConsumers() {
         taskLinkCleanupListener.init(),
         taskReachabilitySyncListener.init(),
         taskBulkReachabilityCleanupListener.init(),
+        taskAutomationListener.init(),
     ]);
 
     logger.info('[Registry] All domain consumers and listeners initialized');

@@ -7,6 +7,10 @@ import { db } from '../../database/index.ts';
 export async function cleanupDb(): Promise<void> {
     await db.deleteFrom('outbox_events').execute();
     await db.deleteFrom('processed_event').execute();
+    await db.deleteFrom('task_automation_rule').execute();
+    await db.deleteFrom('task_reachability').execute();
+    await db.deleteFrom('task_link').execute();
+    await db.deleteFrom('project_task').execute();
     await db.deleteFrom('project_team_member').execute();
     await db.deleteFrom('project_team').execute();
     await db.deleteFrom('project_member').execute();

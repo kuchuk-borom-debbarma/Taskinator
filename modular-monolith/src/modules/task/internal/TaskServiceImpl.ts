@@ -1,4 +1,10 @@
+import { sql } from 'kysely';
 import { db } from '../../../infra/database/index.ts';
+import {
+    ConflictError,
+    NotFoundError,
+    ValidationError,
+} from '../../../infra/graphql/errors.ts';
 import { logger } from '../../../infra/logger/index.ts';
 import {
     KAFKA_EVENTS,
@@ -9,19 +15,28 @@ import type { DomainEvent } from '../../../infra/utils/event-bus/index.js';
 import { appendEventsToOutbox } from '../../../infra/utils/event-bus/OutboxQueries.ts';
 import { syncActionRegistry } from '../../../infra/utils/SyncActionRegistry.ts';
 import type {
+    CreateTaskAutomationRuleInput,
     GetNeighbourhoodParam,
     GetTaskLinksParam,
     LinkConnection,
     PaginationParams,
     Task,
+    TaskAutomationRule,
     TaskConnection,
     TaskContextRow,
     TaskLink,
     TaskNeighbourhoodResult,
     TaskReachabilityLinkChange,
     TaskService,
+    UpdateTaskAutomationRuleInput,
 } from '../TaskService.ts';
-
+import {
+    AUTOMATION_ACTIONS,
+    AUTOMATION_CONDITIONS,
+    isAutomationActionType,
+    isAutomationConditionType,
+    isAutomationTrigger,
+} from './AutomationRegistry.ts';
 import {
     BULK_DELETE_CHUNK_SIZE,
     contractTaskReachability,
@@ -113,6 +128,22 @@ export class TaskServiceImpl implements TaskService {
         return await getNeighbourhood(params);
     }
 
+    async getAutomationRulesForProject(
+        userId: string,
+        projectId: string,
+    ): Promise<TaskAutomationRule[]> {
+        await this.ensureAutomationProjectAccess(userId, projectId);
+
+        const rules = await db
+            .selectFrom('task_automation_rule')
+            .selectAll()
+            .where('fk_project_id', '=', projectId)
+            .orderBy('created_at', 'asc')
+            .execute();
+
+        return rules.map((rule) => this.mapAutomationRule(rule));
+    }
+
     async createTask(param: {
         actorId: string;
         projectId: string;
@@ -175,6 +206,8 @@ export class TaskServiceImpl implements TaskService {
             throw new Error('Task title must be between 3 and 255 characters.');
         }
 
+        await this.runSyncAutomationRules(param);
+
         const result = await updateTask(param);
 
         // SYNC ORCHESTRATION (ORCH-01)
@@ -203,6 +236,128 @@ export class TaskServiceImpl implements TaskService {
 
         logger.info(`TaskService.updateTask successful: ${param.taskId}`);
         return result;
+    }
+
+    async createAutomationRule(
+        actorId: string,
+        input: CreateTaskAutomationRuleInput,
+    ): Promise<TaskAutomationRule> {
+        await this.ensureAutomationProjectAccess(actorId, input.projectId);
+        this.validateAutomationRuleInput(input);
+
+        const rows = await db
+            .insertInto('task_automation_rule')
+            .values({
+                fk_project_id: input.projectId,
+                name: input.name,
+                is_sync: input.isSync ?? false,
+                trigger_type: input.triggerType,
+                trigger_value: input.triggerValue ?? null,
+                condition_type: input.conditionType,
+                condition_value: input.conditionValue ?? null,
+                action_type: input.actionType,
+                action_value: input.actionValue ?? null,
+            })
+            .returningAll()
+            .execute();
+
+        const rule = rows[0];
+        if (!rule)
+            throw new ValidationError('Unable to create automation rule.');
+
+        return this.mapAutomationRule(rule);
+    }
+
+    async updateAutomationRule(
+        actorId: string,
+        input: UpdateTaskAutomationRuleInput,
+    ): Promise<TaskAutomationRule> {
+        await this.ensureAutomationProjectAccess(actorId, input.projectId);
+        this.validateAutomationRuleInput(input);
+
+        const updates: Record<string, unknown> = {
+            version: sql`version + 1`,
+            updated_at: sql`CURRENT_TIMESTAMP`,
+        };
+
+        if (input.name !== undefined) {
+            if (input.name === null || input.name.trim().length === 0) {
+                throw new ValidationError('Automation rule name is required.');
+            }
+            updates.name = input.name;
+        }
+        if (input.isActive !== undefined) {
+            if (input.isActive === null) {
+                throw new ValidationError('isActive cannot be null.');
+            }
+            updates.is_active = input.isActive;
+        }
+        if (input.isSync !== undefined) {
+            if (input.isSync === null) {
+                throw new ValidationError('isSync cannot be null.');
+            }
+            updates.is_sync = input.isSync;
+        }
+        if (input.triggerType !== undefined)
+            updates.trigger_type = input.triggerType;
+        if (input.triggerValue !== undefined)
+            updates.trigger_value = input.triggerValue;
+        if (input.conditionType !== undefined)
+            updates.condition_type = input.conditionType;
+        if (input.conditionValue !== undefined)
+            updates.condition_value = input.conditionValue;
+        if (input.actionType !== undefined)
+            updates.action_type = input.actionType;
+        if (input.actionValue !== undefined)
+            updates.action_value = input.actionValue;
+
+        const rows = await db
+            .updateTable('task_automation_rule')
+            .set(updates as any)
+            .where('id', '=', input.ruleId)
+            .where('fk_project_id', '=', input.projectId)
+            .where('version', '=', input.version)
+            .returningAll()
+            .execute();
+
+        const rule = rows[0];
+        if (!rule) {
+            const existing = await db
+                .selectFrom('task_automation_rule')
+                .select(['id', 'version'])
+                .where('id', '=', input.ruleId)
+                .where('fk_project_id', '=', input.projectId)
+                .executeTakeFirst();
+
+            if (!existing) {
+                throw new NotFoundError(
+                    `Automation rule ${input.ruleId} not found.`,
+                );
+            }
+
+            throw new ConflictError(
+                `Automation rule version mismatch. Expected ${input.version}, but current version is ${existing.version}.`,
+            );
+        }
+
+        return this.mapAutomationRule(rule);
+    }
+
+    async deleteAutomationRule(
+        actorId: string,
+        projectId: string,
+        ruleId: string,
+    ): Promise<boolean> {
+        await this.ensureAutomationProjectAccess(actorId, projectId);
+
+        const result = await db
+            .deleteFrom('task_automation_rule')
+            .where('id', '=', ruleId)
+            .where('fk_project_id', '=', projectId)
+            .returning('id')
+            .executeTakeFirst();
+
+        return !!result;
     }
 
     async deleteTask(param: {
@@ -637,6 +792,168 @@ export class TaskServiceImpl implements TaskService {
         return Array.from(
             new Set(events.flatMap((event) => event.data.taskIds)),
         );
+    }
+
+    private async runSyncAutomationRules(param: {
+        actorId: string;
+        projectId: string;
+        taskId: string;
+        version: number;
+        status?: string | null;
+    }): Promise<void> {
+        if (param.status === undefined) return;
+
+        const targetStatus = param.status ?? 'TODO';
+        const [currentTask] = await getTasksByActorIdAndIds(param.actorId, [
+            param.taskId,
+        ]);
+
+        if (
+            !currentTask ||
+            currentTask.projectId !== param.projectId ||
+            currentTask.version !== param.version ||
+            currentTask.status === targetStatus
+        ) {
+            return;
+        }
+
+        const rules = await db
+            .selectFrom('task_automation_rule')
+            .selectAll()
+            .where('fk_project_id', '=', param.projectId)
+            .where('trigger_type', '=', 'TASK_STATUS_CHANGED')
+            .where('is_active', '=', true)
+            .where('is_sync', '=', true)
+            .where((eb) =>
+                eb.or([
+                    eb('trigger_value', '=', targetStatus),
+                    eb('trigger_value', 'is', null),
+                ]),
+            )
+            .execute();
+
+        for (const rule of rules) {
+            const conditionFn =
+                AUTOMATION_CONDITIONS[
+                    rule.condition_type as keyof typeof AUTOMATION_CONDITIONS
+                ];
+            const actionFn =
+                AUTOMATION_ACTIONS[
+                    rule.action_type as keyof typeof AUTOMATION_ACTIONS
+                ];
+
+            if (!conditionFn || !actionFn) continue;
+
+            const isMet = await conditionFn(currentTask, rule.condition_value);
+            if (!isMet) continue;
+
+            await actionFn(currentTask, rule.action_value, {
+                actorId: param.actorId,
+                isSync: true,
+                taskService: this,
+            });
+        }
+    }
+
+    private async ensureAutomationProjectAccess(
+        actorId: string,
+        projectId: string,
+    ): Promise<void> {
+        const result = await sql<{ hasAccess: boolean }>`
+            SELECT EXISTS (
+                SELECT 1
+                FROM project p
+                WHERE p.id = ${projectId}::uuid
+                  AND (
+                      p.fk_user_id = ${actorId}::text
+                      OR EXISTS (
+                          SELECT 1
+                          FROM project_member pm
+                          WHERE pm.fk_project_id = p.id
+                            AND pm.fk_user_id = ${actorId}::text
+                      )
+                      OR ${actorId}::text LIKE 'system:%'
+                  )
+            ) AS "hasAccess"
+        `.execute(db);
+
+        if (!result.rows[0]?.hasAccess) {
+            throw new NotFoundError(
+                `Project ${projectId} not found or unauthorized.`,
+            );
+        }
+    }
+
+    private validateAutomationRuleInput(
+        input: CreateTaskAutomationRuleInput | UpdateTaskAutomationRuleInput,
+    ): void {
+        const isCreate = !('ruleId' in input);
+
+        if (isCreate && (!input.name || input.name.trim().length === 0)) {
+            throw new ValidationError('Automation rule name is required.');
+        }
+
+        if (
+            (isCreate || input.triggerType !== undefined) &&
+            (!input.triggerType || !isAutomationTrigger(input.triggerType))
+        ) {
+            throw new ValidationError(
+                `Unsupported automation trigger: ${input.triggerType ?? 'missing'}.`,
+            );
+        }
+
+        if (
+            (isCreate || input.conditionType !== undefined) &&
+            (!input.conditionType ||
+                !isAutomationConditionType(input.conditionType))
+        ) {
+            throw new ValidationError(
+                `Unsupported automation condition: ${input.conditionType ?? 'missing'}.`,
+            );
+        }
+
+        if (
+            (isCreate || input.actionType !== undefined) &&
+            (!input.actionType || !isAutomationActionType(input.actionType))
+        ) {
+            throw new ValidationError(
+                `Unsupported automation action: ${input.actionType ?? 'missing'}.`,
+            );
+        }
+    }
+
+    private mapAutomationRule(row: {
+        id: string;
+        fk_project_id: string;
+        name: string;
+        is_active: boolean;
+        is_sync: boolean;
+        trigger_type: string;
+        trigger_value: string | null;
+        condition_type: string;
+        condition_value: string | null;
+        action_type: string;
+        action_value: string | null;
+        version: number;
+        created_at: Date;
+        updated_at: Date;
+    }): TaskAutomationRule {
+        return {
+            id: row.id,
+            projectId: row.fk_project_id,
+            name: row.name,
+            isActive: row.is_active,
+            isSync: row.is_sync,
+            triggerType: row.trigger_type,
+            triggerValue: row.trigger_value,
+            conditionType: row.condition_type,
+            conditionValue: row.condition_value,
+            actionType: row.action_type,
+            actionValue: row.action_value,
+            version: row.version,
+            createdAt: row.created_at,
+            updatedAt: row.updated_at,
+        };
     }
 
     private collectProjectIds(

@@ -27,6 +27,50 @@ export type Task = {
     createdAtPrecision?: string;
 };
 
+export type TaskAutomationRule = {
+    id: string;
+    projectId: string;
+    name: string;
+    isActive: boolean;
+    isSync: boolean;
+    triggerType: string;
+    triggerValue: string | null;
+    conditionType: string;
+    conditionValue: string | null;
+    actionType: string;
+    actionValue: string | null;
+    version: number;
+    createdAt: Date;
+    updatedAt: Date;
+};
+
+export type CreateTaskAutomationRuleInput = {
+    projectId: string;
+    name: string;
+    isSync?: boolean | null;
+    triggerType: string;
+    triggerValue?: string | null;
+    conditionType: string;
+    conditionValue?: string | null;
+    actionType: string;
+    actionValue?: string | null;
+};
+
+export type UpdateTaskAutomationRuleInput = {
+    projectId: string;
+    ruleId: string;
+    version: number;
+    name?: string | null;
+    isActive?: boolean | null;
+    isSync?: boolean | null;
+    triggerType?: string | null;
+    triggerValue?: string | null;
+    conditionType?: string | null;
+    conditionValue?: string | null;
+    actionType?: string | null;
+    actionValue?: string | null;
+};
+
 export type TaskLink = {
     id: string;
     projectId: string;
@@ -129,6 +173,11 @@ export interface TaskService extends BaseService {
         params: GetNeighbourhoodParam,
     ): Promise<TaskNeighbourhoodResult>;
 
+    getAutomationRulesForProject(
+        userId: string,
+        projectId: string,
+    ): Promise<TaskAutomationRule[]>;
+
     // Write Operations
     createTask(param: {
         actorId: string;
@@ -153,6 +202,22 @@ export interface TaskService extends BaseService {
         priority?: number | null;
         traceId?: string | null;
     }): Promise<Task>;
+
+    createAutomationRule(
+        actorId: string,
+        input: CreateTaskAutomationRuleInput,
+    ): Promise<TaskAutomationRule>;
+
+    updateAutomationRule(
+        actorId: string,
+        input: UpdateTaskAutomationRuleInput,
+    ): Promise<TaskAutomationRule>;
+
+    deleteAutomationRule(
+        actorId: string,
+        projectId: string,
+        ruleId: string,
+    ): Promise<boolean>;
 
     deleteTask(param: {
         actorId: string;

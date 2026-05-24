@@ -1,13 +1,16 @@
 import React, { createContext, useMemo } from 'react';
+import { GraphQLAutomationAPI } from '../api/adapters/graphql/GraphQLAutomationAPI';
 import type { ProjectAPI } from '../api/interfaces/ProjectAPI';
 import type { TaskAPI } from '../api/interfaces/TaskAPI';
 import type { TeamAPI } from '../api/interfaces/TeamAPI';
+import type { AutomationAPI } from '../api/interfaces/AutomationAPI';
 import { GraphQLProjectAPI } from '../api/adapters/graphql/GraphQLProjectAPI';
 import { GraphQLTeamAPI } from '../api/adapters/graphql/GraphQLTeamAPI';
 import { GraphQLTaskAPI } from '../api/adapters/graphql/GraphQLTaskAPI';
 import { useAuth } from './AuthContext';
 
 interface ApiContextType {
+  automationApi: AutomationAPI;
   projectApi: ProjectAPI;
   taskApi: TaskAPI;
   teamApi: TeamAPI;
@@ -19,6 +22,7 @@ export const ApiProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const { token, logout } = useAuth();
   
   const apis = useMemo(() => ({
+    automationApi: new GraphQLAutomationAPI(token, { onUnauthorized: logout }),
     projectApi: new GraphQLProjectAPI(token, { onUnauthorized: logout }),
     taskApi: new GraphQLTaskAPI(token, { onUnauthorized: logout }),
     teamApi: new GraphQLTeamAPI(token, { onUnauthorized: logout }),

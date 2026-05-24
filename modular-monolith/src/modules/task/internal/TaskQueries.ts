@@ -188,7 +188,11 @@ export const getTasksByActorIdAndIds = async (
               SELECT 1 FROM project p 
               LEFT JOIN project_member pm ON pm.fk_project_id = p.id
               WHERE p.id = project_task.fk_project_id
-                AND (p.fk_user_id = ${userId}::text OR pm.fk_user_id = ${userId}::text)
+                AND (
+                    p.fk_user_id = ${userId}::text
+                    OR pm.fk_user_id = ${userId}::text
+                    OR ${userId}::text LIKE 'system:%'
+                )
           )
     `.execute(db);
 
