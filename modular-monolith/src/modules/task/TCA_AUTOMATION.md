@@ -389,27 +389,25 @@ Sync block does not happen:
 
 - Rule must be active.
 - Rule must have `is_sync = true`.
-- `trigger_type` must be `TASK_STATUS_CHANGED`.
-- `trigger_value` must equal target status or be null.
-- The task must have a real status change.
-- The condition must return true.
+- `trigger_type` must be `STATUS_CHANGED`.
+- The transition must match the `trigger_value` JSON config (`from` and/or `to` status values).
+- The task status must actually change to a new value.
+- The condition must evaluate to true.
 
 Async cascade does not happen:
 
 - Rule must be active.
 - Rule must have `is_sync = false`.
-- `trigger_type` must be `PREREQUISITE_COMPLETED`.
-- Source task must transition into `DONE`.
-- `TaskAutomationListener` must be registered in Kafka registry.
-- `task_reachability` must contain ancestor/descendant rows.
-- `ALL_PREREQUISITES_DONE` must return true.
+- `trigger_type` must be `STATUS_CHANGED`.
+- The transition must match the `trigger_value` JSON config (`from` and/or `to` status values).
+- `TaskAutomationListener` must be registered in the Kafka registry.
+- The condition must evaluate to true.
 
 Version conflict during async action:
 
-- Another update probably changed the downstream task first.
+- Another update probably changed the task first.
 - The current implementation lets normal optimistic locking behavior surface.
-- If best-effort retry is needed later, add it in the action or listener with
-  bounded retry and fresh task reload.
+- If best-effort retry is needed later, add it in the action or listener with bounded retry and fresh task reload.
 
 ## Design Constraints
 
@@ -426,9 +424,6 @@ Keep these constraints unless the architecture is intentionally revised:
 
 ## Current Gaps
 
-- `TAG_CONTAINS` is a placeholder until task tags exist.
-- `MEMBER_ASSIGNED` is cataloged but not wired into an execution path yet.
-- Status options come from common frontend defaults plus loaded task statuses,
-  not a dedicated project status catalog.
+- Status options come from common frontend defaults plus loaded task statuses, not a dedicated project status catalog.
 - Async action retry on optimistic conflict is not implemented.
 

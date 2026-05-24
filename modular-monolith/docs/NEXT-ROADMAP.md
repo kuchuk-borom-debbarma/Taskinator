@@ -46,22 +46,18 @@ CREATE INDEX idx_automation_project_trigger ON task_automation_rule(fk_project_i
 
 ---
 
-## 📍 Step 2: The MVP Enum Dictionary
+## 📍 Step 2: The Supported Registry
 
 ### 1. Triggers (The "When")
-* `TASK_STATUS_CHANGED` (Value: Target Status e.g. `IN_PROGRESS` or `DONE`)
-* `PREREQUISITE_COMPLETED` (Value: None) - Fires when any blocking task in the dependency graph becomes `DONE`.
-* `MEMBER_ASSIGNED` (Value: None)
+* `STATUS_CHANGED` (Value: JSON string with optional `from` and `to` status constraints) - Fires when a task changes status.
 
 ### 2. Conditions (The "If")
-* `IS_BLOCKED` (Value: None) - Checks if the task has at least one active, incomplete prerequisite.
-* `ALL_PREREQUISITES_DONE` (Value: None) - Checks if all prerequisite tasks are completed.
-* `HAS_NO_ASSIGNEE` (Value: None)
-* `TAG_CONTAINS` (Value: Tag string e.g. `auto:escalate`)
+* `STATUS_EQUALS` (Value: Status string) - Checks if the task's current status matches the value.
+* `ASSIGNEE_EQUALS` (Value: User ID or `'none'`) - Checks if the task's assignee matches the value.
 
 ### 3. Actions (The "Then")
-* `SET_STATUS` (Value: Target Status e.g. `READY`, `TODO`)
-* `SET_ASSIGNEE_TO_ACTOR` (Value: None) - Assigns the task to the user who triggered the mutation.
+* `SET_STATUS` (Value: Target Status string)
+* `SET_ASSIGNEE` (Value: User ID, `'actor'`, or `'none'`)
 * `REJECT_TRANSITION` (Value: Error message string) - Synchronously rejects the status transition and displays a warning banner.
 
 ---
