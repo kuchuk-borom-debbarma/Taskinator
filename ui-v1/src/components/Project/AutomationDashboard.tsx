@@ -328,6 +328,16 @@ export default function AutomationDashboard() {
           ))}
         </div>
 
+        {/* Completed-steps recap — visible on steps 1 through 3 */}
+        {step > 0 && (
+          <SoFarSummary
+            step={step}
+            draft={draft}
+            triggerTemplate={triggerTemplate}
+            conditionTemplate={conditionTemplate}
+          />
+        )}
+
         {(createRule.error || updateRule.error) ? (
           <div className="mb-4">
             <InlineMessage tone="error" message={(createRule.error || updateRule.error as Error).message} />
@@ -644,6 +654,64 @@ function RuleLine({ label, title, value }: { label: string; title: string; value
     </div>
   );
 }
+
+/**
+ * SoFarSummary
+ *
+ * Compact recap strip shown on wizard steps 1–3.
+ * Displays what the user configured in all previously completed steps so they
+ * never lose context while moving forward. Each chip is read-only — use the
+ * Back button to edit a previous step.
+ */
+function SoFarSummary({
+  step,
+  draft,
+  triggerTemplate,
+  conditionTemplate,
+}: {
+  step: number;
+  draft: RuleDraft;
+  triggerTemplate?: TriggerTemplate;
+  conditionTemplate?: ConditionTemplate;
+}) {
+  const items: { label: string; value: string }[] = [];
+
+  // Step 0 — Basics (always completed once we reach step ≥ 1)
+  if (step >= 1 && draft.name) {
+    items.push({
+      label: 'Rule',
+      value: `${draft.name} · ${draft.isSync ? 'Sync' : 'Async'}`,
+    });
+  }
+
+  // Step 1 — Trigger (completed once we reach step ≥ 2)
+  if (step >= 2 && triggerTemplate) {
+    const triggerSuffix = draft.triggerValue ? ` · ${formatRuleValue(draft.triggerValue)}` : '';
+    items.push({ label: 'When', value: `${triggerTemplate.label}${triggerSuffix}` });
+  }
+
+  // Step 2 — Condition (completed once we reach step ≥ 3)
+  if (step >= 3 && conditionTemplate) {
+    const condSuffix = draft.conditionValue ? ` · ${formatRuleValue(draft.conditionValue)}` : '';
+    items.push({ label: 'If', value: `${conditionTemplate.label}${condSuffix}` });
+  }
+
+  if (items.length === 0) return null;
+
+  return (
+    <div className="mb-4 flex flex-col gap-1.5 rounded-2xl border border-app-line/60 bg-app-surface/50 p-3">
+      {items.map((item) => (
+        <div key={item.label} className="flex items-baseline gap-2 text-xs">
+          <span className="w-8 shrink-0 font-bold uppercase tracking-[0.12em] text-app-muted">
+            {item.label}
+          </span>
+          <span className="font-medium text-app-ink leading-snug">{item.value}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 
 function TemplatePicker({
   label,
