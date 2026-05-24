@@ -47,20 +47,20 @@ import { UnauthorizedError } from '../errors.ts';
  */
 const TRIGGER_COMPATIBILITY: Record<
     string,
-    { conditions: string[]; actions: string[] }
+    { compatibleConditions: string[]; compatibleActions: string[] }
 > = {
     STATUS_CHANGED: {
-        conditions: [
+        compatibleConditions: [
             'STATUS_EQUALS',
             'ASSIGNEE_EQUALS',
             'HAS_INCOMPLETE_DESCENDANTS',
         ],
-        actions: ['SET_STATUS', 'SET_ASSIGNEE', 'REJECT_TRANSITION'],
+        compatibleActions: ['SET_STATUS', 'SET_ASSIGNEE', 'REJECT_TRANSITION'],
     },
 
     DESCENDANT_STATUS_CHANGED: {
-        conditions: ['ALL_DESCENDANTS_IN_STATUS'],
-        actions: [
+        compatibleConditions: ['ALL_DESCENDANTS_IN_STATUS'],
+        compatibleActions: [
             'SET_STATUS',
             'SET_ASSIGNEE',
             // REJECT_TRANSITION intentionally excluded:
