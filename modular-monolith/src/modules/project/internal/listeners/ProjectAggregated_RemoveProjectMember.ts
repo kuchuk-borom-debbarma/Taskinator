@@ -1,10 +1,10 @@
-import { logger } from '../../../../logger';
-import eventBus from '../../../../utils/EventBus.ts';
+import { logger } from '../../../../infra/logger';
+import eventBus from '../../../../infra/utils/EventBus.ts';
 import {
     KAFKA_EVENTS,
     KAFKA_TOPICS,
-} from '../../../../utils/event-bus/constants.ts';
-import type { DomainEvent } from '../../../../utils/event-bus/types.ts';
+} from '../../../../infra/utils/event-bus/constants.ts';
+import type { DomainEvent } from '../../../../infra/utils/event-bus/types.ts';
 import { projectService } from '../../index.ts';
 
 /**

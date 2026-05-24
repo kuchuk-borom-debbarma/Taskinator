@@ -1,23 +1,5 @@
-union RealtimeEvent = InternalNotification
-
-type Subscription {
-    """
-    A unified real-time stream for all events relevant to the authenticated user.
-    Automatically filters notifications by userId.
-    """
-    realtimeStream(projectId: String): RealtimeEvent!
-    _empty: String
-}
-
 type Query {
     _empty: String
-    notifications(
-        first: Int
-        after: String
-        last: Int
-        before: String
-    ): NotificationConnection!
-    unreadNotificationsCount: Int!
     """
     Returns the currently authenticated user. Returns null if unauthenticated.
     """
@@ -70,24 +52,6 @@ type Query {
         before: String
     ): TeamMemberConnection!
     """
-    Fetches a single auto action by ID. Returns null if not found or not authorized.
-    """
-    autoAction(id: ID!): AutoAction
-    """
-    Fetches project auto actions using connection pagination.
-    """
-    autoActions(
-        projectId: ID!
-        first: Int
-        after: String
-        last: Int
-        before: String
-    ): AutoActionConnection!
-    """
-    Fetches the dynamic template for an Auto Action scope.
-    """
-    autoActionTemplate(scope: String!, isSync: Boolean): AutoActionTemplate!
-    """
     Fetches a single task by ID. Returns null if not found or not authorized.
     """
     task(id: ID!): Task
@@ -99,8 +63,6 @@ type Query {
 
 type Mutation {
     _empty: String
-    markNotificationAsRead(id: ID!): Boolean
-    markAllNotificationsAsRead: Boolean
     """
     Signs in a user and returns a JWT token.
     """
@@ -173,23 +135,11 @@ type Mutation {
         name: String!
         version: Int!
     ): UpdateTeamPayload!
-    """
-    Creates an auto action rule.
-    """
-    createAutoAction(input: CreateAutoActionInput!): AutoAction!
-    """
-    Updates an auto action rule using optimistic concurrency.
-    """
-    updateAutoAction(
-        id: ID!
-        version: Int!
-        input: UpdateAutoActionInput!
-    ): AutoAction!
-    """
-    Deletes an auto action rule.
-    """
-    deleteAutoAction(id: ID!): DeleteAutoActionPayload!
     task: TaskMutation!
+}
+
+type Subscription {
+    _empty: String
 }
 
 """
@@ -212,28 +162,6 @@ type PageInfo {
     Cursor of the last edge in the current page. Use with `after` to paginate forwards.
     """
     endCursor: String
-}
-
-type InternalNotification {
-    id: ID!
-    userId: String!
-    title: String!
-    message: String!
-    type: String!
-    metadata: String
-    isRead: Boolean!
-    createdAt: String!
-    readAt: String
-}
-
-type NotificationEdge {
-    node: InternalNotification!
-    cursor: String!
-}
-
-type NotificationConnection {
-    edges: [NotificationEdge!]!
-    pageInfo: PageInfo!
 }
 
 """
@@ -674,109 +602,6 @@ type UpdateTeamPayload {
     The updated team.
     """
     team: Team
-}
-
-"""
-Template metadata for an Auto Action scope.
-"""
-type AutoActionTemplate {
-    triggers: [AutoActionTriggerTemplate!]!
-    contextFields: [String!]!
-    actions: [AutoActionActionTemplate!]!
-    conditions: [AutoActionConditionTemplate!]!
-}
-
-"""
-Template for an individual trigger.
-"""
-type AutoActionTriggerTemplate {
-    type: String!
-    name: String!
-    description: String!
-    scope: String!
-}
-
-"""
-Template for an individual action.
-"""
-type AutoActionActionTemplate {
-    id: String!
-    name: String!
-    description: String!
-    isSync: Boolean!
-    scope: String!
-    inputSchema: JSON!
-}
-
-"""
-Template for an individual condition predicate.
-"""
-type AutoActionConditionTemplate {
-    type: String!
-    name: String!
-    description: String
-    isSync: Boolean!
-    scope: String!
-    schema: JSON!
-}
-
-scalar JSON
-
-"""
-An automation rule that reacts to project domain events.
-"""
-type AutoAction {
-    id: ID!
-    project: Project!
-    name: String!
-    description: String
-    triggers: JSON!
-    steps: JSON!
-    isActive: Boolean!
-    isSync: Boolean!
-    version: Int!
-    createdAt: String!
-    updatedAt: String
-    createdBy: User!
-    updatedBy: User!
-}
-
-"""
-Relay-style paginated list of auto actions.
-"""
-type AutoActionConnection {
-    edges: [AutoActionEdge!]!
-    pageInfo: PageInfo!
-    totalCount: Int
-}
-
-type AutoActionEdge {
-    node: AutoAction!
-    cursor: String!
-}
-
-input CreateAutoActionInput {
-    projectId: ID!
-    name: String
-    description: String
-    triggers: JSON!
-    steps: JSON!
-    isActive: Boolean
-    isSync: Boolean
-}
-
-input UpdateAutoActionInput {
-    name: String
-    description: String
-    triggers: JSON
-    steps: JSON
-    isActive: Boolean
-    isSync: Boolean
-}
-
-type DeleteAutoActionPayload {
-    success: Boolean!
-    deletedId: ID!
 }
 
 input CreateTaskInput {

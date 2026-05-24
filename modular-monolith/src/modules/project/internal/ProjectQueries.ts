@@ -1,8 +1,8 @@
 import { sql, type Transaction } from 'kysely';
-import { type Database, db } from '../../../database';
-import type { PaginationParams } from '../../../types/pagination.ts';
-import { KAFKA_EVENTS, KAFKA_TOPICS } from '../../../utils/event-bus';
-import { decodeCursor, encodeCursor } from '../../../utils/utils.ts';
+import { type Database, db } from '../../../infra/database';
+import type { PaginationParams } from '../../../infra/types/pagination.ts';
+import { KAFKA_EVENTS, KAFKA_TOPICS } from '../../../infra/utils/event-bus';
+import { decodeCursor, encodeCursor } from '../../../infra/utils/utils.ts';
 import type { Project, ProjectMember } from '../ProjectService.ts';
 
 export async function insertProject(param: {

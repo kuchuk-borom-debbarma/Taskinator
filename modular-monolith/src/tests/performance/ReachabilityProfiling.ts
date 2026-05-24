@@ -2,8 +2,8 @@ import { performance } from 'node:perf_hooks';
 import {
     createProject,
     createUser,
-} from '../../__tests__/helpers/factories.ts';
-import { db } from '../../database/index.ts';
+} from '../../infra/__tests__/helpers/factories.ts';
+import { db } from '../../infra/database/index.ts';
 import {
     expandTaskReachability,
     syncTaskGraphCounters,

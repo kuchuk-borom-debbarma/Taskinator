@@ -1,5 +1,5 @@
 import { sql, type Transaction } from 'kysely';
-import { type Database, db } from '../../../database';
+import { type Database, db } from '../../../infra/database';
 
 /**
  * Repository for Auth-related database operations.

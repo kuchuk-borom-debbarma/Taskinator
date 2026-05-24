@@ -1,8 +1,8 @@
 import jwt from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
-import { db } from '../../../database';
-import { logger } from '../../../logger';
-import type { DomainEvent } from '../../../utils/event-bus';
+import { db } from '../../../infra/database';
+import { logger } from '../../../infra/logger';
+import type { DomainEvent } from '../../../infra/utils/event-bus';
 import type {
     AuthService,
     SearchUsersParam,
@@ -17,8 +17,8 @@ import { sql } from 'kysely';
 import {
     KAFKA_EVENTS,
     KAFKA_TOPICS,
-} from '../../../utils/event-bus/constants.ts';
-import { claimEventsAtomic } from '../../../utils/event-bus/idempotency.ts';
+} from '../../../infra/utils/event-bus/constants.ts';
+import { claimEventsAtomic } from '../../../infra/utils/event-bus/idempotency.ts';
 import { updateUserProjectCountsBulk } from './AuthQueries.ts';
 
 export class AuthServiceImpl implements AuthService {

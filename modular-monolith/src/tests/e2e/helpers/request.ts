@@ -1,5 +1,5 @@
 import request from 'supertest';
-import { logger } from '../../../logger';
+import { logger } from '../../../infra/logger';
 import { testServer } from './server.ts';
 
 interface GqlRequestParams {

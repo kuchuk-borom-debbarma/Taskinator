@@ -16,8 +16,8 @@ export interface User {
     projectsCount: number;
 }
 
-import type { PaginationParams } from '../../types/pagination.ts';
-import type { DomainEvent } from '../../utils/event-bus';
+import type { PaginationParams } from '../../infra/types/pagination.ts';
+import type { DomainEvent } from '../../infra/utils/event-bus';
 
 export interface SearchUsersParam extends PaginationParams {
     /** Exact username match OR exact UUID match */

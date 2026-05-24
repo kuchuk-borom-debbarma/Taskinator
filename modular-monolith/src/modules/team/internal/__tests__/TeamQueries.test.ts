@@ -9,16 +9,22 @@
  */
 import { afterAll, beforeEach, describe, expect, it } from '@jest/globals';
 import { sql } from 'kysely';
-import { cleanupDb, destroyDb } from '../../../../__tests__/helpers/db.ts';
+import {
+    cleanupDb,
+    destroyDb,
+} from '../../../../infra/__tests__/helpers/db.ts';
 import {
     addProjectMember,
     addTeamMember,
     createProject,
     createTeam,
     createUser,
-} from '../../../../__tests__/helpers/factories.ts';
-import { db } from '../../../../database/index.ts';
-import { ConflictError, NotFoundError } from '../../../../graphql/errors.ts';
+} from '../../../../infra/__tests__/helpers/factories.ts';
+import { db } from '../../../../infra/database/index.ts';
+import {
+    ConflictError,
+    NotFoundError,
+} from '../../../../infra/graphql/errors.ts';
 import {
     deleteTeamMembers,
     deleteTeams,

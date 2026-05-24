@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
-import type { DomainEvent } from '../../../../utils/event-bus';
+import type { DomainEvent } from '../../../../infra/utils/event-bus';
 
 const mockTrx: any = {};
 const mockTransactionExecute = jest.fn<
@@ -28,16 +28,19 @@ const mockDeleteProjectTeamBatch =
 const mockPurgeTeamMembershipsByTeamIdsBatch =
     jest.fn<(...args: any[]) => Promise<{ affectedCount: number }>>();
 
-jest.unstable_mockModule('../../../../database/index.ts', () => ({
+jest.unstable_mockModule('../../../../infra/database/index.ts', () => ({
     db: {
         transaction: mockTransaction,
     },
 }));
 
-jest.unstable_mockModule('../../../../utils/event-bus/idempotency.ts', () => ({
-    claimEventsAtomic: mockClaimEventsAtomic,
-    createEvent: jest.fn(),
-}));
+jest.unstable_mockModule(
+    '../../../../infra/utils/event-bus/idempotency.ts',
+    () => ({
+        claimEventsAtomic: mockClaimEventsAtomic,
+        createEvent: jest.fn(),
+    }),
+);
 
 jest.unstable_mockModule('../TeamQueries.ts', () => ({
     deleteProjectTeamBatch: mockDeleteProjectTeamBatch,
@@ -60,7 +63,7 @@ jest.unstable_mockModule('../TeamQueries.ts', () => ({
 
 const { TeamServiceImpl } = await import('../TeamServiceImpl.ts');
 const { claimEventsAtomic } = await import(
-    '../../../../utils/event-bus/idempotency.ts'
+    '../../../../infra/utils/event-bus/idempotency.ts'
 );
 
 const makeDeltaEvent = (

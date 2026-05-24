@@ -1,5 +1,5 @@
 import { sql } from 'kysely';
-import { db } from './src/database/index.ts';
+import { db } from './src/infra/database/index.ts';
 
 async function list() {
     try {

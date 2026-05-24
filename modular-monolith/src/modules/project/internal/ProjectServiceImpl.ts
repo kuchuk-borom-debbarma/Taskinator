@@ -1,9 +1,9 @@
-import { db } from '../../../database';
-import { logger } from '../../../logger';
-import type { PaginationParams } from '../../../types/pagination.ts';
-import eventBus from '../../../utils/EventBus.ts';
-import type { DomainEvent } from '../../../utils/event-bus';
-import { claimEventsAtomic } from '../../../utils/event-bus/idempotency.ts';
+import { db } from '../../../infra/database';
+import { logger } from '../../../infra/logger';
+import type { PaginationParams } from '../../../infra/types/pagination.ts';
+import eventBus from '../../../infra/utils/EventBus.ts';
+import type { DomainEvent } from '../../../infra/utils/event-bus';
+import { claimEventsAtomic } from '../../../infra/utils/event-bus/idempotency.ts';
 import type {
     Project,
     ProjectMember,

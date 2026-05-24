@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { pool } from '../../../database/index.ts';
+import { pool } from '../../../infra/database/index.ts';
 
 async function applySchema() {
     try {

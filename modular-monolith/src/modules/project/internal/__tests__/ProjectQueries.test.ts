@@ -9,13 +9,16 @@
  */
 import { afterAll, beforeEach, describe, expect, it } from '@jest/globals';
 import { sql } from 'kysely';
-import { cleanupDb, destroyDb } from '../../../../__tests__/helpers/db.ts';
+import {
+    cleanupDb,
+    destroyDb,
+} from '../../../../infra/__tests__/helpers/db.ts';
 import {
     addProjectMember,
     createProject,
     createUser,
-} from '../../../../__tests__/helpers/factories.ts';
-import { db } from '../../../../database/index.ts';
+} from '../../../../infra/__tests__/helpers/factories.ts';
+import { db } from '../../../../infra/database/index.ts';
 import {
     deleteProjectMembers,
     deleteProjects,

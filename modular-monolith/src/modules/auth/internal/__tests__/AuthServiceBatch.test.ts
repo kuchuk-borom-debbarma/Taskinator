@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
-import type { DomainEvent } from '../../../../utils/event-bus';
+import type { DomainEvent } from '../../../../infra/utils/event-bus';
 
 const mockTrx: any = {};
 const mockTransactionExecute = jest.fn<
@@ -13,15 +13,18 @@ const mockClaimEventsAtomic =
 const mockUpdateUserProjectCountsBulk =
     jest.fn<(...args: any[]) => Promise<void>>();
 
-jest.unstable_mockModule('../../../../database/index.ts', () => ({
+jest.unstable_mockModule('../../../../infra/database/index.ts', () => ({
     db: {
         transaction: mockTransaction,
     },
 }));
 
-jest.unstable_mockModule('../../../../utils/event-bus/idempotency.ts', () => ({
-    claimEventsAtomic: mockClaimEventsAtomic,
-}));
+jest.unstable_mockModule(
+    '../../../../infra/utils/event-bus/idempotency.ts',
+    () => ({
+        claimEventsAtomic: mockClaimEventsAtomic,
+    }),
+);
 
 jest.unstable_mockModule('../AuthQueries.ts', () => ({
     updateUserProjectCountsBulk: mockUpdateUserProjectCountsBulk,
@@ -29,7 +32,7 @@ jest.unstable_mockModule('../AuthQueries.ts', () => ({
 
 const { AuthServiceImpl } = await import('../AuthServiceImpl.ts');
 const { claimEventsAtomic } = await import(
-    '../../../../utils/event-bus/idempotency.ts'
+    '../../../../infra/utils/event-bus/idempotency.ts'
 );
 const { updateUserProjectCountsBulk } = await import('../AuthQueries.ts');
 

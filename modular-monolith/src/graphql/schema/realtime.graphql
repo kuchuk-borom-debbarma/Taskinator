@@ -1,9 +1,0 @@
-union RealtimeEvent = InternalNotification
-
-extend type Subscription {
-    """
-    A unified real-time stream for all events relevant to the authenticated user.
-    Automatically filters notifications by userId.
-    """
-    realtimeStream(projectId: String): RealtimeEvent!
-}

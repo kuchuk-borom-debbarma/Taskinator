@@ -1,5 +1,5 @@
-import { cleanupDb } from '../../../__tests__/helpers/db.ts';
-import { db } from '../../../database/index.ts';
+import { cleanupDb } from '../../../infra/__tests__/helpers/db.ts';
+import { db } from '../../../infra/database/index.ts';
 import { gqlRequest } from '../helpers/request.ts';
 import { SIGN_IN } from './mutation.ts';
 import { GET_ME } from './query.ts';

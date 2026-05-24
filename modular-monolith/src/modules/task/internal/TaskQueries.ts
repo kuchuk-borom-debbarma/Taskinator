@@ -1,11 +1,11 @@
 import { type ExpressionBuilder, sql, type Transaction } from 'kysely';
-import { type Database, db } from '../../../database';
-import { ConflictError, NotFoundError } from '../../../graphql/errors.ts';
+import { type Database, db } from '../../../infra/database';
+import { ConflictError, NotFoundError } from '../../../infra/graphql/errors.ts';
 import {
     KAFKA_EVENTS,
     KAFKA_TOPICS,
-} from '../../../utils/event-bus/constants.ts';
-import { decodeCursor, encodeCursor } from '../../../utils/utils.ts';
+} from '../../../infra/utils/event-bus/constants.ts';
+import { decodeCursor, encodeCursor } from '../../../infra/utils/utils.ts';
 import type {
     GetNeighbourhoodParam,
     PaginationParams,

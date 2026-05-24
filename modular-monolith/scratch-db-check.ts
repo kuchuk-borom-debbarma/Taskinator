@@ -1,5 +1,5 @@
 import { sql } from 'kysely';
-import { db } from './src/database';
+import { db } from './src/infra/database';
 
 async function check() {
     console.log('--- DB Check ---');

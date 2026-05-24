@@ -1,18 +1,15 @@
-import { yoga } from './graphql';
-import { startConsumers } from './kafka/registry.ts';
-import { logger } from './logger';
-import { authService } from './modules/auth/index.ts';
-import { externalNotificationService } from './modules/external-notification/index.ts';
-import { internalNotificationService } from './modules/internal-notification/index.ts';
-import { projectService } from './modules/project';
-import { teamService } from './modules/team';
-import { stopRedis } from './redis/index';
-import { startRedisBridge } from './redis/RealtimeRedisBridge';
-import eventBus from './utils/EventBus';
+import { yoga } from './infra/graphql';
+import { startConsumers } from './infra/kafka/registry.ts';
+import { logger } from './infra/logger';
+import { stopRedis } from './infra/redis/index';
+import eventBus from './infra/utils/EventBus';
 import {
     startOutboxRelay,
     stopOutboxRelay,
-} from './utils/event-bus/OutboxRelay';
+} from './infra/utils/event-bus/OutboxRelay';
+import { authService } from './modules/auth/index.ts';
+import { projectService } from './modules/project';
+import { teamService } from './modules/team';
 
 let isRunning = false;
 
@@ -35,10 +32,7 @@ export async function bootstrap(
         projectService.init(),
         teamService.init(),
         authService.init(),
-        externalNotificationService.init(),
-        internalNotificationService.init(),
         startConsumers(),
-        startRedisBridge(),
     ]);
 
     // 3. Background Processing

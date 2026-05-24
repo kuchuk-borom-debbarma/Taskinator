@@ -1,11 +1,5 @@
 import { TaskServiceImpl } from './internal/TaskServiceImpl.ts';
-import type {
-    BehaviorRule,
-    BehaviorSetting,
-    BehaviorSettingsCatalog,
-    Task,
-    TaskLink,
-} from './TaskService.ts';
+import type { Task, TaskLink } from './TaskService.ts';
 
 export interface BaseService {
     init(): Promise<void>;
@@ -13,10 +7,4 @@ export interface BaseService {
 }
 
 export const taskService = new TaskServiceImpl();
-export type {
-    BehaviorRule,
-    BehaviorSetting,
-    BehaviorSettingsCatalog,
-    Task,
-    TaskLink,
-};
+export type { Task, TaskLink };

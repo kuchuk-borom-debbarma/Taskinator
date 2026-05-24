@@ -1,8 +1,8 @@
 import { sql, type Transaction } from 'kysely';
-import { type Database, db } from '../../../database';
-import { ConflictError, NotFoundError } from '../../../graphql/errors.ts';
-import type { PaginationParams } from '../../../types/pagination.ts';
-import { decodeCursor, encodeCursor } from '../../../utils/utils.ts';
+import { type Database, db } from '../../../infra/database';
+import { ConflictError, NotFoundError } from '../../../infra/graphql/errors.ts';
+import type { PaginationParams } from '../../../infra/types/pagination.ts';
+import { decodeCursor, encodeCursor } from '../../../infra/utils/utils.ts';
 import type { User } from '../../auth/AuthService.ts';
 import type { Team, TeamMember } from '../TeamService.ts';
 

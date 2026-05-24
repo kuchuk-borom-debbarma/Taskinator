@@ -1,4 +1,4 @@
-import { db } from '../../../database/index.ts';
+import { db } from '../../../infra/database/index.ts';
 import { taskService } from '../index.ts';
 
 export class CascadeService {
