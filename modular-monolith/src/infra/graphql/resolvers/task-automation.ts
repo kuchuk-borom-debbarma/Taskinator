@@ -91,26 +91,28 @@ export const taskAutomationResolvers = {
                 triggers: [
                     {
                         type: 'STATUS_CHANGED',
-                        label: 'Status changes',
+                        label: 'Task status changes',
                         description:
-                            'Fires when a task status changes. ' +
-                            'Optionally filter by the specific from-status, to-status, or both.',
+                            "Fires when a task's own status changes. " +
+                            'Use this for sync guards (e.g. block the transition if children are unfinished) ' +
+                            'or async cascades on the task itself.',
                         valueTemplate: {
                             inputType: 'SELECT_FROM_TO',
-                            label: 'Status transition',
+                            label: 'Status transition (optional — leave blank to match any change)',
                             dynamicOptionsSource: 'PROJECT_STATUSES',
                         },
                         ...TRIGGER_COMPATIBILITY.STATUS_CHANGED,
                     },
                     {
                         type: 'DESCENDANT_STATUS_CHANGED',
-                        label: 'A descendant status changes',
+                        label: 'A child / descendant task changes status',
                         description:
-                            'Fires on a parent task when any of its descendants (direct or ' +
-                            'transitive) changes status. Use this to build parent-level cascade rules.',
+                            'Fires on the PARENT task when any child or grandchild changes status. ' +
+                            'Use this for parent cascade rules — e.g. automatically set the parent ' +
+                            'to READY once all descendants are DONE.',
                         valueTemplate: {
                             inputType: 'SELECT_FROM_TO',
-                            label: 'Descendant status transition',
+                            label: 'Descendant status transition (optional — leave blank to match any change)',
                             dynamicOptionsSource: 'PROJECT_STATUSES',
                         },
                         ...TRIGGER_COMPATIBILITY.DESCENDANT_STATUS_CHANGED,

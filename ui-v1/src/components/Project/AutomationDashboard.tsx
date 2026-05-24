@@ -699,10 +699,10 @@ function SoFarSummary({
   if (items.length === 0) return null;
 
   return (
-    <div className="mb-4 flex flex-col gap-1.5 rounded-2xl border border-app-line/60 bg-app-surface/50 p-3">
+    <div className="mb-4 space-y-1 border-b border-app-line pb-4">
       {items.map((item) => (
-        <div key={item.label} className="flex items-baseline gap-2 text-xs">
-          <span className="w-8 shrink-0 font-bold uppercase tracking-[0.12em] text-app-muted">
+        <div key={item.label} className="flex items-baseline gap-3 text-xs">
+          <span className="w-12 shrink-0 font-bold uppercase tracking-[0.12em] text-app-muted">
             {item.label}
           </span>
           <span className="font-medium text-app-ink leading-snug">{item.value}</span>
