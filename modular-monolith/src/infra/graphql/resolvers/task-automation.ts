@@ -111,9 +111,8 @@ export const taskAutomationResolvers = {
                             'Use this for parent cascade rules — e.g. automatically set the parent ' +
                             'to READY once all descendants are DONE.',
                         valueTemplate: {
-                            inputType: 'SELECT_FROM_TO',
-                            label: 'Descendant status transition (optional — leave blank to match any change)',
-                            dynamicOptionsSource: 'PROJECT_STATUSES',
+                            inputType: 'NONE',
+                            label: 'Descendant status change',
                         },
                         ...TRIGGER_COMPATIBILITY.DESCENDANT_STATUS_CHANGED,
                     },
