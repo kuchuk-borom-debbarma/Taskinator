@@ -49,6 +49,7 @@ Automate the "busy work" of project management through reliable, transparent, an
 - ✓ [UI-v1 Auto Action Modernization] — Refactor ui-v1 to replace Autopilot with the new Auto Action engine, support dynamic templates, and full terminology rename (v19.0).
 - [ ] [Multi-domain Triggers] — Evaluate events crossing project boundaries (v20.0).
 - [ ] [Complex Predicates] — Evaluate conditions referencing recursive parent/child states (v20.0).
+- [ ] [Event-Driven AI Conductor] — Autonomous background agent decomposing user tasks into subtask hierarchies and linking dependencies via Kafka and LLM tool-calling (v20.0).
 
 ## Current Milestone: v20.0 (Planning)
 

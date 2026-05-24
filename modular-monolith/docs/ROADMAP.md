@@ -150,3 +150,79 @@ LIMIT 5;
 
 ## 📈 Impact on the Taskinator Platform
 By adding these two features, Taskinator-v2 stops being "just another Kanban board" and becomes a **highly sophisticated project steering intelligence engine**. It turns the technical complexity of your recursive PostgreSQL engine into an immediate, high-value product selling point that managers will love.
+
+---
+
+## 📍 Phase 3: The Event-Driven Agentic "AI Conductor"
+
+### 1. Functional Specification
+The **AI Conductor** is an autonomous, out-of-band agent that handles project scoping and breakdown. Instead of project managers manually splitting large Epics or stories into discrete tasks, setting dependencies, and estimating fields, they can delegate this to an LLM-driven background worker.
+
+* **Epic Auto-Decomposition**: When a task is marked as an "Epic" (or fits a specific high-level pattern), the AI Conductor triggers. It parses the scope and breaks it down into a deeply nested tree of sub-tasks using performance-optimized Materialized Paths.
+* **Intelligent Dependency Mapping**: The agent automatically links prerequisite subtasks (e.g., frontend tasks blocking backend integration) inside the DAG.
+* **Auto-Assignment & Routing**: Integrates with team registry data to route subtasks to the correct team based on description semantics.
+
+### 2. Proposed Technical Architecture
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as User Client
+    participant DB as PostgreSQL Database
+    participant Kafka as Kafka Event Bus
+    participant Consumer as AIConductorConsumer
+    participant LLM as LLM Agent (Gemini/OpenAI)
+
+    User->>DB: 1. Create Epic Task
+    Note over DB, Kafka: Transactional Outbox Relay emits event
+    DB->>Kafka: 2. Emit 'project-task-events' (task.created)
+    Kafka->>Consumer: 3. Consume batch of events (ai-conductor-group)
+    
+    rect rgb(240, 245, 255)
+        Note over Consumer, LLM: Agentic Reasoning Loop (ReAct)
+        Consumer->>LLM: 4. Analyze task scope & call tools
+        LLM-->>Consumer: 5. Tool call: createSubTask(parentPath, title, priority)
+        LLM-->>Consumer: 6. Tool call: linkDependency(blockerId, blockedId)
+    end
+
+    Consumer->>DB: 7. Commit batch mutations in single Kysely CTE query
+    DB-->>Consumer: 8. Transaction success
+    Consumer->>Kafka: 9. Emit batch 'task.created' for subtasks
+```
+
+#### A. Asynchronous Kafka Listener
+A dedicated consumer group `ai-conductor-group` subscribes to `project-task-events`. This ensures the AI processing runs completely asynchronously, protecting user-facing GraphQL mutations from latency spikes:
+
+```typescript
+export class AIConductorConsumer implements IEventListener {
+  public async onEvent(event: DomainEvent): Promise<void> {
+    if (event.type !== 'task.created') return;
+    if (event.depth > 50) return; // Recursion loop guard
+    
+    await this.aiConductorService.processEpicTask(event.data.taskId);
+  }
+}
+```
+
+#### B. Agentic Tool Calling & Materialized Paths
+The service passes the epic task details, available project teams, and a context guide on materialized path formats to the LLM. The LLM is configured with tool-calling bindings to recursively outline subtask execution blocks:
+
+```typescript
+const createSubTaskTool = {
+  name: 'createSubTask',
+  description: 'Creates a subtask under a specific parent task.',
+  parameters: {
+    type: 'object',
+    properties: {
+      title: { type: 'string' },
+      priority: { type: 'integer' },
+      parentPath: { type: 'string', description: 'The materialized path of the parent (e.g. task-123.task-456)' }
+    },
+    required: ['title', 'priority', 'parentPath']
+  }
+};
+```
+
+#### C. High-Throughput Bulk CTE Writes
+To keep database performance optimized under 10k RPS compliance standards, all tools called by the LLM are collected and executed in a single PostgreSQL Write-Ahead CTE query rather than multiple discrete updates, reducing network overhead.
+

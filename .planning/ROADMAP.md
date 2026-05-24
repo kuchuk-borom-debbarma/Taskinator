@@ -44,3 +44,17 @@ Cross-entity search, task filtering, and sorting across the platform.
       and `team`; `ILIKE` fallback for MVP.
 - [ ] **Pagination continuity** — filtered and sorted queries paginate correctly
       without N+1 or count-explosion issues.
+
+---
+
+## Phase 57: Event-Driven Agentic AI Conductor (AI-v1)
+
+Autonomous background orchestration to automatically break down high-level tasks into structured subtask hierarchies and dependencies.
+
+- [ ] **Asynchronous Kafka Listener**: Register `AIConductorConsumer` inside `ai-conductor-group` to listen to `project-task-events` (specifically `task.created` events) out-of-band.
+- [ ] **LLM Tool-Calling Integration**: Integrate the Gemini/OpenAI API with custom JSON tool schemas for subtask creation, dependency linking, and assignee routing.
+- [ ] **Materialized Path Helper**: Equip the LLM context with native knowledge of Taskinator's materialized path rules to ensure perfectly structured task hierarchies.
+- [ ] **Optimized Kysely Batch-Writer**: Refactor the tool action executor to collect all LLM-driven subtasks and apply updates in a single, transactionally safe bulk Kysely CTE query.
+- [ ] **Depth-Guard E2E Integration**: Ensure AI Conductor executions respect the trace-level depth limit of 50 to prevent recursive AI loops.
+- [ ] **Polymorphic Test Suite**: Add comprehensive integration tests utilizing `MemoryBus` to verify correct decomposition and execution of raw user instructions.
+

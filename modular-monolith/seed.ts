@@ -1042,8 +1042,7 @@ async function seed() {
                     '${mainProjectId}'::uuid,
                     anc,
                     trg,
-                    MIN(depth),
-                    COUNT(*)
+                    MIN(depth)
                 FROM paths
                 GROUP BY anc, trg
                 ON CONFLICT (fk_project_id, ancestor_task_id, descendant_task_id) DO NOTHING
@@ -1082,7 +1081,7 @@ async function seed() {
               FROM task_link tl JOIN paths p ON tl.source_task_id = p.trg
               WHERE tl.fk_project_id = '${starterProjectId}'::uuid AND p.depth < 10
             )
-            SELECT '${starterProjectId}'::uuid, anc, trg, MIN(depth), COUNT(*) FROM paths GROUP BY anc, trg
+            SELECT '${starterProjectId}'::uuid, anc, trg, MIN(depth) FROM paths GROUP BY anc, trg
             ON CONFLICT (fk_project_id, ancestor_task_id, descendant_task_id) DO NOTHING
         `)
             .execute(db);
