@@ -99,27 +99,57 @@ Important columns:
 | --- | --- | --- | --- |
 | `STATUS_CHANGED` | The task whose status changed | ✅ | ✅ |
 | `DESCENDANT_STATUS_CHANGED` | Every ancestor task when any descendant's status changes | ❌ | ✅ |
+| `LINKED_INCOMING_STATUS_CHANGED` | A task when any incoming linked task changes status (e.g. parent task when subtask changes) | ❌ | ✅ |
+| `LINKED_OUTGOING_STATUS_CHANGED` | A task when any outgoing linked task changes status (e.g. subtask task when parent changes) | ❌ | ✅ |
+| `PRIORITY_CHANGED` | The task whose priority changed | ✅ | ✅ |
+| `ASSIGNEE_CHANGED` | The task whose assignee or team changed | ✅ | ✅ |
+| `TASK_CREATED` | A newly created task in the project | ❌ | ✅ |
 
-**STATUS_CHANGED** `trigger_value` is optional JSON:
-```json
-{ "from": "TODO", "to": "IN_PROGRESS" }
-```
-Omit `from` or `to` to match any value for that field. Omit entirely to match
-any status change.
-
-**DESCENDANT_STATUS_CHANGED** has no trigger value. It automatically fires on any status change of a descendant, leaving specific status validation to the condition step. The rule's condition and action execute in the context of the **ancestor** task.
+**Trigger Configuration Values (`trigger_value`):**
+- **STATUS_CHANGED**: Optional JSON to match a specific transition:
+  ```json
+  { "from": "TODO", "to": "IN_PROGRESS" }
+  ```
+  Omit `from` or `to` to match any value for that field. Omit entirely or pass null to match any status change.
+- **LINKED_INCOMING_STATUS_CHANGED** and **LINKED_OUTGOING_STATUS_CHANGED**: The plain string label of the link dependency to match (e.g. `blocks`, `subtask_of`).
+- **PRIORITY_CHANGED**: Optional JSON to match a priority transition:
+  ```json
+  { "from": 2, "to": 4 }
+  ```
+  Or a plain number string (e.g. `4`) representing the target priority (legacy fallback). If omitted, matches any priority change.
+- **DESCENDANT_STATUS_CHANGED**, **ASSIGNEE_CHANGED**, and **TASK_CREATED**: None (ignored/empty).
 
 ### Conditions
 
 | Key | True when | Compatible with |
 | --- | --- | --- |
-| `STATUS_EQUALS` | Task's current status equals value | `STATUS_CHANGED` |
-| `ASSIGNEE_EQUALS` | Task's assignee matches value (`none` = unassigned) | `STATUS_CHANGED` |
+| `STATUS_EQUALS` | Task's current status equals value | `STATUS_CHANGED`, `LINKED_INCOMING_STATUS_CHANGED`, `LINKED_OUTGOING_STATUS_CHANGED`, `PRIORITY_CHANGED`, `ASSIGNEE_CHANGED`, `TASK_CREATED` |
+| `ASSIGNEE_EQUALS` | Task's assignee matches value (`none` = unassigned) | `STATUS_CHANGED`, `PRIORITY_CHANGED`, `ASSIGNEE_CHANGED`, `TASK_CREATED` |
 | `ALL_DESCENDANTS_IN_STATUS` | Every descendant is in the supplied status | `DESCENDANT_STATUS_CHANGED` |
 | `HAS_INCOMPLETE_DESCENDANTS` | At least one descendant is NOT in the supplied status | `STATUS_CHANGED` |
+| `ALL_LINKED_INCOMING_IN_STATUS` | All tasks linking to this task with label L are in status S | `LINKED_INCOMING_STATUS_CHANGED` |
+| `ALL_LINKED_OUTGOING_IN_STATUS` | All tasks this task links to with label L are in status S | `LINKED_OUTGOING_STATUS_CHANGED` |
+| `PRIORITY_COMPARISON` | Task's priority matches the comparison operator/value | `STATUS_CHANGED`, `DESCENDANT_STATUS_CHANGED`, `LINKED_INCOMING_STATUS_CHANGED`, `LINKED_OUTGOING_STATUS_CHANGED`, `PRIORITY_CHANGED`, `ASSIGNEE_CHANGED`, `TASK_CREATED` |
+| `TEAM_EQUALS` | Task's assigned team matches value (`none` = unassigned) | `STATUS_CHANGED`, `DESCENDANT_STATUS_CHANGED`, `LINKED_INCOMING_STATUS_CHANGED`, `LINKED_OUTGOING_STATUS_CHANGED`, `PRIORITY_CHANGED`, `ASSIGNEE_CHANGED`, `TASK_CREATED` |
+| `ASSIGNEE_NOT_IN_TEAM` | Individual assignee is NOT a member of the assigned team | `STATUS_CHANGED`, `PRIORITY_CHANGED`, `ASSIGNEE_CHANGED`, `TASK_CREATED` |
+| `HAS_LINK_WITH_LABEL` | Task has a link with label L in direction D | `STATUS_CHANGED`, `PRIORITY_CHANGED`, `ASSIGNEE_CHANGED`, `TASK_CREATED` |
 
-> `HAS_INCOMPLETE_DESCENDANTS` is the logical inverse of `ALL_DESCENDANTS_IN_STATUS`.
-> Both share the same SQL query on `task_reachability`. Zero duplication.
+**Condition Configuration Values (`condition_value`):**
+- **ALL_LINKED_INCOMING_IN_STATUS** and **ALL_LINKED_OUTGOING_IN_STATUS**: JSON string representing the dependency label and target status:
+  ```json
+  { "label": "blocks", "status": "DONE" }
+  ```
+- **PRIORITY_COMPARISON**: JSON string specifying the operator and value:
+  ```json
+  { "operator": "lt", "value": 3 }
+  ```
+  Valid operators are: `gt` (>), `lt` (<), `eq` (=), `gte` (>=), `lte` (<=).
+- **HAS_LINK_WITH_LABEL**: JSON string specifying the link direction and label:
+  ```json
+  { "direction": "incoming", "label": "blocks" }
+  ```
+  Valid directions are: `incoming`, `outgoing`, `both`.
+- **ASSIGNEE_NOT_IN_TEAM**: None.
 
 ### Actions
 
@@ -128,6 +158,15 @@ any status change.
 | `SET_STATUS` | Transitions the task to a specific status | ✅ | ✅ |
 | `SET_ASSIGNEE` | Assigns to a member / actor / unassigns | ✅ | ✅ |
 | `REJECT_TRANSITION` | Throws `ValidationError`, blocking the transition | ✅ only | ❌ |
+| `SET_PRIORITY` | Sets the task priority to a numeric value | ✅ | ✅ |
+| `SET_TEAM` | Assigns the task to a specific team | ✅ | ✅ |
+| `SET_TEAM_AND_ASSIGNEE` | Assigns both team and member (resolving team automatically) | ✅ | ✅ |
+| `AUTO_ASSIGN_CREATOR` | Assigns the task back to its original creator | ✅ | ✅ |
+
+**Action Configuration Values (`action_value`):**
+- **SET_PRIORITY**: A numeric value string (e.g. `3`).
+- **SET_TEAM_AND_ASSIGNEE**: A member ID (or `actor` / `none`). When a member/actor is selected, the engine queries the `project_team_member` table to automatically resolve the corresponding team ID and assign it alongside the member to maintain team scoping consistency. Setting `none` clears both assignee and team.
+- **AUTO_ASSIGN_CREATOR**: None (automatically assigns the creator field).
 
 ---
 
@@ -138,13 +177,131 @@ The resolver (`task-automation.ts`) defines a `TRIGGER_COMPATIBILITY` constant:
 ```ts
 const TRIGGER_COMPATIBILITY = {
   STATUS_CHANGED: {
-    conditions: ['STATUS_EQUALS', 'ASSIGNEE_EQUALS', 'HAS_INCOMPLETE_DESCENDANTS'],
-    actions: ['SET_STATUS', 'SET_ASSIGNEE', 'REJECT_TRANSITION'],
+    compatibleConditions: [
+      'STATUS_EQUALS',
+      'ASSIGNEE_EQUALS',
+      'HAS_INCOMPLETE_DESCENDANTS',
+      'PRIORITY_COMPARISON',
+      'TEAM_EQUALS',
+      'ASSIGNEE_NOT_IN_TEAM',
+      'HAS_LINK_WITH_LABEL',
+    ],
+    compatibleActions: [
+      'SET_STATUS',
+      'SET_ASSIGNEE',
+      'REJECT_TRANSITION',
+      'SET_PRIORITY',
+      'SET_TEAM',
+      'SET_TEAM_AND_ASSIGNEE',
+      'AUTO_ASSIGN_CREATOR',
+    ],
   },
+
   DESCENDANT_STATUS_CHANGED: {
-    conditions: ['ALL_DESCENDANTS_IN_STATUS'],
-    actions: ['SET_STATUS', 'SET_ASSIGNEE'],
-    // REJECT_TRANSITION excluded: the descendant's transition already committed
+    compatibleConditions: [
+      'ALL_DESCENDANTS_IN_STATUS',
+      'PRIORITY_COMPARISON',
+      'TEAM_EQUALS',
+    ],
+    compatibleActions: [
+      'SET_STATUS',
+      'SET_ASSIGNEE',
+      'SET_PRIORITY',
+      'SET_TEAM',
+      'SET_TEAM_AND_ASSIGNEE',
+      'AUTO_ASSIGN_CREATOR',
+    ],
+  },
+
+  LINKED_INCOMING_STATUS_CHANGED: {
+    compatibleConditions: [
+      'ALL_LINKED_INCOMING_IN_STATUS',
+      'STATUS_EQUALS',
+      'PRIORITY_COMPARISON',
+      'TEAM_EQUALS',
+    ],
+    compatibleActions: [
+      'SET_STATUS',
+      'SET_ASSIGNEE',
+      'SET_PRIORITY',
+      'SET_TEAM_AND_ASSIGNEE',
+      'AUTO_ASSIGN_CREATOR',
+    ],
+  },
+
+  LINKED_OUTGOING_STATUS_CHANGED: {
+    compatibleConditions: [
+      'ALL_LINKED_OUTGOING_IN_STATUS',
+      'STATUS_EQUALS',
+      'PRIORITY_COMPARISON',
+      'TEAM_EQUALS',
+    ],
+    compatibleActions: [
+      'SET_STATUS',
+      'SET_ASSIGNEE',
+      'SET_PRIORITY',
+      'SET_TEAM_AND_ASSIGNEE',
+      'AUTO_ASSIGN_CREATOR',
+    ],
+  },
+
+  PRIORITY_CHANGED: {
+    compatibleConditions: [
+      'STATUS_EQUALS',
+      'ASSIGNEE_EQUALS',
+      'PRIORITY_COMPARISON',
+      'TEAM_EQUALS',
+      'ASSIGNEE_NOT_IN_TEAM',
+      'HAS_LINK_WITH_LABEL',
+    ],
+    compatibleActions: [
+      'SET_STATUS',
+      'SET_ASSIGNEE',
+      'REJECT_TRANSITION',
+      'SET_PRIORITY',
+      'SET_TEAM',
+      'SET_TEAM_AND_ASSIGNEE',
+      'AUTO_ASSIGN_CREATOR',
+    ],
+  },
+
+  ASSIGNEE_CHANGED: {
+    compatibleConditions: [
+      'STATUS_EQUALS',
+      'ASSIGNEE_EQUALS',
+      'PRIORITY_COMPARISON',
+      'TEAM_EQUALS',
+      'ASSIGNEE_NOT_IN_TEAM',
+      'HAS_LINK_WITH_LABEL',
+    ],
+    compatibleActions: [
+      'SET_STATUS',
+      'SET_ASSIGNEE',
+      'REJECT_TRANSITION',
+      'SET_PRIORITY',
+      'SET_TEAM',
+      'SET_TEAM_AND_ASSIGNEE',
+      'AUTO_ASSIGN_CREATOR',
+    ],
+  },
+
+  TASK_CREATED: {
+    compatibleConditions: [
+      'STATUS_EQUALS',
+      'ASSIGNEE_EQUALS',
+      'PRIORITY_COMPARISON',
+      'TEAM_EQUALS',
+      'ASSIGNEE_NOT_IN_TEAM',
+      'HAS_LINK_WITH_LABEL',
+    ],
+    compatibleActions: [
+      'SET_STATUS',
+      'SET_ASSIGNEE',
+      'SET_PRIORITY',
+      'SET_TEAM',
+      'SET_TEAM_AND_ASSIGNEE',
+      'AUTO_ASSIGN_CREATOR',
+    ],
   },
 };
 ```
@@ -169,17 +326,19 @@ Used for validation rules that block a mutation before it commits.
 GraphQL task.update
 → TaskServiceImpl.updateTask
 → runSyncAutomationRules
-→ load active sync STATUS_CHANGED rules
-→ evaluate transition match (trigger_value JSON)
-→ evaluate condition against current task state
+→ check if status, priority, or assignee is changing
+→ load active sync rules (STATUS_CHANGED, PRIORITY_CHANGED, ASSIGNEE_CHANGED)
+→ evaluate transition match (trigger_value JSON/plain for status/priority)
+→ build validationTask projection (merging incoming assignee/team updates)
+→ evaluate condition against the validationTask projection
 → run action (may throw ValidationError → rejects the update)
 → only then call TaskQueries.updateTask
 ```
 
 - Runs **before** the database write.
-- Only runs when `param.status` is present and actually changes.
-- `DESCENDANT_STATUS_CHANGED` is **not** supported in sync mode — descendant
-  changes are always async because they happen post-commit.
+- Runs when `param.status`, `param.priority`, `param.memberId`, or `param.teamId` is updated and actually changes from the database state.
+- Builds a `validationTask` projection merging incoming updates. This ensures validations (like `ASSIGNEE_NOT_IN_TEAM`) check the *target* state being set, not the old state.
+- `DESCENDANT_STATUS_CHANGED`, dependency links, and creation triggers are **not** supported in sync mode — those are always async.
 
 ### Async Path: Post-Commit Cascade
 
@@ -351,8 +510,13 @@ Access control via `ensureAutomationProjectAccess`: project owner, member, or
 
 `TaskAutomation.test.ts` covers:
 
-- Sync rejection: STATUS_CHANGED + HAS_INCOMPLETE_DESCENDANTS + REJECT_TRANSITION.
-- Async status cascade: STATUS_CHANGED + STATUS_EQUALS + SET_STATUS.
+- **Sync status rejection**: `STATUS_CHANGED` trigger + `HAS_INCOMPLETE_DESCENDANTS` condition + `REJECT_TRANSITION` action.
+- **Async status cascade**: `STATUS_CHANGED` trigger + `STATUS_EQUALS` condition + `SET_STATUS` action.
+- **Async linked incoming cascade**: `LINKED_INCOMING_STATUS_CHANGED` trigger + `ALL_LINKED_INCOMING_IN_STATUS` condition + `SET_STATUS` action.
+- **Async linked outgoing cascade**: `LINKED_OUTGOING_STATUS_CHANGED` trigger + `ALL_LINKED_OUTGOING_IN_STATUS` condition + `SET_STATUS` action.
+- **Sync priority rejection**: `PRIORITY_CHANGED` trigger + `PRIORITY_COMPARISON` condition + `REJECT_TRANSITION` action.
+- **Async creator auto-assignment**: `TASK_CREATED` trigger + `AUTO_ASSIGN_CREATOR` action.
+- **Sync assignee rejection**: `ASSIGNEE_CHANGED` trigger + `ASSIGNEE_NOT_IN_TEAM` condition + `REJECT_TRANSITION` action.
 
 Run tests:
 
@@ -392,10 +556,10 @@ npm run build
 
 **Sync block does not happen:**
 - Rule must be `is_sync = true`.
-- `trigger_type` must be `STATUS_CHANGED` (only sync-capable trigger).
-- Transition must match `trigger_value` JSON.
-- Status must actually change to a new value.
-- Condition must evaluate to true.
+- `trigger_type` must be one of the sync-capable triggers: `STATUS_CHANGED`, `PRIORITY_CHANGED`, `ASSIGNEE_CHANGED`.
+- For `STATUS_CHANGED` and `PRIORITY_CHANGED`, transition must match `trigger_value` JSON (or plain value).
+- Status, priority, or assignee must actually change to a new value.
+- Condition must evaluate to true on the pre-commit `validationTask` projection (note: team and assignee updates are merged pre-commit so that validations check the target state, while status and priority are evaluated pre-transition).
 
 **Async cascade does not happen:**
 - Rule must be `is_sync = false` and `is_active = true`.
