@@ -246,23 +246,23 @@ export default function AutomationDashboard() {
 
       <div className="grid gap-6 xl:grid-cols-2">
         <RuleSection
-          title="Active blockers"
+          title="Sync rules"
           icon={ShieldCheck}
           rules={syncRules}
           catalog={catalog}
-          emptyTitle="No sync blockers"
-          emptyDescription="Create a sync rule to reject invalid task transitions."
+          emptyTitle="No sync rules"
+          emptyDescription="Create a sync rule to run blocking logic or validation guards."
           onToggle={(rule) => toggleRule.mutate(rule)}
           onEdit={openEdit}
           onDelete={(rule) => deleteRule.mutate(rule)}
         />
         <RuleSection
-          title="Background cascades"
+          title="Async rules"
           icon={Bolt}
           rules={asyncRules}
           catalog={catalog}
-          emptyTitle="No async cascades"
-          emptyDescription="Create an async rule to move dependent work after events."
+          emptyTitle="No async rules"
+          emptyDescription="Create an async rule to trigger background cascades or side effects."
           onToggle={(rule) => toggleRule.mutate(rule)}
           onEdit={openEdit}
           onDelete={(rule) => deleteRule.mutate(rule)}
@@ -298,8 +298,8 @@ export default function AutomationDashboard() {
                 onChange={(event) => setDraft((current) => ({ ...current, isSync: event.target.value === 'sync' }))}
                 className="w-full rounded-2xl border border-app-line bg-white/85 px-4 py-3 text-sm text-app-ink outline-none transition focus:border-app-accent focus:ring-4 focus:ring-app-accent/10"
               >
-                <option value="sync">Sync blocker</option>
-                <option value="async">Async cascade</option>
+                <option value="sync">Sync rule</option>
+                <option value="async">Async rule</option>
               </select>
             </label>
           </div>
@@ -316,6 +316,11 @@ export default function AutomationDashboard() {
               }))
             }
           />
+          {triggerTemplate ? (
+            <p className="-mt-3 text-xs text-app-muted font-medium px-1">
+              {triggerTemplate.description}
+            </p>
+          ) : null}
           {triggerTemplate ? (
             <AutomationFormRenderer
               template={triggerTemplate.valueTemplate}
@@ -338,6 +343,11 @@ export default function AutomationDashboard() {
             }
           />
           {conditionTemplate ? (
+            <p className="-mt-3 text-xs text-app-muted font-medium px-1">
+              {conditionTemplate.description}
+            </p>
+          ) : null}
+          {conditionTemplate ? (
             <AutomationFormRenderer
               template={conditionTemplate.valueTemplate}
               value={draft.conditionValue}
@@ -358,6 +368,11 @@ export default function AutomationDashboard() {
               }))
             }
           />
+          {actionTemplate ? (
+            <p className="-mt-3 text-xs text-app-muted font-medium px-1">
+              {actionTemplate.description}
+            </p>
+          ) : null}
           {actionTemplate ? (
             <AutomationFormRenderer
               template={actionTemplate.valueTemplate}
