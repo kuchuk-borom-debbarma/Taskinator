@@ -358,7 +358,22 @@ export default function AutomationDashboard() {
               <span className="mb-2 block text-sm font-medium text-app-ink">Mode</span>
               <select
                 value={draft.isSync ? 'sync' : 'async'}
-                onChange={(e) => setDraft((c) => ({ ...c, isSync: e.target.value === 'sync' }))}
+                onChange={(e) => {
+                  const nextIsSync = e.target.value === 'sync';
+                  setDraft((c) => {
+                    const resetTrigger = nextIsSync && c.triggerType === 'DESCENDANT_STATUS_CHANGED';
+                    return {
+                      ...c,
+                      isSync: nextIsSync,
+                      triggerType: resetTrigger ? '' : c.triggerType,
+                      triggerValue: resetTrigger ? '' : c.triggerValue,
+                      conditionType: resetTrigger ? '' : c.conditionType,
+                      conditionValue: resetTrigger ? '' : c.conditionValue,
+                      actionType: resetTrigger ? '' : c.actionType,
+                      actionValue: resetTrigger ? '' : c.actionValue,
+                    };
+                  });
+                }}
                 className="w-full rounded-2xl border border-app-line bg-white/85 px-4 py-3 text-sm text-app-ink outline-none transition focus:border-app-accent focus:ring-4 focus:ring-app-accent/10"
               >
                 <option value="sync">Sync — blocks the action immediately</option>
@@ -374,7 +389,13 @@ export default function AutomationDashboard() {
             <TemplatePicker
               label="When"
               value={draft.triggerType}
-              options={catalog.triggers}
+              options={catalog.triggers.filter((t) => {
+                if (draft.isSync) {
+                  // Descendant status changes is strictly async-only
+                  return t.type !== 'DESCENDANT_STATUS_CHANGED';
+                }
+                return true;
+              })}
               onChange={(triggerType) => {
                 const newTrigger = catalog.triggers.find((t) => t.type === triggerType);
                 const compatConditions = newTrigger?.compatibleConditions ?? [];
