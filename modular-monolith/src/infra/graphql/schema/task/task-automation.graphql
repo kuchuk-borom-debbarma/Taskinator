@@ -3,6 +3,7 @@ enum InputType {
     TEXT
     NUMBER
     NONE
+    SELECT_FROM_TO
 }
 
 type AutomationOption {

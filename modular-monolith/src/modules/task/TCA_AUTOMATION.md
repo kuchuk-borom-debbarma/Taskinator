@@ -86,33 +86,24 @@ Migration files:
 - `database/migration_automation_rule.sql`
 - `database/schema.sql`
 
-## Supported MVP Registry
+## Supported Registry
 
-The registry is finite and strongly typed.
+The registry is finite, strongly typed, and highly generalized.
 
 Triggers:
 
-- `TASK_STATUS_CHANGED`: Fires when a task transitions to a target status.
-  `trigger_value` may hold the target status, such as `IN_PROGRESS`.
-- `PREREQUISITE_COMPLETED`: Async trigger fired after a prerequisite task
-  reaches `DONE`.
-- `MEMBER_ASSIGNED`: Reserved in the catalog for member assignment flows.
+- `STATUS_CHANGED`: Fires when a task changes status. Support optional `from` and/or `to` transitions by storing serialized JSON configurations (e.g. `{"from":"TODO","to":"IN_PROGRESS"}`) in the `trigger_value` column.
 
 Conditions:
 
-- `IS_BLOCKED`: True when the task has at least one incomplete ancestor in
-  `task_reachability`.
-- `ALL_PREREQUISITES_DONE`: True when no incomplete ancestors remain.
-- `HAS_NO_ASSIGNEE`: True when `task.memberId` is empty.
-- `TAG_CONTAINS`: Placeholder for future tag support. It currently returns
-  `false`.
+- `STATUS_EQUALS`: True when the task's current status equals the user-supplied string value.
+- `ASSIGNEE_EQUALS`: True when the task's assignee matches the user-supplied string value (or is unassigned if `'none'`).
 
 Actions:
 
-- `SET_STATUS`: Calls `taskService.updateTask` with a new status.
-- `SET_ASSIGNEE_TO_ACTOR`: Calls `taskService.updateTask` with `memberId` set
-  to the actor.
-- `REJECT_TRANSITION`: Throws `ValidationError` only in sync mode.
+- `SET_STATUS`: Automatically transitions the task to the selected status column.
+- `SET_ASSIGNEE`: Assigns the task to the user-supplied value (assigns to the actor if `'actor'`, unassigns if `'none'`, or a specific member ID).
+- `REJECT_TRANSITION`: Throws a `ValidationError` inside the pre-commit request cycle (only in sync mode).
 
 ## Execution Model
 
@@ -120,7 +111,7 @@ There are two execution paths.
 
 ### Sync Path: Pre-Commit Guard
 
-Used for validation rules that must block a user mutation.
+Used for validation rules that must block a user mutation before it commits.
 
 Flow:
 
@@ -128,11 +119,12 @@ Flow:
 GraphQL task.update
 -> TaskServiceImpl.updateTask
 -> runSyncAutomationRules
--> load current task
--> load active sync rules for TASK_STATUS_CHANGED
+-> load current task state
+-> load active sync rules for STATUS_CHANGED
+-> evaluate transition match (using trigger_value JSON)
 -> evaluate condition
 -> run action
--> action may throw ValidationError
+-> action may throw ValidationError (rejecting the update)
 -> only then call TaskQueries.updateTask
 ```
 
@@ -141,21 +133,11 @@ Key behavior:
 - Runs before the database update.
 - Only runs when `param.status` is present.
 - Skips if the target status equals the current status.
-- Uses the current task version to avoid evaluating stale transitions.
-- Throws before `TaskQueries.updateTask`, so rejected transitions do not write
-  task rows or outbox events.
-
-Current sync use case:
-
-```text
-TASK_STATUS_CHANGED(IN_PROGRESS)
-IS_BLOCKED
-REJECT_TRANSITION("Finish blockers first.")
-```
+- Throws before database write, so rejected transitions do not write task rows or outbox events.
 
 ### Async Path: Post-Commit Cascade
 
-Used for background automation after task events are already committed.
+Used for background automation cascades after task events are already committed.
 
 Flow:
 
@@ -163,30 +145,18 @@ Flow:
 TaskService.updateTask commits task.updated outbox event
 -> OutboxRelay publishes task.updated on task-events
 -> TaskAutomationListener consumes task.updated
--> if old.status != DONE and new.status == DONE
--> load active async PREREQUISITE_COMPLETED rules
--> load downstream descendants from task_reachability
--> evaluate condition for each downstream task
+-> if status actually changed
+-> load active async STATUS_CHANGED rules
+-> evaluate transition match (using trigger_value JSON)
+-> evaluate condition on the task
 -> action calls taskService.updateTask
 ```
 
 Key behavior:
 
 - Runs after commit through the event bus.
-- Only reacts to transitions into `DONE`.
-- Finds downstream tasks by querying `task_reachability` where the completed
-  task is an ancestor.
-- Actions must call the standard task service. This preserves optimistic
-  versions, task.updated outbox events, graph counters, subscriptions, and
-  downstream cascades.
-
-Current async use case:
-
-```text
-PREREQUISITE_COMPLETED
-ALL_PREREQUISITES_DONE
-SET_STATUS(READY)
-```
+- Highly scalable and decoupled: because actions invoke `taskService.updateTask`, standard outbox events propagate any new status changes, enabling natural, self-propagated cascades without complex graph reachability logic!
+- Actions must call the standard task service. This preserves optimistic versions, outbox events, graph counters, subscriptions, and downstream cascades.
 
 ## Why Actions Call `taskService.updateTask`
 

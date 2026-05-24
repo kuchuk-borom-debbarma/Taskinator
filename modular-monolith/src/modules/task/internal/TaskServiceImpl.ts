@@ -821,18 +821,25 @@ export class TaskServiceImpl implements TaskService {
             .selectFrom('task_automation_rule')
             .selectAll()
             .where('fk_project_id', '=', param.projectId)
-            .where('trigger_type', '=', 'TASK_STATUS_CHANGED')
+            .where('trigger_type', '=', 'STATUS_CHANGED')
             .where('is_active', '=', true)
             .where('is_sync', '=', true)
-            .where((eb) =>
-                eb.or([
-                    eb('trigger_value', '=', targetStatus),
-                    eb('trigger_value', 'is', null),
-                ]),
-            )
             .execute();
 
         for (const rule of rules) {
+            let matches = true;
+            if (rule.trigger_value) {
+                try {
+                    const cfg = JSON.parse(rule.trigger_value);
+                    if (cfg.from && cfg.from !== currentTask.status)
+                        matches = false;
+                    if (cfg.to && cfg.to !== targetStatus) matches = false;
+                } catch (e) {
+                    if (rule.trigger_value !== targetStatus) matches = false;
+                }
+            }
+            if (!matches) continue;
+
             const conditionFn =
                 AUTOMATION_CONDITIONS[
                     rule.condition_type as keyof typeof AUTOMATION_CONDITIONS

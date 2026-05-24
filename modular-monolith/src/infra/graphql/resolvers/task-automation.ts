@@ -14,74 +14,38 @@ export const taskAutomationResolvers = {
             return {
                 triggers: [
                     {
-                        type: 'TASK_STATUS_CHANGED',
-                        label: 'When task status changes to',
+                        type: 'STATUS_CHANGED',
+                        label: 'Status changes',
                         description:
-                            'Triggers when a task enters a specific status column.',
+                            'Triggers when a task status changes (e.g. to a column, from a column, or any status change).',
                         valueTemplate: {
-                            inputType: 'SELECT',
-                            label: 'Select Status',
+                            inputType: 'SELECT_FROM_TO',
+                            label: 'Status Transition',
                             dynamicOptionsSource: 'PROJECT_STATUSES',
-                        },
-                    },
-                    {
-                        type: 'PREREQUISITE_COMPLETED',
-                        label: 'When all blocker prerequisites are completed',
-                        description:
-                            'Fires in the background when blocker dependencies are marked DONE.',
-                        valueTemplate: {
-                            inputType: 'NONE',
-                            label: '',
-                        },
-                    },
-                    {
-                        type: 'MEMBER_ASSIGNED',
-                        label: 'When a member is assigned',
-                        description:
-                            'Triggers when a task receives an assignee.',
-                        valueTemplate: {
-                            inputType: 'NONE',
-                            label: '',
                         },
                     },
                 ],
                 conditions: [
                     {
-                        type: 'IS_BLOCKED',
-                        label: 'If the task has active blockers',
-                        description: 'Checks if prerequisites are incomplete.',
-                        valueTemplate: {
-                            inputType: 'NONE',
-                            label: '',
-                        },
-                    },
-                    {
-                        type: 'ALL_PREREQUISITES_DONE',
-                        label: 'If all prerequisite tasks are completed',
-                        description: 'Checks if blockers count reaches 0.',
-                        valueTemplate: {
-                            inputType: 'NONE',
-                            label: '',
-                        },
-                    },
-                    {
-                        type: 'HAS_NO_ASSIGNEE',
-                        label: 'If the task has no assignee',
-                        description: 'Checks whether no member is assigned.',
-                        valueTemplate: {
-                            inputType: 'NONE',
-                            label: '',
-                        },
-                    },
-                    {
-                        type: 'TAG_CONTAINS',
-                        label: 'If a task tag contains',
+                        type: 'STATUS_EQUALS',
+                        label: 'Task status is',
                         description:
-                            'Checks whether task tags include a matching value.',
+                            'Checks if the task is currently in a specific status column.',
+                        valueTemplate: {
+                            inputType: 'SELECT',
+                            label: 'Status',
+                            dynamicOptionsSource: 'PROJECT_STATUSES',
+                        },
+                    },
+                    {
+                        type: 'ASSIGNEE_EQUALS',
+                        label: 'Task assignee is',
+                        description:
+                            'Checks whether the task is assigned to a specific user (or "none" if unassigned).',
                         valueTemplate: {
                             inputType: 'TEXT',
-                            label: 'Tag',
-                            placeholder: 'auto:escalate',
+                            label: 'Assignee User ID (or "none")',
+                            placeholder: 'User ID or "none"',
                         },
                     },
                 ],
@@ -90,7 +54,7 @@ export const taskAutomationResolvers = {
                         type: 'SET_STATUS',
                         label: 'Set task status to',
                         description:
-                            'Transitions task to target status column.',
+                            'Automatically transitions the task to the selected status column.',
                         valueTemplate: {
                             inputType: 'SELECT',
                             label: 'Target Status',
@@ -98,24 +62,25 @@ export const taskAutomationResolvers = {
                         },
                     },
                     {
-                        type: 'SET_ASSIGNEE_TO_ACTOR',
-                        label: 'Assign task to actor',
+                        type: 'SET_ASSIGNEE',
+                        label: 'Set task assignee to',
                         description:
-                            'Assigns the task to the user who triggered the automation.',
+                            'Assigns the task to a user (use "actor" to assign to the person who triggered it, or "none" to unassign).',
                         valueTemplate: {
-                            inputType: 'NONE',
-                            label: '',
+                            inputType: 'TEXT',
+                            label: 'Assignee (User ID, "actor", or "none")',
+                            placeholder: 'User ID, "actor", or "none"',
                         },
                     },
                     {
                         type: 'REJECT_TRANSITION',
-                        label: 'Reject the drag-and-drop status transition',
+                        label: 'Block and warn user',
                         description:
-                            'Synchronously rejects status movement and displays a warning.',
+                            'Synchronously rejects status movement and displays a warning warning message.',
                         valueTemplate: {
                             inputType: 'TEXT',
-                            label: 'Custom Rejection Message',
-                            placeholder: 'Task is blocked!',
+                            label: 'Rejection Warning Message',
+                            placeholder: 'This transition is blocked!',
                         },
                     },
                 ],

@@ -21,6 +21,10 @@ type TaskUpdatedPayload = {
     actorId?: string | null;
 };
 
+/**
+ * Asynchronous background listener that consumes task updated events from Kafka
+ * and executes post-commit async status-changed automation rules.
+ */
 export class TaskAutomationListener {
     async init() {
         logger.info('[Task Automation] Initializing');
@@ -40,98 +44,104 @@ export class TaskAutomationListener {
     ): Promise<void> {
         for (const event of events) {
             const { old, new: next, projectId, taskId } = event.data;
-            if (old?.status === 'DONE' || next?.status !== 'DONE') continue;
+            if (!next || old?.status === next.status) continue; // Only trigger if status actually changed
 
-            await this.runPrerequisiteCompletedRules(
+            await this.runStatusChangedRules(
                 projectId,
                 taskId,
+                old?.status ?? null,
+                next.status ?? null,
                 event.data.actorId || 'system:automation',
             );
         }
     }
 
-    private async runPrerequisiteCompletedRules(
+    /**
+     * Executes async rules of type STATUS_CHANGED for the updated task.
+     */
+    private async runStatusChangedRules(
         projectId: string,
-        completedTaskId: string,
+        taskId: string,
+        fromStatus: string | null,
+        toStatus: string | null,
         actorId: string,
     ): Promise<void> {
         const rules = await db
             .selectFrom('task_automation_rule')
             .selectAll()
             .where('fk_project_id', '=', projectId)
-            .where('trigger_type', '=', 'PREREQUISITE_COMPLETED')
+            .where('trigger_type', '=', 'STATUS_CHANGED')
             .where('is_active', '=', true)
             .where('is_sync', '=', false)
             .execute();
 
         if (rules.length === 0) return;
 
-        const downstreamTasks = await this.getDownstreamTasks(
-            projectId,
-            completedTaskId,
-        );
-
-        for (const task of downstreamTasks) {
-            for (const rule of rules) {
-                const conditionFn =
-                    AUTOMATION_CONDITIONS[
-                        rule.condition_type as keyof typeof AUTOMATION_CONDITIONS
-                    ];
-                const actionFn =
-                    AUTOMATION_ACTIONS[
-                        rule.action_type as keyof typeof AUTOMATION_ACTIONS
-                    ];
-
-                if (!conditionFn || !actionFn) continue;
-
-                const isMet = await conditionFn(task, rule.condition_value);
-                if (!isMet) continue;
-
-                await actionFn(task, rule.action_value, {
-                    actorId,
-                    taskService,
-                });
-            }
-        }
-    }
-
-    private async getDownstreamTasks(
-        projectId: string,
-        completedTaskId: string,
-    ): Promise<Task[]> {
-        const rows = await db
-            .selectFrom('task_reachability')
-            .innerJoin(
-                'project_task',
-                'project_task.id',
-                'task_reachability.descendant_task_id',
-            )
-            .select([
-                'project_task.id as id',
-                'project_task.fk_project_id as projectId',
-                'project_task.fk_team_id as teamId',
-                'project_task.fk_member_id as memberId',
-                'project_task.title as title',
-                'project_task.description as description',
-                'project_task.status as status',
-                'project_task.version as version',
-                'project_task.created_by as createdBy',
-                'project_task.updated_by as updatedBy',
-                'project_task.priority as priority',
-                'project_task.created_at as createdAt',
-                'project_task.updated_at as updatedAt',
-                'project_task.direct_incoming_count as directIncomingCount',
-                'project_task.direct_outgoing_count as directOutgoingCount',
-                'project_task.total_incoming_count as totalIncomingCount',
-                'project_task.total_outgoing_count as totalOutgoingCount',
-                'project_task.incoming_label_counts as incomingLabelCounts',
-                'project_task.outgoing_label_counts as outgoingLabelCounts',
-            ])
-            .where('task_reachability.fk_project_id', '=', projectId)
-            .where('task_reachability.ancestor_task_id', '=', completedTaskId)
-            .where('task_reachability.depth', '>', 0)
+        // Fetch task's full state
+        const [task] = await db
+            .selectFrom('project_task')
+            .selectAll()
+            .where('id', '=', taskId)
             .execute();
 
-        return rows as Task[];
+        if (!task) return;
+
+        // Map database row to standard Task interface
+        const publicTask: Task = {
+            id: task.id,
+            projectId: task.fk_project_id,
+            teamId: task.fk_team_id,
+            memberId: task.fk_member_id,
+            title: task.title,
+            description: task.description,
+            status: task.status,
+            version: task.version,
+            createdBy: task.created_by,
+            updatedBy: task.updated_by,
+            priority: task.priority ?? 0,
+            createdAt: task.created_at,
+            updatedAt: task.updated_at,
+            directIncomingCount: task.direct_incoming_count ?? 0,
+            directOutgoingCount: task.direct_outgoing_count ?? 0,
+            totalIncomingCount: task.total_incoming_count ?? 0,
+            totalOutgoingCount: task.total_outgoing_count ?? 0,
+            incomingLabelCounts:
+                (task.incoming_label_counts as Record<string, number>) ?? {},
+            outgoingLabelCounts:
+                (task.outgoing_label_counts as Record<string, number>) ?? {},
+        };
+
+        for (const rule of rules) {
+            let matches = true;
+            if (rule.trigger_value) {
+                try {
+                    const cfg = JSON.parse(rule.trigger_value);
+                    if (cfg.from && cfg.from !== fromStatus) matches = false;
+                    if (cfg.to && cfg.to !== toStatus) matches = false;
+                } catch (e) {
+                    if (rule.trigger_value !== toStatus) matches = false;
+                }
+            }
+            if (!matches) continue;
+
+            const conditionFn =
+                AUTOMATION_CONDITIONS[
+                    rule.condition_type as keyof typeof AUTOMATION_CONDITIONS
+                ];
+            const actionFn =
+                AUTOMATION_ACTIONS[
+                    rule.action_type as keyof typeof AUTOMATION_ACTIONS
+                ];
+
+            if (!conditionFn || !actionFn) continue;
+
+            const isMet = await conditionFn(publicTask, rule.condition_value);
+            if (!isMet) continue;
+
+            await actionFn(publicTask, rule.action_value, {
+                actorId,
+                taskService,
+            });
+        }
     }
 }

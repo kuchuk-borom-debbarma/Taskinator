@@ -4,7 +4,7 @@ export interface AutomationOption {
 }
 
 export interface ValueTemplate {
-  inputType: 'SELECT' | 'TEXT' | 'NUMBER' | 'NONE';
+  inputType: 'SELECT' | 'TEXT' | 'NUMBER' | 'NONE' | 'SELECT_FROM_TO';
   label: string;
   placeholder?: string | null;
   staticOptions?: AutomationOption[] | null;

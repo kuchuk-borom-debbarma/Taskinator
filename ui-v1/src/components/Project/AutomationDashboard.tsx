@@ -532,7 +532,7 @@ function RuleLine({ label, title, value }: { label: string; title: string; value
     <div className="rounded-2xl bg-white/65 px-3 py-2">
       <span className="mr-2 text-[11px] font-bold uppercase tracking-[0.16em] text-app-muted">{label}</span>
       <span className="font-medium text-app-ink">{title}</span>
-      {value ? <span className="ml-2 text-app-muted">{formatStatusLabel(value)}</span> : null}
+      {value ? <span className="ml-2 text-app-muted">{formatRuleValue(value)}</span> : null}
     </div>
   );
 }
@@ -594,4 +594,27 @@ function buildCreateInput(projectId: string, draft: RuleDraft): CreateTaskAutoma
     actionType: draft.actionType,
     actionValue: draft.actionValue || null,
   };
+}
+
+export function formatRuleValue(value: string | null | undefined): string {
+  if (!value) return '';
+  if (value.startsWith('{')) {
+    try {
+      const parsed = JSON.parse(value);
+      const parts: string[] = [];
+      if (parsed.from) {
+        parts.push(`from ${formatStatusLabel(parsed.from)}`);
+      }
+      if (parsed.to) {
+        parts.push(`to ${formatStatusLabel(parsed.to)}`);
+      }
+      if (parts.length === 0) {
+        return 'any status change';
+      }
+      return parts.join(' ');
+    } catch (e) {
+      return value;
+    }
+  }
+  return formatStatusLabel(value);
 }

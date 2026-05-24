@@ -5,15 +5,14 @@ import type { Task } from '../../TaskService.ts';
 
 const projectId = '11111111-1111-4111-8111-111111111111';
 const actorId = 'user-1';
-const blockerTaskId = '22222222-2222-4222-8222-222222222222';
 const blockedTaskId = '33333333-3333-4333-8333-333333333333';
 
-const blockedTask: Task = {
+const mockTask: Task = {
     id: blockedTaskId,
     projectId,
     teamId: null,
     memberId: null,
-    title: 'Blocked task',
+    title: 'Test task',
     description: '',
     status: 'TODO',
     version: 1,
@@ -22,9 +21,9 @@ const blockedTask: Task = {
     priority: 0,
     createdAt: new Date('2026-05-24T00:00:00.000Z'),
     updatedAt: new Date('2026-05-24T00:00:00.000Z'),
-    directIncomingCount: 1,
+    directIncomingCount: 0,
     directOutgoingCount: 0,
-    totalIncomingCount: 1,
+    totalIncomingCount: 0,
     totalOutgoingCount: 0,
     incomingLabelCounts: {},
     outgoingLabelCounts: {},
@@ -106,38 +105,36 @@ const { TaskAutomationListener } = await import(
 describe('Task TCA automation engine', () => {
     beforeEach(() => {
         jest.clearAllMocks();
-        mockGetTasksByActorIdAndIds.mockResolvedValue([blockedTask]);
+        mockGetTasksByActorIdAndIds.mockResolvedValue([mockTask]);
         mockUpdateTaskQuery.mockResolvedValue({
-            ...blockedTask,
+            ...mockTask,
             status: 'IN_PROGRESS',
             version: 2,
         });
         mockTaskServiceUpdateTask.mockResolvedValue({
-            ...blockedTask,
-            status: 'READY',
+            ...mockTask,
+            memberId: actorId,
             version: 2,
         });
     });
 
-    it('rejects blocked sync status transitions before the task update runs', async () => {
-        mockDb.selectFrom
-            .mockReturnValueOnce(
-                makeQuery([
-                    {
-                        id: 'rule-1',
-                        fk_project_id: projectId,
-                        is_active: true,
-                        is_sync: true,
-                        trigger_type: 'TASK_STATUS_CHANGED',
-                        trigger_value: 'IN_PROGRESS',
-                        condition_type: 'IS_BLOCKED',
-                        condition_value: null,
-                        action_type: 'REJECT_TRANSITION',
-                        action_value: 'Finish blockers first.',
-                    },
-                ]),
-            )
-            .mockReturnValueOnce(makeQuery([{ id: blockerTaskId }]));
+    it('rejects sync status transitions if status condition matches and action is REJECT_TRANSITION', async () => {
+        mockDb.selectFrom.mockReturnValueOnce(
+            makeQuery([
+                {
+                    id: 'rule-1',
+                    fk_project_id: projectId,
+                    is_active: true,
+                    is_sync: true,
+                    trigger_type: 'STATUS_CHANGED',
+                    trigger_value: JSON.stringify({ to: 'IN_PROGRESS' }),
+                    condition_type: 'STATUS_EQUALS',
+                    condition_value: 'TODO',
+                    action_type: 'REJECT_TRANSITION',
+                    action_value: 'Transition is blocked by sync rule.',
+                },
+            ]),
+        );
 
         const service = new TaskServiceImpl();
 
@@ -154,7 +151,7 @@ describe('Task TCA automation engine', () => {
         expect(mockUpdateTaskQuery).not.toHaveBeenCalled();
     });
 
-    it('unlocks downstream tasks through standard updateTask after prerequisite completion', async () => {
+    it('triggers async status-changed rules and executes actions in the background', async () => {
         mockDb.selectFrom
             .mockReturnValueOnce(
                 makeQuery([
@@ -163,17 +160,40 @@ describe('Task TCA automation engine', () => {
                         fk_project_id: projectId,
                         is_active: true,
                         is_sync: false,
-                        trigger_type: 'PREREQUISITE_COMPLETED',
-                        trigger_value: null,
-                        condition_type: 'ALL_PREREQUISITES_DONE',
-                        condition_value: null,
-                        action_type: 'SET_STATUS',
-                        action_value: 'READY',
+                        trigger_type: 'STATUS_CHANGED',
+                        trigger_value: JSON.stringify({ to: 'DONE' }),
+                        condition_type: 'STATUS_EQUALS',
+                        condition_value: 'DONE',
+                        action_type: 'SET_ASSIGNEE',
+                        action_value: 'actor',
                     },
                 ]),
             )
-            .mockReturnValueOnce(makeQuery([blockedTask]))
-            .mockReturnValueOnce(makeQuery([]));
+            .mockReturnValueOnce(
+                makeQuery([
+                    {
+                        id: blockedTaskId,
+                        fk_project_id: projectId,
+                        fk_team_id: null,
+                        fk_member_id: null,
+                        title: 'Test task',
+                        description: '',
+                        status: 'DONE',
+                        version: 1,
+                        created_by: actorId,
+                        updated_by: actorId,
+                        priority: 0,
+                        created_at: new Date('2026-05-24T00:00:00.000Z'),
+                        updated_at: new Date('2026-05-24T00:00:00.000Z'),
+                        direct_incoming_count: 0,
+                        direct_outgoing_count: 0,
+                        total_incoming_count: 0,
+                        total_outgoing_count: 0,
+                        incoming_label_counts: {},
+                        outgoing_label_counts: {},
+                    },
+                ]),
+            );
 
         const event: DomainEvent<{
             taskId: string;
@@ -186,9 +206,9 @@ describe('Task TCA automation engine', () => {
             type: 'task.updated',
             key: projectId,
             data: {
-                taskId: blockerTaskId,
+                taskId: blockedTaskId,
                 projectId,
-                old: { status: 'IN_PROGRESS' },
+                old: { status: 'TODO' },
                 new: { status: 'DONE' },
                 actorId,
             },
@@ -203,7 +223,7 @@ describe('Task TCA automation engine', () => {
             projectId,
             taskId: blockedTaskId,
             version: 1,
-            status: 'READY',
+            memberId: actorId,
         });
     });
 });

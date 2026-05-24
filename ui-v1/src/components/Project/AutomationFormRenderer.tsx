@@ -8,6 +8,9 @@ interface RendererProps {
   projectStatuses: string[];
 }
 
+/**
+ * Dynamic form component that renders fields based on server-driven template specification.
+ */
 export function AutomationFormRenderer({
   template,
   value,
@@ -28,12 +31,64 @@ export function AutomationFormRenderer({
     );
   }
 
-  if (template.inputType === 'SELECT') {
-    const options =
-      template.dynamicOptionsSource === 'PROJECT_STATUSES'
-        ? projectStatuses.map((status) => ({ value: status, label: formatStatusLabel(status) }))
-        : template.staticOptions ?? [];
+  const options =
+    template.dynamicOptionsSource === 'PROJECT_STATUSES'
+      ? projectStatuses.map((status) => ({ value: status, label: formatStatusLabel(status) }))
+      : template.staticOptions ?? [];
 
+  if (template.inputType === 'SELECT_FROM_TO') {
+    let config = { from: '', to: '' };
+    if (value) {
+      try {
+        config = JSON.parse(value);
+      } catch (e) {
+        config = { from: '', to: value };
+      }
+    }
+
+    return (
+      <div className="grid gap-4 sm:grid-cols-2">
+        <label className="block">
+          <span className="mb-2 block text-sm font-medium text-app-ink">From Status (Optional)</span>
+          <select
+            value={config.from || ''}
+            onChange={(event) => {
+              const fromVal = event.target.value;
+              onChange(JSON.stringify({ from: fromVal || undefined, to: config.to || undefined }));
+            }}
+            className="w-full rounded-2xl border border-app-line bg-white/85 px-4 py-3 text-sm text-app-ink outline-none transition focus:border-app-accent focus:ring-4 focus:ring-app-accent/10"
+          >
+            <option value="">Any status</option>
+            {options.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="block">
+          <span className="mb-2 block text-sm font-medium text-app-ink">To Status (Optional)</span>
+          <select
+            value={config.to || ''}
+            onChange={(event) => {
+              const toVal = event.target.value;
+              onChange(JSON.stringify({ from: config.from || undefined, to: toVal || undefined }));
+            }}
+            className="w-full rounded-2xl border border-app-line bg-white/85 px-4 py-3 text-sm text-app-ink outline-none transition focus:border-app-accent focus:ring-4 focus:ring-app-accent/10"
+          >
+            <option value="">Any status</option>
+            {options.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </label>
+      </div>
+    );
+  }
+
+  if (template.inputType === 'SELECT') {
     return (
       <label className="block">
         <span className="mb-2 block text-sm font-medium text-app-ink">{template.label}</span>
@@ -56,6 +111,9 @@ export function AutomationFormRenderer({
   return null;
 }
 
+/**
+ * Formats a status string (e.g. READY_TO_TEST -> Ready To Test) for display.
+ */
 export function formatStatusLabel(status: string) {
   return status
     .toLowerCase()
