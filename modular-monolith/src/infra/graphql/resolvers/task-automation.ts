@@ -41,11 +41,10 @@ export const taskAutomationResolvers = {
                         type: 'ASSIGNEE_EQUALS',
                         label: 'Task assignee is',
                         description:
-                            'Checks whether the task is assigned to a specific user (or "none" if unassigned).',
+                            'Checks whether the task is assigned to a specific team member.',
                         valueTemplate: {
-                            inputType: 'TEXT',
-                            label: 'Assignee User ID (or "none")',
-                            placeholder: 'User ID or "none"',
+                            inputType: 'TEAM_MEMBER',
+                            label: 'Assigned member',
                         },
                     },
                 ],
@@ -65,11 +64,10 @@ export const taskAutomationResolvers = {
                         type: 'SET_ASSIGNEE',
                         label: 'Set task assignee to',
                         description:
-                            'Assigns the task to a user (use "actor" to assign to the person who triggered it, or "none" to unassign).',
+                            'Assigns the task to a team member (or the person who triggered the rule, or unassigns it).',
                         valueTemplate: {
-                            inputType: 'TEXT',
-                            label: 'Assignee (User ID, "actor", or "none")',
-                            placeholder: 'User ID, "actor", or "none"',
+                            inputType: 'TEAM_MEMBER',
+                            label: 'Assignee',
                         },
                     },
                     {

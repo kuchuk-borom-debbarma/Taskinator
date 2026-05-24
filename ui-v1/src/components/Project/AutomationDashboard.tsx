@@ -274,7 +274,7 @@ export default function AutomationDashboard() {
         title={modal?.mode === 'edit' ? 'Edit automation rule' : 'New automation rule'}
         description="Choose trigger, condition, and action from server templates."
         onClose={closeModal}
-        size="xl"
+        size="lg"
       >
         <form
           className="space-y-5"
@@ -327,6 +327,7 @@ export default function AutomationDashboard() {
               value={draft.triggerValue}
               onChange={(triggerValue) => setDraft((current) => ({ ...current, triggerValue }))}
               projectStatuses={projectStatuses}
+              projectId={projectId}
             />
           ) : null}
 
@@ -353,6 +354,8 @@ export default function AutomationDashboard() {
               value={draft.conditionValue}
               onChange={(conditionValue) => setDraft((current) => ({ ...current, conditionValue }))}
               projectStatuses={projectStatuses}
+              projectId={projectId}
+              includeSpecialAssignees={false}
             />
           ) : null}
 
@@ -379,6 +382,8 @@ export default function AutomationDashboard() {
               value={draft.actionValue}
               onChange={(actionValue) => setDraft((current) => ({ ...current, actionValue }))}
               projectStatuses={projectStatuses}
+              projectId={projectId}
+              includeSpecialAssignees={actionTemplate.type === 'SET_ASSIGNEE'}
             />
           ) : null}
 

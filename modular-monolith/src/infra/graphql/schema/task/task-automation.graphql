@@ -4,6 +4,7 @@ enum InputType {
     NUMBER
     NONE
     SELECT_FROM_TO
+    TEAM_MEMBER
 }
 
 type AutomationOption {
