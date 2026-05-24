@@ -16,6 +16,16 @@ export interface TriggerTemplate {
   label: string;
   description: string;
   valueTemplate: ValueTemplate;
+  /**
+   * Condition type keys that are semantically valid for this trigger.
+   * Returned by the catalog; used by the wizard to filter Step 2.
+   */
+  compatibleConditions: string[];
+  /**
+   * Action type keys that are semantically valid for this trigger.
+   * Returned by the catalog; used by the wizard to filter Step 3.
+   */
+  compatibleActions: string[];
 }
 
 export interface ConditionTemplate {

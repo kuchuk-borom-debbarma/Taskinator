@@ -99,6 +99,24 @@ export default function AutomationDashboard() {
   const conditionTemplate = catalog?.conditions.find((entry) => entry.type === draft.conditionType);
   const actionTemplate = catalog?.actions.find((entry) => entry.type === draft.actionType);
 
+  /**
+   * Filter conditions and actions to only those compatible with the selected trigger.
+   * Derived from the server-returned compatibleConditions / compatibleActions lists
+   * on TriggerTemplate — no frontend hardcoding required.
+   * Falls back to the full catalog when no trigger is selected yet.
+   */
+  const filteredConditions = catalog
+    ? triggerTemplate
+      ? catalog.conditions.filter((c) => triggerTemplate.compatibleConditions.includes(c.type))
+      : catalog.conditions
+    : [];
+
+  const filteredActions = catalog
+    ? triggerTemplate
+      ? catalog.actions.filter((a) => triggerTemplate.compatibleActions.includes(a.type))
+      : catalog.actions
+    : [];
+
   const createRule = useMutation({
     mutationFn: () => automationApi.createRule(buildCreateInput(projectId!, draft)),
     onSuccess: (created) => {
@@ -347,7 +365,35 @@ export default function AutomationDashboard() {
               label="When"
               value={draft.triggerType}
               options={catalog.triggers}
-              onChange={(triggerType) => setDraft((c) => ({ ...c, triggerType, triggerValue: '' }))}
+              onChange={(triggerType) => {
+                const newTrigger = catalog.triggers.find((t) => t.type === triggerType);
+                const compatConditions = newTrigger?.compatibleConditions ?? [];
+                const compatActions = newTrigger?.compatibleActions ?? [];
+
+                // Auto-select the condition if only one is compatible; otherwise reset.
+                const nextCondition = compatConditions.includes(draft.conditionType)
+                  ? draft.conditionType
+                  : compatConditions.length === 1
+                  ? compatConditions[0]
+                  : '';
+
+                // Auto-select the action if only one is compatible; otherwise reset.
+                const nextAction = compatActions.includes(draft.actionType)
+                  ? draft.actionType
+                  : compatActions.length === 1
+                  ? compatActions[0]
+                  : '';
+
+                setDraft((c) => ({
+                  ...c,
+                  triggerType,
+                  triggerValue: '',
+                  conditionType: nextCondition,
+                  conditionValue: nextCondition !== draft.conditionType ? '' : c.conditionValue,
+                  actionType: nextAction,
+                  actionValue: nextAction !== draft.actionType ? '' : c.actionValue,
+                }));
+              }}
             />
             {triggerTemplate && (
               <p className="text-xs text-app-muted font-medium px-1">{triggerTemplate.description}</p>
@@ -370,9 +416,15 @@ export default function AutomationDashboard() {
             <TemplatePicker
               label="If"
               value={draft.conditionType}
-              options={catalog.conditions}
+              options={filteredConditions}
               onChange={(conditionType) => setDraft((c) => ({ ...c, conditionType, conditionValue: '' }))}
             />
+            {/* Hint when the trigger pre-selected the only compatible condition */}
+            {filteredConditions.length === 1 && (
+              <p className="text-xs font-semibold text-app-accent px-1">
+                ✓ Only compatible condition for this trigger — pre-selected
+              </p>
+            )}
             {conditionTemplate && (
               <p className="text-xs text-app-muted font-medium px-1">{conditionTemplate.description}</p>
             )}
@@ -395,9 +447,15 @@ export default function AutomationDashboard() {
             <TemplatePicker
               label="Then"
               value={draft.actionType}
-              options={catalog.actions}
+              options={filteredActions}
               onChange={(actionType) => setDraft((c) => ({ ...c, actionType, actionValue: '' }))}
             />
+            {/* Hint when the trigger pre-selected the only compatible action */}
+            {filteredActions.length === 1 && (
+              <p className="text-xs font-semibold text-app-accent px-1">
+                ✓ Only compatible action for this trigger — pre-selected
+              </p>
+            )}
             {actionTemplate && (
               <p className="text-xs text-app-muted font-medium px-1">{actionTemplate.description}</p>
             )}
@@ -617,13 +675,22 @@ function TemplatePicker({
   );
 }
 
+/**
+ * Populates default values when opening the "new rule" wizard.
+ * Picks the first trigger from the catalog, then selects the first
+ * compatible condition and action for that trigger so the user lands
+ * in a valid initial state without having to touch every step.
+ */
 function withCatalogDefaults(draft: RuleDraft, catalog?: AutomationTemplatesCatalog): RuleDraft {
   if (!catalog) return draft;
+  const defaultTrigger = catalog.triggers[0];
+  const compatConditions = defaultTrigger?.compatibleConditions ?? [];
+  const compatActions = defaultTrigger?.compatibleActions ?? [];
   return {
     ...draft,
-    triggerType: catalog.triggers[0]?.type ?? '',
-    conditionType: catalog.conditions[0]?.type ?? '',
-    actionType: catalog.actions[0]?.type ?? '',
+    triggerType: defaultTrigger?.type ?? '',
+    conditionType: catalog.conditions.find((c) => compatConditions.includes(c.type))?.type ?? '',
+    actionType: catalog.actions.find((a) => compatActions.includes(a.type))?.type ?? '',
   };
 }
 

@@ -25,6 +25,16 @@ type TriggerTemplate {
     label: String!
     description: String!
     valueTemplate: ValueTemplate!
+    """
+    Condition types that are semantically valid for this trigger.
+    The frontend uses this list to filter the Condition step in the rule wizard.
+    """
+    compatibleConditions: [String!]!
+    """
+    Action types that are semantically valid for this trigger.
+    The frontend uses this list to filter the Action step in the rule wizard.
+    """
+    compatibleActions: [String!]!
 }
 
 type ConditionTemplate {
