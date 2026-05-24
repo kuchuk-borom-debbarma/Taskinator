@@ -7,5 +7,10 @@ export interface OutboxEventTable {
     stream_key: string | null;
     payload: any;
     status: ColumnType<string, string | undefined, string>;
+    locked_at: ColumnType<
+        Date | null,
+        string | Date | null | undefined,
+        string | Date | null | undefined
+    >;
     created_at: ColumnType<string, string | undefined, never>;
 }

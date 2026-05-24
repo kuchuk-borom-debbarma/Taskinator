@@ -177,8 +177,14 @@ CREATE TABLE outbox_events (
     stream_key TEXT,
     payload JSONB NOT NULL,
     status TEXT NOT NULL DEFAULT 'PENDING',
+    locked_at TIMESTAMP WITH TIME ZONE DEFAULT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
+
+-- Index to optimize recovery of orphaned locks under crash-recovery scenarios
+CREATE INDEX idx_outbox_events_recovery ON outbox_events (status, locked_at) 
+WHERE status = 'PROCESSING';
+
 
 -- Trigger for Outbox Relay (LISTEN/NOTIFY)
 CREATE OR REPLACE FUNCTION notify_outbox_event() RETURNS TRIGGER AS $$

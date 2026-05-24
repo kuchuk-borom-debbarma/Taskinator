@@ -1,4 +1,4 @@
-import type { Transaction } from 'kysely';
+import { type Kysely, sql, type Transaction } from 'kysely';
 import type { Pool, PoolClient } from 'pg';
 import type { EventRelayPort } from '../../contracts/index.ts';
 import type { Database } from '../../database/index.ts';
@@ -23,7 +23,7 @@ export class PostgresOutboxRelay implements EventRelayPort {
 
     constructor(
         private readonly deps: {
-            db: { transaction(): any };
+            db: Kysely<Database>;
             pool: Pool;
             eventBus: Bus;
             logger: Logger;
@@ -70,35 +70,101 @@ export class PostgresOutboxRelay implements EventRelayPort {
     }
 
     async processBatch() {
-        await this.deps.db.transaction().execute(async (trx: any) => {
-            const events = await this.fetchPendingEvents(trx);
-            if (events.length === 0) return;
+        // 1. Claim pending events in a super-fast micro-transaction
+        const events = await this.deps.db
+            .transaction()
+            .execute(async (trx: any) => {
+                const pending = await this.fetchPendingEvents(trx);
+                if (pending.length === 0) return [];
 
-            this.deps.logger.info(
-                `[OutboxRelay] Processing batch of ${events.length} events: ` +
-                    `[${events.map((event) => `id=${event.id}, stream=${event.stream}, type=${event.payload.type}`).join('; ')}]`,
-            );
+                const eventIds = pending.map((event) => event.id);
 
+                // Lock events using a lease lock. If we crash, another process can reclaim it after 60s.
+                await trx
+                    .updateTable('outbox_events')
+                    .set({
+                        status: 'PROCESSING',
+                        locked_at: sql<any>`NOW()`,
+                    })
+                    .where('id', 'in', eventIds)
+                    .execute();
+
+                return pending;
+            });
+
+        if (events.length === 0) return;
+
+        this.deps.logger.info(
+            `[OutboxRelay] Claimed batch of ${events.length} events for processing: ` +
+                `[${events.map((event) => `id=${event.id}, stream=${event.stream}, type=${event.payload.type}`).join('; ')}]`,
+        );
+
+        try {
+            // 2. Dispatch to Event Bus (Kafka network I/O) OUTSIDE the database transaction
             await this.dispatchToEventBus(events);
 
+            // 3. Clear processed events in a fast, single query outside a transaction
             const eventIds = events.map((event) => event.id);
-            await this.clearProcessedEvents(trx, eventIds);
+            await this.clearProcessedEvents(eventIds);
 
-            if (events.length === 100) {
+            if (events.length === 100 && this.isRunning) {
                 setImmediate(() => this.processBatch());
             }
-        });
+        } catch (err) {
+            this.deps.logger.error(
+                '[OutboxRelay] Error dispatching event batch, reverting status to PENDING for retry',
+                err,
+            );
+
+            // Recovery: Reset events to PENDING so they can be claimed again immediately
+            const eventIds = events.map((event) => event.id);
+            try {
+                await this.deps.db
+                    .updateTable('outbox_events')
+                    .set({
+                        status: 'PENDING',
+                        locked_at: null,
+                    })
+                    .where('id', 'in', eventIds)
+                    .execute();
+            } catch (resetErr) {
+                this.deps.logger.error(
+                    '[OutboxRelay] Failed to revert event batch status to PENDING',
+                    resetErr,
+                );
+            }
+        }
     }
 
     private async fetchPendingEvents(trx: Transaction<Database>) {
+        // Query returns PENDING events OR events locked in PROCESSING for longer than 60s (indicating a crash)
         return await trx
             .selectFrom('outbox_events')
             .selectAll()
-            .where('status', '=', 'PENDING')
+            .where((eb) =>
+                eb.or([
+                    eb('status', '=', 'PENDING'),
+                    eb.and([
+                        eb('status', '=', 'PROCESSING'),
+                        eb(
+                            'locked_at',
+                            '<',
+                            sql<any>`NOW() - INTERVAL '60 seconds'`,
+                        ),
+                    ]),
+                ]),
+            )
             .orderBy('created_at', 'asc')
             .limit(100)
             .forUpdate()
             .skipLocked()
+            .execute();
+    }
+
+    private async clearProcessedEvents(eventIds: number[]) {
+        await this.deps.db
+            .deleteFrom('outbox_events')
+            .where('id', 'in', eventIds)
             .execute();
     }
 
@@ -141,16 +207,6 @@ export class PostgresOutboxRelay implements EventRelayPort {
                 );
             }),
         );
-    }
-
-    private async clearProcessedEvents(
-        trx: Transaction<Database>,
-        eventIds: number[],
-    ) {
-        await trx
-            .deleteFrom('outbox_events')
-            .where('id', 'in', eventIds)
-            .execute();
     }
 
     private async setupListener() {
