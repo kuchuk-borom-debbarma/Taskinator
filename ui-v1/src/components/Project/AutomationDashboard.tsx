@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams } from '@tanstack/react-router';
-import { Bolt, Loader2, PencilLine, Plus, ShieldCheck, Trash2, Workflow, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Bolt, Check, Loader2, PencilLine, Plus, ShieldCheck, Trash2, Workflow, X } from 'lucide-react';
 import type {
   ActionTemplate,
   AutomationTemplatesCatalog,
@@ -23,6 +23,9 @@ import {
 import { AutomationFormRenderer, formatStatusLabel } from './AutomationFormRenderer';
 
 const COMMON_STATUSES = ['TODO', 'IN_PROGRESS', 'READY', 'DONE'];
+
+/** Labels shown in the step indicator of the new/edit rule wizard. */
+const WIZARD_STEPS = ['Basics', 'Trigger', 'Condition', 'Action'] as const;
 
 type RuleDraft = {
   name: string;
@@ -57,6 +60,8 @@ export default function AutomationDashboard() {
   const queryClient = useQueryClient();
   const [modal, setModal] = useState<ModalState>(null);
   const [draft, setDraft] = useState<RuleDraft>(emptyDraft);
+  /** Current wizard step: 0=basics, 1=trigger, 2=condition, 3=action */
+  const [step, setStep] = useState(0);
   const rulesKey = ['automation-rules', projectId];
 
   const catalogQuery = useQuery({
@@ -177,6 +182,7 @@ export default function AutomationDashboard() {
   const openCreate = () => {
     const next = withCatalogDefaults(emptyDraft, catalog);
     setDraft(next);
+    setStep(0);
     setModal({ mode: 'create' });
   };
 
@@ -191,12 +197,14 @@ export default function AutomationDashboard() {
       actionType: rule.actionType,
       actionValue: rule.actionValue ?? '',
     });
+    setStep(0);
     setModal({ mode: 'edit', rule });
   };
 
   const closeModal = () => {
     setModal(null);
     setDraft(emptyDraft);
+    setStep(0);
   };
 
   const saveDisabled =
@@ -271,141 +279,178 @@ export default function AutomationDashboard() {
 
       <AppModal
         open={!!modal}
-        title={modal?.mode === 'edit' ? 'Edit automation rule' : 'New automation rule'}
-        description="Choose trigger, condition, and action from server templates."
+        title={modal?.mode === 'edit' ? 'Edit rule' : 'New rule'}
         onClose={closeModal}
-        size="lg"
+        size="md"
       >
-        <form
-          className="space-y-5"
-          onSubmit={(event) => {
-            event.preventDefault();
-            if (saveDisabled) return;
-            if (modal?.mode === 'edit') updateRule.mutate();
-            else createRule.mutate();
-          }}
-        >
-          {(createRule.error || updateRule.error) ? (
-            <InlineMessage tone="error" message={(createRule.error || updateRule.error as Error).message} />
-          ) : null}
+        {/* Step indicator */}
+        <div className="mb-5 flex items-center gap-1.5">
+          {WIZARD_STEPS.map((label, i) => (
+            <div key={label} className="flex items-center gap-1.5">
+              <div
+                className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-bold transition ${
+                  i < step
+                    ? 'bg-app-success text-white'
+                    : i === step
+                    ? 'bg-app-accent text-white'
+                    : 'bg-app-ink/8 text-app-muted'
+                }`}
+              >
+                {i < step ? <Check size={12} /> : i + 1}
+              </div>
+              <span className={`text-xs font-semibold ${
+                i === step ? 'text-app-ink' : 'text-app-muted'
+              }`}>{label}</span>
+              {i < WIZARD_STEPS.length - 1 && (
+                <div className={`h-px w-4 rounded ${
+                  i < step ? 'bg-app-success' : 'bg-app-line'
+                }`} />
+              )}
+            </div>
+          ))}
+        </div>
 
-          <div className="grid gap-4 md:grid-cols-[1.2fr_0.8fr]">
-            <TextField label="Rule name" value={draft.name} onChange={(name) => setDraft((current) => ({ ...current, name }))} required />
+        {(createRule.error || updateRule.error) ? (
+          <div className="mb-4">
+            <InlineMessage tone="error" message={(createRule.error || updateRule.error as Error).message} />
+          </div>
+        ) : null}
+
+        {/* Step 0 — Basics */}
+        {step === 0 && (
+          <div className="space-y-4">
+            <TextField
+              label="Rule name"
+              value={draft.name}
+              onChange={(name) => setDraft((c) => ({ ...c, name }))}
+              placeholder="e.g. Block incomplete tasks"
+              required
+            />
             <label className="block">
               <span className="mb-2 block text-sm font-medium text-app-ink">Mode</span>
               <select
                 value={draft.isSync ? 'sync' : 'async'}
-                onChange={(event) => setDraft((current) => ({ ...current, isSync: event.target.value === 'sync' }))}
+                onChange={(e) => setDraft((c) => ({ ...c, isSync: e.target.value === 'sync' }))}
                 className="w-full rounded-2xl border border-app-line bg-white/85 px-4 py-3 text-sm text-app-ink outline-none transition focus:border-app-accent focus:ring-4 focus:ring-app-accent/10"
               >
-                <option value="sync">Sync rule</option>
-                <option value="async">Async rule</option>
+                <option value="sync">Sync — blocks the action immediately</option>
+                <option value="async">Async — runs in the background</option>
               </select>
             </label>
           </div>
+        )}
 
-          <TemplatePicker
-            label="Trigger"
-            value={draft.triggerType}
-            options={catalog.triggers}
-            onChange={(triggerType) =>
-              setDraft((current) => ({
-                ...current,
-                triggerType,
-                triggerValue: '',
-              }))
-            }
-          />
-          {triggerTemplate ? (
-            <p className="-mt-3 text-xs text-app-muted font-medium px-1">
-              {triggerTemplate.description}
-            </p>
-          ) : null}
-          {triggerTemplate ? (
-            <AutomationFormRenderer
-              template={triggerTemplate.valueTemplate}
-              value={draft.triggerValue}
-              onChange={(triggerValue) => setDraft((current) => ({ ...current, triggerValue }))}
-              projectStatuses={projectStatuses}
-              projectId={projectId}
+        {/* Step 1 — Trigger */}
+        {step === 1 && (
+          <div className="space-y-3">
+            <TemplatePicker
+              label="When"
+              value={draft.triggerType}
+              options={catalog.triggers}
+              onChange={(triggerType) => setDraft((c) => ({ ...c, triggerType, triggerValue: '' }))}
             />
-          ) : null}
+            {triggerTemplate && (
+              <p className="text-xs text-app-muted font-medium px-1">{triggerTemplate.description}</p>
+            )}
+            {triggerTemplate && (
+              <AutomationFormRenderer
+                template={triggerTemplate.valueTemplate}
+                value={draft.triggerValue}
+                onChange={(triggerValue) => setDraft((c) => ({ ...c, triggerValue }))}
+                projectStatuses={projectStatuses}
+                projectId={projectId}
+              />
+            )}
+          </div>
+        )}
 
-          <TemplatePicker
-            label="Condition"
-            value={draft.conditionType}
-            options={catalog.conditions}
-            onChange={(conditionType) =>
-              setDraft((current) => ({
-                ...current,
-                conditionType,
-                conditionValue: '',
-              }))
-            }
-          />
-          {conditionTemplate ? (
-            <p className="-mt-3 text-xs text-app-muted font-medium px-1">
-              {conditionTemplate.description}
-            </p>
-          ) : null}
-          {conditionTemplate ? (
-            <AutomationFormRenderer
-              template={conditionTemplate.valueTemplate}
-              value={draft.conditionValue}
-              onChange={(conditionValue) => setDraft((current) => ({ ...current, conditionValue }))}
-              projectStatuses={projectStatuses}
-              projectId={projectId}
-              includeSpecialAssignees={false}
+        {/* Step 2 — Condition */}
+        {step === 2 && (
+          <div className="space-y-3">
+            <TemplatePicker
+              label="If"
+              value={draft.conditionType}
+              options={catalog.conditions}
+              onChange={(conditionType) => setDraft((c) => ({ ...c, conditionType, conditionValue: '' }))}
             />
-          ) : null}
+            {conditionTemplate && (
+              <p className="text-xs text-app-muted font-medium px-1">{conditionTemplate.description}</p>
+            )}
+            {conditionTemplate && (
+              <AutomationFormRenderer
+                template={conditionTemplate.valueTemplate}
+                value={draft.conditionValue}
+                onChange={(conditionValue) => setDraft((c) => ({ ...c, conditionValue }))}
+                projectStatuses={projectStatuses}
+                projectId={projectId}
+                includeSpecialAssignees={false}
+              />
+            )}
+          </div>
+        )}
 
-          <TemplatePicker
-            label="Action"
-            value={draft.actionType}
-            options={catalog.actions}
-            onChange={(actionType) =>
-              setDraft((current) => ({
-                ...current,
-                actionType,
-                actionValue: '',
-              }))
-            }
-          />
-          {actionTemplate ? (
-            <p className="-mt-3 text-xs text-app-muted font-medium px-1">
-              {actionTemplate.description}
-            </p>
-          ) : null}
-          {actionTemplate ? (
-            <AutomationFormRenderer
-              template={actionTemplate.valueTemplate}
-              value={draft.actionValue}
-              onChange={(actionValue) => setDraft((current) => ({ ...current, actionValue }))}
-              projectStatuses={projectStatuses}
-              projectId={projectId}
-              includeSpecialAssignees={actionTemplate.type === 'SET_ASSIGNEE'}
+        {/* Step 3 — Action */}
+        {step === 3 && (
+          <div className="space-y-3">
+            <TemplatePicker
+              label="Then"
+              value={draft.actionType}
+              options={catalog.actions}
+              onChange={(actionType) => setDraft((c) => ({ ...c, actionType, actionValue: '' }))}
             />
-          ) : null}
+            {actionTemplate && (
+              <p className="text-xs text-app-muted font-medium px-1">{actionTemplate.description}</p>
+            )}
+            {actionTemplate && (
+              <AutomationFormRenderer
+                template={actionTemplate.valueTemplate}
+                value={draft.actionValue}
+                onChange={(actionValue) => setDraft((c) => ({ ...c, actionValue }))}
+                projectStatuses={projectStatuses}
+                projectId={projectId}
+                includeSpecialAssignees={actionTemplate.type === 'SET_ASSIGNEE'}
+              />
+            )}
+          </div>
+        )}
 
-          <div className="flex flex-wrap gap-3 pt-2">
+        {/* Wizard navigation */}
+        <div className="mt-6 flex items-center justify-between gap-3">
+          <button
+            type="button"
+            onClick={step === 0 ? closeModal : () => setStep((s) => s - 1)}
+            className="inline-flex items-center gap-2 rounded-full border border-app-line bg-white/80 px-4 py-2.5 text-sm font-semibold text-app-ink transition hover:border-app-ink/20"
+          >
+            {step === 0 ? <><X size={14} /> Cancel</> : <><ArrowLeft size={14} /> Back</>}
+          </button>
+
+          {step < 3 ? (
             <button
               type="button"
-              onClick={closeModal}
-              className="inline-flex items-center gap-2 rounded-full border border-app-line bg-white/80 px-5 py-3 text-sm font-semibold text-app-ink transition hover:border-app-ink/20"
+              disabled={step === 0 && !draft.name.trim()}
+              onClick={() => setStep((s) => s + 1)}
+              className="inline-flex items-center gap-2 rounded-full bg-app-accent px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-app-accent/90 disabled:opacity-50"
             >
-              <X size={16} />
-              Cancel
+              Next <ArrowRight size={14} />
             </button>
+          ) : (
             <button
-              type="submit"
+              type="button"
               disabled={saveDisabled || createRule.isPending || updateRule.isPending}
-              className="inline-flex items-center gap-2 rounded-full bg-app-accent px-5 py-3 text-sm font-semibold text-white transition hover:bg-app-accent/90 disabled:opacity-60"
+              onClick={() => {
+                if (saveDisabled) return;
+                if (modal?.mode === 'edit') updateRule.mutate();
+                else createRule.mutate();
+              }}
+              className="inline-flex items-center gap-2 rounded-full bg-app-accent px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-app-accent/90 disabled:opacity-50"
             >
-              {createRule.isPending || updateRule.isPending ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
+              {createRule.isPending || updateRule.isPending
+                ? <Loader2 size={14} className="animate-spin" />
+                : <Check size={14} />}
               Save rule
             </button>
-          </div>
-        </form>
+          )}
+        </div>
       </AppModal>
     </div>
   );
