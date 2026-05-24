@@ -194,25 +194,7 @@ AFTER INSERT ON outbox_events
 FOR EACH ROW EXECUTE FUNCTION notify_outbox_event();
 
 
--- Project Auto Action Table (NEW)
-CREATE TABLE auto_action (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    fk_project_id UUID NOT NULL REFERENCES project(id) ON DELETE CASCADE,
-    name TEXT NOT NULL DEFAULT 'Untitled Auto Action',
-    description TEXT,
-    triggers JSONB NOT NULL DEFAULT '[]',
-    steps JSONB NOT NULL DEFAULT '[]',
-    is_active BOOLEAN NOT NULL DEFAULT TRUE,
-    is_sync BOOLEAN NOT NULL DEFAULT TRUE,
-    version INTEGER NOT NULL DEFAULT 1,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    created_by TEXT NOT NULL,
-    updated_by TEXT NOT NULL
-);
 
--- Auto Action Indexes
-CREATE INDEX idx_auto_action_project ON auto_action(fk_project_id);
 
 CREATE TABLE IF NOT EXISTS task_automation_rule (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

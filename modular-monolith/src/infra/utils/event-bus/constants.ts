@@ -6,7 +6,6 @@ export const KAFKA_TOPICS = {
     TEAM_AGGREGATED: 'team-aggregated-events',
     TASK: 'task-events',
     TASK_AGGREGATED: 'task-aggregated-events',
-    AUTO_ACTION: 'auto-action-events',
 } as const;
 
 // Event type constants — values match exactly what the outbox SQL writes,
@@ -93,10 +92,5 @@ export const KAFKA_EVENTS = {
     PIPELINE: {
         TRIGGER: 'pipeline.trigger',
         CONTINUE: 'pipeline.continue',
-    },
-    AUTO_ACTION: {
-        CREATED: 'auto_action.created',
-        UPDATED: 'auto_action.updated',
-        DELETED: 'auto_action.deleted',
     },
 } as const;
