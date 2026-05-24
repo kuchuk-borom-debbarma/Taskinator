@@ -3,9 +3,8 @@ enum InputType {
     TEXT
     NUMBER
     NONE
-    SELECT_FROM_TO
     TEAM_MEMBER
-    LINK_LABEL_AND_STATUS
+    COMPOSITE
 }
 
 enum AutomationMode {
@@ -18,12 +17,22 @@ type AutomationOption {
     label: String!
 }
 
+type TemplateField {
+    key: String!
+    inputType: InputType!
+    label: String!
+    placeholder: String
+    staticOptions: [AutomationOption!]
+    dynamicOptionsSource: String
+}
+
 type ValueTemplate {
     inputType: InputType!
     label: String!
     placeholder: String
     staticOptions: [AutomationOption!]
     dynamicOptionsSource: String
+    fields: [TemplateField!]
 }
 
 type TriggerTemplate {

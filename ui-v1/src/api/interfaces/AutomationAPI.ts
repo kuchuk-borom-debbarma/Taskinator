@@ -3,12 +3,30 @@ export interface AutomationOption {
   label: string;
 }
 
-export interface ValueTemplate {
-  inputType: 'SELECT' | 'TEXT' | 'NUMBER' | 'NONE' | 'SELECT_FROM_TO' | 'TEAM_MEMBER' | 'LINK_LABEL_AND_STATUS';
+export type InputType =
+  | 'SELECT'
+  | 'TEXT'
+  | 'NUMBER'
+  | 'NONE'
+  | 'TEAM_MEMBER'
+  | 'COMPOSITE';
+
+export interface TemplateField {
+  key: string;
+  inputType: InputType;
   label: string;
   placeholder?: string | null;
   staticOptions?: AutomationOption[] | null;
   dynamicOptionsSource?: string | null;
+}
+
+export interface ValueTemplate {
+  inputType: InputType;
+  label: string;
+  placeholder?: string | null;
+  staticOptions?: AutomationOption[] | null;
+  dynamicOptionsSource?: string | null;
+  fields?: TemplateField[] | null;
 }
 
 export interface TriggerTemplate {

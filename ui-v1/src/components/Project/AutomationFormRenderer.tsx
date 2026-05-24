@@ -44,6 +44,37 @@ export function AutomationFormRenderer({
 }: RendererProps) {
   if (template.inputType === 'NONE') return null;
 
+  if (template.inputType === 'COMPOSITE' && template.fields) {
+    let config: Record<string, string> = {};
+    if (value) {
+      try {
+        config = JSON.parse(value);
+      } catch {
+        config = {};
+      }
+    }
+
+    return (
+      <div className="grid gap-4 sm:grid-cols-2">
+        {template.fields.map((field) => (
+          <div key={field.key} className="w-full">
+            <AutomationFormRenderer
+              template={field}
+              value={config[field.key] || ''}
+              onChange={(newFieldVal) => {
+                const updatedConfig = { ...config, [field.key]: newFieldVal };
+                onChange(JSON.stringify(updatedConfig));
+              }}
+              projectStatuses={projectStatuses}
+              projectId={projectId}
+              includeSpecialAssignees={includeSpecialAssignees}
+            />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   if (template.inputType === 'TEXT' || template.inputType === 'NUMBER') {
     return (
       <TextField
@@ -56,110 +87,11 @@ export function AutomationFormRenderer({
     );
   }
 
-  // Resolve options list for SELECT / SELECT_FROM_TO
+  // Resolve options list for SELECT
   const options =
     template.dynamicOptionsSource === 'PROJECT_STATUSES'
       ? projectStatuses.map((status) => ({ value: status, label: formatStatusLabel(status) }))
       : template.staticOptions ?? [];
-
-  if (template.inputType === 'SELECT_FROM_TO') {
-    let config = { from: '', to: '' };
-    if (value) {
-      try {
-        config = JSON.parse(value);
-      } catch {
-        config = { from: '', to: value };
-      }
-    }
-
-    return (
-      <div className="grid gap-4 sm:grid-cols-2">
-        <label className="block">
-          <span className="mb-2 block text-sm font-medium text-app-ink">From Status (Optional)</span>
-          <select
-            value={config.from || ''}
-            onChange={(event) => {
-              const fromVal = event.target.value;
-              onChange(JSON.stringify({ from: fromVal || undefined, to: config.to || undefined }));
-            }}
-            className={SELECT_CLASS}
-          >
-            <option value="">Any status</option>
-            {options.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="block">
-          <span className="mb-2 block text-sm font-medium text-app-ink">To Status (Optional)</span>
-          <select
-            value={config.to || ''}
-            onChange={(event) => {
-              const toVal = event.target.value;
-              onChange(JSON.stringify({ from: config.from || undefined, to: toVal || undefined }));
-            }}
-            className={SELECT_CLASS}
-          >
-            <option value="">Any status</option>
-            {options.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
-    );
-  }
-
-  if (template.inputType === 'LINK_LABEL_AND_STATUS') {
-    let config = { label: '', status: '' };
-    if (value) {
-      try {
-        config = JSON.parse(value);
-      } catch {
-        config = { label: '', status: value };
-      }
-    }
-
-    const statusOptions = projectStatuses.map((status) => ({
-      value: status,
-      label: formatStatusLabel(status),
-    }));
-
-    return (
-      <div className="grid gap-4 sm:grid-cols-2">
-        <TextField
-          label="Link Label (e.g. blocks, subtask)"
-          value={config.label || ''}
-          onChange={(lbl) => {
-            onChange(JSON.stringify({ label: lbl.trim(), status: config.status }));
-          }}
-          placeholder="blocks"
-          required
-        />
-        <label className="block">
-          <span className="mb-2 block text-sm font-medium text-app-ink">Target Status</span>
-          <select
-            value={config.status || ''}
-            onChange={(event) => {
-              onChange(JSON.stringify({ label: config.label, status: event.target.value }));
-            }}
-            className={SELECT_CLASS}
-          >
-            <option value="">Select status</option>
-            {statusOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
-    );
-  }
 
   if (template.inputType === 'SELECT') {
     return (

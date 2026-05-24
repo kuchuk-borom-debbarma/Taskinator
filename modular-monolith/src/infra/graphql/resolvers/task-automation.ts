@@ -113,9 +113,22 @@ export const taskAutomationResolvers = {
                             'Use this for sync guards (e.g. block the transition if children are unfinished) ' +
                             'or async cascades on the task itself.',
                         valueTemplate: {
-                            inputType: 'SELECT_FROM_TO',
-                            label: 'Status transition (optional — leave blank to match any change)',
-                            dynamicOptionsSource: 'PROJECT_STATUSES',
+                            inputType: 'COMPOSITE',
+                            label: 'Status Transition',
+                            fields: [
+                                {
+                                    key: 'from',
+                                    inputType: 'SELECT',
+                                    label: 'From Status (Optional)',
+                                    dynamicOptionsSource: 'PROJECT_STATUSES',
+                                },
+                                {
+                                    key: 'to',
+                                    inputType: 'SELECT',
+                                    label: 'To Status (Optional)',
+                                    dynamicOptionsSource: 'PROJECT_STATUSES',
+                                },
+                            ],
                         },
                         supportedModes: ['SYNC', 'ASYNC'],
                         ...TRIGGER_COMPATIBILITY.STATUS_CHANGED,
@@ -216,8 +229,22 @@ export const taskAutomationResolvers = {
                         description:
                             'True when every task with an incoming link of the specified label is in the selected status.',
                         valueTemplate: {
-                            inputType: 'LINK_LABEL_AND_STATUS',
+                            inputType: 'COMPOSITE',
                             label: 'Incoming Link Filter',
+                            fields: [
+                                {
+                                    key: 'label',
+                                    inputType: 'TEXT',
+                                    label: 'Link Label (e.g. blocks, subtask)',
+                                    placeholder: 'blocks',
+                                },
+                                {
+                                    key: 'status',
+                                    inputType: 'SELECT',
+                                    label: 'Target Status',
+                                    dynamicOptionsSource: 'PROJECT_STATUSES',
+                                },
+                            ],
                         },
                     },
                     {
@@ -226,8 +253,22 @@ export const taskAutomationResolvers = {
                         description:
                             'True when every task with an outgoing link of the specified label is in the selected status.',
                         valueTemplate: {
-                            inputType: 'LINK_LABEL_AND_STATUS',
+                            inputType: 'COMPOSITE',
                             label: 'Outgoing Link Filter',
+                            fields: [
+                                {
+                                    key: 'label',
+                                    inputType: 'TEXT',
+                                    label: 'Link Label (e.g. blocks, subtask)',
+                                    placeholder: 'blocks',
+                                },
+                                {
+                                    key: 'status',
+                                    inputType: 'SELECT',
+                                    label: 'Target Status',
+                                    dynamicOptionsSource: 'PROJECT_STATUSES',
+                                },
+                            ],
                         },
                     },
                 ],

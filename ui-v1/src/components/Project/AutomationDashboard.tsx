@@ -824,10 +824,17 @@ export function formatRuleValue(value: string | null | undefined): string {
       if (parsed.to) {
         parts.push(`to ${formatStatusLabel(parsed.to)}`);
       }
-      if (parts.length === 0) {
-        return 'any status change';
+      if (parts.length > 0) {
+        return parts.join(' ');
       }
-      return parts.join(' ');
+      
+      // Generic fallback for any other COMPOSITE configuration values
+      return Object.entries(parsed)
+        .map(([key, val]) => {
+          const valStr = typeof val === 'string' ? formatStatusLabel(val) : String(val);
+          return `${formatStatusLabel(key)}: ${valStr}`;
+        })
+        .join(', ');
     } catch (e) {
       return value;
     }
