@@ -53,6 +53,8 @@ import type { Task, TaskService } from '../TaskService.ts';
 export const AUTOMATION_TRIGGERS = [
     'STATUS_CHANGED',
     'DESCENDANT_STATUS_CHANGED',
+    'LINKED_INCOMING_STATUS_CHANGED',
+    'LINKED_OUTGOING_STATUS_CHANGED',
 ] as const;
 
 // ─── Condition keys ───────────────────────────────────────────────────────────
@@ -75,6 +77,8 @@ export const AUTOMATION_CONDITION_TYPES = [
     'ASSIGNEE_EQUALS',
     'ALL_DESCENDANTS_IN_STATUS',
     'HAS_INCOMPLETE_DESCENDANTS',
+    'ALL_LINKED_INCOMING_IN_STATUS',
+    'ALL_LINKED_OUTGOING_IN_STATUS',
 ] as const;
 
 // ─── Action keys ──────────────────────────────────────────────────────────────
@@ -185,6 +189,66 @@ export const AUTOMATION_CONDITIONS = {
      */
     HAS_INCOMPLETE_DESCENDANTS: async (task: Task, value: string | null) =>
         !(await allDescendantsInStatus(task, value)),
+
+    /**
+     * True when ALL tasks linking TO this task with label L are in status S.
+     * Value format is JSON string: {"label": "blocks", "status": "DONE"}
+     */
+    ALL_LINKED_INCOMING_IN_STATUS: async (task: Task, value: string | null) => {
+        if (!value) return false;
+        try {
+            const { label, status } = JSON.parse(value);
+            if (!label || !status) return false;
+
+            const firstMismatch = await db
+                .selectFrom('task_link')
+                .innerJoin(
+                    'project_task',
+                    'project_task.id',
+                    'task_link.source_task_id',
+                )
+                .select('task_link.source_task_id')
+                .where('task_link.target_task_id', '=', task.id)
+                .where('task_link.label', '=', label)
+                .where('project_task.status', '!=', status)
+                .limit(1)
+                .executeTakeFirst();
+
+            return firstMismatch === undefined;
+        } catch {
+            return false;
+        }
+    },
+
+    /**
+     * True when ALL tasks this task links TO with label L are in status S.
+     * Value format is JSON string: {"label": "blocks", "status": "DONE"}
+     */
+    ALL_LINKED_OUTGOING_IN_STATUS: async (task: Task, value: string | null) => {
+        if (!value) return false;
+        try {
+            const { label, status } = JSON.parse(value);
+            if (!label || !status) return false;
+
+            const firstMismatch = await db
+                .selectFrom('task_link')
+                .innerJoin(
+                    'project_task',
+                    'project_task.id',
+                    'task_link.target_task_id',
+                )
+                .select('task_link.target_task_id')
+                .where('task_link.source_task_id', '=', task.id)
+                .where('task_link.label', '=', label)
+                .where('project_task.status', '!=', status)
+                .limit(1)
+                .executeTakeFirst();
+
+            return firstMismatch === undefined;
+        } catch {
+            return false;
+        }
+    },
 } satisfies Record<
     (typeof AUTOMATION_CONDITION_TYPES)[number],
     AutomationCondition

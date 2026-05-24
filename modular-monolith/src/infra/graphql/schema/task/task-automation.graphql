@@ -5,6 +5,7 @@ enum InputType {
     NONE
     SELECT_FROM_TO
     TEAM_MEMBER
+    LINK_LABEL_AND_STATUS
 }
 
 enum AutomationMode {

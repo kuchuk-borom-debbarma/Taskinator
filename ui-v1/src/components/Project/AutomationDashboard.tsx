@@ -814,6 +814,9 @@ export function formatRuleValue(value: string | null | undefined): string {
   if (value.startsWith('{')) {
     try {
       const parsed = JSON.parse(value);
+      if (parsed.label && parsed.status) {
+        return `type "${parsed.label}" in status ${formatStatusLabel(parsed.status)}`;
+      }
       const parts: string[] = [];
       if (parsed.from) {
         parts.push(`from ${formatStatusLabel(parsed.from)}`);

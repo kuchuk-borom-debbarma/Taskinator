@@ -67,6 +67,22 @@ const TRIGGER_COMPATIBILITY: Record<
             // the descendant's transition already committed at this point.
         ],
     },
+
+    LINKED_INCOMING_STATUS_CHANGED: {
+        compatibleConditions: [
+            'ALL_LINKED_INCOMING_IN_STATUS',
+            'STATUS_EQUALS',
+        ],
+        compatibleActions: ['SET_STATUS', 'SET_ASSIGNEE'],
+    },
+
+    LINKED_OUTGOING_STATUS_CHANGED: {
+        compatibleConditions: [
+            'ALL_LINKED_OUTGOING_IN_STATUS',
+            'STATUS_EQUALS',
+        ],
+        compatibleActions: ['SET_STATUS', 'SET_ASSIGNEE'],
+    },
 };
 
 // ─── Resolver ─────────────────────────────────────────────────────────────────
@@ -118,6 +134,34 @@ export const taskAutomationResolvers = {
                         supportedModes: ['ASYNC'],
                         ...TRIGGER_COMPATIBILITY.DESCENDANT_STATUS_CHANGED,
                     },
+                    {
+                        type: 'LINKED_INCOMING_STATUS_CHANGED',
+                        label: 'A linked incoming task changes status',
+                        description:
+                            'Fires on this task when any task linking TO this task changes status. ' +
+                            'E.g. fires on the parent when a subtask changes status.',
+                        valueTemplate: {
+                            inputType: 'TEXT',
+                            label: 'Link Label (e.g. subtask_of, blocks)',
+                            placeholder: 'blocks',
+                        },
+                        supportedModes: ['ASYNC'],
+                        ...TRIGGER_COMPATIBILITY.LINKED_INCOMING_STATUS_CHANGED,
+                    },
+                    {
+                        type: 'LINKED_OUTGOING_STATUS_CHANGED',
+                        label: 'A linked outgoing task changes status',
+                        description:
+                            'Fires on this task when any task THIS task links TO changes status. ' +
+                            'E.g. fires on the subtask when the parent changes status.',
+                        valueTemplate: {
+                            inputType: 'TEXT',
+                            label: 'Link Label (e.g. subtask_of, blocks)',
+                            placeholder: 'blocks',
+                        },
+                        supportedModes: ['ASYNC'],
+                        ...TRIGGER_COMPATIBILITY.LINKED_OUTGOING_STATUS_CHANGED,
+                    },
                 ],
 
                 conditions: [
@@ -164,6 +208,26 @@ export const taskAutomationResolvers = {
                             inputType: 'SELECT',
                             label: 'Expected completion status',
                             dynamicOptionsSource: 'PROJECT_STATUSES',
+                        },
+                    },
+                    {
+                        type: 'ALL_LINKED_INCOMING_IN_STATUS',
+                        label: 'All incoming linked tasks of type L are in status S',
+                        description:
+                            'True when every task with an incoming link of the specified label is in the selected status.',
+                        valueTemplate: {
+                            inputType: 'LINK_LABEL_AND_STATUS',
+                            label: 'Incoming Link Filter',
+                        },
+                    },
+                    {
+                        type: 'ALL_LINKED_OUTGOING_IN_STATUS',
+                        label: 'All outgoing linked tasks of type L are in status S',
+                        description:
+                            'True when every task with an outgoing link of the specified label is in the selected status.',
+                        valueTemplate: {
+                            inputType: 'LINK_LABEL_AND_STATUS',
+                            label: 'Outgoing Link Filter',
                         },
                     },
                 ],

@@ -105,6 +105,24 @@ export class TaskAutomationListener {
                 toStatus,
                 actorId,
             );
+
+            // Run rules that fire when a linked incoming task changes status.
+            await this.runLinkedIncomingStatusChangedRules(
+                projectId,
+                taskId,
+                fromStatus,
+                toStatus,
+                actorId,
+            );
+
+            // Run rules that fire when a linked outgoing task changes status.
+            await this.runLinkedOutgoingStatusChangedRules(
+                projectId,
+                taskId,
+                fromStatus,
+                toStatus,
+                actorId,
+            );
         }
     }
 
@@ -226,6 +244,126 @@ export class TaskAutomationListener {
 
                 // Condition + action run in the ancestor's context.
                 await this.evaluateAndRun(ancestorTask, rule, actorId);
+            }
+        }
+    }
+
+    /**
+     * Runs async rules of type LINKED_INCOMING_STATUS_CHANGED.
+     *
+     * Fires on task Y (the target) when its incoming task X (the source) changes status,
+     * where X --[L]--> Y exists.
+     */
+    private async runLinkedIncomingStatusChangedRules(
+        projectId: string,
+        changedTaskId: string,
+        fromStatus: string | null,
+        toStatus: string | null,
+        actorId: string,
+    ): Promise<void> {
+        // Find tasks Y that have an incoming link from the changed task X
+        const links = await db
+            .selectFrom('task_link')
+            .select(['target_task_id', 'label'])
+            .where('source_task_id', '=', changedTaskId)
+            .execute();
+
+        if (links.length === 0) return;
+
+        // Group by label to minimize DB rule loading queries
+        const groupedByLabel = new Map<string, string[]>();
+        for (const link of links) {
+            const list = groupedByLabel.get(link.label) || [];
+            list.push(link.target_task_id);
+            groupedByLabel.set(link.label, list);
+        }
+
+        for (const [label, targetTaskIds] of groupedByLabel.entries()) {
+            const rules = await db
+                .selectFrom('task_automation_rule')
+                .selectAll()
+                .where('fk_project_id', '=', projectId)
+                .where('trigger_type', '=', 'LINKED_INCOMING_STATUS_CHANGED')
+                .where('trigger_value', '=', label)
+                .where('is_active', '=', true)
+                .where('is_sync', '=', false)
+                .execute();
+
+            if (rules.length === 0) continue;
+
+            for (const targetTaskId of targetTaskIds) {
+                const [targetRow] = await db
+                    .selectFrom('project_task')
+                    .selectAll()
+                    .where('id', '=', targetTaskId)
+                    .execute();
+
+                if (!targetRow) continue;
+
+                const targetTask = this.mapTaskRow(targetRow);
+                for (const rule of rules) {
+                    await this.evaluateAndRun(targetTask, rule, actorId);
+                }
+            }
+        }
+    }
+
+    /**
+     * Runs async rules of type LINKED_OUTGOING_STATUS_CHANGED.
+     *
+     * Fires on task Y (the source) when its outgoing task X (the target) changes status,
+     * where Y --[L]--> X exists.
+     */
+    private async runLinkedOutgoingStatusChangedRules(
+        projectId: string,
+        changedTaskId: string,
+        fromStatus: string | null,
+        toStatus: string | null,
+        actorId: string,
+    ): Promise<void> {
+        // Find tasks Y that have an outgoing link to the changed task X
+        const links = await db
+            .selectFrom('task_link')
+            .select(['source_task_id', 'label'])
+            .where('target_task_id', '=', changedTaskId)
+            .execute();
+
+        if (links.length === 0) return;
+
+        // Group by label to minimize DB rule loading queries
+        const groupedByLabel = new Map<string, string[]>();
+        for (const link of links) {
+            const list = groupedByLabel.get(link.label) || [];
+            list.push(link.source_task_id);
+            groupedByLabel.set(link.label, list);
+        }
+
+        for (const [label, sourceTaskIds] of groupedByLabel.entries()) {
+            const rules = await db
+                .selectFrom('task_automation_rule')
+                .selectAll()
+                .where('fk_project_id', '=', projectId)
+                .where('trigger_type', '=', 'LINKED_OUTGOING_STATUS_CHANGED')
+                .where('trigger_value', '=', label)
+                .where('is_active', '=', true)
+                .where('is_sync', '=', false)
+                .execute();
+
+            if (rules.length === 0) continue;
+
+            for (const sourceTaskId of sourceTaskIds) {
+                const [sourceRow] = await db
+                    .selectFrom('project_task')
+                    .selectAll()
+                    .where('id', '=', sourceTaskId)
+                    .execute();
+
+                if (!sourceRow) continue;
+
+                const sourceTask = this.mapTaskRow(sourceRow);
+                for (const rule of rules) {
+                    await this.evaluateAndRun(sourceTask, rule, actorId);
+                }
             }
         }
     }

@@ -44,6 +44,7 @@ const makeQuery = (rows: any[]) => {
         selectAll: jest.fn(() => query),
         where: jest.fn(() => query),
         execute: jest.fn(async () => rows),
+        executeTakeFirst: jest.fn(async () => rows[0]),
     };
     return query;
 };
@@ -224,6 +225,178 @@ describe('Task TCA automation engine', () => {
             taskId: blockedTaskId,
             version: 1,
             memberId: actorId,
+        });
+    });
+
+    it('triggers async LINKED_INCOMING_STATUS_CHANGED rules and executes actions in the background', async () => {
+        const mockTargetTaskId = 'target-task-1';
+        let linkQueryCallCount = 0;
+        mockDb.selectFrom.mockImplementation((table: string) => {
+            if (table === 'task_link') {
+                linkQueryCallCount++;
+                if (linkQueryCallCount === 1) {
+                    return makeQuery([
+                        { target_task_id: mockTargetTaskId, label: 'blocks' },
+                    ]);
+                }
+                return makeQuery([]);
+            }
+            if (table === 'task_automation_rule') {
+                return makeQuery([
+                    {
+                        id: 'rule-3',
+                        fk_project_id: projectId,
+                        is_active: true,
+                        is_sync: false,
+                        trigger_type: 'LINKED_INCOMING_STATUS_CHANGED',
+                        trigger_value: 'blocks',
+                        condition_type: 'ALL_LINKED_INCOMING_IN_STATUS',
+                        condition_value: JSON.stringify({
+                            label: 'blocks',
+                            status: 'DONE',
+                        }),
+                        action_type: 'SET_STATUS',
+                        action_value: 'READY',
+                    },
+                ]);
+            }
+            if (table === 'project_task') {
+                return makeQuery([
+                    {
+                        id: mockTargetTaskId,
+                        fk_project_id: projectId,
+                        fk_team_id: null,
+                        fk_member_id: null,
+                        title: 'Test task',
+                        description: '',
+                        status: 'TODO',
+                        version: 1,
+                        created_by: actorId,
+                        updated_by: actorId,
+                        priority: 0,
+                        created_at: new Date('2026-05-24T00:00:00.000Z'),
+                        updated_at: new Date('2026-05-24T00:00:00.000Z'),
+                    },
+                ]);
+            }
+            return makeQuery([]);
+        });
+
+        const event: DomainEvent<{
+            taskId: string;
+            projectId: string;
+            old: { status: string };
+            new: { status: string };
+            actorId: string;
+        }> = {
+            eventId: 'event-2',
+            type: 'task.updated',
+            key: projectId,
+            data: {
+                taskId: blockedTaskId,
+                projectId,
+                old: { status: 'TODO' },
+                new: { status: 'DONE' },
+                actorId,
+            },
+            timestamp: '2026-05-24T00:00:00.000Z',
+        };
+
+        const listener = new TaskAutomationListener();
+        await (listener as any).handleTaskUpdated([event]);
+
+        expect(mockTaskServiceUpdateTask).toHaveBeenCalledWith({
+            actorId,
+            projectId,
+            taskId: mockTargetTaskId,
+            version: 1,
+            status: 'READY',
+        });
+    });
+
+    it('triggers async LINKED_OUTGOING_STATUS_CHANGED rules and executes actions in the background', async () => {
+        const mockSourceTaskId = 'source-task-1';
+        let linkQueryCallCount = 0;
+        mockDb.selectFrom.mockImplementation((table: string) => {
+            if (table === 'task_link') {
+                linkQueryCallCount++;
+                if (linkQueryCallCount === 1) {
+                    return makeQuery([
+                        { source_task_id: mockSourceTaskId, label: 'blocks' },
+                    ]);
+                }
+                return makeQuery([]);
+            }
+            if (table === 'task_automation_rule') {
+                return makeQuery([
+                    {
+                        id: 'rule-4',
+                        fk_project_id: projectId,
+                        is_active: true,
+                        is_sync: false,
+                        trigger_type: 'LINKED_OUTGOING_STATUS_CHANGED',
+                        trigger_value: 'blocks',
+                        condition_type: 'ALL_LINKED_OUTGOING_IN_STATUS',
+                        condition_value: JSON.stringify({
+                            label: 'blocks',
+                            status: 'DONE',
+                        }),
+                        action_type: 'SET_STATUS',
+                        action_value: 'READY',
+                    },
+                ]);
+            }
+            if (table === 'project_task') {
+                return makeQuery([
+                    {
+                        id: mockSourceTaskId,
+                        fk_project_id: projectId,
+                        fk_team_id: null,
+                        fk_member_id: null,
+                        title: 'Test task',
+                        description: '',
+                        status: 'TODO',
+                        version: 1,
+                        created_by: actorId,
+                        updated_by: actorId,
+                        priority: 0,
+                        created_at: new Date('2026-05-24T00:00:00.000Z'),
+                        updated_at: new Date('2026-05-24T00:00:00.000Z'),
+                    },
+                ]);
+            }
+            return makeQuery([]);
+        });
+
+        const event: DomainEvent<{
+            taskId: string;
+            projectId: string;
+            old: { status: string };
+            new: { status: string };
+            actorId: string;
+        }> = {
+            eventId: 'event-3',
+            type: 'task.updated',
+            key: projectId,
+            data: {
+                taskId: blockedTaskId,
+                projectId,
+                old: { status: 'TODO' },
+                new: { status: 'DONE' },
+                actorId,
+            },
+            timestamp: '2026-05-24T00:00:00.000Z',
+        };
+
+        const listener = new TaskAutomationListener();
+        await (listener as any).handleTaskUpdated([event]);
+
+        expect(mockTaskServiceUpdateTask).toHaveBeenCalledWith({
+            actorId,
+            projectId,
+            taskId: mockSourceTaskId,
+            version: 1,
+            status: 'READY',
         });
     });
 });
