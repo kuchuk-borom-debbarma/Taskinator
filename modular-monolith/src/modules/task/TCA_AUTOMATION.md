@@ -107,9 +107,7 @@ Important columns:
 Omit `from` or `to` to match any value for that field. Omit entirely to match
 any status change.
 
-**DESCENDANT_STATUS_CHANGED** uses the same `trigger_value` format, but `from`
-and `to` refer to the **descendant's** status transition, not the ancestor's.
-The rule's condition and action execute in the context of the **ancestor** task.
+**DESCENDANT_STATUS_CHANGED** has no trigger value. It automatically fires on any status change of a descendant, leaving specific status validation to the condition step. The rule's condition and action execute in the context of the **ancestor** task.
 
 ### Conditions
 
