@@ -81,6 +81,19 @@ export const getTasksPage = async (
             ${params.memberId ?? null}::text IS NULL OR fk_member_id = ${params.memberId}
           )
           AND (
+            ${params.search ?? null}::text IS NULL
+            OR title ILIKE ${`%${params.search}%`}
+            OR description ILIKE ${`%${params.search}%`}
+          )
+          AND (
+            ${params.status ?? null}::text IS NULL
+            OR status = ${params.status}
+          )
+          AND (
+            ${params.priority ?? null}::integer IS NULL
+            OR priority = ${params.priority}
+          )
+          AND (
             ${cursorEpoch}::text IS NULL
             OR (
                 CASE 

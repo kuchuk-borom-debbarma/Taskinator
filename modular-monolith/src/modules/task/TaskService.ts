@@ -87,6 +87,9 @@ export type TaskLink = {
 export type PaginationParams = SharedPaginationParams & {
     teamId?: string;
     memberId?: string;
+    search?: string | null;
+    status?: string | null;
+    priority?: number | null;
 };
 
 export interface TaskConnection {

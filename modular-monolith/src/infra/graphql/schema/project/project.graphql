@@ -30,6 +30,7 @@ type Project {
     Paginated list of members belonging to this project.
     """
     projectMembers(
+        search: String
         """
         Forward pagination — return the first N members.
         """

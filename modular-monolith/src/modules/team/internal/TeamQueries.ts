@@ -104,6 +104,10 @@ export const getTeams = async (
             ${memberId ?? null}::text IS NULL OR EXISTS (SELECT 1 FROM project_team_member ptm WHERE ptm.fk_team_id = t.id AND ptm.fk_user_id = ${memberId})
           )
           AND (
+            ${params.search ?? null}::text IS NULL
+            OR t.name ILIKE ${`%${params.search}%`}
+          )
+          AND (
             ${cursorEpoch}::text IS NULL
             OR (
                 CASE 
@@ -179,27 +183,33 @@ export const getTeamMembers = async (
             LIMIT 1
         )
         SELECT 
-            id, 
-            fk_project_id AS "projectId", 
-            fk_team_id AS "teamId", 
-            fk_user_id AS "userId", 
-            version, 
-            created_at AS "createdAt", 
-            created_at::text as "epochPrecision",
-            updated_at AS "updatedAt"
-        FROM project_team_member
-        WHERE fk_team_id = ${teamId}::uuid
+            ptm.id, 
+            ptm.fk_project_id AS "projectId", 
+            ptm.fk_team_id AS "teamId", 
+            ptm.fk_user_id AS "userId", 
+            ptm.version, 
+            ptm.created_at AS "createdAt", 
+            ptm.created_at::text as "epochPrecision",
+            ptm.updated_at AS "updatedAt"
+        FROM project_team_member ptm
+        INNER JOIN users u ON u.id = ptm.fk_user_id::uuid
+        WHERE ptm.fk_team_id = ${teamId}::uuid
           AND EXISTS (SELECT 1 FROM auth_check)
+          AND (
+            ${params.search ?? null}::text IS NULL
+            OR u.username ILIKE ${`%${params.search}%`}
+            OR u.email ILIKE ${`%${params.search}%`}
+          )
           AND (
               ${cursorEpoch}::text IS NULL
               OR (
                   CASE 
-                    WHEN ${isBackward} THEN (created_at > ${cursorEpoch}::timestamptz OR (created_at = ${cursorEpoch}::timestamptz AND id > ${cursorId}::uuid))
-                    ELSE (created_at < ${cursorEpoch}::timestamptz OR (created_at = ${cursorEpoch}::timestamptz AND id < ${cursorId}::uuid))
+                    WHEN ${isBackward} THEN (ptm.created_at > ${cursorEpoch}::timestamptz OR (ptm.created_at = ${cursorEpoch}::timestamptz AND ptm.id > ${cursorId}::uuid))
+                    ELSE (ptm.created_at < ${cursorEpoch}::timestamptz OR (ptm.created_at = ${cursorEpoch}::timestamptz AND ptm.id < ${cursorId}::uuid))
                   END
               )
           )
-        ORDER BY created_at ${sql.raw(isBackward ? 'ASC' : 'DESC')}, id ${sql.raw(isBackward ? 'ASC' : 'DESC')}
+        ORDER BY ptm.created_at ${sql.raw(isBackward ? 'ASC' : 'DESC')}, ptm.id ${sql.raw(isBackward ? 'ASC' : 'DESC')}
         LIMIT ${limit + 1}
     `.execute(db);
 

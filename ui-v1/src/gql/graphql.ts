@@ -16,6 +16,15 @@ export type Scalars = {
   Float: { input: number; output: number; }
 };
 
+export type ActionTemplate = {
+  __typename?: 'ActionTemplate';
+  description: Scalars['String']['output'];
+  label: Scalars['String']['output'];
+  supportedModes: Array<AutomationMode>;
+  type: Scalars['String']['output'];
+  valueTemplate: ValueTemplate;
+};
+
 export type AddProjectMembersPayload = {
   __typename?: 'AddProjectMembersPayload';
   success: Scalars['Boolean']['output'];
@@ -26,6 +35,44 @@ export type AddTeamMembersPayload = {
   /** Number of members successfully added. */
   addedCount: Scalars['Int']['output'];
   success: Scalars['Boolean']['output'];
+};
+
+export type AutomationMode =
+  | 'ASYNC'
+  | 'SYNC';
+
+export type AutomationOption = {
+  __typename?: 'AutomationOption';
+  label: Scalars['String']['output'];
+  value: Scalars['String']['output'];
+};
+
+export type AutomationTemplatesCatalog = {
+  __typename?: 'AutomationTemplatesCatalog';
+  actions: Array<ActionTemplate>;
+  conditions: Array<ConditionTemplate>;
+  triggers: Array<TriggerTemplate>;
+};
+
+export type ConditionTemplate = {
+  __typename?: 'ConditionTemplate';
+  description: Scalars['String']['output'];
+  label: Scalars['String']['output'];
+  type: Scalars['String']['output'];
+  valueTemplate: ValueTemplate;
+};
+
+export type CreateTaskAutomationRuleInput = {
+  actionType: Scalars['String']['input'];
+  actionValue?: InputMaybe<Scalars['String']['input']>;
+  conditionType: Scalars['String']['input'];
+  conditionValue?: InputMaybe<Scalars['String']['input']>;
+  isActive?: InputMaybe<Scalars['Boolean']['input']>;
+  isSync: Scalars['Boolean']['input'];
+  name: Scalars['String']['input'];
+  projectId: Scalars['ID']['input'];
+  triggerType: Scalars['String']['input'];
+  triggerValue?: InputMaybe<Scalars['String']['input']>;
 };
 
 export type CreateTaskInput = {
@@ -59,6 +106,12 @@ export type CreateTeamPayload = {
   team?: Maybe<Team>;
 };
 
+export type DeleteAutomationRuleResult = {
+  __typename?: 'DeleteAutomationRuleResult';
+  ruleId: Scalars['ID']['output'];
+  success: Scalars['Boolean']['output'];
+};
+
 export type DeleteProjectsPayload = {
   __typename?: 'DeleteProjectsPayload';
   /** Number of projects successfully deleted. */
@@ -73,6 +126,14 @@ export type DeleteTeamsPayload = {
   success: Scalars['Boolean']['output'];
 };
 
+export type InputType =
+  | 'COMPOSITE'
+  | 'NONE'
+  | 'NUMBER'
+  | 'SELECT'
+  | 'TEAM_MEMBER'
+  | 'TEXT';
+
 export type Mutation = {
   __typename?: 'Mutation';
   _empty?: Maybe<Scalars['String']['output']>;
@@ -82,10 +143,12 @@ export type Mutation = {
   addTeamMembers: AddTeamMembersPayload;
   /** Creates a new project. Returns the created project. */
   createProject?: Maybe<Project>;
+  createTaskAutomationRule: TaskAutomationRule;
   /** Creates a new team within a project. */
   createTeam: CreateTeamPayload;
   /** Permanently deletes one or more projects. */
   deleteProjects: DeleteProjectsPayload;
+  deleteTaskAutomationRule: DeleteAutomationRuleResult;
   /** Permanently deletes one or more teams within a project. */
   deleteTeams: DeleteTeamsPayload;
   /** Removes one or more members from a project. */
@@ -99,6 +162,7 @@ export type Mutation = {
   task: TaskMutation;
   /** Updates a project's name or description. Returns the updated project. */
   updateProject?: Maybe<Project>;
+  updateTaskAutomationRule: TaskAutomationRule;
   /** Updates a team's details with optimistic locking. */
   updateTeam: UpdateTeamPayload;
 };
@@ -123,6 +187,11 @@ export type MutationCreateProjectArgs = {
 };
 
 
+export type MutationCreateTaskAutomationRuleArgs = {
+  input: CreateTaskAutomationRuleInput;
+};
+
+
 export type MutationCreateTeamArgs = {
   name: Scalars['String']['input'];
   projectId: Scalars['ID']['input'];
@@ -131,6 +200,12 @@ export type MutationCreateTeamArgs = {
 
 export type MutationDeleteProjectsArgs = {
   projectIds: Array<Scalars['ID']['input']>;
+};
+
+
+export type MutationDeleteTaskAutomationRuleArgs = {
+  projectId: Scalars['ID']['input'];
+  ruleId: Scalars['ID']['input'];
 };
 
 
@@ -171,6 +246,11 @@ export type MutationUpdateProjectArgs = {
   id: Scalars['ID']['input'];
   name?: InputMaybe<Scalars['String']['input']>;
   version: Scalars['Int']['input'];
+};
+
+
+export type MutationUpdateTaskAutomationRuleArgs = {
+  input: UpdateTaskAutomationRuleInput;
 };
 
 
@@ -262,6 +342,7 @@ export type ProjectProjectMembersArgs = {
   before?: InputMaybe<Scalars['String']['input']>;
   first?: InputMaybe<Scalars['Int']['input']>;
   last?: InputMaybe<Scalars['Int']['input']>;
+  search?: InputMaybe<Scalars['String']['input']>;
 };
 
 
@@ -272,6 +353,9 @@ export type ProjectProjectTasksArgs = {
   first?: InputMaybe<Scalars['Int']['input']>;
   last?: InputMaybe<Scalars['Int']['input']>;
   memberId?: InputMaybe<Scalars['ID']['input']>;
+  priority?: InputMaybe<Scalars['Int']['input']>;
+  search?: InputMaybe<Scalars['String']['input']>;
+  status?: InputMaybe<Scalars['String']['input']>;
   teamId?: InputMaybe<Scalars['ID']['input']>;
 };
 
@@ -282,6 +366,7 @@ export type ProjectTeamsArgs = {
   before?: InputMaybe<Scalars['String']['input']>;
   first?: InputMaybe<Scalars['Int']['input']>;
   last?: InputMaybe<Scalars['Int']['input']>;
+  search?: InputMaybe<Scalars['String']['input']>;
 };
 
 /** Relay-style paginated list of projects. */
@@ -333,6 +418,7 @@ export type ProjectMemberEdge = {
 export type Query = {
   __typename?: 'Query';
   _empty?: Maybe<Scalars['String']['output']>;
+  automationTemplatesCatalog: AutomationTemplatesCatalog;
   /** Returns the currently authenticated user. Returns null if unauthenticated. */
   me?: Maybe<User>;
   /** Fetches a single project by ID. Returns null if not found or not authorized. */
@@ -341,6 +427,7 @@ export type Query = {
   projects: Array<Project>;
   /** Fetches a single task by ID. Returns null if not found or not authorized. */
   task?: Maybe<Task>;
+  taskAutomationRules: Array<TaskAutomationRule>;
   /** Fetches multiple tasks by ID. Returns only those the user is authorized to view. */
   tasks: Array<Task>;
   /** Fetches a single team by ID. */
@@ -356,6 +443,11 @@ export type Query = {
 };
 
 
+export type QueryAutomationTemplatesCatalogArgs = {
+  projectId: Scalars['ID']['input'];
+};
+
+
 export type QueryProjectArgs = {
   id: Scalars['ID']['input'];
 };
@@ -368,6 +460,11 @@ export type QueryProjectsArgs = {
 
 export type QueryTaskArgs = {
   id: Scalars['ID']['input'];
+};
+
+
+export type QueryTaskAutomationRulesArgs = {
+  projectId: Scalars['ID']['input'];
 };
 
 
@@ -387,6 +484,7 @@ export type QueryTeamMembersArgs = {
   first?: InputMaybe<Scalars['Int']['input']>;
   last?: InputMaybe<Scalars['Int']['input']>;
   projectId: Scalars['ID']['input'];
+  search?: InputMaybe<Scalars['String']['input']>;
   teamId: Scalars['ID']['input'];
 };
 
@@ -475,6 +573,22 @@ export type TaskNeighbourLinksArgs = {
   direction?: InputMaybe<NeighbourDirection>;
   first?: InputMaybe<Scalars['Int']['input']>;
   last?: InputMaybe<Scalars['Int']['input']>;
+};
+
+export type TaskAutomationRule = {
+  __typename?: 'TaskAutomationRule';
+  actionType: Scalars['String']['output'];
+  actionValue?: Maybe<Scalars['String']['output']>;
+  conditionType: Scalars['String']['output'];
+  conditionValue?: Maybe<Scalars['String']['output']>;
+  id: Scalars['ID']['output'];
+  isActive: Scalars['Boolean']['output'];
+  isSync: Scalars['Boolean']['output'];
+  name: Scalars['String']['output'];
+  projectId: Scalars['ID']['output'];
+  triggerType: Scalars['String']['output'];
+  triggerValue?: Maybe<Scalars['String']['output']>;
+  version: Scalars['Int']['output'];
 };
 
 /** Relay-style paginated list of tasks. */
@@ -677,6 +791,50 @@ export type TeamMemberEdge = {
   node: TeamMember;
 };
 
+export type TemplateField = {
+  __typename?: 'TemplateField';
+  dynamicOptionsSource?: Maybe<Scalars['String']['output']>;
+  inputType: InputType;
+  key: Scalars['String']['output'];
+  label: Scalars['String']['output'];
+  placeholder?: Maybe<Scalars['String']['output']>;
+  staticOptions?: Maybe<Array<AutomationOption>>;
+};
+
+export type TriggerTemplate = {
+  __typename?: 'TriggerTemplate';
+  /**
+   * Action types that are semantically valid for this trigger.
+   * The frontend uses this list to filter the Action step in the rule wizard.
+   */
+  compatibleActions: Array<Scalars['String']['output']>;
+  /**
+   * Condition types that are semantically valid for this trigger.
+   * The frontend uses this list to filter the Condition step in the rule wizard.
+   */
+  compatibleConditions: Array<Scalars['String']['output']>;
+  description: Scalars['String']['output'];
+  label: Scalars['String']['output'];
+  supportedModes: Array<AutomationMode>;
+  type: Scalars['String']['output'];
+  valueTemplate: ValueTemplate;
+};
+
+export type UpdateTaskAutomationRuleInput = {
+  actionType?: InputMaybe<Scalars['String']['input']>;
+  actionValue?: InputMaybe<Scalars['String']['input']>;
+  conditionType?: InputMaybe<Scalars['String']['input']>;
+  conditionValue?: InputMaybe<Scalars['String']['input']>;
+  isActive?: InputMaybe<Scalars['Boolean']['input']>;
+  isSync?: InputMaybe<Scalars['Boolean']['input']>;
+  name?: InputMaybe<Scalars['String']['input']>;
+  projectId: Scalars['ID']['input'];
+  ruleId: Scalars['ID']['input'];
+  triggerType?: InputMaybe<Scalars['String']['input']>;
+  triggerValue?: InputMaybe<Scalars['String']['input']>;
+  version: Scalars['Int']['input'];
+};
+
 export type UpdateTaskInput = {
   /** Updated description. Omit to leave unchanged. */
   description?: InputMaybe<Scalars['String']['input']>;
@@ -751,6 +909,16 @@ export type UserEdge = {
   __typename?: 'UserEdge';
   cursor: Scalars['String']['output'];
   node: User;
+};
+
+export type ValueTemplate = {
+  __typename?: 'ValueTemplate';
+  dynamicOptionsSource?: Maybe<Scalars['String']['output']>;
+  fields?: Maybe<Array<TemplateField>>;
+  inputType: InputType;
+  label: Scalars['String']['output'];
+  placeholder?: Maybe<Scalars['String']['output']>;
+  staticOptions?: Maybe<Array<AutomationOption>>;
 };
 
 export type GetMyProjectsQueryVariables = Exact<{

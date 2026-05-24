@@ -184,7 +184,7 @@ export const teamResolvers = {
         },
         teamMembers: async (
             _parent: any,
-            { projectId, teamId, first, after, last, before }: any,
+            { projectId, teamId, first, after, last, before, search }: any,
             context: GraphQLContext,
         ) => {
             if (!context.userId) throw new UnauthorizedError();
@@ -194,7 +194,7 @@ export const teamResolvers = {
                     context.userId,
                     projectId,
                     teamId,
-                    { first, after, last, before },
+                    { first, after, last, before, search },
                 );
 
             return {

@@ -3,6 +3,7 @@ extend type Project {
     Paginated list of teams within this project.
     """
     teams(
+        search: String
         """
         Forward pagination — return the first N teams.
         """
@@ -39,6 +40,7 @@ extend type Query {
     teamMembers(
         projectId: ID!
         teamId: ID!
+        search: String
         """
         Forward pagination — return the first N members.
         """

@@ -370,26 +370,32 @@ export const getProjectMembers = async (
             LIMIT 1
         )
         SELECT 
-            id, 
-            fk_user_id AS "userId", 
-            fk_project_id AS "projectId", 
-            version, 
-            created_at AS "createdAt", 
-            created_at::text as "epochPrecision",
-            updated_at AS "updatedAt"
-        FROM project_member
-        WHERE fk_project_id = ${projectId}::uuid
+            pm.id, 
+            pm.fk_user_id AS "userId", 
+            pm.fk_project_id AS "projectId", 
+            pm.version, 
+            pm.created_at AS "createdAt", 
+            pm.created_at::text as "epochPrecision",
+            pm.updated_at AS "updatedAt"
+        FROM project_member pm
+        INNER JOIN users u ON u.id = pm.fk_user_id::uuid
+        WHERE pm.fk_project_id = ${projectId}::uuid
           AND EXISTS (SELECT 1 FROM auth_check)
+          AND (
+            ${params.search ?? null}::text IS NULL
+            OR u.username ILIKE ${`%${params.search}%`}
+            OR u.email ILIKE ${`%${params.search}%`}
+          )
           AND (
               ${cursorEpoch}::text IS NULL
               OR (
                   CASE 
-                    WHEN ${isBackward} THEN (created_at > ${cursorEpoch}::timestamptz OR (created_at = ${cursorEpoch}::timestamptz AND id > ${cursorId}::uuid))
-                    ELSE (created_at < ${cursorEpoch}::timestamptz OR (created_at = ${cursorEpoch}::timestamptz AND id < ${cursorId}::uuid))
+                    WHEN ${isBackward} THEN (pm.created_at > ${cursorEpoch}::timestamptz OR (pm.created_at = ${cursorEpoch}::timestamptz AND pm.id > ${cursorId}::uuid))
+                    ELSE (pm.created_at < ${cursorEpoch}::timestamptz OR (pm.created_at = ${cursorEpoch}::timestamptz AND pm.id < ${cursorId}::uuid))
                   END
               )
           )
-        ORDER BY created_at ${sql.raw(isBackward ? 'ASC' : 'DESC')}, id ${sql.raw(isBackward ? 'ASC' : 'DESC')}
+        ORDER BY pm.created_at ${sql.raw(isBackward ? 'ASC' : 'DESC')}, pm.id ${sql.raw(isBackward ? 'ASC' : 'DESC')}
         LIMIT ${limit + 1}
     `.execute(db);
 

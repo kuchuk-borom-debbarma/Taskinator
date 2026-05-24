@@ -6,6 +6,9 @@ extend type Project {
     projectTasks(
         teamId: ID
         memberId: ID
+        search: String
+        status: String
+        priority: Int
         """
         Forward pagination — return the first N tasks.
         """

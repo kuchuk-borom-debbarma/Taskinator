@@ -3,6 +3,7 @@ export interface PaginationParams {
     after?: string;
     last?: number;
     before?: string;
+    search?: string | null;
 }
 
 export interface PageInfo {
