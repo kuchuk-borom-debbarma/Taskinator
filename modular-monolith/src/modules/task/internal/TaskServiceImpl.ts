@@ -250,6 +250,7 @@ export class TaskServiceImpl implements TaskService {
             .values({
                 fk_project_id: input.projectId,
                 name: input.name,
+                is_active: input.isActive ?? true,
                 is_sync: input.isSync ?? false,
                 trigger_type: input.triggerType,
                 trigger_value: input.triggerValue ?? null,

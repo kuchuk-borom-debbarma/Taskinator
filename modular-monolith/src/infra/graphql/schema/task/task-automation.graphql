@@ -75,6 +75,7 @@ type TaskAutomationRule {
 input CreateTaskAutomationRuleInput {
     projectId: ID!
     name: String!
+    isActive: Boolean
     isSync: Boolean!
     triggerType: String!
     triggerValue: String

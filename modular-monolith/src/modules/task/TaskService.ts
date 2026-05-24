@@ -47,6 +47,7 @@ export type TaskAutomationRule = {
 export type CreateTaskAutomationRuleInput = {
     projectId: string;
     name: string;
+    isActive?: boolean | null;
     isSync?: boolean | null;
     triggerType: string;
     triggerValue?: string | null;
