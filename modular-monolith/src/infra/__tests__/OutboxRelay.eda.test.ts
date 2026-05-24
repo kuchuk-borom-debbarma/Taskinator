@@ -206,4 +206,88 @@ describe('OutboxRelay — EDA Integration (MemoryBus)', () => {
             expect(remaining).toHaveLength(0);
         }, 5000);
     });
+
+    it('reclaims and publishes an outbox event stuck in PROCESSING if the lease has expired (>60s)', async () => {
+        const expiredTime = new Date(Date.now() - 70 * 1000).toISOString();
+
+        // Seed an event locked 70s ago (expired lease)
+        await db
+            .insertInto('outbox_events')
+            .values({
+                stream: EVENT_STREAMS.PROJECT,
+                stream_key: 'test-expired-id',
+                payload: {
+                    type: EVENT_TYPES.PROJECT.CREATED,
+                    projectId: 'test-expired-id',
+                } as any,
+                status: 'PROCESSING',
+                locked_at: expiredTime as any,
+            })
+            .execute();
+
+        const publishSpy = jest.spyOn(eventBus, 'publish');
+
+        startOutboxRelay();
+
+        // Expired event should be reclaimed and published
+        await waitFor(async () => {
+            expect(publishSpy).toHaveBeenCalledWith(
+                EVENT_STREAMS.PROJECT,
+                EVENT_TYPES.PROJECT.CREATED,
+                expect.arrayContaining([
+                    expect.objectContaining({ key: 'test-expired-id' }),
+                ]),
+            );
+        });
+
+        // The reclaimed row should be successfully deleted
+        await waitFor(async () => {
+            const remaining = await db
+                .selectFrom('outbox_events')
+                .selectAll()
+                .execute();
+            expect(remaining).toHaveLength(0);
+        });
+
+        publishSpy.mockRestore();
+    });
+
+    it('ignores an outbox event stuck in PROCESSING if the lease is still active (<60s)', async () => {
+        const activeTime = new Date(Date.now() - 5 * 1000).toISOString();
+
+        // Seed an event locked 5s ago (active lease)
+        await db
+            .insertInto('outbox_events')
+            .values({
+                stream: EVENT_STREAMS.PROJECT,
+                stream_key: 'test-active-id',
+                payload: {
+                    type: EVENT_TYPES.PROJECT.CREATED,
+                    projectId: 'test-active-id',
+                } as any,
+                status: 'PROCESSING',
+                locked_at: activeTime as any,
+            })
+            .execute();
+
+        const publishSpy = jest.spyOn(eventBus, 'publish');
+
+        startOutboxRelay();
+
+        // Wait a short time to allow polling cycle
+        await new Promise((r) => setTimeout(r, 300));
+
+        // Active lease should NOT be reclaimed or published
+        expect(publishSpy).not.toHaveBeenCalled();
+
+        // Row should remain untouched in the database
+        const remaining = await db
+            .selectFrom('outbox_events')
+            .selectAll()
+            .execute();
+        expect(remaining).toHaveLength(1);
+        expect(remaining[0]!.stream_key).toBe('test-active-id');
+
+        publishSpy.mockRestore();
+    });
 });
