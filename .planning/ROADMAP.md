@@ -24,3 +24,23 @@
 - [ ] Add integration tests for recursive parent-child conditions.
 - [ ] Validate cross-project trigger latency and reliability.
 - [ ] Perform stress testing on complex predicate trees to ensure stability.
+
+---
+
+## Phase 56: Search Module (v1.1)
+
+Cross-entity search, task filtering, and sorting across the platform.
+
+- [ ] **Global search bar** (⌘K / Ctrl+K) — search tasks, teams, and members
+      in one query, grouped by entity type, keyboard-navigable.
+- [ ] **Task filtering** — filter by status, assignee, team, priority, date range,
+      and any combination; URL-persisted so filters are shareable.
+- [ ] **Task sorting** — sort by priority, dates, status, assignee; multi-column
+      sort with correct cursor-pagination continuity.
+- [ ] **Member & team search** — find members within a team or project-wide;
+      filter the teams list by name or member count.
+- [ ] **Backend search API** — PostgreSQL full-text search via `tsvector` /
+      `tsquery` with indexed `search_vector` column on `project_task`, `project_member`,
+      and `team`; `ILIKE` fallback for MVP.
+- [ ] **Pagination continuity** — filtered and sorted queries paginate correctly
+      without N+1 or count-explosion issues.
