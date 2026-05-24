@@ -1,6 +1,6 @@
 import { sql } from 'kysely';
 import { v4 as uuidv4 } from 'uuid';
-import { db } from './src/database';
+import { db } from './src/infra/database';
 
 // ============================================================
 //  ⚙️  CONFIGURATION — Tune all numbers here

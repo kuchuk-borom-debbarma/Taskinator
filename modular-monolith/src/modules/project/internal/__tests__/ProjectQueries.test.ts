@@ -9,13 +9,16 @@
  */
 import { afterAll, beforeEach, describe, expect, it } from '@jest/globals';
 import { sql } from 'kysely';
-import { cleanupDb, destroyDb } from '../../../../__tests__/helpers/db.ts';
+import {
+    cleanupDb,
+    destroyDb,
+} from '../../../../infra/__tests__/helpers/db.ts';
 import {
     addProjectMember,
     createProject,
     createUser,
-} from '../../../../__tests__/helpers/factories.ts';
-import { db } from '../../../../database/index.ts';
+} from '../../../../infra/__tests__/helpers/factories.ts';
+import { db } from '../../../../infra/database/index.ts';
 import {
     deleteProjectMembers,
     deleteProjects,
@@ -107,7 +110,7 @@ describe('ProjectQueries — Integration (Real DB + wCTE)', () => {
             // Verify atomic outbox entry exists
             const outboxEntries = await sql<any>`
                 SELECT * FROM outbox_events 
-                WHERE kafka_topic = 'project.created' 
+                WHERE kafka_topic = 'project-events' 
                   AND kafka_key = ${project!.id}::text
             `.execute(db);
 
@@ -142,7 +145,7 @@ describe('ProjectQueries — Integration (Real DB + wCTE)', () => {
             // Verify outbox
             const outboxEntries = await sql<any>`
                 SELECT * FROM outbox_events 
-                WHERE kafka_topic = 'project.updated' 
+                WHERE kafka_topic = 'project-events' 
                   AND kafka_key = ${project!.id}::text
                 ORDER BY created_at DESC LIMIT 1
             `.execute(db);
@@ -240,8 +243,9 @@ describe('ProjectQueries — Integration (Real DB + wCTE)', () => {
             // Verify outbox has 2 deletion events
             const outboxEntries = await sql<any>`
                 SELECT * FROM outbox_events 
-                WHERE kafka_topic = 'project.deleted' 
+                WHERE kafka_topic = 'project-events' 
                   AND kafka_key IN (${p1!.id}, ${p2!.id})
+                  AND payload->>'type' = 'project.deleted'
             `.execute(db);
 
             expect(outboxEntries.rows).toHaveLength(2);

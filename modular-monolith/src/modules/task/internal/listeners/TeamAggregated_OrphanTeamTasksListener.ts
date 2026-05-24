@@ -1,13 +1,11 @@
-import { db } from '../../../../database';
-import { logger } from '../../../../logger';
-import eventBus from '../../../../utils/EventBus.ts';
+import { logger } from '../../../../infra/logger';
+import eventBus from '../../../../infra/utils/EventBus.ts';
 import {
     KAFKA_EVENTS,
     KAFKA_TOPICS,
-} from '../../../../utils/event-bus/constants.ts';
-import { claimEventsAtomic } from '../../../../utils/event-bus/idempotency.ts';
-import type { DomainEvent } from '../../../../utils/event-bus/types.ts';
-import { orphanTasksByTeamIdsBatch } from '../TaskQueries.ts';
+} from '../../../../infra/utils/event-bus/constants.ts';
+import type { DomainEvent } from '../../../../infra/utils/event-bus/types.ts';
+import { taskService } from '../../index.ts';
 
 /**
  * Execution Listener: Orphan Team Tasks
@@ -34,35 +32,6 @@ export class TeamAggregated_OrphanTeamTasksListener {
     private async handleOrphanTeamTasks(
         events: DomainEvent<{ teamIds: string[] }>[],
     ) {
-        if (events.length === 0) return;
-
-        await db.transaction().execute(async (trx) => {
-            // [1] Explicit Idempotency Claim
-            const unprocessed = await claimEventsAtomic(
-                trx,
-                events,
-                'team-task-orphaning-group',
-            );
-
-            if (unprocessed.length === 0) return;
-
-            // [2] Collect all unique team IDs from the batch
-            const teamIds = Array.from(
-                new Set(unprocessed.flatMap((e) => e.data.teamIds)),
-            );
-
-            logger.info(
-                `[TeamAggregated -> Task] Orphaning tasks for ${teamIds.length} teams (from ${unprocessed.length} events)`,
-            );
-
-            const { affectedCount } = await orphanTasksByTeamIdsBatch(
-                teamIds,
-                trx,
-            );
-
-            logger.info(
-                `[TeamAggregated -> Task] Successfully orphaned ${affectedCount} tasks`,
-            );
-        });
+        await taskService.handleOrphanTeamTasks(events);
     }
 }

@@ -1,0 +1,141 @@
+enum InputType {
+    SELECT
+    TEXT
+    NUMBER
+    NONE
+    TEAM_MEMBER
+    COMPOSITE
+}
+
+enum AutomationMode {
+    SYNC
+    ASYNC
+}
+
+type AutomationOption {
+    value: String!
+    label: String!
+}
+
+type TemplateField {
+    key: String!
+    inputType: InputType!
+    label: String!
+    placeholder: String
+    staticOptions: [AutomationOption!]
+    dynamicOptionsSource: String
+}
+
+type ValueTemplate {
+    inputType: InputType!
+    label: String!
+    placeholder: String
+    staticOptions: [AutomationOption!]
+    dynamicOptionsSource: String
+    fields: [TemplateField!]
+}
+
+type TriggerTemplate {
+    type: String!
+    label: String!
+    description: String!
+    valueTemplate: ValueTemplate!
+    supportedModes: [AutomationMode!]!
+    """
+    Condition types that are semantically valid for this trigger.
+    The frontend uses this list to filter the Condition step in the rule wizard.
+    """
+    compatibleConditions: [String!]!
+    """
+    Action types that are semantically valid for this trigger.
+    The frontend uses this list to filter the Action step in the rule wizard.
+    """
+    compatibleActions: [String!]!
+}
+
+type ConditionTemplate {
+    type: String!
+    label: String!
+    description: String!
+    valueTemplate: ValueTemplate!
+}
+
+type ActionTemplate {
+    type: String!
+    label: String!
+    description: String!
+    valueTemplate: ValueTemplate!
+    supportedModes: [AutomationMode!]!
+}
+
+type AutomationTemplatesCatalog {
+    triggers: [TriggerTemplate!]!
+    conditions: [ConditionTemplate!]!
+    actions: [ActionTemplate!]!
+}
+
+type TaskAutomationRule {
+    id: ID!
+    projectId: ID!
+    name: String!
+    isActive: Boolean!
+    isSync: Boolean!
+    triggerType: String!
+    triggerValue: String
+    conditionType: String!
+    conditionValue: String
+    actionType: String!
+    actionValue: String
+    version: Int!
+}
+
+input CreateTaskAutomationRuleInput {
+    projectId: ID!
+    name: String!
+    isActive: Boolean
+    isSync: Boolean!
+    triggerType: String!
+    triggerValue: String
+    conditionType: String!
+    conditionValue: String
+    actionType: String!
+    actionValue: String
+}
+
+input UpdateTaskAutomationRuleInput {
+    projectId: ID!
+    ruleId: ID!
+    version: Int!
+    name: String
+    isActive: Boolean
+    isSync: Boolean
+    triggerType: String
+    triggerValue: String
+    conditionType: String
+    conditionValue: String
+    actionType: String
+    actionValue: String
+}
+
+type DeleteAutomationRuleResult {
+    success: Boolean!
+    ruleId: ID!
+}
+
+extend type Query {
+    automationTemplatesCatalog(projectId: ID!): AutomationTemplatesCatalog!
+    taskAutomationRules(projectId: ID!): [TaskAutomationRule!]!
+}
+
+extend type Mutation {
+    createTaskAutomationRule(
+        input: CreateTaskAutomationRuleInput!
+    ): TaskAutomationRule!
+    updateTaskAutomationRule(
+        input: UpdateTaskAutomationRuleInput!
+    ): TaskAutomationRule!
+    deleteTaskAutomationRule(
+        projectId: ID!
+        ruleId: ID!
+    ): DeleteAutomationRuleResult!
+}

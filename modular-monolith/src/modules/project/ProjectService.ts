@@ -1,4 +1,5 @@
-import type { PaginationParams } from '../../types/pagination.ts';
+import type { PaginationParams } from '../../infra/types/pagination.ts';
+import type { DomainEvent } from '../../infra/utils/event-bus';
 import type { BaseService } from './index.ts';
 
 export type Project = {
@@ -105,4 +106,24 @@ export interface ProjectService extends BaseService {
         projectId: string;
         userIds: string[];
     }): Promise<boolean>;
+
+    handleProjectMemberCountSync(
+        events: DomainEvent<{ projectId: string; delta: number }>[],
+    ): Promise<void>;
+
+    handleSyncProjectTaskCount(
+        events: DomainEvent<{ projectId: string; delta: number }>[],
+    ): Promise<void>;
+
+    handleSyncProjectTeamCount(
+        events: DomainEvent<{ projectId: string; delta: number }>[],
+    ): Promise<void>;
+
+    handleRemoveProjectMember(
+        events: DomainEvent<{ projectId: string; userIds: string[] }>[],
+    ): Promise<void>;
+
+    handleDeleteProjectMember(
+        events: DomainEvent<{ projectIds: string[] }>[],
+    ): Promise<void>;
 }

@@ -370,4 +370,5 @@ export class GraphQLTaskAPI implements TaskAPI {
       pagination
     );
   }
+
 }

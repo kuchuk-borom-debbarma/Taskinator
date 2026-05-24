@@ -1,17 +1,11 @@
-import { db } from '../../../../database';
-import { logger } from '../../../../logger';
-import eventBus from '../../../../utils/EventBus.ts';
+import { logger } from '../../../../infra/logger';
+import eventBus from '../../../../infra/utils/EventBus.ts';
 import {
     KAFKA_EVENTS,
     KAFKA_TOPICS,
-} from '../../../../utils/event-bus/constants.ts';
-import { claimEventsAtomic } from '../../../../utils/event-bus/idempotency.ts';
-import { appendEventsToOutbox } from '../../../../utils/event-bus/OutboxQueries.ts';
-import type { DomainEvent } from '../../../../utils/event-bus/types.ts';
-import {
-    BULK_DELETE_CHUNK_SIZE,
-    deleteProjectTaskReachabilityChunk,
-} from '../TaskQueries.ts';
+} from '../../../../infra/utils/event-bus/constants.ts';
+import type { DomainEvent } from '../../../../infra/utils/event-bus/types.ts';
+import { taskService } from '../../index.ts';
 
 /**
  * Execution Listener: Delete Project Task Reachability (Chunked)
@@ -52,50 +46,6 @@ export class ProjectAggregated_DeleteProjectReachability {
     private async handleProjectReachabilityPurge(
         events: DomainEvent<{ projectIds: string[] }>[],
     ) {
-        if (events.length === 0) return;
-
-        await db.transaction().execute(async (trx) => {
-            // [1] Explicit Idempotency Claim
-            // Previously missing — added as part of the chunking refactor.
-            const unprocessed = await claimEventsAtomic(
-                trx,
-                events,
-                'task-project-reachability-purge-group',
-            );
-
-            if (unprocessed.length === 0) return;
-
-            // [2] Collect unique project IDs
-            const projectIds = Array.from(
-                new Set(unprocessed.flatMap((e) => e.data.projectIds)),
-            );
-
-            // [3] Delete one bounded chunk
-            const { affectedCount } = await deleteProjectTaskReachabilityChunk(
-                projectIds,
-                trx,
-            );
-
-            logger.info(
-                `[Graph Engine] Purged chunk of ${affectedCount} reachability rows for ${projectIds.length} projects`,
-            );
-
-            // [4] If the chunk was full, more rows may remain — self-signal to continue
-            if (affectedCount === BULK_DELETE_CHUNK_SIZE) {
-                logger.info(
-                    '[Graph Engine] Chunk full — emitting continuation signal for reachability purge',
-                );
-                await appendEventsToOutbox(trx, [
-                    {
-                        kafka_topic: KAFKA_TOPICS.PROJECT_AGGREGATED,
-                        payload: {
-                            type: KAFKA_EVENTS.PROJECT_AGGREGATED
-                                .DELETE_PROJECT_TASK_REACHABILITY_CHUNK,
-                            projectIds,
-                        },
-                    },
-                ]);
-            }
-        });
+        await taskService.handleDeleteProjectReachability(events);
     }
 }

@@ -1,0 +1,101 @@
+extend type Project {
+    """
+    Paginated list of teams within this project.
+    """
+    teams(
+        search: String
+        """
+        Forward pagination — return the first N teams.
+        """
+        first: Int
+        """
+        Forward pagination — return teams after this cursor.
+        """
+        after: String
+        """
+        Backward pagination — return the last N teams.
+        """
+        last: Int
+        """
+        Backward pagination — return members before this cursor.
+        """
+        before: String
+    ): TeamConnection!
+}
+
+extend type Query {
+    """
+    Fetches a single team by ID.
+    """
+    team(id: ID!): Team
+
+    """
+    Fetches multiple teams by ID.
+    """
+    teams(ids: [ID!]): [Team!]!
+
+    """
+    Fetches a paginated list of members for a given team.
+    """
+    teamMembers(
+        projectId: ID!
+        teamId: ID!
+        search: String
+        """
+        Forward pagination — return the first N members.
+        """
+        first: Int
+        """
+        Forward pagination — return members after this cursor.
+        """
+        after: String
+        """
+        Backward pagination — return the last N members.
+        """
+        last: Int
+        """
+        Backward pagination — return members before this cursor.
+        """
+        before: String
+    ): TeamMemberConnection!
+}
+
+extend type Mutation {
+    """
+    Creates a new team within a project.
+    """
+    createTeam(projectId: ID!, name: String!): CreateTeamPayload!
+
+    """
+    Permanently deletes one or more teams within a project.
+    """
+    deleteTeams(projectId: ID!, teamIds: [ID!]!): DeleteTeamsPayload!
+
+    """
+    Adds one or more users as members of a team.
+    """
+    addTeamMembers(
+        projectId: ID!
+        teamId: ID!
+        userIds: [ID!]!
+    ): AddTeamMembersPayload!
+
+    """
+    Removes one or more members from a team.
+    """
+    removeTeamMembers(
+        projectId: ID!
+        teamId: ID!
+        userIds: [ID!]!
+    ): RemoveTeamMembersPayload!
+
+    """
+    Updates a team's details with optimistic locking.
+    """
+    updateTeam(
+        projectId: ID!
+        teamId: ID!
+        name: String!
+        version: Int!
+    ): UpdateTeamPayload!
+}

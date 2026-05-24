@@ -1,6 +1,6 @@
 import jwt from 'jsonwebtoken';
-import { cleanupDb } from '../../../__tests__/helpers/db.ts';
-import { db } from '../../../database/index.ts';
+import { cleanupDb } from '../../../infra/__tests__/helpers/db.ts';
+import { db } from '../../../infra/database/index.ts';
 import { gqlRequest } from '../helpers/request.ts';
 import { bootstrapE2E, teardownE2E } from '../helpers/server.ts';
 import { CREATE_PROJECT } from '../project/mutation.ts';
@@ -184,7 +184,7 @@ describe('Task Delete E2E', () => {
         for (let i = 0; i < 20; i++) {
             dbLink = await db
                 .selectFrom('task_link')
-                .where((eb) =>
+                .where((eb: any) =>
                     eb('source_task_id', '=', taskId).or(
                         'target_task_id',
                         '=',
@@ -202,7 +202,7 @@ describe('Task Delete E2E', () => {
         for (let i = 0; i < 20; i++) {
             dbReach = await db
                 .selectFrom('task_reachability')
-                .where((eb) =>
+                .where((eb: any) =>
                     eb('ancestor_task_id', '=', taskId).or(
                         'descendant_task_id',
                         '=',

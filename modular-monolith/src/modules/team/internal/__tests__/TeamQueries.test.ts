@@ -9,16 +9,22 @@
  */
 import { afterAll, beforeEach, describe, expect, it } from '@jest/globals';
 import { sql } from 'kysely';
-import { cleanupDb, destroyDb } from '../../../../__tests__/helpers/db.ts';
+import {
+    cleanupDb,
+    destroyDb,
+} from '../../../../infra/__tests__/helpers/db.ts';
 import {
     addProjectMember,
     addTeamMember,
     createProject,
     createTeam,
     createUser,
-} from '../../../../__tests__/helpers/factories.ts';
-import { db } from '../../../../database/index.ts';
-import { ConflictError, NotFoundError } from '../../../../graphql/errors.ts';
+} from '../../../../infra/__tests__/helpers/factories.ts';
+import { db } from '../../../../infra/database/index.ts';
+import {
+    ConflictError,
+    NotFoundError,
+} from '../../../../infra/graphql/errors.ts';
 import {
     deleteTeamMembers,
     deleteTeams,
@@ -54,7 +60,7 @@ describe('TeamQueries — Integration (Real DB + wCTE)', () => {
             await createTeam(projectId, ownerId, 'Team Beta');
 
             const teams = await getTeams(ownerId, projectId);
-            expect(teams).toHaveLength(2);
+            expect(teams.teams).toHaveLength(2);
         });
 
         it('returns empty for unauthorized user', async () => {
@@ -62,7 +68,7 @@ describe('TeamQueries — Integration (Real DB + wCTE)', () => {
             const stranger = await createUser();
 
             const teams = await getTeams(stranger.id, projectId);
-            expect(teams).toHaveLength(0);
+            expect(teams.teams).toHaveLength(0);
         });
     });
 
@@ -93,7 +99,7 @@ describe('TeamQueries — Integration (Real DB + wCTE)', () => {
 
             // Verify outbox
             const outbox =
-                await sql<any>`SELECT * FROM outbox_events WHERE kafka_topic = 'team.created'`.execute(
+                await sql<any>`SELECT * FROM outbox_events WHERE kafka_topic = 'team-events'`.execute(
                     db,
                 );
             expect(outbox.rows).toHaveLength(1);
@@ -139,10 +145,10 @@ describe('TeamQueries — Integration (Real DB + wCTE)', () => {
             expect(deletedCount).toBe(2);
 
             const remaining = await getTeams(ownerId, projectId);
-            expect(remaining).toHaveLength(0);
+            expect(remaining.teams).toHaveLength(0);
 
             const outbox =
-                await sql<any>`SELECT * FROM outbox_events WHERE kafka_topic = 'team.deleted'`.execute(
+                await sql<any>`SELECT * FROM outbox_events WHERE kafka_topic = 'team-events'`.execute(
                     db,
                 );
             expect(outbox.rows).toHaveLength(2);
@@ -170,11 +176,11 @@ describe('TeamQueries — Integration (Real DB + wCTE)', () => {
             expect(members.members).toHaveLength(2);
 
             const outbox =
-                await sql<any>`SELECT * FROM outbox_events WHERE kafka_topic = 'team.members_added'`.execute(
+                await sql<any>`SELECT * FROM outbox_events WHERE kafka_topic = 'team-events'`.execute(
                     db,
                 );
             expect(outbox.rows).toHaveLength(1);
-            expect(outbox.rows[0].payload.userIds).toContain(u1.id);
+            expect(outbox.rows[0].payload.addedUserIds).toContain(u1.id);
         });
     });
 
@@ -198,7 +204,7 @@ describe('TeamQueries — Integration (Real DB + wCTE)', () => {
             expect(members.members).toHaveLength(0);
 
             const outbox =
-                await sql<any>`SELECT * FROM outbox_events WHERE kafka_topic = 'team.members_removed'`.execute(
+                await sql<any>`SELECT * FROM outbox_events WHERE kafka_topic = 'team-events'`.execute(
                     db,
                 );
             expect(outbox.rows).toHaveLength(1);
@@ -221,7 +227,7 @@ describe('TeamQueries — Integration (Real DB + wCTE)', () => {
             expect(updated.version).toBe(team.version + 1);
 
             const outbox =
-                await sql<any>`SELECT * FROM outbox_events WHERE kafka_topic = 'team.updated'`.execute(
+                await sql<any>`SELECT * FROM outbox_events WHERE kafka_topic = 'team-events'`.execute(
                     db,
                 );
             expect(outbox.rows).toHaveLength(1);

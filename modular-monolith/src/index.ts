@@ -1,5 +1,5 @@
 import { bootstrap } from './app';
-import { logger } from './logger';
+import { logger } from './infra/logger';
 
 /**
  * Production Entry Point

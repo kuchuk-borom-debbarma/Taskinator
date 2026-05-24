@@ -1,0 +1,319 @@
+import { logger } from '../../../logger';
+import eventBus from '../../../utils/EventBus.ts';
+import {
+    aggregatorService,
+    type DomainEvent,
+    KAFKA_EVENTS,
+    KAFKA_TOPICS,
+} from '../../../utils/event-bus';
+import type { OutboxEntry } from '../../../utils/event-bus/OutboxQueries.ts';
+
+/**
+ * Task Smart Batch Aggregator
+ *
+ * Responsibilities:
+ * 1. Fold raw Task events (Create/Update/Delete) to minimize downstream churn.
+ * 2. Calculate deltas for Projects, Teams, and Members.
+ * 3. Emit declarative cleanup and sync actions into TASK_AGGREGATED topic.
+ * 4. Atomic processing via Transactional Outbox.
+ */
+export class TaskEvents_BatchAggregator {
+    async init() {
+        logger.info('[TaskEvents -> Aggregator] Initializing Smart Consumer');
+
+        await eventBus.subscribe(
+            KAFKA_TOPICS.TASK,
+            'task-aggregator-group',
+            {
+                [KAFKA_EVENTS.TASK.CREATED]: this.handleTaskBatch.bind(this),
+                [KAFKA_EVENTS.TASK.UPDATED]: this.handleTaskBatch.bind(this),
+                [KAFKA_EVENTS.TASK.DELETED]: this.handleTaskBatch.bind(this),
+                [KAFKA_EVENTS.TASK_LINK.CREATED]:
+                    this.handleTaskBatch.bind(this),
+                [KAFKA_EVENTS.TASK_LINK.UPDATED]:
+                    this.handleTaskBatch.bind(this),
+                [KAFKA_EVENTS.TASK_LINK.DELETED]:
+                    this.handleTaskBatch.bind(this),
+            },
+            { batch: true },
+        );
+    }
+
+    private async handleTaskBatch(events: DomainEvent[]) {
+        if (events.length === 0) return;
+
+        await aggregatorService.processAggregatorBatch(
+            'task-aggregator-group',
+            events,
+            (unprocessed) => {
+                logger.info(
+                    `[Task Coordinator] Processing batch of ${unprocessed.length} new events`,
+                );
+
+                // [1.5] Strict Chronological Sort
+                // Ensures causality (Create -> Update -> Delete) is preserved regardless of Kafka fetch order
+                const chronologicallyOrderedEvents = [...unprocessed].sort(
+                    (a, b) =>
+                        new Date(a.timestamp).getTime() -
+                        new Date(b.timestamp).getTime(),
+                );
+
+                // [2] Semantic Folding & Delta Calculation
+                const projectDeltas = new Map<string, number>();
+                const teamDeltas = new Map<string, number>();
+                const deletedTaskIds = new Set<string>();
+                const linkDeltas = new Map<
+                    string,
+                    {
+                        delta: number;
+                        projectId: string;
+                        sourceId: string;
+                        targetId: string;
+                    }
+                >();
+
+                for (const event of chronologicallyOrderedEvents) {
+                    const data = event.data;
+                    const { projectId, taskId } = data;
+
+                    switch (event.type) {
+                        case KAFKA_EVENTS.TASK.CREATED:
+                            projectDeltas.set(
+                                projectId,
+                                (projectDeltas.get(projectId) || 0) + 1,
+                            );
+                            if (data.teamId) {
+                                teamDeltas.set(
+                                    data.teamId,
+                                    (teamDeltas.get(data.teamId) || 0) + 1,
+                                );
+                            }
+                            break;
+
+                        case KAFKA_EVENTS.TASK.DELETED:
+                            projectDeltas.set(
+                                projectId,
+                                (projectDeltas.get(projectId) || 0) - 1,
+                            );
+                            if (data.teamId) {
+                                teamDeltas.set(
+                                    data.teamId,
+                                    (teamDeltas.get(data.teamId) || 0) - 1,
+                                );
+                            }
+                            deletedTaskIds.add(taskId);
+                            break;
+
+                        case KAFKA_EVENTS.TASK.UPDATED: {
+                            const { old, new: newState } = data;
+
+                            if (!old || !newState) {
+                                logger.warn(
+                                    `[Task Coordinator] Skipping update event for task ${taskId} due to missing old/new state`,
+                                );
+                                break;
+                            }
+
+                            // Team Changes (Folding team task counts)
+                            if (old.teamId !== newState.teamId) {
+                                if (old.teamId)
+                                    teamDeltas.set(
+                                        old.teamId,
+                                        (teamDeltas.get(old.teamId) || 0) - 1,
+                                    );
+                                if (newState.teamId)
+                                    teamDeltas.set(
+                                        newState.teamId,
+                                        (teamDeltas.get(newState.teamId) || 0) +
+                                            1,
+                                    );
+                            }
+                            break;
+                        }
+
+                        case KAFKA_EVENTS.TASK_LINK.CREATED: {
+                            const key = `${data.sourceTaskId}:${data.targetTaskId}`;
+                            const existing = linkDeltas.get(key) || {
+                                delta: 0,
+                                projectId: data.projectId,
+                                sourceId: data.sourceTaskId,
+                                targetId: data.targetTaskId,
+                            };
+                            linkDeltas.set(key, {
+                                ...existing,
+                                delta: existing.delta + 1,
+                            });
+                            break;
+                        }
+
+                        case KAFKA_EVENTS.TASK_LINK.DELETED: {
+                            const key = `${data.sourceTaskId}:${data.targetTaskId}`;
+                            const existing = linkDeltas.get(key) || {
+                                delta: 0,
+                                projectId: data.projectId,
+                                sourceId: data.sourceTaskId,
+                                targetId: data.targetTaskId,
+                            };
+                            linkDeltas.set(key, {
+                                ...existing,
+                                delta: existing.delta - 1,
+                            });
+                            break;
+                        }
+
+                        case KAFKA_EVENTS.TASK_LINK.UPDATED: {
+                            const {
+                                projectId,
+                                oldSourceTaskId,
+                                oldTargetTaskId,
+                                newSourceTaskId,
+                                newTargetTaskId,
+                            } = data;
+
+                            // Remove old connection
+                            const oldKey = `${oldSourceTaskId}:${oldTargetTaskId}`;
+                            const oldEx = linkDeltas.get(oldKey) || {
+                                delta: 0,
+                                projectId,
+                                sourceId: oldSourceTaskId,
+                                targetId: oldTargetTaskId,
+                            };
+                            linkDeltas.set(oldKey, {
+                                ...oldEx,
+                                delta: oldEx.delta - 1,
+                            });
+
+                            // Add new connection
+                            const newKey = `${newSourceTaskId}:${newTargetTaskId}`;
+                            const newEx = linkDeltas.get(newKey) || {
+                                delta: 0,
+                                projectId,
+                                sourceId: newSourceTaskId,
+                                targetId: newTargetTaskId,
+                            };
+                            linkDeltas.set(newKey, {
+                                ...newEx,
+                                delta: newEx.delta + 1,
+                            });
+                            break;
+                        }
+                    }
+                }
+
+                // [3] Build Outbox Signals
+                const outboxEntries: OutboxEntry[] = [];
+
+                // Project Count Syncs
+                for (const [projectId, delta] of projectDeltas.entries()) {
+                    if (delta === 0) continue;
+                    // [Signal]: SYNC_PROJECT_TASK_COUNT
+                    // [Purpose]: Syncs the denormalized total task count on the Project entity for high-speed dashboard rendering.
+                    outboxEntries.push({
+                        kafka_topic: KAFKA_TOPICS.TASK_AGGREGATED,
+                        payload: {
+                            type: KAFKA_EVENTS.TASK_AGGREGATED
+                                .SYNC_PROJECT_TASK_COUNT,
+                            projectId,
+                            delta,
+                        },
+                    });
+                }
+
+                // Team Count Syncs
+                for (const [teamId, delta] of teamDeltas.entries()) {
+                    if (delta === 0) continue;
+                    // [Signal]: SYNC_TEAM_TASK_COUNT
+                    // [Purpose]: Syncs the denormalized total task count on the Team entity.
+                    outboxEntries.push({
+                        kafka_topic: KAFKA_TOPICS.TASK_AGGREGATED,
+                        payload: {
+                            type: KAFKA_EVENTS.TASK_AGGREGATED
+                                .SYNC_TEAM_TASK_COUNT,
+                            teamId,
+                            delta,
+                        },
+                    });
+                }
+
+                // Link Reachability Syncs
+                const projectLinks = new Map<
+                    string,
+                    Array<{
+                        sourceTaskId: string;
+                        targetTaskId: string;
+                        action: 'ADD' | 'REMOVE';
+                    }>
+                >();
+                for (const sync of linkDeltas.values()) {
+                    if (sync.delta === 0) continue;
+
+                    // Optimization: If either task is being deleted, the bulk signal handles it
+                    if (
+                        deletedTaskIds.has(sync.sourceId) ||
+                        deletedTaskIds.has(sync.targetId)
+                    ) {
+                        continue;
+                    }
+
+                    const links = projectLinks.get(sync.projectId) || [];
+                    links.push({
+                        sourceTaskId: sync.sourceId,
+                        targetTaskId: sync.targetId,
+                        action: sync.delta > 0 ? 'ADD' : 'REMOVE',
+                    });
+                    projectLinks.set(sync.projectId, links);
+                }
+
+                for (const [projectId, links] of projectLinks.entries()) {
+                    // [Signal]: SYNC_TASK_REACHABILITY
+                    // [Purpose]: Updates the transitive closure (reachability) table when task-to-task links are added or removed.
+                    outboxEntries.push({
+                        kafka_topic: KAFKA_TOPICS.TASK_AGGREGATED,
+                        payload: {
+                            type: KAFKA_EVENTS.TASK_AGGREGATED
+                                .SYNC_TASK_REACHABILITY,
+                            projectId,
+                            links,
+                        },
+                    });
+                }
+
+                // Bulk Cleanup Actions (Triggered on task deletion)
+                if (deletedTaskIds.size > 0) {
+                    const ids = Array.from(deletedTaskIds);
+
+                    // [Signal]: DELETE_TASK_LINKS
+                    // [Purpose]: Cleanup: Purges all direct dependency link records (source/target) involving the deleted tasks.
+                    outboxEntries.push({
+                        kafka_topic: KAFKA_TOPICS.TASK_AGGREGATED,
+                        payload: {
+                            type: KAFKA_EVENTS.TASK_AGGREGATED
+                                .DELETE_TASK_LINKS,
+                            taskIds: ids,
+                        },
+                    });
+
+                    // [Signal]: DELETE_TASK_REACHABILITY
+                    // [Purpose]: Massive Cleanup: Triggers the chunked, recursive purge and repair of the graph reachability closure table.
+                    // This is a separate, heavy operation that must be handled by the listener
+                    outboxEntries.push({
+                        kafka_topic: KAFKA_TOPICS.TASK_AGGREGATED,
+                        payload: {
+                            type: KAFKA_EVENTS.TASK_AGGREGATED
+                                .DELETE_TASK_REACHABILITY,
+                            taskIds: ids,
+                        },
+                    });
+                }
+
+                if (outboxEntries.length > 0) {
+                    logger.info(
+                        `[Task Coordinator] Wrote ${outboxEntries.length} signals for batch`,
+                    );
+                }
+
+                return outboxEntries;
+            },
+        );
+    }
+}

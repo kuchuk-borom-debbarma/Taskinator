@@ -1,4 +1,4 @@
-import { db } from '../../../database/index.ts';
+import { db } from '../../../infra/database/index.ts';
 
 /**
  * Converts a 0-indexed integer into a base-26 alphabetical string.

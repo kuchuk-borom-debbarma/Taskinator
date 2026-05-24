@@ -1,4 +1,5 @@
-import type { PaginationParams as SharedPaginationParams } from '../../types/pagination.ts';
+import type { PaginationParams as SharedPaginationParams } from '../../infra/types/pagination.ts';
+import type { DomainEvent } from '../../infra/utils/event-bus';
 import type { BaseService } from './index.ts';
 
 export type TaskStatus = string;
@@ -26,6 +27,51 @@ export type Task = {
     createdAtPrecision?: string;
 };
 
+export type TaskAutomationRule = {
+    id: string;
+    projectId: string;
+    name: string;
+    isActive: boolean;
+    isSync: boolean;
+    triggerType: string;
+    triggerValue: string | null;
+    conditionType: string;
+    conditionValue: string | null;
+    actionType: string;
+    actionValue: string | null;
+    version: number;
+    createdAt: Date;
+    updatedAt: Date;
+};
+
+export type CreateTaskAutomationRuleInput = {
+    projectId: string;
+    name: string;
+    isActive?: boolean | null;
+    isSync?: boolean | null;
+    triggerType: string;
+    triggerValue?: string | null;
+    conditionType: string;
+    conditionValue?: string | null;
+    actionType: string;
+    actionValue?: string | null;
+};
+
+export type UpdateTaskAutomationRuleInput = {
+    projectId: string;
+    ruleId: string;
+    version: number;
+    name?: string | null;
+    isActive?: boolean | null;
+    isSync?: boolean | null;
+    triggerType?: string | null;
+    triggerValue?: string | null;
+    conditionType?: string | null;
+    conditionValue?: string | null;
+    actionType?: string | null;
+    actionValue?: string | null;
+};
+
 export type TaskLink = {
     id: string;
     projectId: string;
@@ -41,6 +87,9 @@ export type TaskLink = {
 export type PaginationParams = SharedPaginationParams & {
     teamId?: string;
     memberId?: string;
+    search?: string | null;
+    status?: string | null;
+    priority?: number | null;
 };
 
 export interface TaskConnection {
@@ -54,6 +103,32 @@ export interface LinkConnection {
     nextCursor: string | null;
     prevCursor: string | null;
 }
+
+export type TaskReachabilityLinkChange = {
+    action: 'ADD' | 'REMOVE';
+    sourceTaskId: string;
+    targetTaskId: string;
+};
+
+/**
+ * Minimal task row used by the auto-action context resolver.
+ * Internal-only — no actor permission check needed.
+ */
+export type TaskContextRow = {
+    id: string;
+    fk_project_id: string;
+    fk_team_id: string | null;
+    fk_member_id: string | null;
+    title: string;
+    status: string;
+    priority: number | null;
+    version: number;
+    prev_status: string | null;
+    prev_priority: number | null;
+    prev_title: string | null;
+    prev_team_id: string | null;
+    prev_member_id: string | null;
+};
 
 export interface GetTaskLinksParam {
     userId: string;
@@ -81,6 +156,12 @@ export interface TaskService extends BaseService {
      */
     getTasksByActorIdAndIds(actorId: string, ids: string[]): Promise<Task[]>;
 
+    /**
+     * Internal fetch for auto-action context resolution.
+     * No actor permission check — caller is trusted (auto-action engine).
+     */
+    getTaskContextById(taskId: string): Promise<TaskContextRow | undefined>;
+
     getTaskLinks(
         params: GetTaskLinksParam,
         pagination: PaginationParams,
@@ -95,6 +176,11 @@ export interface TaskService extends BaseService {
     getTaskNeighbourhood(
         params: GetNeighbourhoodParam,
     ): Promise<TaskNeighbourhoodResult>;
+
+    getAutomationRulesForProject(
+        userId: string,
+        projectId: string,
+    ): Promise<TaskAutomationRule[]>;
 
     // Write Operations
     createTask(param: {
@@ -120,6 +206,22 @@ export interface TaskService extends BaseService {
         priority?: number | null;
         traceId?: string | null;
     }): Promise<Task>;
+
+    createAutomationRule(
+        actorId: string,
+        input: CreateTaskAutomationRuleInput,
+    ): Promise<TaskAutomationRule>;
+
+    updateAutomationRule(
+        actorId: string,
+        input: UpdateTaskAutomationRuleInput,
+    ): Promise<TaskAutomationRule>;
+
+    deleteAutomationRule(
+        actorId: string,
+        projectId: string,
+        ruleId: string,
+    ): Promise<boolean>;
 
     deleteTask(param: {
         actorId: string;
@@ -149,6 +251,45 @@ export interface TaskService extends BaseService {
         targetTaskId?: string | null;
         label?: string | null;
     }): Promise<TaskLink>;
+
+    handleTaskReachabilitySync(
+        events: DomainEvent<{
+            projectId: string;
+            links: TaskReachabilityLinkChange[];
+        }>[],
+    ): Promise<void>;
+
+    handleDeleteTaskLinks(
+        events: DomainEvent<{ taskIds: string[] }>[],
+    ): Promise<void>;
+
+    handleDeleteTaskReachability(
+        events: DomainEvent<{ taskIds: string[] }>[],
+    ): Promise<void>;
+
+    handleUnassignProjectTaskMember(
+        events: DomainEvent<{ projectId: string; userIds: string[] }>[],
+    ): Promise<void>;
+
+    handleDeleteProjectTask(
+        events: DomainEvent<{ projectIds: string[] }>[],
+    ): Promise<void>;
+
+    handleDeleteProjectTaskLink(
+        events: DomainEvent<{ projectIds: string[] }>[],
+    ): Promise<void>;
+
+    handleDeleteProjectReachability(
+        events: DomainEvent<{ projectIds: string[] }>[],
+    ): Promise<void>;
+
+    handleOrphanTeamTasks(
+        events: DomainEvent<{ teamIds: string[] }>[],
+    ): Promise<void>;
+
+    handleUnassignMemberFromTeamTasks(
+        events: DomainEvent<{ teamId: string; userIds: string[] }>[],
+    ): Promise<void>;
 }
 
 // ─── Neighbourhood (Radial Graph View) ──────────────────────────────────────

@@ -32,33 +32,41 @@ Automate the "busy work" of project management through reliable, transparent, an
 - ✓ [Event-Driven Pipeline Orchestrator] — Implemented resumable sequential engine with bulk-update aggregation (v6.0).
 - ✓ [UI-v1 Dynamic Context] — Support dynamic trigger entity selection and lazy-context field lookups (v7.0) — Validated in Phase 27: Builder & Canvas Alignment.
 - ✓ [UI-v1 Sequential Pipeline] — Update Pipeline Editor to align with v6.0 sequential payload schema (v7.0) — Validated in Phase 27: Builder & Canvas Alignment.
+- ✓ [High-Performance CTE Outbox Writes] — Single-query bulk updates + outbox insertion in SmartAggregator (v8.0).
+- ✓ [Asynchronous Depth Guards] — TraceId + depth propagation across async Kafka loops to enforce recursion limits (v8.0).
+- ✓ [Auto-Action Condition AST Schema] — Define structural AST types for logical (AND/OR/NOT) and predicate operations under TASK scope (v9.0).
+- ✓ [Fresh-Fetch Condition Evaluator] — Implement dynamic, optimistic-safe recursive evaluator using current/previous states (v9.0).
+- ✓ [Dynamic Scope & Template Sync] — Integrate condition variables and schemas in registry template and metadata output (v9.0).
+- ✓ [Action & Condition Engine Isolation] — Decouple and isolate execution engines independently without tied triggers or tied flows (v10.0).
+- ✓ [Context Engine] — Centrally resolve, merge snapshots, and validate type-safe entity contexts via registries and database resolvers (v11.0).
+- ✓ [Tied Rule Orchestration] — Tie independent triggers, conditions, actions, and context resolvers together into unified execution rules (v12.0).
+- ✅ [Auto Action Re-sectoring] — Restructure the auto-action module to match the established Controller/Service/Queries pattern; route cross-module operations through service interfaces (v13.0).
+- ✅ [Hide Internal Engines] — Simplify auto-action module structure by hiding internal engines and organizing the internal directory (v14.0).
+- ✓ [Service Layer Isolation] — Enforce strict service layer isolation in all Kafka listeners and smart aggregators by decoupling direct database access (v15.0).
+- ✓ [Auto Action Runtime Integration] — Connected auto-action rules to event consumers and GraphQL APIs (v16.0).
+- ✓ [Auto Action E2E Verification & Reliability] — Validated end-to-end flows and hardened runtime reliability (v17.0).
+- ✓ [Auto Action Architecture & Performance Evolution] — Transformed the engine into a high-throughput, resilient, and resumable system with CTEs and Sync Orchestration (v18.0).
+- ✓ [UI-v1 Auto Action Modernization] — Refactor ui-v1 to replace Autopilot with the new Auto Action engine, support dynamic templates, and full terminology rename (v19.0).
+- [ ] [Multi-domain Triggers] — Evaluate events crossing project boundaries (v20.0).
+- [ ] [Complex Predicates] — Evaluate conditions referencing recursive parent/child states (v20.0).
 
-- [ ] [Multi-domain Triggers] — Evaluate events crossing project boundaries.
-- [ ] [Complex Predicates] — Evaluate conditions referencing recursive parent/child states.
+## Current Milestone: v20.0 (Planning)
 
-### Out of Scope
+**Goal:** Expand Auto Action intelligence with Multi-domain triggers and complex cross-entity recursive predicates.
 
-- [Cron-based Triggers] — Reactive/event-driven architecture remains primary focus.
-- [External Service Actions] — Scope confined to internal Taskinator domain mutations.
+## Current State (Post-v19.0)
 
-## Next Milestone Goals (v8.0)
-
-**Goal:** Establish advanced monitoring, cross-project event evaluation, and high-performance throughput optimizations for Autopilot execution.
-
-**Target features:**
-- Implement Multi-domain Triggers to evaluate events crossing project boundaries.
-- Integrate Complex Predicates to evaluate conditions referencing recursive parent/child states.
-- Set up real-time SSE execution tracing dashboards in `ui-v1`.
-
-## Current State (Post-v7.0)
-The Autopilot engine has been fully rebuilt (v6.0) and the frontend application `ui-v1` has been completely synchronized (v7.0) to support recursive ast condition evaluation, lazy context resolution, sequential pipelines with drag-and-drop reordering, and frame-accurate visual flows. All components are fully verified with a 100% test passing rate.
+v19.0 is complete. ui-v1 is fully modernized and uses the new dynamic Auto Action engine. The system is ready for advanced intelligence features.
 
 ## Key Decisions
 
 | Key Decisions | Rationale | Outcome |
 |----------|-----------|---------|
-| Action Chain Model | Ensures predictable execution order and atomicity. | **Complete** |
-| Live-Context Evaluation | Prevents logic execution on stale snapshots; ensures data integrity. | **Complete** |
+...
+| Runtime Integration | Thin Kafka consumer + Service orchestration; GraphQL connections + DataLoaders; internal engine/query hiding. | **Complete (v16.0)** |
+| E2E Verification | Comprehensive test suite for rule execution and recursion guards. | **Complete (v17.0)** |
+| Performance & Orchestration | Single-Query CTEs, Sync Registry, and Resumable Async Chunking. | **Complete (v18.0)** |
+
 | TraceID + Depth Loop Detection | Simpler and more reliable than mutation hashing for initial release. | **Complete** |
 | SSE Streaming | Low-latency progress updates without polling overhead. | **Complete** |
 | XYFlow Serialization | Decoupled graph coordinate state from logical execution JSON trees. | **Complete (v2.0)** |
@@ -68,16 +76,19 @@ The Autopilot engine has been fully rebuilt (v6.0) and the frontend application 
 | Engine Amputation | Remove broken execution code before rebuilding to stabilize system and provide a clean slate. | **Complete (v5.0)** |
 | Recursive Kafka Loop | Enables resumable execution and prevents long-running DB locks by processing one step per event. | **Complete (v6.0)** |
 | Smart Aggregation (CASE) | Optimizes high-throughput updates by grouping heterogeneous mutations into single SQL roundtrips. | **Complete (v6.0)** |
+| Single-Query CTE Writes | Reduces PostgreSQL round-trips to exactly 1 query for high-throughput outbox event emission. | **Complete (v8.0)** |
+| Strict depth hop ceiling | Prevent resource exhaustion by halting recursive events exceeding a depth of 50. | **Complete (v8.0)** |
+| Isolated Engines | Introduce completely standalone actionEngine and conditionEngine for high modularity. | **Complete (v10.0)** |
+| Context Engine | Centrally resolve, merge snapshots, and validate type-safe entity contexts via registries and database resolvers. | **Complete (v11.0)** |
+| Tied Rule Orchestration | Sequential pipeline executor binding context, conditions, and actions; persistent prev_ columns for concurrent-safe transition state; condition splitting for future async chunking. | **Complete (v12.0)** |
+| Auto Action Re-sectoring | Service interface + internal Queries/ServiceImpl pattern; task scope goes through taskService not bare db. | **Complete (v13.0)** |
+| Internal Engine Hiding | Organize internal/ into functional sub-folders and hide all execution engines behind the service layer. | **Complete (v14.0)** |
+| Service Layer Isolation | Decouple DB access from listeners/aggregators; enforce delegation to service interfaces or module-internal queries. | **Complete (v15.0)** |
+| Runtime Integration | Thin Kafka consumer + Service orchestration; GraphQL connections + DataLoaders; internal engine/query hiding. | **Complete (v16.0)** |
 
 ## Evolution
 
 This document evolves at phase transitions and milestone boundaries.
 
-**After each milestone** (via `/gsd:complete-milestone`):
-1. Full review of all sections
-2. Core Value check — still the right priority?
-3. Audit Out of Scope — reasons still valid?
-4. Update Context with current state
-
 ---
-*Last updated: 2026-05-17 after v7.0 milestone completion*
+*Last updated: 2026-05-22 — v18.0 milestone complete*

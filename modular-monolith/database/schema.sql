@@ -72,6 +72,11 @@ CREATE TABLE project_task (
     incoming_label_counts JSONB NOT NULL DEFAULT '{}',
     outgoing_label_counts JSONB NOT NULL DEFAULT '{}',
     priority INTEGER NOT NULL DEFAULT 0,
+    prev_status TEXT,
+    prev_priority INTEGER,
+    prev_title TEXT,
+    prev_team_id UUID,
+    prev_member_id TEXT,
     CONSTRAINT fk_task_project_id CHECK (fk_project_id IS NOT NULL)
 );
 
@@ -189,69 +194,24 @@ AFTER INSERT ON outbox_events
 FOR EACH ROW EXECUTE FUNCTION notify_outbox_event();
 
 
--- Project Autopilot Table
-CREATE TABLE autopilot (
+
+
+CREATE TABLE IF NOT EXISTS task_automation_rule (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    fk_project_id UUID NOT NULL,
-    name TEXT NOT NULL DEFAULT 'Untitled Autopilot',
-    description TEXT,
-    triggers JSONB NOT NULL DEFAULT '[]',
-    steps JSONB NOT NULL DEFAULT '[]',
+    fk_project_id UUID NOT NULL REFERENCES project(id) ON DELETE CASCADE,
+    name TEXT NOT NULL DEFAULT 'Untitled Automation',
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
-    trace_history_enabled BOOLEAN NOT NULL DEFAULT FALSE,
+    is_sync BOOLEAN NOT NULL DEFAULT FALSE,
+    trigger_type TEXT NOT NULL,
+    trigger_value TEXT,
+    condition_type TEXT NOT NULL,
+    condition_value TEXT,
+    action_type TEXT NOT NULL,
+    action_value TEXT,
     version INTEGER NOT NULL DEFAULT 1,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    created_by TEXT NOT NULL,
-    updated_by TEXT NOT NULL
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP NOT NULL
 );
 
--- Autopilot Indexes
-CREATE INDEX idx_autopilot_project ON autopilot(fk_project_id);
-
--- Autopilot Conditions Table
-CREATE TABLE conditions (
-    id TEXT PRIMARY KEY,
-    name TEXT NOT NULL,
-    definition JSONB NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    created_by TEXT NOT NULL
-);
-
--- Autopilot Condition Labels Table
-CREATE TABLE condition_labels (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    name TEXT NOT NULL,
-    condition_hash TEXT NOT NULL REFERENCES conditions(id) ON DELETE CASCADE,
-    project_id UUID NOT NULL REFERENCES project(id) ON DELETE CASCADE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    created_by TEXT NOT NULL,
-    updated_by TEXT NOT NULL,
-    UNIQUE(project_id, name)
-);
-
--- Autopilot Actions Table
-CREATE TABLE actions (
-    id TEXT PRIMARY KEY,
-    name TEXT NOT NULL,
-    steps JSONB NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    created_by TEXT NOT NULL
-);
-
--- Autopilot Action Labels Table
-CREATE TABLE action_labels (
-    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    name TEXT NOT NULL,
-    action_hash TEXT NOT NULL REFERENCES actions(id) ON DELETE CASCADE,
-    project_id UUID NOT NULL REFERENCES project(id) ON DELETE CASCADE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
-    created_by TEXT NOT NULL,
-    updated_by TEXT NOT NULL,
-    UNIQUE(project_id, name)
-);
-
+CREATE INDEX IF NOT EXISTS idx_automation_project_trigger
+    ON task_automation_rule(fk_project_id, trigger_type);

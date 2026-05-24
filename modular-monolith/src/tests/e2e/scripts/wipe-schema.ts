@@ -1,4 +1,4 @@
-import { pool } from '../../../database/index.ts';
+import { pool } from '../../../infra/database/index.ts';
 
 async function wipeSchema() {
     try {

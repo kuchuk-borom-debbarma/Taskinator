@@ -1,55 +1,23 @@
----
-gsd_state_version: 1.0
-milestone: v7.0
-milestone_name: milestone
-status: Awaiting next milestone
-last_updated: "2026-05-17T06:35:38.697Z"
-last_activity: 2026-05-17 — Milestone v7.0 completed and archived
-progress:
-  total_phases: 7
-  completed_phases: 3
-  total_plans: 16
-  completed_plans: 10
-  percent: 43
----
+# State: v20.0 - Advanced Automation Intelligence
 
-# Project State - Milestone v7.0 (UI Alignment)
+## Milestone Status
+- Current Milestone: v20.0
+- Progress: 0% (0/5 Phases)
+- Blockers: None
 
-## Completed Phase: Phase 26 - GraphQL Sync & Codegen
+## Active Phase
+- Phase: 51 - Recursive Context Resolution
+- Status: Planning
 
-- [x] **GQL-01**: Backend GraphQL schema and resolvers aligned with v6.0 engine.
-- [x] **GQL-02**: UI synchronized via `codegen` with updated components and fragments.
+## Phase Progress
+- [ ] Research current context engine limits
+- [ ] Design recursive resolution logic
+- [ ] Implement parent/child loaders
 
-## Active Phase: Phase 27 - Builder & Canvas Alignment
+## Recent Changes
+- Initiated v20.0 milestone planning.
+- Updated PROJECT.md, REQUIREMENTS.md, and ROADMAP.md.
 
-- [ ] **UI-CTX-01**: Implement `AutopilotMetadataContext` for global entity-field discovery.
-- [ ] **UI-CTX-02**: Predicate dropdowns filter fields based on trigger entity type.
-- [x] **UI-CTX-03**: Support "Condition Logic Blocks" interleaved in the sequence.
-- [x] **UI-PIPE-01**: Mixed Pipeline support in `PipelineEditor`.
-- [x] **UI-PIPE-02**: Pipeline Step Reordering (DND).
-- [x] **UI-PIPE-03**: Sequential Semantics (Visual Flow).
-
-## Progress
-
-- [x] Phase 26 Planning & Execution (Completed)
-- [/] Phase 27 Planning & Execution (In Progress)
-- [ ] Phase 28 Planning & Execution (Pending)
-
-## Blockers
-
-- None.
-
-## Next Step
-
-- Run Plan 27-03 to implement condition editing in the pipeline.
-
-## Current Position
-
-Phase: Milestone v7.0 complete
-Plan: —
-Status: Awaiting next milestone
-Last activity: 2026-05-17 — Milestone v7.0 completed and archived
-
-## Operator Next Steps
-
-- Start the next milestone with /gsd-new-milestone
+## Notes
+- v20.0 is a major intelligence upgrade focusing on relational data evaluation.
+- Multi-domain triggers will significantly expand the scope of automation beyond single projects.

@@ -1,6 +1,6 @@
 import { createServer } from 'node:http';
 import { bootstrap, shutdown } from '../../../app.ts';
-import { yoga } from '../../../graphql/index.ts';
+import { yoga } from '../../../infra/graphql/index.ts';
 
 /**
  * Automatically bootstraps the entire production infrastructure for E2E tests.

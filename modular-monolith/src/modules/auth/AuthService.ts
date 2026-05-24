@@ -16,7 +16,8 @@ export interface User {
     projectsCount: number;
 }
 
-import type { PaginationParams } from '../../types/pagination.ts';
+import type { PaginationParams } from '../../infra/types/pagination.ts';
+import type { DomainEvent } from '../../infra/utils/event-bus';
 
 export interface SearchUsersParam extends PaginationParams {
     /** Exact username match OR exact UUID match */
@@ -46,4 +47,8 @@ export interface AuthService {
      * Batch fetch users by IDs.
      */
     getUsersByIds(ids: string[]): Promise<User[]>;
+
+    handleUserProjectCountSync(
+        events: DomainEvent<{ userId: string; delta: number }>[],
+    ): Promise<void>;
 }
