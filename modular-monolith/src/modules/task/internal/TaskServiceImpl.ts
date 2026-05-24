@@ -801,10 +801,10 @@ export class TaskServiceImpl implements TaskService {
         taskId: string;
         version: number;
         status?: string | null;
+        teamId?: string | null;
+        memberId?: string | null;
+        priority?: number | null;
     }): Promise<void> {
-        if (param.status === undefined) return;
-
-        const targetStatus = param.status ?? 'TODO';
         const [currentTask] = await getTasksByActorIdAndIds(param.actorId, [
             param.taskId,
         ]);
@@ -812,9 +812,22 @@ export class TaskServiceImpl implements TaskService {
         if (
             !currentTask ||
             currentTask.projectId !== param.projectId ||
-            currentTask.version !== param.version ||
-            currentTask.status === targetStatus
+            currentTask.version !== param.version
         ) {
+            return;
+        }
+
+        const isStatusChanging =
+            param.status !== undefined && param.status !== currentTask.status;
+        const isPriorityChanging =
+            param.priority !== undefined &&
+            param.priority !== currentTask.priority;
+        const isAssigneeChanging =
+            (param.memberId !== undefined &&
+                param.memberId !== currentTask.memberId) ||
+            (param.teamId !== undefined && param.teamId !== currentTask.teamId);
+
+        if (!isStatusChanging && !isPriorityChanging && !isAssigneeChanging) {
             return;
         }
 
@@ -822,23 +835,56 @@ export class TaskServiceImpl implements TaskService {
             .selectFrom('task_automation_rule')
             .selectAll()
             .where('fk_project_id', '=', param.projectId)
-            .where('trigger_type', '=', 'STATUS_CHANGED')
+            .where('trigger_type', 'in', [
+                'STATUS_CHANGED',
+                'PRIORITY_CHANGED',
+                'ASSIGNEE_CHANGED',
+            ])
             .where('is_active', '=', true)
             .where('is_sync', '=', true)
             .execute();
 
         for (const rule of rules) {
             let matches = true;
-            if (rule.trigger_value) {
-                try {
-                    const cfg = JSON.parse(rule.trigger_value);
-                    if (cfg.from && cfg.from !== currentTask.status)
-                        matches = false;
-                    if (cfg.to && cfg.to !== targetStatus) matches = false;
-                } catch (e) {
-                    if (rule.trigger_value !== targetStatus) matches = false;
+
+            if (rule.trigger_type === 'STATUS_CHANGED') {
+                if (!isStatusChanging) continue;
+                const targetStatus = param.status ?? 'TODO';
+                if (rule.trigger_value) {
+                    try {
+                        const cfg = JSON.parse(rule.trigger_value);
+                        if (cfg.from && cfg.from !== currentTask.status)
+                            matches = false;
+                        if (cfg.to && cfg.to !== targetStatus) matches = false;
+                    } catch (e) {
+                        if (rule.trigger_value !== targetStatus)
+                            matches = false;
+                    }
                 }
+            } else if (rule.trigger_type === 'PRIORITY_CHANGED') {
+                if (!isPriorityChanging) continue;
+                const targetPriority = param.priority ?? 0;
+                if (rule.trigger_value) {
+                    try {
+                        const cfg = JSON.parse(rule.trigger_value);
+                        if (
+                            cfg.from &&
+                            Number(cfg.from) !== currentTask.priority
+                        )
+                            matches = false;
+                        if (cfg.to && Number(cfg.to) !== targetPriority)
+                            matches = false;
+                    } catch (e) {
+                        if (Number(rule.trigger_value) !== targetPriority)
+                            matches = false;
+                    }
+                }
+            } else if (rule.trigger_type === 'ASSIGNEE_CHANGED') {
+                if (!isAssigneeChanging) continue;
+            } else {
+                continue;
             }
+
             if (!matches) continue;
 
             const conditionFn =
@@ -852,7 +898,22 @@ export class TaskServiceImpl implements TaskService {
 
             if (!conditionFn || !actionFn) continue;
 
-            const isMet = await conditionFn(currentTask, rule.condition_value);
+            const validationTask: Task = {
+                ...currentTask,
+                memberId:
+                    param.memberId !== undefined
+                        ? param.memberId
+                        : currentTask.memberId,
+                teamId:
+                    param.teamId !== undefined
+                        ? param.teamId
+                        : currentTask.teamId,
+            };
+
+            const isMet = await conditionFn(
+                validationTask,
+                rule.condition_value,
+            );
             if (!isMet) continue;
 
             await actionFn(currentTask, rule.action_value, {

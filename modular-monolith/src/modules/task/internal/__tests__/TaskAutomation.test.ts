@@ -399,4 +399,153 @@ describe('Task TCA automation engine', () => {
             status: 'READY',
         });
     });
+
+    it('rejects sync priority transitions if priority comparison matches and action is REJECT_TRANSITION', async () => {
+        mockDb.selectFrom.mockReturnValueOnce(
+            makeQuery([
+                {
+                    id: 'rule-priority-1',
+                    fk_project_id: projectId,
+                    is_active: true,
+                    is_sync: true,
+                    trigger_type: 'PRIORITY_CHANGED',
+                    trigger_value: JSON.stringify({ to: 3 }),
+                    condition_type: 'PRIORITY_COMPARISON',
+                    condition_value: JSON.stringify({
+                        operator: 'eq',
+                        value: 0,
+                    }),
+                    action_type: 'REJECT_TRANSITION',
+                    action_value: 'Priority increase blocked by policy.',
+                },
+            ]),
+        );
+
+        const service = new TaskServiceImpl();
+
+        await expect(
+            service.updateTask({
+                actorId,
+                projectId,
+                taskId: blockedTaskId,
+                version: 1,
+                priority: 3,
+            }),
+        ).rejects.toThrow(ValidationError);
+
+        expect(mockUpdateTaskQuery).not.toHaveBeenCalled();
+    });
+
+    it('triggers async task-created rules and auto assigns creator', async () => {
+        mockDb.selectFrom
+            .mockReturnValueOnce(
+                makeQuery([
+                    {
+                        id: 'rule-created-1',
+                        fk_project_id: projectId,
+                        is_active: true,
+                        is_sync: false,
+                        trigger_type: 'TASK_CREATED',
+                        trigger_value: null,
+                        condition_type: 'STATUS_EQUALS',
+                        condition_value: 'TODO',
+                        action_type: 'AUTO_ASSIGN_CREATOR',
+                        action_value: null,
+                    },
+                ]),
+            )
+            .mockReturnValueOnce(
+                makeQuery([
+                    {
+                        id: blockedTaskId,
+                        fk_project_id: projectId,
+                        fk_team_id: null,
+                        fk_member_id: null,
+                        title: 'Created task',
+                        description: '',
+                        status: 'TODO',
+                        version: 1,
+                        created_by: actorId,
+                        updated_by: actorId,
+                        priority: 0,
+                        created_at: new Date('2026-05-24T00:00:00.000Z'),
+                        updated_at: new Date('2026-05-24T00:00:00.000Z'),
+                        direct_incoming_count: 0,
+                        direct_outgoing_count: 0,
+                        total_incoming_count: 0,
+                        total_outgoing_count: 0,
+                        incoming_label_counts: {},
+                        outgoing_label_counts: {},
+                    },
+                ]),
+            );
+
+        const event: DomainEvent<{
+            taskId: string;
+            projectId: string;
+            actorId: string;
+        }> = {
+            eventId: 'event-created-1',
+            type: 'task.created',
+            key: projectId,
+            data: {
+                taskId: blockedTaskId,
+                projectId,
+                actorId,
+            },
+            timestamp: '2026-05-24T00:00:00.000Z',
+        };
+
+        const listener = new TaskAutomationListener();
+        await (listener as any).handleTaskCreated([event]);
+
+        expect(mockTaskServiceUpdateTask).toHaveBeenCalledWith({
+            actorId,
+            projectId,
+            taskId: blockedTaskId,
+            version: 1,
+            memberId: actorId,
+        });
+    });
+
+    it('rejects sync assignee changes if ASSIGNEE_NOT_IN_TEAM matches and action is REJECT_TRANSITION', async () => {
+        mockDb.selectFrom.mockImplementation((table: string) => {
+            if (table === 'task_automation_rule') {
+                return makeQuery([
+                    {
+                        id: 'rule-assignee-1',
+                        fk_project_id: projectId,
+                        is_active: true,
+                        is_sync: true,
+                        trigger_type: 'ASSIGNEE_CHANGED',
+                        trigger_value: null,
+                        condition_type: 'ASSIGNEE_NOT_IN_TEAM',
+                        condition_value: null,
+                        action_type: 'REJECT_TRANSITION',
+                        action_value:
+                            'Assignee must be a member of the assigned team.',
+                    },
+                ]);
+            }
+            if (table === 'project_team_member') {
+                return makeQuery([]);
+            }
+            return makeQuery([]);
+        });
+
+        const service = new TaskServiceImpl();
+
+        await expect(
+            service.updateTask({
+                actorId,
+                projectId,
+                taskId: blockedTaskId,
+                version: 1,
+                memberId: 'invalid-user',
+                teamId: 'some-team-id',
+            }),
+        ).rejects.toThrow(ValidationError);
+
+        expect(mockUpdateTaskQuery).not.toHaveBeenCalled();
+    });
 });

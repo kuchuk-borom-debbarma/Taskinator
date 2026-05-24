@@ -54,17 +54,35 @@ const TRIGGER_COMPATIBILITY: Record<
             'STATUS_EQUALS',
             'ASSIGNEE_EQUALS',
             'HAS_INCOMPLETE_DESCENDANTS',
+            'PRIORITY_COMPARISON',
+            'TEAM_EQUALS',
+            'ASSIGNEE_NOT_IN_TEAM',
+            'HAS_LINK_WITH_LABEL',
         ],
-        compatibleActions: ['SET_STATUS', 'SET_ASSIGNEE', 'REJECT_TRANSITION'],
-    },
-
-    DESCENDANT_STATUS_CHANGED: {
-        compatibleConditions: ['ALL_DESCENDANTS_IN_STATUS'],
         compatibleActions: [
             'SET_STATUS',
             'SET_ASSIGNEE',
-            // REJECT_TRANSITION intentionally excluded:
-            // the descendant's transition already committed at this point.
+            'REJECT_TRANSITION',
+            'SET_PRIORITY',
+            'SET_TEAM',
+            'SET_TEAM_AND_ASSIGNEE',
+            'AUTO_ASSIGN_CREATOR',
+        ],
+    },
+
+    DESCENDANT_STATUS_CHANGED: {
+        compatibleConditions: [
+            'ALL_DESCENDANTS_IN_STATUS',
+            'PRIORITY_COMPARISON',
+            'TEAM_EQUALS',
+        ],
+        compatibleActions: [
+            'SET_STATUS',
+            'SET_ASSIGNEE',
+            'SET_PRIORITY',
+            'SET_TEAM',
+            'SET_TEAM_AND_ASSIGNEE',
+            'AUTO_ASSIGN_CREATOR',
         ],
     },
 
@@ -72,16 +90,91 @@ const TRIGGER_COMPATIBILITY: Record<
         compatibleConditions: [
             'ALL_LINKED_INCOMING_IN_STATUS',
             'STATUS_EQUALS',
+            'PRIORITY_COMPARISON',
+            'TEAM_EQUALS',
         ],
-        compatibleActions: ['SET_STATUS', 'SET_ASSIGNEE'],
+        compatibleActions: [
+            'SET_STATUS',
+            'SET_ASSIGNEE',
+            'SET_PRIORITY',
+            'SET_TEAM_AND_ASSIGNEE',
+            'AUTO_ASSIGN_CREATOR',
+        ],
     },
 
     LINKED_OUTGOING_STATUS_CHANGED: {
         compatibleConditions: [
             'ALL_LINKED_OUTGOING_IN_STATUS',
             'STATUS_EQUALS',
+            'PRIORITY_COMPARISON',
+            'TEAM_EQUALS',
         ],
-        compatibleActions: ['SET_STATUS', 'SET_ASSIGNEE'],
+        compatibleActions: [
+            'SET_STATUS',
+            'SET_ASSIGNEE',
+            'SET_PRIORITY',
+            'SET_TEAM_AND_ASSIGNEE',
+            'AUTO_ASSIGN_CREATOR',
+        ],
+    },
+
+    PRIORITY_CHANGED: {
+        compatibleConditions: [
+            'STATUS_EQUALS',
+            'ASSIGNEE_EQUALS',
+            'PRIORITY_COMPARISON',
+            'TEAM_EQUALS',
+            'ASSIGNEE_NOT_IN_TEAM',
+            'HAS_LINK_WITH_LABEL',
+        ],
+        compatibleActions: [
+            'SET_STATUS',
+            'SET_ASSIGNEE',
+            'REJECT_TRANSITION',
+            'SET_PRIORITY',
+            'SET_TEAM',
+            'SET_TEAM_AND_ASSIGNEE',
+            'AUTO_ASSIGN_CREATOR',
+        ],
+    },
+
+    ASSIGNEE_CHANGED: {
+        compatibleConditions: [
+            'STATUS_EQUALS',
+            'ASSIGNEE_EQUALS',
+            'PRIORITY_COMPARISON',
+            'TEAM_EQUALS',
+            'ASSIGNEE_NOT_IN_TEAM',
+            'HAS_LINK_WITH_LABEL',
+        ],
+        compatibleActions: [
+            'SET_STATUS',
+            'SET_ASSIGNEE',
+            'REJECT_TRANSITION',
+            'SET_PRIORITY',
+            'SET_TEAM',
+            'SET_TEAM_AND_ASSIGNEE',
+            'AUTO_ASSIGN_CREATOR',
+        ],
+    },
+
+    TASK_CREATED: {
+        compatibleConditions: [
+            'STATUS_EQUALS',
+            'ASSIGNEE_EQUALS',
+            'PRIORITY_COMPARISON',
+            'TEAM_EQUALS',
+            'ASSIGNEE_NOT_IN_TEAM',
+            'HAS_LINK_WITH_LABEL',
+        ],
+        compatibleActions: [
+            'SET_STATUS',
+            'SET_ASSIGNEE',
+            'SET_PRIORITY',
+            'SET_TEAM',
+            'SET_TEAM_AND_ASSIGNEE',
+            'AUTO_ASSIGN_CREATOR',
+        ],
     },
 };
 
@@ -174,6 +267,42 @@ export const taskAutomationResolvers = {
                         },
                         supportedModes: ['ASYNC'],
                         ...TRIGGER_COMPATIBILITY.LINKED_OUTGOING_STATUS_CHANGED,
+                    },
+                    {
+                        type: 'PRIORITY_CHANGED',
+                        label: 'Task priority changes',
+                        description:
+                            "Fires when a task's priority is modified.",
+                        valueTemplate: {
+                            inputType: 'NONE',
+                            label: 'Priority change',
+                        },
+                        supportedModes: ['SYNC', 'ASYNC'],
+                        ...TRIGGER_COMPATIBILITY.PRIORITY_CHANGED,
+                    },
+                    {
+                        type: 'ASSIGNEE_CHANGED',
+                        label: 'Task assignee changes',
+                        description:
+                            "Fires when a task's individual assignee or team changes.",
+                        valueTemplate: {
+                            inputType: 'NONE',
+                            label: 'Assignee change',
+                        },
+                        supportedModes: ['SYNC', 'ASYNC'],
+                        ...TRIGGER_COMPATIBILITY.ASSIGNEE_CHANGED,
+                    },
+                    {
+                        type: 'TASK_CREATED',
+                        label: 'Task is created',
+                        description:
+                            'Fires when a new task is created inside the project.',
+                        valueTemplate: {
+                            inputType: 'NONE',
+                            label: 'Task creation',
+                        },
+                        supportedModes: ['ASYNC'],
+                        ...TRIGGER_COMPATIBILITY.TASK_CREATED,
                     },
                 ],
 
@@ -271,6 +400,88 @@ export const taskAutomationResolvers = {
                             ],
                         },
                     },
+                    {
+                        type: 'PRIORITY_COMPARISON',
+                        label: 'Task priority matches',
+                        description:
+                            'True when the task priority satisfies a dynamic operator comparison.',
+                        valueTemplate: {
+                            inputType: 'COMPOSITE',
+                            label: 'Priority Comparison',
+                            fields: [
+                                {
+                                    key: 'operator',
+                                    inputType: 'SELECT',
+                                    label: 'Operator',
+                                    staticOptions: [
+                                        { value: 'gt', label: 'Greater Than' },
+                                        { value: 'lt', label: 'Less Than' },
+                                        { value: 'eq', label: 'Equal To' },
+                                        {
+                                            value: 'gte',
+                                            label: 'Greater Than or Equal',
+                                        },
+                                        {
+                                            value: 'lte',
+                                            label: 'Less Than or Equal',
+                                        },
+                                    ],
+                                },
+                                {
+                                    key: 'value',
+                                    inputType: 'NUMBER',
+                                    label: 'Priority Value',
+                                },
+                            ],
+                        },
+                    },
+                    {
+                        type: 'ASSIGNEE_NOT_IN_TEAM',
+                        label: 'Assignee is not in task team',
+                        description:
+                            'True when the individually assigned member does not belong to the task team.',
+                        valueTemplate: {
+                            inputType: 'NONE',
+                            label: 'Assignee not in team check',
+                        },
+                    },
+                    {
+                        type: 'HAS_LINK_WITH_LABEL',
+                        label: 'Task has a link of type L in direction D',
+                        description:
+                            'True when the task has a matching incoming or outgoing dependency link.',
+                        valueTemplate: {
+                            inputType: 'COMPOSITE',
+                            label: 'Dependency Link Check',
+                            fields: [
+                                {
+                                    key: 'direction',
+                                    inputType: 'SELECT',
+                                    label: 'Direction',
+                                    staticOptions: [
+                                        {
+                                            value: 'incoming',
+                                            label: 'Incoming Link',
+                                        },
+                                        {
+                                            value: 'outgoing',
+                                            label: 'Outgoing Link',
+                                        },
+                                        {
+                                            value: 'both',
+                                            label: 'Either Direction',
+                                        },
+                                    ],
+                                },
+                                {
+                                    key: 'label',
+                                    inputType: 'TEXT',
+                                    label: 'Link Label (e.g. blocks, subtask)',
+                                    placeholder: 'blocks',
+                                },
+                            ],
+                        },
+                    },
                 ],
 
                 actions: [
@@ -311,6 +522,39 @@ export const taskAutomationResolvers = {
                                 'e.g. Finish all subtasks before marking this done.',
                         },
                         supportedModes: ['SYNC'],
+                    },
+                    {
+                        type: 'SET_PRIORITY',
+                        label: 'Set task priority to',
+                        description:
+                            'Automatically sets the task priority to a numeric value.',
+                        valueTemplate: {
+                            inputType: 'NUMBER',
+                            label: 'Priority',
+                        },
+                        supportedModes: ['SYNC', 'ASYNC'],
+                    },
+                    {
+                        type: 'SET_TEAM_AND_ASSIGNEE',
+                        label: 'Set task team and assignee to',
+                        description:
+                            'Assigns both the team and a member from that team.',
+                        valueTemplate: {
+                            inputType: 'TEAM_MEMBER',
+                            label: 'Team and Assignee',
+                        },
+                        supportedModes: ['SYNC', 'ASYNC'],
+                    },
+                    {
+                        type: 'AUTO_ASSIGN_CREATOR',
+                        label: 'Assign task to its creator',
+                        description:
+                            'Automatically assigns the task back to its original creator.',
+                        valueTemplate: {
+                            inputType: 'NONE',
+                            label: 'Assign to Creator',
+                        },
+                        supportedModes: ['SYNC', 'ASYNC'],
                     },
                 ],
             };
