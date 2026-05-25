@@ -1,13 +1,12 @@
 {
+    "mode": "yolo",
+    "granularity": "standard",
+    "parallelization": true,
+    "commit_docs": true,
+    "model_profile": "balanced",
     "workflow": {
-        "mode": "auto",
         "research": true,
-        "requirements": true,
-        "roadmap": true
-    },
-    "preferences": {
-        "testing": "E2E Heavy",
-        "execution": "Kafka Native",
-        "migration": "Fresh Start"
+        "plan_check": true,
+        "verifier": true
     }
 }
