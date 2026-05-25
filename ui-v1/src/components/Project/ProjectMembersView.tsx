@@ -50,6 +50,7 @@ export default function ProjectMembersView() {
     mutationFn: () => projectApi.addProjectMembers(projectId, parsedUserIds()),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['project-members', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['project-members-all', projectId] });
       queryClient.invalidateQueries({ queryKey: ['project-dashboard', projectId] });
       queryClient.invalidateQueries({ queryKey: ['project', projectId] });
       setUserIds('');
@@ -60,6 +61,7 @@ export default function ProjectMembersView() {
     mutationFn: (memberId: string) => projectApi.removeProjectMembers(projectId, [memberId]),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['project-members', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['project-members-all', projectId] });
       queryClient.invalidateQueries({ queryKey: ['project-dashboard', projectId] });
       queryClient.invalidateQueries({ queryKey: ['project', projectId] });
     },

@@ -7,7 +7,8 @@ import {
   redirect
 } from '@tanstack/react-router';
 import { Link } from '@tanstack/react-router';
-import { type AuthContextType } from './context/AuthContext';
+import { LogOut } from 'lucide-react';
+import { useAuth, type AuthContextType } from './context/AuthContext';
 import { AuthScreen } from './components/Auth/AuthScreen';
 import { NotFoundComponent, GlobalErrorComponent } from './components/Layout/RouterFeedback';
 import { RootComponent } from './components/Layout/RootComponent';
@@ -29,10 +30,12 @@ export const rootRoute = createRootRouteWithContext<MyRouterContext>()({
 // --- Layout Routes ---
 
 const AuthenticatedLayout = () => {
+  const { user, logout } = useAuth();
+
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-bg-notion text-text-notion relative">
       {/* Top Nav */}
-      <header className="flex h-14 shrink-0 items-center px-6 border-b border-slate-200/50 bg-white/60 backdrop-blur-md z-10">
+      <header className="flex h-14 shrink-0 items-center justify-between px-6 border-b border-slate-200/50 bg-white/60 backdrop-blur-md z-10">
         <Link to="/" className="flex items-center gap-2.5 group">
           <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-tr from-app-accent to-indigo-500 text-white shadow-sm transition group-hover:scale-105 duration-300">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor" className="h-4.5 w-4.5">
@@ -41,6 +44,25 @@ const AuthenticatedLayout = () => {
           </div>
           <span className="text-base font-extrabold tracking-tight bg-gradient-to-r from-app-ink to-slate-700 bg-clip-text text-transparent">Task-In</span>
         </Link>
+
+        <div className="flex items-center gap-4">
+          {user?.username && (
+            <div className="flex items-center gap-2 rounded-xl bg-slate-100/80 border border-slate-200/40 px-3 py-1.5 text-xs font-bold text-app-ink shadow-sm">
+              <div className="flex h-5 w-5 items-center justify-center rounded-full bg-app-accent-soft text-[10px] font-black text-app-accent">
+                {user.username.substring(0, 2).toUpperCase()}
+              </div>
+              <span>@{user.username}</span>
+            </div>
+          )}
+          <button
+            onClick={logout}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-red-200 bg-red-50 hover:bg-red-100 px-3 py-1.5 text-xs font-bold text-red-600 transition duration-300 cursor-pointer shadow-sm shadow-red-100/50"
+            title="Sign out"
+          >
+            <LogOut size={13} />
+            <span>Sign out</span>
+          </button>
+        </div>
       </header>
 
       {/* Main Content */}

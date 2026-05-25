@@ -84,19 +84,10 @@ export default function ProjectDashboardView() {
       </div>
 
       {/* Telemetry Metrics Grid */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-3">
         <StatCard label="Total Tasks" value={project?.tasksCount ?? 0} hint="Open and closed workflow issues" accent="orange" />
         <StatCard label="Assigned Teams" value={project?.teamsCount ?? 0} hint="Collaborating units inside project" accent="teal" />
-        <StatCard label="Member Count" value={members.length} hint="Active workspace contributors" accent="ink" />
-        <SurfaceCard className="p-6 flex flex-col justify-between min-h-[140px] hover:translate-y-[-2px]">
-          <div>
-            <div className="mb-3 inline-flex rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-indigo-50 border border-indigo-100 text-indigo-600">
-              Connections
-            </div>
-            <div className="text-3xl font-extrabold tracking-[-0.04em] text-app-ink">{links.length}</div>
-          </div>
-          <p className="mt-2 text-xs text-app-muted">Established task dependencies</p>
-        </SurfaceCard>
+        <StatCard label="Member Count" value={project?.projectMembersCount ?? 0} hint="Active workspace contributors" accent="ink" />
       </div>
 
       {/* Primary Content Split */}
@@ -121,7 +112,7 @@ export default function ProjectDashboardView() {
             </div>
 
             <div className="space-y-3.5">
-              {tasks.length === 0 ? (
+              {project?.tasksCount === 0 ? (
                 <EmptyState
                   icon={LayoutGrid}
                   title="No tasks yet"
@@ -230,7 +221,7 @@ export default function ProjectDashboardView() {
             </div>
 
             <div className="space-y-3">
-              {teams.length === 0 ? (
+              {project?.teamsCount === 0 ? (
                 <p className="text-xs leading-relaxed text-app-muted">No teams assigned to this project yet.</p>
               ) : (
                 teams.slice(0, 4).map((team) => (
@@ -270,7 +261,7 @@ export default function ProjectDashboardView() {
             </div>
 
             <div className="space-y-3">
-              {members.length === 0 ? (
+              {project?.projectMembersCount === 0 ? (
                 <p className="text-xs leading-relaxed text-app-muted">No members joined this workspace yet.</p>
               ) : (
                 members.slice(0, 5).map((member) => (

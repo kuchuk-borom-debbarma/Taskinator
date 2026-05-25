@@ -32,8 +32,6 @@ export function ProjectDashboard() {
   const projects = data?.projects ?? [];
   const pageInfo = data?.pageInfo;
   const totalProjects = data?.totalCount ?? projects.length;
-  const totalTasks = projects.reduce((sum, project) => sum + project.tasksCount, 0);
-  const totalTeams = projects.reduce((sum, project) => sum + project.teamsCount, 0);
 
   const handleNext = () => {
     if (pageInfo?.hasNextPage) {
@@ -68,10 +66,8 @@ export function ProjectDashboard() {
         />
       </SurfaceCardStrong>
 
-      <div className="mt-6 grid gap-4 md:grid-cols-3">
-        <StatCard label="Projects" value={totalProjects} hint="" />
-        <StatCard label="Tasks in view" value={totalTasks} hint="" accent="teal" />
-        <StatCard label="Teams" value={totalTeams} hint="" accent="ink" />
+      <div className="mt-6">
+        <StatCard label="Total Projects" value={totalProjects} hint="Active projects within your organization" accent="teal" />
       </div>
 
       <div className="mt-8">
@@ -79,9 +75,6 @@ export function ProjectDashboard() {
           <div className="mb-6 flex items-center justify-between gap-4">
             <div>
               <h2 className="text-2xl font-semibold tracking-[-0.04em] text-app-ink">Projects</h2>
-            </div>
-            <div className="rounded-full bg-app-ink/5 px-3 py-1.5 text-xs font-semibold text-app-muted">
-              {projects.length} loaded
             </div>
           </div>
 
@@ -93,7 +86,7 @@ export function ProjectDashboard() {
             <EmptyState
               icon={FolderSearch}
               title="No projects yet"
-              description="Create the first project to kick off the redesigned workspace flow."
+              description="Create your first project to start organizing tasks, managing teams, and tracking progress."
               action={
                 <button
                   onClick={() => setCreateProjectModalOpen(true)}

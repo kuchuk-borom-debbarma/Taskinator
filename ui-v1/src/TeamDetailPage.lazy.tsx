@@ -74,6 +74,7 @@ export default function TeamDetailPage() {
     onSuccess: (payload) => {
       if (payload.team) queryClient.setQueryData(['team-detail', teamId], { ...detail, team: payload.team });
       queryClient.invalidateQueries({ queryKey: ['project-teams', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['project-teams-all', projectId] });
       queryClient.invalidateQueries({ queryKey: ['project-dashboard', projectId] });
       setIsEditing(false);
     },
@@ -83,6 +84,7 @@ export default function TeamDetailPage() {
     mutationFn: () => teamApi.deleteTeams(projectId, [teamId]),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['project-teams', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['project-teams-all', projectId] });
       queryClient.invalidateQueries({ queryKey: ['project-dashboard', projectId] });
       navigate({ to: '/projects/$projectId/teams', params: { projectId } });
     },
@@ -93,6 +95,7 @@ export default function TeamDetailPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['team-detail', teamId] });
       queryClient.invalidateQueries({ queryKey: ['team-members', teamId] });
+      queryClient.invalidateQueries({ queryKey: ['team-members-all', teamId] });
       setMemberIds('');
     },
   });
@@ -106,6 +109,7 @@ export default function TeamDetailPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['team-detail', teamId] });
       queryClient.invalidateQueries({ queryKey: ['team-members', teamId] });
+      queryClient.invalidateQueries({ queryKey: ['team-members-all', teamId] });
     },
   });
 

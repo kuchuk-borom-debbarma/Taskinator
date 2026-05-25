@@ -61,9 +61,6 @@ export const TaskListView: React.FC<TaskListViewProps> = ({
               </button>
             )}
             Tasks
-            <span className="text-[11px] font-black uppercase tracking-[0.2em] px-2 py-0.5 bg-focus-blue/20 text-focus-blue border border-focus-blue/30 rounded-full">
-              {tasks.length} Loaded
-            </span>
           </h1>
         </div>
 

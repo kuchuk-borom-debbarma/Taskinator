@@ -1086,8 +1086,8 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
                   value={statusDraft}
                   onChange={setStatusDraft}
                   options={[
-                    { label: 'Todo', value: 'TODO' },
-                    { label: 'In Progress', value: 'IN_PROGRESS' },
+                    { label: 'To do', value: 'TODO' },
+                    { label: 'In progress', value: 'IN_PROGRESS' },
                     { label: 'Done', value: 'DONE' },
                     { label: 'Canceled', value: 'CANCELED' },
                   ]}

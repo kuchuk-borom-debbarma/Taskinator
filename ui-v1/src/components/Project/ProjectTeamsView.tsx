@@ -65,6 +65,7 @@ export default function ProjectTeamsView() {
     mutationFn: () => teamApi.createTeam(projectId, name.trim()),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['project-teams', projectId] });
+      queryClient.invalidateQueries({ queryKey: ['project-teams-all', projectId] });
       queryClient.invalidateQueries({ queryKey: ['project-dashboard', projectId] });
       setName('');
       setShowCreate(false);
@@ -119,9 +120,6 @@ export default function ProjectTeamsView() {
             <div>
               <span className="text-[9px] font-extrabold uppercase tracking-widest text-app-accent">Team Roster</span>
               <h2 className="text-xl font-bold tracking-tight text-app-ink mt-0.5">Active Groups</h2>
-            </div>
-            <div className="rounded-xl bg-slate-100 px-3 py-2 text-xs font-bold text-app-muted border border-slate-200/30">
-              {teams.length} Groups
             </div>
           </div>
 
