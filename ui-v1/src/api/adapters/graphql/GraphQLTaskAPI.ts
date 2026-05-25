@@ -1,5 +1,5 @@
 import type { TaskAPI } from '../../interfaces/TaskAPI';
-import type { PageInfo, PaginationArgs, ProjectTask, TaskLink, NeighbourDirection, SimulatedSlip } from '../../types';
+import type { PageInfo, PaginationArgs, ProjectTask, TaskLink, NeighbourDirection, SimulatedSlip, TaskComment, TaskActivityLog } from '../../types';
 import { AuthenticationError } from '../../errors';
 
 import { CONFIG } from '../../../config';
@@ -43,6 +43,27 @@ const TASK_LINK_FIELDS = `
     assignedMember { id username }
   }
   createdBy { id username }
+`;
+
+const COMMENT_FIELDS = `
+  id
+  content
+  version
+  createdAt
+  updatedAt
+  author { id username }
+`;
+
+const ACTIVITY_LOG_FIELDS = `
+  id
+  actionType
+  createdAt
+  actor { id username }
+  changes {
+    field
+    oldValue
+    newValue
+  }
 `;
 
 export class GraphQLTaskAPI implements TaskAPI {
@@ -394,5 +415,120 @@ export class GraphQLTaskAPI implements TaskAPI {
       }
     `, { projectId, taskId, delayDays });
     return data.simulateSlippage;
+  }
+
+  async getTaskComments(
+    taskId: string,
+    pagination?: PaginationArgs
+  ): Promise<{ comments: TaskComment[], pageInfo: PageInfo }> {
+    const { first, after, last, before } = pagination || {};
+    const data = await this.query<any>(gql`
+      query GetTaskComments($taskId: ID!, $first: Int, $after: String, $last: Int, $before: String) {
+        task(id: $taskId) {
+          comments(first: $first, after: $after, last: $last, before: $before) {
+            edges {
+              node {
+                ${COMMENT_FIELDS}
+              }
+            }
+            pageInfo {
+              hasNextPage
+              hasPreviousPage
+              startCursor
+              endCursor
+            }
+          }
+        }
+      }
+    `, { taskId, first, after, last, before });
+
+    const conn = data.task?.comments;
+    if (!conn) return { comments: [], pageInfo: { hasNextPage: false, hasPreviousPage: false, endCursor: null, startCursor: null } };
+
+    return {
+      comments: conn.edges.map((e: any) => e.node),
+      pageInfo: {
+        hasNextPage: conn.pageInfo.hasNextPage || false,
+        hasPreviousPage: conn.pageInfo.hasPreviousPage || false,
+        endCursor: conn.pageInfo.endCursor || null,
+        startCursor: conn.pageInfo.startCursor || null,
+      }
+    };
+  }
+
+  async getTaskActivityLogs(
+    taskId: string,
+    pagination?: PaginationArgs
+  ): Promise<{ logs: TaskActivityLog[], pageInfo: PageInfo }> {
+    const { first, after, last, before } = pagination || {};
+    const data = await this.query<any>(gql`
+      query GetTaskActivityLogs($taskId: ID!, $first: Int, $after: String, $last: Int, $before: String) {
+        task(id: $taskId) {
+          activityLogs(first: $first, after: $after, last: $last, before: $before) {
+            edges {
+              node {
+                ${ACTIVITY_LOG_FIELDS}
+              }
+            }
+            pageInfo {
+              hasNextPage
+              hasPreviousPage
+              startCursor
+              endCursor
+            }
+          }
+        }
+      }
+    `, { taskId, first, after, last, before });
+
+    const conn = data.task?.activityLogs;
+    if (!conn) return { logs: [], pageInfo: { hasNextPage: false, hasPreviousPage: false, endCursor: null, startCursor: null } };
+
+    return {
+      logs: conn.edges.map((e: any) => e.node),
+      pageInfo: {
+        hasNextPage: conn.pageInfo.hasNextPage || false,
+        hasPreviousPage: conn.pageInfo.hasPreviousPage || false,
+        endCursor: conn.pageInfo.endCursor || null,
+        startCursor: conn.pageInfo.startCursor || null,
+      }
+    };
+  }
+
+  async addComment(taskId: string, content: string): Promise<TaskComment> {
+    const data = await this.query<any>(gql`
+      mutation AddComment($taskId: ID!, $content: String!) {
+        task {
+          addComment(taskId: $taskId, content: $content) {
+            ${COMMENT_FIELDS}
+          }
+        }
+      }
+    `, { taskId, content });
+    return data.task.addComment;
+  }
+
+  async updateComment(commentId: string, content: string, version: number): Promise<TaskComment> {
+    const data = await this.query<any>(gql`
+      mutation UpdateComment($commentId: ID!, $content: String!, $version: Int!) {
+        task {
+          updateComment(commentId: $commentId, content: $content, version: $version) {
+            ${COMMENT_FIELDS}
+          }
+        }
+      }
+    `, { commentId, content, version });
+    return data.task.updateComment;
+  }
+
+  async deleteComment(commentId: string): Promise<string> {
+    const data = await this.query<any>(gql`
+      mutation DeleteComment($commentId: ID!) {
+        task {
+          deleteComment(commentId: $commentId)
+        }
+      }
+    `, { commentId });
+    return data.task.deleteComment;
   }
 }

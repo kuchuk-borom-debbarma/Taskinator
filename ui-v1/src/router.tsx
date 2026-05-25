@@ -32,12 +32,14 @@ const AuthenticatedLayout = () => {
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-bg-notion text-text-notion relative">
       {/* Top Nav */}
-      <header className="flex h-16 shrink-0 items-center px-6 border-b border-app-line/40 bg-white/40 backdrop-blur-md z-10">
-        <Link to="/" className="flex items-center gap-3 group">
-          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-app-accent/10 text-app-accent transition group-hover:bg-app-accent group-hover:text-white">
-            <span className="font-bold">T</span>
+      <header className="flex h-14 shrink-0 items-center px-6 border-b border-slate-200/50 bg-white/60 backdrop-blur-md z-10">
+        <Link to="/" className="flex items-center gap-2.5 group">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-tr from-app-accent to-indigo-500 text-white shadow-sm transition group-hover:scale-105 duration-300">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={3} stroke="currentColor" className="h-4.5 w-4.5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
+            </svg>
           </div>
-          <span className="text-lg font-bold tracking-tight text-app-ink">Taskinator</span>
+          <span className="text-base font-extrabold tracking-tight bg-gradient-to-r from-app-ink to-slate-700 bg-clip-text text-transparent">Task-In</span>
         </Link>
       </header>
 

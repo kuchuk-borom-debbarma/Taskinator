@@ -6,7 +6,9 @@ import type {
     ProjectTeamMemberTable,
     ProjectTeamTable,
 } from './tables/ProjectTeam.ts';
+import type { TaskActivityLogTable } from './tables/TaskActivityLog.ts';
 import type { TaskAutomationRuleTable } from './tables/TaskAutomationRule.ts';
+import type { TaskCommentTable } from './tables/TaskComment.ts';
 import type { TaskLinkTable } from './tables/TaskLink.ts';
 import type { TaskReachabilityTable } from './tables/TaskReachability.ts';
 import type { PendingUserTable, UserTable } from './tables/User.ts';
@@ -24,4 +26,6 @@ export interface Database {
     users: UserTable;
     pending_users: PendingUserTable;
     outbox_events: OutboxEventTable;
+    task_comment: TaskCommentTable;
+    task_activity_log: TaskActivityLogTable;
 }

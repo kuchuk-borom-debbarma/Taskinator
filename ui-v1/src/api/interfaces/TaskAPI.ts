@@ -1,4 +1,4 @@
-import type { PageInfo, PaginationArgs, ProjectTask, TaskLink, NeighbourDirection, SimulatedSlip } from '../types';
+import type { PageInfo, PaginationArgs, ProjectTask, TaskLink, NeighbourDirection, SimulatedSlip, TaskComment, TaskActivityLog } from '../types';
 
 export interface TaskAPI {
   getTasks(
@@ -65,5 +65,30 @@ export interface TaskAPI {
     taskId: string,
     delayDays: number
   ): Promise<SimulatedSlip[]>;
+
+  getTaskComments(
+    taskId: string,
+    pagination?: PaginationArgs
+  ): Promise<{ comments: TaskComment[], pageInfo: PageInfo }>;
+
+  getTaskActivityLogs(
+    taskId: string,
+    pagination?: PaginationArgs
+  ): Promise<{ logs: TaskActivityLog[], pageInfo: PageInfo }>;
+
+  addComment(
+    taskId: string,
+    content: string
+  ): Promise<TaskComment>;
+
+  updateComment(
+    commentId: string,
+    content: string,
+    version: number
+  ): Promise<TaskComment>;
+
+  deleteComment(
+    commentId: string
+  ): Promise<string>;
 }
 

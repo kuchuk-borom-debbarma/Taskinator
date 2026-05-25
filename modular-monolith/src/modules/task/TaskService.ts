@@ -312,6 +312,75 @@ export interface TaskService extends BaseService {
         taskId: string,
         delayDays: number,
     ): Promise<SimulatedSlip[]>;
+
+    // Comment and Activity Log Operations
+    getTaskComments(
+        userId: string,
+        taskId: string,
+        pagination: PaginationParams,
+    ): Promise<TaskCommentConnection>;
+
+    getTaskActivityLogs(
+        userId: string,
+        taskId: string,
+        pagination: PaginationParams,
+    ): Promise<TaskActivityLogConnection>;
+
+    addComment(
+        userId: string,
+        taskId: string,
+        content: string,
+    ): Promise<TaskComment>;
+
+    updateComment(
+        userId: string,
+        commentId: string,
+        content: string,
+        version: number,
+    ): Promise<TaskComment>;
+
+    deleteComment(userId: string, commentId: string): Promise<string>;
+}
+
+// ─── Comments and Activity Logs Types ───────────────────────────────────────
+
+export type TaskComment = {
+    id: string;
+    taskId: string;
+    projectId: string;
+    userId: string;
+    content: string;
+    version: number;
+    createdAt: Date;
+    updatedAt: Date;
+};
+
+export type TaskFieldChange = {
+    field: string;
+    oldValue: string | null;
+    newValue: string | null;
+};
+
+export type TaskActivityLog = {
+    id: string;
+    taskId: string;
+    projectId: string;
+    userId: string;
+    actionType: string;
+    changes: TaskFieldChange[];
+    createdAt: Date;
+};
+
+export interface TaskCommentConnection {
+    comments: TaskComment[];
+    nextCursor: string | null;
+    prevCursor: string | null;
+}
+
+export interface TaskActivityLogConnection {
+    logs: TaskActivityLog[];
+    nextCursor: string | null;
+    prevCursor: string | null;
 }
 
 // ─── Neighbourhood (Radial Graph View) ──────────────────────────────────────

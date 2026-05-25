@@ -1,6 +1,10 @@
 import { type ExpressionBuilder, sql, type Transaction } from 'kysely';
 import { type Database, db } from '../../../infra/database';
-import { ConflictError, NotFoundError } from '../../../infra/graphql/errors.ts';
+import {
+    ConflictError,
+    NotFoundError,
+    UnauthorizedError,
+} from '../../../infra/graphql/errors.ts';
 import {
     EVENT_STREAMS,
     EVENT_TYPES,
@@ -10,7 +14,10 @@ import type {
     GetNeighbourhoodParam,
     PaginationParams,
     Task,
+    TaskActivityLog,
+    TaskComment,
     TaskContextRow,
+    TaskFieldChange,
     TaskLink,
     TaskNeighbourhoodResult,
 } from '../TaskService.ts';
@@ -1917,3 +1924,421 @@ export async function getTaskContextById(
         .where('id', '=', taskId as any)
         .executeTakeFirst();
 }
+
+export const getTaskCommentsPage = async (
+    userId: string,
+    taskId: string,
+    params: PaginationParams,
+): Promise<{
+    comments: TaskComment[];
+    nextCursor: string | null;
+    prevCursor: string | null;
+}> => {
+    const limit = Math.min(params.first || params.last || 10, 50);
+    const { after, before } = params;
+    const isBackward = !!before;
+    const cursor = before || after;
+
+    let cursorEpoch: string | null = null;
+    let cursorId: string | null = null;
+
+    if (cursor) {
+        const decoded = decodeCursor(cursor);
+        cursorEpoch = decoded.timeValue;
+        cursorId = decoded.id;
+    }
+
+    const result = await sql<any>`
+        WITH target_task AS (
+            SELECT fk_project_id FROM project_task WHERE id = ${taskId}::uuid
+        ),
+        auth_check AS (
+            SELECT 1 FROM target_task t
+            JOIN project p ON p.id = t.fk_project_id AND p.fk_user_id = ${userId}::text
+            UNION ALL
+            SELECT 1 FROM target_task t
+            JOIN project_member pm ON pm.fk_project_id = t.fk_project_id AND pm.fk_user_id = ${userId}::text
+            LIMIT 1
+        )
+        SELECT 
+            id,
+            fk_task_id AS "taskId",
+            fk_project_id AS "projectId",
+            fk_user_id AS "userId",
+            content,
+            version,
+            created_at AS "createdAt",
+            updated_at AS "updatedAt"
+        FROM task_comment
+        WHERE fk_task_id = ${taskId}::uuid
+          AND EXISTS (SELECT 1 FROM auth_check)
+          AND (
+            ${cursorEpoch}::text IS NULL
+            OR (
+                CASE 
+                    WHEN ${isBackward}::boolean THEN
+                        created_at > ${cursorEpoch}::timestamptz OR (created_at = ${cursorEpoch}::timestamptz AND id > ${cursorId}::uuid)
+                    ELSE
+                        created_at < ${cursorEpoch}::timestamptz OR (created_at = ${cursorEpoch}::timestamptz AND id < ${cursorId}::uuid)
+                END
+            )
+          )
+        ORDER BY 
+            CASE WHEN ${isBackward}::boolean THEN created_at END ASC,
+            CASE WHEN ${isBackward}::boolean THEN id END ASC,
+            CASE WHEN NOT ${isBackward}::boolean THEN created_at END DESC,
+            CASE WHEN NOT ${isBackward}::boolean THEN id END DESC
+        LIMIT ${limit + 1}
+    `.execute(db);
+
+    let rows = result.rows;
+    if (isBackward) {
+        rows = [...rows].reverse();
+    }
+
+    const hasMore = rows.length > limit;
+    if (hasMore) {
+        if (isBackward) {
+            rows.shift();
+        } else {
+            rows.pop();
+        }
+    }
+
+    const comments: TaskComment[] = rows.map((r) => ({
+        id: r.id,
+        taskId: r.taskId,
+        projectId: r.projectId,
+        userId: r.userId,
+        content: r.content,
+        version: Number(r.version),
+        createdAt: new Date(r.createdAt),
+        updatedAt: new Date(r.updatedAt),
+    }));
+
+    let nextCursor: string | null = null;
+    let prevCursor: string | null = null;
+
+    if (comments.length > 0) {
+        if (isBackward || hasMore) {
+            const first = comments[0];
+            if (first) {
+                prevCursor = encodeCursor(
+                    first.createdAt.toISOString(),
+                    first.id,
+                );
+            }
+        }
+        if (!isBackward || hasMore) {
+            const last = comments[comments.length - 1];
+            if (last) {
+                nextCursor = encodeCursor(
+                    last.createdAt.toISOString(),
+                    last.id,
+                );
+            }
+        }
+    }
+
+    return { comments, nextCursor, prevCursor };
+};
+
+export const getTaskActivityLogsPage = async (
+    userId: string,
+    taskId: string,
+    params: PaginationParams,
+): Promise<{
+    logs: TaskActivityLog[];
+    nextCursor: string | null;
+    prevCursor: string | null;
+}> => {
+    const limit = Math.min(params.first || params.last || 10, 50);
+    const { after, before } = params;
+    const isBackward = !!before;
+    const cursor = before || after;
+
+    let cursorEpoch: string | null = null;
+    let cursorId: string | null = null;
+
+    if (cursor) {
+        const decoded = decodeCursor(cursor);
+        cursorEpoch = decoded.timeValue;
+        cursorId = decoded.id;
+    }
+
+    const result = await sql<any>`
+        WITH target_task AS (
+            SELECT fk_project_id FROM project_task WHERE id = ${taskId}::uuid
+        ),
+        auth_check AS (
+            SELECT 1 FROM target_task t
+            JOIN project p ON p.id = t.fk_project_id AND p.fk_user_id = ${userId}::text
+            UNION ALL
+            SELECT 1 FROM target_task t
+            JOIN project_member pm ON pm.fk_project_id = t.fk_project_id AND pm.fk_user_id = ${userId}::text
+            LIMIT 1
+        )
+        SELECT 
+            id,
+            fk_task_id AS "taskId",
+            fk_project_id AS "projectId",
+            fk_user_id AS "userId",
+            action_type AS "actionType",
+            payload,
+            created_at AS "createdAt"
+        FROM task_activity_log
+        WHERE fk_task_id = ${taskId}::uuid
+          AND EXISTS (SELECT 1 FROM auth_check)
+          AND (
+            ${cursorEpoch}::text IS NULL
+            OR (
+                CASE 
+                    WHEN ${isBackward}::boolean THEN
+                        created_at > ${cursorEpoch}::timestamptz OR (created_at = ${cursorEpoch}::timestamptz AND id > ${cursorId}::uuid)
+                    ELSE
+                        created_at < ${cursorEpoch}::timestamptz OR (created_at = ${cursorEpoch}::timestamptz AND id < ${cursorId}::uuid)
+                END
+            )
+          )
+        ORDER BY 
+            CASE WHEN ${isBackward}::boolean THEN created_at END ASC,
+            CASE WHEN ${isBackward}::boolean THEN id END ASC,
+            CASE WHEN NOT ${isBackward}::boolean THEN created_at END DESC,
+            CASE WHEN NOT ${isBackward}::boolean THEN id END DESC
+        LIMIT ${limit + 1}
+    `.execute(db);
+
+    let rows = result.rows;
+    if (isBackward) {
+        rows = [...rows].reverse();
+    }
+
+    const hasMore = rows.length > limit;
+    if (hasMore) {
+        if (isBackward) {
+            rows.shift();
+        } else {
+            rows.pop();
+        }
+    }
+
+    const logs: TaskActivityLog[] = rows.map((r) => {
+        const payload =
+            typeof r.payload === 'string' ? JSON.parse(r.payload) : r.payload;
+        const changes: TaskFieldChange[] = [];
+        if (payload.changes) {
+            for (const [field, delta] of Object.entries<any>(payload.changes)) {
+                changes.push({
+                    field,
+                    oldValue:
+                        delta.old === null || delta.old === undefined
+                            ? null
+                            : String(delta.old),
+                    newValue:
+                        delta.new === null || delta.new === undefined
+                            ? null
+                            : String(delta.new),
+                });
+            }
+        } else if (r.actionType === 'task.created') {
+            for (const [field, val] of Object.entries<any>(payload)) {
+                if (
+                    field !== 'actorId' &&
+                    field !== 'traceId' &&
+                    field !== 'taskId' &&
+                    field !== 'projectId'
+                ) {
+                    changes.push({
+                        field,
+                        oldValue: null,
+                        newValue:
+                            val === null || val === undefined
+                                ? null
+                                : String(val),
+                    });
+                }
+            }
+        }
+        return {
+            id: r.id,
+            taskId: r.taskId,
+            projectId: r.projectId,
+            userId: r.userId,
+            actionType: r.actionType,
+            changes,
+            createdAt: new Date(r.createdAt),
+        };
+    });
+
+    let nextCursor: string | null = null;
+    let prevCursor: string | null = null;
+
+    if (logs.length > 0) {
+        if (isBackward || hasMore) {
+            const first = logs[0];
+            if (first) {
+                prevCursor = encodeCursor(
+                    first.createdAt.toISOString(),
+                    first.id,
+                );
+            }
+        }
+        if (!isBackward || hasMore) {
+            const last = logs[logs.length - 1];
+            if (last) {
+                nextCursor = encodeCursor(
+                    last.createdAt.toISOString(),
+                    last.id,
+                );
+            }
+        }
+    }
+
+    return { logs, nextCursor, prevCursor };
+};
+
+export const insertComment = async (
+    userId: string,
+    taskId: string,
+    content: string,
+): Promise<TaskComment> => {
+    const result = await sql<any>`
+        WITH target_task AS (
+            SELECT fk_project_id FROM project_task WHERE id = ${taskId}::uuid
+        ),
+        authorized AS (
+            SELECT t.fk_project_id FROM target_task t
+            JOIN project p ON p.id = t.fk_project_id AND p.fk_user_id = ${userId}::text
+            UNION ALL
+            SELECT t.fk_project_id FROM target_task t
+            JOIN project_member pm ON pm.fk_project_id = t.fk_project_id AND pm.fk_user_id = ${userId}::text
+            LIMIT 1
+        ),
+        inserted_comment AS (
+            INSERT INTO task_comment (fk_task_id, fk_project_id, fk_user_id, content)
+            SELECT ${taskId}::uuid, fk_project_id, ${userId}::text, ${content}
+            FROM authorized
+            RETURNING id, fk_task_id AS "taskId", fk_project_id AS "projectId", fk_user_id AS "userId", content, version, created_at AS "createdAt", updated_at AS "updatedAt"
+        )
+        SELECT * FROM inserted_comment
+    `.execute(db);
+
+    const comment = result.rows[0];
+    if (!comment) {
+        throw new NotFoundError(
+            `Task with ID ${taskId} not found or you do not have permission to comment on it.`,
+        );
+    }
+
+    return {
+        id: comment.id,
+        taskId: comment.taskId,
+        projectId: comment.projectId,
+        userId: comment.userId,
+        content: comment.content,
+        version: Number(comment.version),
+        createdAt: new Date(comment.createdAt),
+        updatedAt: new Date(comment.updatedAt),
+    };
+};
+
+export const updateComment = async (
+    userId: string,
+    commentId: string,
+    content: string,
+    version: number,
+): Promise<TaskComment> => {
+    const result = await sql<any>`
+        WITH authorized AS (
+            SELECT 1 FROM task_comment tc
+            JOIN project p ON p.id = tc.fk_project_id AND p.fk_user_id = ${userId}::text
+            UNION ALL
+            SELECT 1 FROM task_comment tc
+            JOIN project_member pm ON pm.fk_project_id = tc.fk_project_id AND pm.fk_user_id = ${userId}::text
+            UNION ALL
+            SELECT 1 FROM task_comment tc
+            WHERE tc.id = ${commentId}::uuid AND tc.fk_user_id = ${userId}::text
+            LIMIT 1
+        ),
+        updated_comment AS (
+            UPDATE task_comment 
+            SET content = ${content}, version = version + 1, updated_at = NOW()
+            WHERE id = ${commentId}::uuid
+              AND version = ${version}
+              AND EXISTS (SELECT 1 FROM authorized)
+            RETURNING id, fk_task_id AS "taskId", fk_project_id AS "projectId", fk_user_id AS "userId", content, version, created_at AS "createdAt", updated_at AS "updatedAt"
+        )
+        SELECT * FROM updated_comment
+    `.execute(db);
+
+    const comment = result.rows[0];
+    if (!comment) {
+        const exists = await sql<{ id: string; version: number }>`
+            SELECT id, version FROM task_comment WHERE id = ${commentId}::uuid
+        `.execute(db);
+
+        if (exists.rows.length === 0) {
+            throw new NotFoundError(`Comment with ID ${commentId} not found.`);
+        }
+
+        const comm = exists.rows[0];
+        if (!comm) {
+            throw new NotFoundError(`Comment with ID ${commentId} not found.`);
+        }
+        if (comm.version !== version) {
+            throw new ConflictError(
+                `Optimistic lock failure: comment version mismatch (expected ${version}, but found ${comm.version}). Please refresh and try again.`,
+            );
+        }
+
+        throw new UnauthorizedError(
+            `You are not authorized to update this comment.`,
+        );
+    }
+
+    return {
+        id: comment.id,
+        taskId: comment.taskId,
+        projectId: comment.projectId,
+        userId: comment.userId,
+        content: comment.content,
+        version: Number(comment.version),
+        createdAt: new Date(comment.createdAt),
+        updatedAt: new Date(comment.updatedAt),
+    };
+};
+
+export const deleteComment = async (
+    userId: string,
+    commentId: string,
+): Promise<string> => {
+    const result = await sql<{ id: string }>`
+        WITH authorized AS (
+            SELECT 1 FROM task_comment tc
+            JOIN project p ON p.id = tc.fk_project_id AND p.fk_user_id = ${userId}::text
+            UNION ALL
+            SELECT 1 FROM task_comment tc
+            JOIN project_member pm ON pm.fk_project_id = tc.fk_project_id AND pm.fk_user_id = ${userId}::text
+            UNION ALL
+            SELECT 1 FROM task_comment tc
+            WHERE tc.id = ${commentId}::uuid AND tc.fk_user_id = ${userId}::text
+            LIMIT 1
+        ),
+        deleted_comment AS (
+            DELETE FROM task_comment
+            WHERE id = ${commentId}::uuid
+              AND EXISTS (SELECT 1 FROM authorized)
+            RETURNING id
+        )
+        SELECT id FROM deleted_comment
+    `.execute(db);
+
+    const deletedId = result.rows[0]?.id;
+    if (!deletedId) {
+        throw new NotFoundError(
+            `Comment with ID ${commentId} not found or you do not have permission to delete it.`,
+        );
+    }
+
+    return deletedId;
+};

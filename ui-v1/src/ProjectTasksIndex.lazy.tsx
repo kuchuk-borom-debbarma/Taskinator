@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useParams, useSearch } from '@tanstack/react-router';
-import { ArrowLeft, ArrowRight, Filter, FolderKanban, Loader2, Plus, Search } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Filter, FolderKanban, Loader2, Plus, Search, Eye } from 'lucide-react';
 import { useApi } from './hooks/useApi';
 import type { ProjectTask, TaskStatus, TaskPriority } from './api/types';
 import {
@@ -164,71 +164,92 @@ export default function ProjectTasksIndex() {
   const filteredTasks = data?.tasks ?? [];
 
   return (
-    <div className="page-frame">
-      <div className="grid gap-6 xl:grid-cols-[0.78fr_1.22fr]">
-        <SurfaceCard className="p-5">
-          <p className="eyebrow mb-2">Filter tasks</p>
-          <h2 className="text-2xl font-semibold tracking-[-0.04em] text-app-ink">Focus the current slice</h2>
+    <div className="page-frame animate-fade-in space-y-6">
+      {/* Search and Filters Hub */}
+      <div className="grid gap-6 xl:grid-cols-[280px_1fr]">
+        {/* Left Side: Dynamic Filter Control Drawer */}
+        <SurfaceCard className="p-5 flex flex-col justify-start h-fit gap-5">
+          <div>
+            <span className="text-[9px] font-extrabold uppercase tracking-widest text-app-accent">Workspace Filters</span>
+            <h2 className="text-base font-bold text-app-ink mt-0.5">Filter Tasks</h2>
+          </div>
 
-          <label className="mt-5 block">
-            <span className="mb-2 flex items-center gap-2 text-sm font-medium text-app-ink">
-              <Search size={15} />
-              Search
+          {/* Search bar */}
+          <label className="block space-y-1.5">
+            <span className="flex items-center gap-2 text-xs font-bold text-app-ink uppercase tracking-wide opacity-90">
+              <Search size={13} className="text-app-accent" />
+              Search keywords
             </span>
-            <input
-              value={query}
-              onChange={(event) => handleQueryChange(event.target.value)}
-              placeholder="Title or description..."
-              className="w-full rounded-2xl border border-app-line bg-white/80 px-4 py-3 text-sm text-app-ink outline-none transition focus:border-app-accent focus:ring-4 focus:ring-app-accent/10"
-            />
+            <div className="relative">
+              <input
+                value={query}
+                onChange={(event) => handleQueryChange(event.target.value)}
+                placeholder="Title or description..."
+                className="w-full rounded-xl border border-slate-200 bg-white/70 pl-3.5 pr-8 py-2.5 text-xs text-app-ink outline-none transition focus:border-app-accent focus:bg-white focus:ring-4 focus:ring-app-accent/5 shadow-sm"
+              />
+              {query && (
+                <button 
+                  onClick={() => handleQueryChange('')} 
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs font-semibold text-app-muted hover:text-app-ink cursor-pointer"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
           </label>
 
-          <div className="mt-5">
-            <span className="mb-3 flex items-center gap-2 text-sm font-medium text-app-ink">
-              <Filter size={15} />
-              Status
+          {/* Status filters */}
+          <div className="space-y-2">
+            <span className="flex items-center gap-2 text-xs font-bold text-app-ink uppercase tracking-wide opacity-90">
+              <Filter size={13} className="text-app-accent-2" />
+              Lifecycle Status
             </span>
-            <div className="flex flex-wrap gap-2">
-              {(['ALL', 'TODO', 'IN_PROGRESS', 'DONE'] as const).map((option) => (
-                <button
-                  key={option}
-                  onClick={() => handleStatusFilterChange(option)}
-                  className={`rounded-full px-4 py-2 text-xs font-semibold transition ${
-                    statusFilter === option
-                      ? 'bg-app-ink text-white'
-                      : 'border border-app-line bg-white/75 text-app-ink hover:border-app-ink/20'
-                  }`}
-                >
-                  {option === 'ALL' ? 'All' : option.replace('_', ' ')}
-                </button>
-              ))}
+            <div className="flex flex-wrap gap-1.5">
+              {(['ALL', 'TODO', 'IN_PROGRESS', 'DONE'] as const).map((option) => {
+                const isActive = statusFilter === option;
+                return (
+                  <button
+                    key={option}
+                    onClick={() => handleStatusFilterChange(option)}
+                    className={`rounded-full px-3 py-1.5 text-[10px] font-bold tracking-wide border transition duration-200 cursor-pointer ${
+                      isActive
+                        ? 'bg-app-ink border-app-ink text-white shadow-sm'
+                        : 'border-slate-200 bg-white/60 text-app-muted hover:border-slate-300 hover:text-app-ink'
+                    }`}
+                  >
+                    {option === 'ALL' ? 'All' : option.replace('_', ' ')}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
-          <div className="mt-5">
-            <span className="mb-2 block text-sm font-medium text-app-ink">Priority</span>
+          {/* Priority dropdown */}
+          <label className="block space-y-1.5">
+            <span className="block text-xs font-bold text-app-ink uppercase tracking-wide opacity-90">Severity Priority</span>
             <select
               value={priorityFilter}
               onChange={(event) => {
                 const val = event.target.value;
                 handlePriorityFilterChange(val === 'ALL' ? 'ALL' : Number(val));
               }}
-              className="w-full rounded-2xl border border-app-line bg-white/85 px-4 py-3 text-sm text-app-ink outline-none transition focus:border-app-accent focus:ring-4 focus:ring-app-accent/10"
+              className="w-full rounded-xl border border-slate-200 bg-white/70 px-3.5 py-2.5 text-xs text-app-ink outline-none transition focus:border-app-accent focus:bg-white cursor-pointer shadow-sm"
             >
               <option value="ALL">All priorities</option>
-              <option value={0}>Urgent</option>
-              <option value={1}>High</option>
-              <option value={2}>Medium</option>
-              <option value={3}>Low</option>
+              <option value={0}>Urgent (P0)</option>
+              <option value={1}>High (P1)</option>
+              <option value={2}>Medium (P2)</option>
+              <option value={3}>Low (P3)</option>
             </select>
-          </div>
+          </label>
 
-          <div className="mt-5">
-            <span className="mb-2 block text-sm font-medium text-app-ink">Team</span>
+          {/* Team Filter */}
+          <label className="block space-y-1.5">
+            <span className="block text-xs font-bold text-app-ink uppercase tracking-wide opacity-90">Assigned Team</span>
             <select
               value={teamFilter}
               onChange={(event) => handleTeamFilterChange(event.target.value)}
-              className="w-full rounded-2xl border border-app-line bg-white/85 px-4 py-3 text-sm text-app-ink outline-none transition focus:border-app-accent focus:ring-4 focus:ring-app-accent/10"
+              className="w-full rounded-xl border border-slate-200 bg-white/70 px-3.5 py-2.5 text-xs text-app-ink outline-none transition focus:border-app-accent focus:bg-white cursor-pointer shadow-sm"
             >
               <option value="ALL">All teams</option>
               {teamsData?.teams?.map((team) => (
@@ -237,14 +258,15 @@ export default function ProjectTasksIndex() {
                 </option>
               ))}
             </select>
-          </div>
+          </label>
 
-          <div className="mt-5">
-            <span className="mb-2 block text-sm font-medium text-app-ink">Assignee</span>
+          {/* Assignee Filter */}
+          <label className="block space-y-1.5">
+            <span className="block text-xs font-bold text-app-ink uppercase tracking-wide opacity-90">Workspace Contributor</span>
             <select
               value={assigneeFilter}
               onChange={(event) => handleAssigneeFilterChange(event.target.value)}
-              className="w-full rounded-2xl border border-app-line bg-white/85 px-4 py-3 text-sm text-app-ink outline-none transition focus:border-app-accent focus:ring-4 focus:ring-app-accent/10"
+              className="w-full rounded-xl border border-slate-200 bg-white/70 px-3.5 py-2.5 text-xs text-app-ink outline-none transition focus:border-app-accent focus:bg-white cursor-pointer shadow-sm"
             >
               <option value="ALL">All assignees</option>
               {membersData?.members?.map((member) => (
@@ -253,8 +275,9 @@ export default function ProjectTasksIndex() {
                 </option>
               ))}
             </select>
-          </div>
+          </label>
 
+          {/* Reset Filters button */}
           {(query !== '' || statusFilter !== 'ALL' || priorityFilter !== 'ALL' || teamFilter !== 'ALL' || assigneeFilter !== 'ALL') && (
             <button
               onClick={() => {
@@ -265,60 +288,64 @@ export default function ProjectTasksIndex() {
                 setAssigneeFilter('ALL');
                 resetPagination();
               }}
-              className="mt-6 w-full rounded-2xl border border-app-danger/20 bg-app-danger/10 py-3 text-xs font-semibold text-app-danger transition hover:bg-app-danger/15"
+              className="w-full rounded-xl border border-red-200 bg-red-50 hover:bg-red-100 py-2.5 text-[10px] font-bold uppercase tracking-wider text-red-600 transition duration-300 cursor-pointer"
             >
               Reset all filters
             </button>
           )}
         </SurfaceCard>
 
-        <SurfaceCardStrong className="p-5 md:p-6">
-          <div className="mb-6 flex items-center justify-between gap-4">
+        {/* Right Side: Primary Tasks Feed */}
+        <SurfaceCardStrong className="p-6 space-y-6 flex flex-col justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200/40 pb-5 shrink-0">
             <div>
-              <p className="eyebrow mb-2">Task list</p>
-              <h2 className="text-2xl font-semibold tracking-[-0.04em] text-app-ink">Prioritized work</h2>
+              <span className="text-[9px] font-extrabold uppercase tracking-widest text-app-accent">Workspace Board</span>
+              <h2 className="text-xl font-bold tracking-tight text-app-ink mt-0.5">Prioritized Issues</h2>
             </div>
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setShowCreate(true)}
-                className="inline-flex items-center gap-2 rounded-full bg-app-accent px-4 py-2 text-sm font-semibold text-white transition hover:bg-app-accent/90"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-app-accent hover:bg-app-accent/90 px-4 py-2.5 text-xs font-bold text-white transition duration-300 cursor-pointer shadow-sm shadow-app-accent/10"
               >
-                <Plus size={16} />
-                Create task
+                <Plus size={14} />
+                Create Task
               </button>
-              <div className="rounded-full bg-app-ink/5 px-3 py-1.5 text-xs font-semibold text-app-muted">
-                {filteredTasks.length} shown
+              <div className="rounded-xl bg-slate-100 px-3 py-2 text-xs font-bold text-app-muted border border-slate-200/30">
+                {filteredTasks.length} Issues
               </div>
             </div>
           </div>
 
-          {isLoading ? (
-            <div className="flex min-h-[18rem] items-center justify-center">
-              <Loader2 size={28} className="animate-spin text-app-accent" />
-            </div>
-          ) : filteredTasks.length === 0 ? (
-            <EmptyState
-              icon={FolderKanban}
-              title="No tasks match this view"
-              description="Try another filter or create a task to start building the execution plan."
-              action={
-                <button
-                  onClick={() => setShowCreate(true)}
-                  className="rounded-full bg-app-accent px-5 py-3 text-sm font-semibold text-white transition hover:bg-app-accent/90"
-                >
-                  Create task
-                </button>
-              }
-            />
-          ) : (
-            <div className="space-y-3">
-              {filteredTasks.map((task) => (
-                <TaskRow key={task.id} task={task} projectId={projectId!} />
-              ))}
-            </div>
-          )}
+          <div className="flex-1 min-h-[400px]">
+            {isLoading ? (
+              <div className="flex min-h-[18rem] items-center justify-center">
+                <Loader2 size={24} className="animate-spin text-app-accent" />
+              </div>
+            ) : filteredTasks.length === 0 ? (
+              <EmptyState
+                icon={FolderKanban}
+                title="No tasks match this view"
+                description="Try refining your filter parameters or spawn a new task to organize this segment."
+                action={
+                  <button
+                    onClick={() => setShowCreate(true)}
+                    className="rounded-xl bg-app-accent hover:bg-app-accent/90 px-4 py-2.5 text-xs font-bold text-white transition duration-300 cursor-pointer shadow-sm"
+                  >
+                    Create Task
+                  </button>
+                }
+              />
+            ) : (
+              <div className="space-y-3.5">
+                {filteredTasks.map((task) => (
+                  <TaskRow key={task.id} task={task} projectId={projectId!} />
+                ))}
+              </div>
+            )}
+          </div>
 
-          <div className="mt-6 flex items-center justify-between gap-4 border-t border-app-line pt-6">
+          {/* Pagination Deck */}
+          <div className="flex items-center justify-between gap-4 border-t border-slate-200/40 pt-5 shrink-0">
             <PagingButton
               disabled={!data?.pageInfo.hasPreviousPage}
               onClick={() =>
@@ -332,7 +359,7 @@ export default function ProjectTasksIndex() {
                 })
               }
             >
-              <ArrowLeft size={14} />
+              <ArrowLeft size={12} />
               Prev
             </PagingButton>
             <PagingButton
@@ -349,31 +376,32 @@ export default function ProjectTasksIndex() {
               }
             >
               Next
-              <ArrowRight size={14} />
+              <ArrowRight size={12} />
             </PagingButton>
           </div>
         </SurfaceCardStrong>
       </div>
 
+      {/* Task Creation Modal */}
       <AppModal
         open={showCreate}
-        title="Create a task"
-        description="Capture the unit of work, then refine team assignment and dependency flow inside the task detail."
+        title="Create new task"
+        description="Establish the scope of work. Assignees, dependencies, and discussion panels can be configured within task details."
         onClose={() => setShowCreate(false)}
       >
         <form
-          className="space-y-4"
+          className="space-y-5"
           onSubmit={(event) => {
             event.preventDefault();
             if (!title.trim()) return;
             createTask.mutate();
           }}
         >
-          <TextField label="Title" value={title} onChange={setTitle} placeholder="Write launch checklist" required />
-          <TextAreaField label="Description" value={description} onChange={setDescription} placeholder="Describe the outcome and any key notes." />
+          <TextField label="Task Title" value={title} onChange={setTitle} placeholder="Build deployment deployment pipeline..." required />
+          <TextAreaField label="Task Scope / Description" value={description} onChange={setDescription} placeholder="Detail requirements and implementation steps..." />
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <CustomFormSelect
-              label="Status"
+              label="Initial Status"
               value={status}
               onChange={setStatus}
               options={[
@@ -383,34 +411,34 @@ export default function ProjectTasksIndex() {
               ]}
             />
             <CustomFormSelect
-              label="Priority"
+              label="Priority Level"
               value={priority}
               onChange={setPriority}
               type="number"
               options={[
-                { label: 'Urgent', value: 0 },
-                { label: 'High', value: 1 },
-                { label: 'Medium', value: 2 },
-                { label: 'Low', value: 3 },
+                { label: 'Urgent (P0)', value: 0 },
+                { label: 'High (P1)', value: 1 },
+                { label: 'Medium (P2)', value: 2 },
+                { label: 'Low (P3)', value: 3 },
               ]}
             />
             <TextField type="date" label="Due Date" value={dueDate} onChange={setDueDate} />
           </div>
-          <div className="flex flex-wrap gap-3 pt-2">
+          <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-200/50">
             <button
               type="button"
               onClick={() => setShowCreate(false)}
-              className="rounded-full border border-app-line bg-white/80 px-5 py-3 text-sm font-semibold text-app-ink transition hover:border-app-ink/20"
+              className="rounded-xl border border-slate-200 bg-white hover:bg-slate-50 px-4 py-2.5 text-xs font-bold text-app-ink transition duration-300 cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={createTask.isPending || !title.trim()}
-              className="inline-flex items-center gap-2 rounded-full bg-app-accent px-5 py-3 text-sm font-semibold text-white transition hover:bg-app-accent/90 disabled:opacity-60"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-app-accent hover:bg-app-accent/90 px-4 py-2.5 text-xs font-bold text-white transition duration-300 disabled:opacity-60 cursor-pointer shadow-sm"
             >
-              {createTask.isPending ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
-              Create task
+              {createTask.isPending ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
+              Create Task
             </button>
           </div>
         </form>
@@ -424,27 +452,37 @@ function TaskRow({ task, projectId }: { task: ProjectTask; projectId: string }) 
     <Link
       to="/projects/$projectId/tasks/$taskId"
       params={{ projectId, taskId: task.id }}
-      className="block rounded-[24px] border border-app-line bg-white/75 p-4 transition hover:border-app-accent/30"
+      className="block rounded-2xl border border-slate-200/60 hover:border-app-accent/35 bg-white/70 p-4 transition-all duration-300 hover:translate-x-[2px] shadow-sm hover:shadow-md group"
     >
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="max-w-2xl">
-          <h3 className="text-lg font-semibold text-app-ink">{task.title}</h3>
-          <p className="mt-2 truncate-2 text-sm leading-6 text-app-muted">
-            {task.description || 'No description added yet.'}
-          </p>
+      <div className="flex flex-col md:flex-row md:items-start justify-between gap-3">
+        <div className="space-y-1.5 max-w-2xl">
+          <h3 className="text-sm font-bold text-app-ink leading-snug group-hover:text-app-accent transition-colors">{task.title}</h3>
+          {task.description ? (
+            <p className="text-xs text-app-muted truncate-2 leading-relaxed">{task.description}</p>
+          ) : (
+            <p className="text-[11px] text-slate-400 italic">No description added yet.</p>
+          )}
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex items-center gap-1.5 shrink-0">
           <StatusBadge status={task.status} />
           <PriorityBadge priority={task.priority} />
         </div>
       </div>
-      <div className="mt-4 flex flex-wrap items-center gap-4 text-sm text-app-muted">
-        <span>{task.team?.name || 'No team assigned'}</span>
-        <span>{task.assignedMember?.username || 'No assignee'}</span>
-        <span>Updated {formatDate(task.updatedAt)}</span>
-        <span className="inline-flex items-center gap-1 font-semibold text-app-accent">
-          Open details
-          <ArrowRight size={14} />
+      <div className="mt-4 pt-3 border-t border-slate-200/40 flex flex-wrap items-center justify-between gap-3 text-[11px] text-app-muted">
+        <div className="flex items-center gap-4">
+          <span className="font-semibold bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md border border-slate-200/30">
+            {task.team?.name || 'No assigned team'}
+          </span>
+          {task.assignedMember?.username ? (
+            <span className="font-bold text-slate-600">@{task.assignedMember.username}</span>
+          ) : (
+            <span className="text-slate-400">Unassigned</span>
+          )}
+          <span>Updated {formatDate(task.updatedAt)}</span>
+        </div>
+        <span className="inline-flex items-center gap-1 font-bold text-app-accent hover:text-app-accent/80 transition-colors shrink-0">
+          Open Details
+          <Eye size={12} />
         </span>
       </div>
     </Link>

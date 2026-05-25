@@ -1,6 +1,11 @@
 import type { Project } from '../../../modules/project/ProjectService.ts';
 import { taskService } from '../../../modules/task';
-import type { Task, TaskLink } from '../../../modules/task/TaskService.ts';
+import type {
+    Task,
+    TaskActivityLog,
+    TaskComment,
+    TaskLink,
+} from '../../../modules/task/TaskService.ts';
 import type { PaginationParams } from '../../types/pagination.ts';
 import { encodeCursor } from '../../utils/utils.ts';
 import type { GraphQLContext } from '../context.ts';
@@ -113,6 +118,54 @@ export const taskResolvers = {
                                   l.id,
                               )
                             : encodeCursor(l.createdAt.toISOString(), l.id),
+                })),
+                pageInfo: {
+                    hasNextPage: !!nextCursor,
+                    hasPreviousPage: !!prevCursor,
+                    startCursor: prevCursor,
+                    endCursor: nextCursor,
+                },
+            };
+        },
+        comments: async (
+            parent: Task,
+            args: PaginationParams,
+            context: GraphQLContext,
+        ) => {
+            const userId = context.userId;
+            if (!userId) throw new UnauthorizedError();
+
+            const { comments, nextCursor, prevCursor } =
+                await taskService.getTaskComments(userId, parent.id, args);
+
+            return {
+                edges: comments.map((c: any) => ({
+                    node: c,
+                    cursor: encodeCursor(c.createdAt.toISOString(), c.id),
+                })),
+                pageInfo: {
+                    hasNextPage: !!nextCursor,
+                    hasPreviousPage: !!prevCursor,
+                    startCursor: prevCursor,
+                    endCursor: nextCursor,
+                },
+            };
+        },
+        activityLogs: async (
+            parent: Task,
+            args: PaginationParams,
+            context: GraphQLContext,
+        ) => {
+            const userId = context.userId;
+            if (!userId) throw new UnauthorizedError();
+
+            const { logs, nextCursor, prevCursor } =
+                await taskService.getTaskActivityLogs(userId, parent.id, args);
+
+            return {
+                edges: logs.map((l: any) => ({
+                    node: l,
+                    cursor: encodeCursor(l.createdAt.toISOString(), l.id),
                 })),
                 pageInfo: {
                     hasNextPage: !!nextCursor,
@@ -302,15 +355,21 @@ export const taskResolvers = {
     },
 
     Query: {
-        task: (
+        task: async (
             _parent: any,
             { id }: { id: string },
             context: GraphQLContext,
         ) => {
-            return context.loaders.task.byActorIdAndId.load({
+            const task = await context.loaders.task.byActorIdAndId.load({
                 actorId: context.userId || '',
                 id: id,
             });
+            if (!task) {
+                throw new NotFoundError(
+                    `Task with ID ${id} not found or you do not have permission to view it.`,
+                );
+            }
+            return task;
         },
         tasks: async (
             _parent: any,
@@ -444,6 +503,86 @@ export const taskResolvers = {
                 label: input.label,
             });
         },
+        addComment: async (
+            _parent: any,
+            { taskId, content }: { taskId: string; content: string },
+            context: GraphQLContext,
+        ): Promise<TaskComment> => {
+            if (!context.userId) throw new UnauthorizedError();
+            return await taskService.addComment(
+                context.userId,
+                taskId,
+                content,
+            );
+        },
+        updateComment: async (
+            _parent: any,
+            {
+                commentId,
+                content,
+                version,
+            }: { commentId: string; content: string; version: number },
+            context: GraphQLContext,
+        ): Promise<TaskComment> => {
+            if (!context.userId) throw new UnauthorizedError();
+            return await taskService.updateComment(
+                context.userId,
+                commentId,
+                content,
+                version,
+            );
+        },
+        deleteComment: async (
+            _parent: any,
+            { commentId }: { commentId: string },
+            context: GraphQLContext,
+        ): Promise<string> => {
+            if (!context.userId) throw new UnauthorizedError();
+            return await taskService.deleteComment(context.userId, commentId);
+        },
+    },
+    TaskComment: {
+        id: (parent: TaskComment) => parent.id,
+        task: (parent: TaskComment, _args: any, context: GraphQLContext) => {
+            return context.loaders.task.byId.load(parent.taskId);
+        },
+        project: (parent: TaskComment, _args: any, context: GraphQLContext) => {
+            return context.loaders.project.byId.load(parent.projectId);
+        },
+        author: (parent: TaskComment, _args: any, context: GraphQLContext) => {
+            return context.loaders.user.byId.load(parent.userId);
+        },
+        content: (parent: TaskComment) => parent.content,
+        version: (parent: TaskComment) => parent.version,
+        createdAt: (parent: TaskComment) => parent.createdAt.toISOString(),
+        updatedAt: (parent: TaskComment) => parent.updatedAt.toISOString(),
+    },
+    TaskActivityLog: {
+        id: (parent: TaskActivityLog) => parent.id,
+        task: (
+            parent: TaskActivityLog,
+            _args: any,
+            context: GraphQLContext,
+        ) => {
+            return context.loaders.task.byId.load(parent.taskId);
+        },
+        project: (
+            parent: TaskActivityLog,
+            _args: any,
+            context: GraphQLContext,
+        ) => {
+            return context.loaders.project.byId.load(parent.projectId);
+        },
+        actor: (
+            parent: TaskActivityLog,
+            _args: any,
+            context: GraphQLContext,
+        ) => {
+            return context.loaders.user.byId.load(parent.userId);
+        },
+        actionType: (parent: TaskActivityLog) => parent.actionType,
+        changes: (parent: TaskActivityLog) => parent.changes,
+        createdAt: (parent: TaskActivityLog) => parent.createdAt.toISOString(),
     },
     TaskLabelCount: {
         count: () => 0,

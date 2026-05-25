@@ -213,6 +213,21 @@ type TaskMutation {
     Updates a task link (label, source, or target).
     """
     updateLink(input: UpdateTaskLinkInput!): TaskLink!
+
+    """
+    Adds a new comment to a task.
+    """
+    addComment(taskId: ID!, content: String!): TaskComment!
+
+    """
+    Updates an existing task comment. Supports optimistic locking.
+    """
+    updateComment(commentId: ID!, content: String!, version: Int!): TaskComment!
+
+    """
+    Deletes an existing task comment. Returns the deleted comment's ID.
+    """
+    deleteComment(commentId: ID!): ID!
 }
 
 extend type Query {
@@ -254,4 +269,55 @@ type SimulatedSlip {
     slipDays: Int!
     riskLevel: RiskLevel!
     bufferRemainingDays: Int!
+}
+
+# ─────────────────────────────────────────────
+# Task Comments and History Types
+# ─────────────────────────────────────────────
+
+type TaskComment {
+    id: ID!
+    task: Task!
+    project: Project!
+    author: User!
+    content: String!
+    version: Int!
+    createdAt: String!
+    updatedAt: String!
+}
+
+type TaskCommentEdge {
+    node: TaskComment!
+    cursor: String!
+}
+
+type TaskCommentConnection {
+    edges: [TaskCommentEdge!]!
+    pageInfo: PageInfo!
+}
+
+type TaskFieldChange {
+    field: String!
+    oldValue: String
+    newValue: String
+}
+
+type TaskActivityLog {
+    id: ID!
+    task: Task!
+    project: Project!
+    actor: User!
+    actionType: String!
+    changes: [TaskFieldChange!]!
+    createdAt: String!
+}
+
+type TaskActivityLogEdge {
+    node: TaskActivityLog!
+    cursor: String!
+}
+
+type TaskActivityLogConnection {
+    edges: [TaskActivityLogEdge!]!
+    pageInfo: PageInfo!
 }

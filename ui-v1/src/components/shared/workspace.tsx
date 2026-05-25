@@ -7,14 +7,14 @@ export function SurfaceCard({
   className,
   children,
 }: PropsWithChildren<{ className?: string }>) {
-  return <section className={clsx('surface-card rounded-[28px]', className)}>{children}</section>;
+  return <section className={clsx('surface-card rounded-[24px]', className)}>{children}</section>;
 }
 
 export function SurfaceCardStrong({
   className,
   children,
 }: PropsWithChildren<{ className?: string }>) {
-  return <section className={clsx('surface-card-strong rounded-[32px]', className)}>{children}</section>;
+  return <section className={clsx('surface-card-strong rounded-[24px]', className)}>{children}</section>;
 }
 
 export function PageHeader({
@@ -29,15 +29,15 @@ export function PageHeader({
   actions?: ReactNode;
 }) {
   return (
-    <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-      <div className="max-w-3xl">
-        <div className="eyebrow mb-3">{eyebrow}</div>
-        <h1 className="text-3xl font-semibold tracking-[-0.03em] text-app-ink md:text-5xl">
+    <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between mb-8 animate-fade-in">
+      <div className="max-w-3xl space-y-1.5">
+        <div className="eyebrow">{eyebrow}</div>
+        <h1 className="text-3xl font-extrabold tracking-[-0.04em] text-app-ink md:text-4xl">
           {title}
         </h1>
-        <p className="mt-3 max-w-2xl text-sm leading-7 text-app-muted md:text-base">{description}</p>
+        <p className="max-w-2xl text-sm leading-relaxed text-app-muted">{description}</p>
       </div>
-      {actions ? <div className="flex flex-wrap gap-3">{actions}</div> : null}
+      {actions ? <div className="flex flex-wrap gap-2.5 shrink-0">{actions}</div> : null}
     </div>
   );
 }
@@ -54,18 +54,20 @@ export function StatCard({
   accent?: 'orange' | 'teal' | 'ink';
 }) {
   const accents = {
-    orange: 'bg-app-accent/10 text-app-accent',
-    teal: 'bg-app-accent-2-soft text-app-accent-2',
-    ink: 'bg-app-ink/8 text-app-ink',
+    orange: 'bg-app-accent-soft text-app-accent border border-app-accent/10',
+    teal: 'bg-app-accent-2-soft text-app-accent-2 border border-app-accent-2/10',
+    ink: 'bg-app-ink/5 text-app-ink border border-app-ink/5',
   };
 
   return (
-    <SurfaceCard className="p-5">
-      <div className={clsx('mb-4 inline-flex rounded-full px-3 py-1 text-[11px] font-semibold', accents[accent])}>
-        {label}
+    <SurfaceCard className="p-6 flex flex-col justify-between min-h-[140px] hover:translate-y-[-2px]">
+      <div>
+        <div className={clsx('mb-3 inline-flex rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider', accents[accent])}>
+          {label}
+        </div>
+        <div className="text-3xl font-extrabold tracking-[-0.04em] text-app-ink">{value}</div>
       </div>
-      <div className="text-3xl font-semibold tracking-[-0.05em] text-app-ink">{value}</div>
-      <p className="mt-2 text-sm text-app-muted">{hint}</p>
+      <p className="mt-2 text-xs text-app-muted">{hint}</p>
     </SurfaceCard>
   );
 }
@@ -84,16 +86,16 @@ export function EmptyState({
   className?: string;
 }) {
   return (
-    <SurfaceCard className={clsx('flex flex-col items-center justify-center gap-4 px-8 py-14 text-center', className)}>
-      <div className="rounded-full bg-app-ink/5 p-4 text-app-muted">
-        <Icon size={26} />
+    <div className={clsx('flex flex-col items-center justify-center gap-4 px-8 py-12 text-center rounded-[24px] border border-dashed border-slate-200/80 bg-white/40 backdrop-blur-md', className)}>
+      <div className="rounded-full bg-slate-100 p-4 text-app-muted shadow-inner">
+        <Icon size={24} />
       </div>
-      <div>
-        <h3 className="text-lg font-semibold text-app-ink">{title}</h3>
-        <p className="mt-2 max-w-md text-sm leading-6 text-app-muted">{description}</p>
+      <div className="space-y-1">
+        <h3 className="text-base font-bold text-app-ink">{title}</h3>
+        <p className="max-w-xs text-xs leading-relaxed text-app-muted">{description}</p>
       </div>
-      {action}
-    </SurfaceCard>
+      {action && <div className="mt-2">{action}</div>}
+    </div>
   );
 }
 
@@ -121,26 +123,28 @@ export function AppModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-[#111827]/40 p-4 backdrop-blur-sm md:items-center">
+    <div className="fixed inset-0 z-[100] flex items-end justify-center bg-slate-900/35 p-4 backdrop-blur-md md:items-center animate-fade-in">
       <div className="absolute inset-0 cursor-default" aria-hidden="true" onClick={onClose} />
-      <div className={clsx('surface-card-strong relative z-[110] w-full rounded-[28px] p-6 shadow-2xl md:p-7', sizeClasses[size])}>
-        <div className="mb-6 flex items-start justify-between gap-4 shrink-0">
+      <div className={clsx('surface-card-strong relative z-[110] w-full rounded-[24px] p-6 shadow-2xl md:p-7 border border-slate-200/50 flex flex-col max-h-[90vh]', sizeClasses[size])}>
+        <div className="mb-5 flex items-start justify-between gap-4 shrink-0">
           <div className="min-w-0 flex-1">
-            <h2 className="text-2xl font-semibold tracking-[-0.03em] text-app-ink">{title}</h2>
-            {description ? <p className="mt-2 text-sm leading-6 text-app-muted">{description}</p> : null}
+            <h2 className="text-xl font-bold tracking-tight text-app-ink">{title}</h2>
+            {description ? <p className="mt-1 text-xs text-app-muted leading-relaxed">{description}</p> : null}
           </div>
           <button
-            className="group -mr-2 -mt-2 flex h-10 w-10 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-app-ink/5"
+            className="group -mr-2 -mt-2 flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors hover:bg-slate-100"
             onClick={(e) => {
               e.stopPropagation();
               onClose();
             }}
             aria-label="Close modal"
           >
-            <X size={20} className="text-app-muted transition-colors group-hover:text-app-ink" />
+            <X size={16} className="text-app-muted transition-colors group-hover:text-app-ink" />
           </button>
         </div>
-        {children}
+        <div className="overflow-y-auto pr-1 flex-1 custom-scrollbar">
+          {children}
+        </div>
       </div>
     </div>
   );
@@ -163,14 +167,14 @@ export function TextField({
 }) {
   return (
     <label className="block">
-      <span className="mb-2 block text-sm font-medium text-app-ink">{label}</span>
+      <span className="mb-1.5 block text-xs font-bold text-app-ink uppercase tracking-wider opacity-90">{label}</span>
       <input
         type={type}
         value={value}
         required={required}
         placeholder={placeholder}
         onChange={(event) => onChange(event.target.value)}
-        className="w-full rounded-2xl border border-app-line bg-white/85 px-4 py-3 text-sm text-app-ink outline-none transition focus:border-app-accent focus:ring-4 focus:ring-app-accent/10"
+        className="w-full rounded-xl border border-slate-200 bg-white/70 px-3.5 py-2.5 text-sm text-app-ink outline-none transition focus:border-app-accent focus:bg-white focus:ring-4 focus:ring-app-accent/5 shadow-sm"
       />
     </label>
   );
@@ -191,13 +195,13 @@ export function TextAreaField({
 }) {
   return (
     <label className="block">
-      <span className="mb-2 block text-sm font-medium text-app-ink">{label}</span>
+      <span className="mb-1.5 block text-xs font-bold text-app-ink uppercase tracking-wider opacity-90">{label}</span>
       <textarea
         value={value}
         rows={rows}
         placeholder={placeholder}
         onChange={(event) => onChange(event.target.value)}
-        className="w-full resize-none rounded-2xl border border-app-line bg-white/85 px-4 py-3 text-sm text-app-ink outline-none transition focus:border-app-accent focus:ring-4 focus:ring-app-accent/10"
+        className="w-full resize-none rounded-xl border border-slate-200 bg-white/70 px-3.5 py-2.5 text-sm text-app-ink outline-none transition focus:border-app-accent focus:bg-white focus:ring-4 focus:ring-app-accent/5 shadow-sm leading-relaxed"
       />
     </label>
   );
@@ -207,8 +211,8 @@ export function StatusBadge({ status }: { status: string }) {
   const meta = getStatusMeta(status);
   const Icon = meta.icon;
   return (
-    <span className={clsx('inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold', meta.className)}>
-      <Icon size={14} />
+    <span className={clsx('inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold border', meta.className)}>
+      <Icon size={12} className="opacity-95" />
       {meta.label}
     </span>
   );
@@ -217,7 +221,8 @@ export function StatusBadge({ status }: { status: string }) {
 export function PriorityBadge({ priority }: { priority: number }) {
   const meta = getPriorityMeta(priority);
   return (
-    <span className={clsx('inline-flex rounded-full px-3 py-1.5 text-xs font-semibold', meta.className)}>
+    <span className={clsx('inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold border', meta.className)}>
+      <span className="h-1.5 w-1.5 rounded-full bg-current" />
       {meta.label}
     </span>
   );
@@ -225,11 +230,11 @@ export function PriorityBadge({ priority }: { priority: number }) {
 
 export function LoadingPane({ title, message }: { title: string; message: string }) {
   return (
-    <div className="flex min-h-[50vh] flex-col items-center justify-center gap-4 text-center">
-      <div className="h-12 w-12 animate-spin rounded-full border-4 border-app-accent/15 border-t-app-accent" />
-      <div>
-        <h2 className="text-xl font-semibold text-app-ink">{title}</h2>
-        <p className="mt-2 text-sm text-app-muted">{message}</p>
+    <div className="flex min-h-[40vh] flex-col items-center justify-center gap-4 text-center animate-fade-in">
+      <div className="h-10 w-10 animate-spin rounded-full border-2 border-app-accent/20 border-t-app-accent" />
+      <div className="space-y-1">
+        <h2 className="text-base font-bold text-app-ink">{title}</h2>
+        <p className="text-xs text-app-muted max-w-xs">{message}</p>
       </div>
     </div>
   );
@@ -243,17 +248,17 @@ export function InlineMessage({
   message: string;
 }) {
   const styles = {
-    error: 'border-app-danger/15 bg-app-danger/10 text-app-danger',
-    success: 'border-app-success/15 bg-app-success/10 text-app-success',
-    info: 'border-app-accent-2/15 bg-app-accent-2-soft text-app-accent-2',
+    error: 'border-red-200 bg-red-50/70 text-red-700',
+    success: 'border-emerald-200 bg-emerald-50/70 text-emerald-700',
+    info: 'border-sky-200 bg-sky-50/70 text-sky-700',
   };
 
   const Icon = tone === 'error' ? AlertCircle : CheckCircle2;
 
   return (
-    <div className={clsx('flex items-center gap-2 rounded-2xl border px-4 py-3 text-sm', styles[tone])}>
-      <Icon size={16} />
-      {message}
+    <div className={clsx('flex items-center gap-2 rounded-xl border px-3.5 py-2.5 text-xs font-semibold', styles[tone])}>
+      <Icon size={14} className="shrink-0" />
+      <span>{message}</span>
     </div>
   );
 }
@@ -279,49 +284,49 @@ function getStatusMeta(status: string) {
       return {
         label: 'Done',
         icon: CheckCircle2,
-        className: 'bg-app-success/12 text-app-success',
+        className: 'bg-emerald-50/50 border-emerald-200 text-emerald-700',
       };
     case 'IN_PROGRESS':
       return {
         label: 'In progress',
         icon: Clock,
-        className: 'bg-app-accent-2-soft text-app-accent-2',
+        className: 'bg-sky-50/50 border-sky-200 text-sky-700',
       };
     case 'TODO':
       return {
         label: 'To do',
         icon: Circle,
-        className: 'bg-app-neutral/15 text-app-neutral',
+        className: 'bg-slate-50/60 border-slate-200 text-slate-600',
       };
     case 'CANCELED':
       return {
         label: 'Canceled',
         icon: X,
-        className: 'bg-app-danger/10 text-app-danger',
+        className: 'bg-red-50/50 border-red-200 text-red-600',
       };
     default:
       return {
         label: status || 'Unknown',
         icon: Circle,
-        className: 'bg-app-ink/10 text-app-ink',
+        className: 'bg-slate-100 border-slate-300 text-slate-700',
       };
   }
 }
 
 function getPriorityMeta(priority: number) {
   if (priority === 0) {
-    return { label: 'Urgent', className: 'bg-app-danger/12 text-app-danger' };
+    return { label: 'Urgent', className: 'bg-red-50/50 border-red-200 text-red-700' };
   }
   if (priority === 1) {
-    return { label: 'High', className: 'bg-app-accent/12 text-app-accent' };
+    return { label: 'High', className: 'bg-orange-50/50 border-orange-200 text-orange-700' };
   }
   if (priority === 2) {
-    return { label: 'Medium', className: 'bg-app-warning/14 text-app-warning' };
+    return { label: 'Medium', className: 'bg-amber-50/50 border-amber-200 text-amber-700' };
   }
   if (priority === 3) {
-    return { label: 'Low', className: 'bg-app-neutral/12 text-app-neutral' };
+    return { label: 'Low', className: 'bg-slate-50/60 border-slate-200 text-slate-500' };
   }
-  return { label: `Priority ${priority}`, className: 'bg-app-ink/10 text-app-ink' };
+  return { label: `Priority ${priority}`, className: 'bg-slate-100 border-slate-300 text-slate-700' };
 }
 
 export function CustomInlineSelect({
@@ -363,7 +368,7 @@ export function CustomInlineSelect({
           }
         }}
         onBlur={onClose}
-        className="w-full rounded-xl border border-app-line bg-white/50 px-2 py-1.5 text-sm outline-none shadow-sm cursor-pointer"
+        className="w-full rounded-xl border border-slate-200 bg-white/70 px-2 py-1.5 text-xs font-semibold outline-none shadow-sm cursor-pointer focus:border-app-accent focus:bg-white"
       >
         {options.map((o) => (
           <option key={o.value} value={o.value}>
@@ -390,7 +395,7 @@ export function CustomInlineSelect({
       }}
       onBlur={handleInputBlur}
       placeholder={type === 'number' ? 'Enter a number...' : 'Type custom value...'}
-      className="w-full rounded-xl border border-app-accent bg-white px-2 py-1.5 text-sm outline-none shadow-sm focus:ring-2 focus:ring-app-accent/10"
+      className="w-full rounded-xl border border-app-accent bg-white px-2 py-1.5 text-xs font-semibold outline-none shadow-sm focus:ring-4 focus:ring-app-accent/5"
     />
   );
 }
@@ -433,11 +438,11 @@ export function CustomFormSelect({
   return (
     <div className="space-y-2">
       <label className="block">
-        <span className="mb-2 block text-sm font-medium text-app-ink">{label}</span>
+        <span className="mb-1.5 block text-xs font-bold text-app-ink uppercase tracking-wider opacity-90">{label}</span>
         <select
           value={isCustom ? '__OTHER__' : value}
           onChange={handleSelectChange}
-          className="w-full rounded-2xl border border-app-line bg-white/85 px-4 py-3 text-sm text-app-ink outline-none transition focus:border-app-accent focus:ring-4 focus:ring-app-accent/10 cursor-pointer"
+          className="w-full rounded-xl border border-slate-200 bg-white/70 px-3.5 py-2.5 text-sm text-app-ink outline-none transition focus:border-app-accent focus:bg-white focus:ring-4 focus:ring-app-accent/5 cursor-pointer shadow-sm"
         >
           {options.map((o) => (
             <option key={o.value} value={o.value}>

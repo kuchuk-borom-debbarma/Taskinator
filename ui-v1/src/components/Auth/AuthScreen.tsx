@@ -68,7 +68,7 @@ export const AuthScreen: React.FC = () => {
             <div>
               <div className="inline-flex items-center gap-2 rounded-full bg-white/70 px-4 py-2 text-sm font-semibold text-app-ink">
                 <Sparkles size={16} className="text-app-accent" />
-                Taskinator v2
+                Task-In
               </div>
               <h1 className="mt-6 max-w-xl text-4xl font-semibold leading-tight tracking-[-0.05em] text-app-ink md:text-6xl">
                 Modern task management for high-performance teams.

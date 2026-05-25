@@ -23,7 +23,10 @@ import type {
     RiskLevel,
     SimulatedSlip,
     Task,
+    TaskActivityLogConnection,
     TaskAutomationRule,
+    TaskComment,
+    TaskCommentConnection,
     TaskConnection,
     TaskContextRow,
     TaskLink,
@@ -42,6 +45,7 @@ import {
 import {
     BULK_DELETE_CHUNK_SIZE,
     contractTaskReachability,
+    deleteComment as deleteCommentQuery,
     deleteProjectTaskLinksChunk,
     deleteProjectTaskReachabilityChunk,
     deleteProjectTasksChunk,
@@ -52,11 +56,14 @@ import {
     expandTaskReachability,
     getNeighbourhood,
     getProjectTaskLinksPage,
+    getTaskActivityLogsPage,
+    getTaskCommentsPage,
     getTaskContextById as getTaskContextByIdQuery,
     getTaskLinksPage,
     getTasksByActorIdAndIds,
     getTasksByIds as getTasksByIdsQuery,
     getTasksPage,
+    insertComment as insertCommentQuery,
     insertTask,
     insertTaskLink,
     orphanTasksByTeamIdsBatch,
@@ -64,6 +71,7 @@ import {
     syncTaskGraphCounters,
     unassignMembersFromTeamTasksBatch,
     unassignProjectTaskMembersBatch,
+    updateComment as updateCommentQuery,
     updateTask,
     updateTaskLink,
 } from './TaskQueries.ts';
@@ -1207,6 +1215,85 @@ export class TaskServiceImpl implements TaskService {
         }
 
         return results;
+    }
+
+    async getTaskComments(
+        userId: string,
+        taskId: string,
+        pagination: PaginationParams,
+    ): Promise<TaskCommentConnection> {
+        logger.debug(
+            `TaskService.getTaskComments called for task ${taskId} by user ${userId}`,
+        );
+        return await getTaskCommentsPage(userId, taskId, pagination);
+    }
+
+    async getTaskActivityLogs(
+        userId: string,
+        taskId: string,
+        pagination: PaginationParams,
+    ): Promise<TaskActivityLogConnection> {
+        logger.debug(
+            `TaskService.getTaskActivityLogs called for task ${taskId} by user ${userId}`,
+        );
+        return await getTaskActivityLogsPage(userId, taskId, pagination);
+    }
+
+    async addComment(
+        userId: string,
+        taskId: string,
+        content: string,
+    ): Promise<TaskComment> {
+        logger.info(
+            `TaskService.addComment started for task ${taskId} by user ${userId}`,
+        );
+        if (!content || content.trim().length === 0) {
+            throw new ValidationError('Comment content cannot be empty.');
+        }
+        if (content.length > 2000) {
+            throw new ValidationError(
+                'Comment content cannot exceed 2000 characters.',
+            );
+        }
+        const result = await insertCommentQuery(userId, taskId, content.trim());
+        logger.info(`TaskService.addComment successful: ${result.id}`);
+        return result;
+    }
+
+    async updateComment(
+        userId: string,
+        commentId: string,
+        content: string,
+        version: number,
+    ): Promise<TaskComment> {
+        logger.info(
+            `TaskService.updateComment started for comment ${commentId} by user ${userId}`,
+        );
+        if (!content || content.trim().length === 0) {
+            throw new ValidationError('Comment content cannot be empty.');
+        }
+        if (content.length > 2000) {
+            throw new ValidationError(
+                'Comment content cannot exceed 2000 characters.',
+            );
+        }
+        const result = await updateCommentQuery(
+            userId,
+            commentId,
+            content.trim(),
+            version,
+        );
+        logger.info(`TaskService.updateComment successful: ${result.id}`);
+        return result;
+    }
+
+    async deleteComment(userId: string, commentId: string): Promise<string> {
+        logger.info(
+            `TaskService.deleteComment started for comment ${commentId} by user ${userId}`,
+        );
+        const result = await deleteCommentQuery(userId, commentId);
+        logger.info(`TaskService.deleteComment successful: ${result}`);
+        return result;
     }
 
     async init(): Promise<void> {

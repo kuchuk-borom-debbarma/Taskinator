@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, ArrowRight, Copy, Loader2, Network, PencilLine, Plus, Save, Trash2, X, AlertTriangle, ShieldAlert } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Copy, Loader2, Network, PencilLine, Plus, Save, Trash2, X, AlertTriangle, ShieldAlert, MessageSquare, Calendar, CheckCircle2, Users } from 'lucide-react';
 import { useApi } from '../../hooks/useApi';
 import type { TaskLink, TaskStatus, TaskPriority } from '../../api/types';
 import {
@@ -97,6 +97,56 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
     queryKey: ['team-members-all', currentTeamId],
     queryFn: () => teamApi.getTeamMembers(task!.project!.id, currentTeamId!, { first: 100 }),
     enabled: !!task?.project?.id && !!currentTeamId,
+  });
+
+  // Comments and Activity Logs Local States
+  const [taskTab, setTaskTab] = useState<'comments' | 'activity'>('comments');
+  const [commentCursor, setCommentCursor] = useState<string | null>(null);
+  const [commentCursorHistory, setCommentCursorHistory] = useState<string[]>([]);
+  const [logCursor, setLogCursor] = useState<string | null>(null);
+  const [logCursorHistory, setLogCursorHistory] = useState<string[]>([]);
+  const [commentDraft, setCommentDraft] = useState('');
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editCommentDraft, setEditCommentDraft] = useState('');
+
+  // Fetch comments
+  const { data: commentsData, isLoading: commentsLoading } = useQuery({
+    queryKey: ['task-comments', taskId, commentCursor],
+    queryFn: () => taskApi.getTaskComments(taskId, commentCursor ? { first: 6, after: commentCursor } : { first: 6 }),
+    enabled: !!task,
+  });
+
+  // Fetch activity logs
+  const { data: logsData, isLoading: logsLoading } = useQuery({
+    queryKey: ['task-logs', taskId, logCursor],
+    queryFn: () => taskApi.getTaskActivityLogs(taskId, logCursor ? { first: 8, after: logCursor } : { first: 8 }),
+    enabled: !!task,
+  });
+
+  // Mutations
+  const addCommentMutation = useMutation({
+    mutationFn: (content: string) => taskApi.addComment(taskId, content),
+    onSuccess: () => {
+      setCommentDraft('');
+      queryClient.invalidateQueries({ queryKey: ['task-comments', taskId] });
+    },
+  });
+
+  const updateCommentMutation = useMutation({
+    mutationFn: (input: { commentId: string; content: string; version: number }) =>
+      taskApi.updateComment(input.commentId, input.content, input.version),
+    onSuccess: () => {
+      setEditingCommentId(null);
+      setEditCommentDraft('');
+      queryClient.invalidateQueries({ queryKey: ['task-comments', taskId] });
+    },
+  });
+
+  const deleteCommentMutation = useMutation({
+    mutationFn: (commentId: string) => taskApi.deleteComment(commentId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['task-comments', taskId] });
+    },
   });
 
   useEffect(() => {
@@ -508,15 +558,288 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
         </SurfaceCard>
 
         <div className="space-y-6">
-          <SurfaceCardStrong className="p-5 md:p-6">
-            <div className="mb-4 flex items-center justify-between gap-4">
-              <div>
-                <h2 className="text-2xl font-semibold tracking-[-0.04em] text-app-ink">Description</h2>
-              </div>
+          <SurfaceCardStrong className="p-5 md:p-6 space-y-6">
+            {/* Tab Selector */}
+            <div className="flex border-b border-app-line/60">
+              <button
+                onClick={() => setTaskTab('comments')}
+                className={`pb-3 text-sm font-semibold tracking-wide border-b-2 px-4 transition-all duration-300 ${
+                  taskTab === 'comments' ? 'border-app-accent text-app-accent' : 'border-transparent text-app-muted hover:text-app-ink'
+                }`}
+              >
+                Comments
+              </button>
+              <button
+                onClick={() => setTaskTab('activity')}
+                className={`pb-3 text-sm font-semibold tracking-wide border-b-2 px-4 transition-all duration-300 ${
+                  taskTab === 'activity' ? 'border-app-accent text-app-accent' : 'border-transparent text-app-muted hover:text-app-ink'
+                }`}
+              >
+                Activity Log
+              </button>
             </div>
-            <p className="text-sm leading-7 text-app-muted whitespace-pre-wrap">
-              {task.description || 'No description provided.'}
-            </p>
+
+            {/* Comments Tab View */}
+            {taskTab === 'comments' && (
+              <div className="space-y-6">
+                {/* Add Comment Input Form */}
+                <div className="space-y-3">
+                  <textarea
+                    value={commentDraft}
+                    onChange={(e) => setCommentDraft(e.target.value)}
+                    placeholder="Add a comment... (Markdown not parsed yet, but supported)"
+                    rows={3}
+                    className="w-full rounded-2xl border border-app-line bg-white/60 px-4 py-3 text-sm outline-none shadow-sm focus:border-app-accent/50 focus:bg-white transition-all duration-300 resize-none"
+                  />
+                  <div className="flex justify-end">
+                    <button
+                      onClick={() => addCommentMutation.mutate(commentDraft)}
+                      disabled={!commentDraft.trim() || addCommentMutation.isPending}
+                      className="inline-flex items-center gap-2 rounded-full bg-app-accent px-5 py-2.5 text-xs font-bold text-white transition hover:bg-app-accent/90 disabled:opacity-50 shadow-sm shadow-app-accent/10"
+                    >
+                      {addCommentMutation.isPending ? <Loader2 size={12} className="animate-spin" /> : <MessageSquare size={12} />}
+                      Post Comment
+                    </button>
+                  </div>
+                </div>
+
+                {/* Comments Stream */}
+                <div className="space-y-4">
+                  {commentsLoading ? (
+                    <div className="flex items-center justify-center py-8 text-app-muted text-sm gap-2">
+                      <Loader2 size={16} className="animate-spin" /> Loading comments...
+                    </div>
+                  ) : commentsData?.comments.length === 0 ? (
+                    <div className="text-center py-8 text-sm text-app-muted border border-dashed border-app-line rounded-2xl bg-app-ink/2">
+                      No comments yet. Start the conversation!
+                    </div>
+                  ) : (
+                    commentsData?.comments.map((comment) => (
+                      <div key={comment.id} className="group relative rounded-2xl border border-app-line bg-white/50 px-4 py-4 transition hover:bg-white hover:border-app-accent/20 hover:shadow-md hover:shadow-app-ink/2 duration-300">
+                        <div className="flex items-start justify-between gap-4 mb-2">
+                          <div className="flex items-center gap-2">
+                            <div className="flex h-7 w-7 items-center justify-center rounded-full bg-app-accent/10 text-xs font-bold text-app-accent uppercase">
+                              {comment.author.username.substring(0, 2)}
+                            </div>
+                            <div>
+                              <span className="text-xs font-bold text-app-ink">{comment.author.username}</span>
+                              <span className="text-[10px] text-app-muted ml-2">{formatDate(comment.createdAt)}</span>
+                            </div>
+                          </div>
+                          
+                          {/* Owner Actions */}
+                          <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                            <button
+                              onClick={() => {
+                                setEditingCommentId(comment.id);
+                                setEditCommentDraft(comment.content);
+                              }}
+                              className="rounded p-1 text-app-muted hover:bg-app-ink/5 hover:text-app-accent transition-colors"
+                              title="Edit comment"
+                            >
+                              <PencilLine size={12} />
+                            </button>
+                            <button
+                              onClick={() => {
+                                if (confirm('Are you sure you want to delete this comment?')) {
+                                  deleteCommentMutation.mutate(comment.id);
+                                }
+                              }}
+                              className="rounded p-1 text-app-muted hover:bg-app-danger/10 hover:text-app-danger transition-colors"
+                              title="Delete comment"
+                            >
+                              <Trash2 size={12} />
+                            </button>
+                          </div>
+                        </div>
+
+                        {editingCommentId === comment.id ? (
+                          <div className="space-y-3 mt-2">
+                            <textarea
+                              value={editCommentDraft}
+                              onChange={(e) => setEditCommentDraft(e.target.value)}
+                              rows={2}
+                              className="w-full rounded-xl border border-app-line bg-white px-3 py-2 text-sm outline-none shadow-sm focus:border-app-accent/50 transition-all resize-none"
+                            />
+                            <div className="flex justify-end gap-2">
+                              <button
+                                onClick={() => {
+                                  setEditingCommentId(null);
+                                  setEditCommentDraft('');
+                                }}
+                                className="rounded-full border border-app-line px-4 py-2 text-[11px] font-semibold text-app-ink bg-white hover:bg-app-ink/5 transition-colors"
+                              >
+                                Cancel
+                              </button>
+                              <button
+                                onClick={() => updateCommentMutation.mutate({ commentId: comment.id, content: editCommentDraft, version: comment.version })}
+                                disabled={!editCommentDraft.trim() || updateCommentMutation.isPending}
+                                className="rounded-full bg-app-accent px-4 py-2 text-[11px] font-semibold text-white hover:bg-app-accent/90 disabled:opacity-50 transition-all"
+                              >
+                                {updateCommentMutation.isPending ? 'Saving...' : 'Save'}
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="text-sm text-app-ink whitespace-pre-wrap leading-relaxed pl-1">{comment.content}</p>
+                        )}
+                      </div>
+                    ))
+                  )}
+
+                  {/* Comments Pagination */}
+                  {commentsData?.pageInfo && (commentsData.pageInfo.hasNextPage || commentCursorHistory.length > 0) && (
+                    <div className="flex items-center justify-center gap-2 pt-4">
+                      <button
+                        onClick={() => {
+                          const history = [...commentCursorHistory];
+                          history.pop();
+                          setCommentCursorHistory(history);
+                          setCommentCursor(history[history.length - 1] || null);
+                        }}
+                        disabled={commentCursorHistory.length === 0}
+                        className="inline-flex items-center gap-1.5 rounded-full border border-app-line bg-white px-4 py-2 text-xs font-semibold text-app-ink hover:border-app-ink/20 disabled:opacity-40 transition-all duration-300"
+                      >
+                        <ArrowLeft size={12} />
+                        Prev
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (commentsData.pageInfo.endCursor) {
+                            setCommentCursorHistory([...commentCursorHistory, commentCursor || '']);
+                            setCommentCursor(commentsData.pageInfo.endCursor);
+                          }
+                        }}
+                        disabled={!commentsData.pageInfo.hasNextPage}
+                        className="inline-flex items-center gap-1.5 rounded-full border border-app-line bg-white px-4 py-2 text-xs font-semibold text-app-ink hover:border-app-ink/20 disabled:opacity-40 transition-all duration-300"
+                      >
+                        Next
+                        <ArrowRight size={12} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Activity Log Tab View */}
+            {taskTab === 'activity' && (
+              <div className="space-y-6">
+                <div className="space-y-6 relative border-l-2 border-app-line ml-4 pl-6 py-2">
+                  {logsLoading ? (
+                    <div className="flex items-center justify-center py-8 text-app-muted text-sm gap-2 -ml-6">
+                      <Loader2 size={16} className="animate-spin" /> Loading activity log...
+                    </div>
+                  ) : logsData?.logs.length === 0 ? (
+                    <div className="text-center py-8 text-sm text-app-muted -ml-6 border border-dashed border-app-line rounded-2xl bg-app-ink/2">
+                      No activities logged.
+                    </div>
+                  ) : (
+                    logsData?.logs.map((log) => {
+                      let icon = <PencilLine size={12} className="text-app-accent" />;
+                      let bgClass = "bg-app-accent/10 ring-app-accent/20";
+
+                      if (log.actionType === 'task.created') {
+                        icon = <Plus size={12} className="text-green-600" />;
+                        bgClass = "bg-green-100 ring-green-200/50";
+                      } else {
+                        const fields = log.changes.map(c => c.field);
+                        if (fields.includes('status')) {
+                          icon = <CheckCircle2 size={12} className="text-blue-600" />;
+                          bgClass = "bg-blue-100 ring-blue-200/50";
+                        } else if (fields.includes('priority')) {
+                          icon = <ShieldAlert size={12} className="text-amber-600" />;
+                          bgClass = "bg-amber-100 ring-amber-200/50";
+                        } else if (fields.includes('dueDate')) {
+                          icon = <Calendar size={12} className="text-purple-600" />;
+                          bgClass = "bg-purple-100 ring-purple-200/50";
+                        } else if (fields.includes('teamId') || fields.includes('memberId')) {
+                          icon = <Users size={12} className="text-indigo-600" />;
+                          bgClass = "bg-indigo-100 ring-indigo-200/50";
+                        }
+                      }
+
+                      return (
+                        <div key={log.id} className="relative group">
+                          {/* Timeline marker with custom micro-animations */}
+                          <span className={`absolute -left-[33px] top-1 flex h-6 w-6 items-center justify-center rounded-full ${bgClass} ring-4 ring-white transition-transform group-hover:scale-110 duration-300`}>
+                            {icon}
+                          </span>
+
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between gap-4">
+                              <span className="text-xs font-bold text-app-ink">{log.actor.username}</span>
+                              <span className="text-[10px] text-app-muted">{formatDate(log.createdAt)}</span>
+                            </div>
+
+                            {log.actionType === 'task.created' ? (
+                              <p className="text-sm text-app-muted leading-relaxed">Created this task.</p>
+                            ) : (
+                              <div className="space-y-1 mt-1">
+                                {log.changes.map((change, idx) => {
+                                  const displayField = change.field.replace('fk_', '').replace('_id', '');
+
+                                  return (
+                                    <div key={idx} className="text-sm leading-relaxed text-app-muted">
+                                      updated <span className="font-semibold text-app-ink capitalize">{displayField}</span>:{' '}
+                                      {change.field === 'status' ? (
+                                        <span className="inline-flex flex-wrap items-center gap-1.5">
+                                          changed from <StatusBadge status={change.oldValue || 'TODO'} /> to <StatusBadge status={change.newValue || 'TODO'} />
+                                        </span>
+                                      ) : change.field === 'priority' ? (
+                                        <span className="inline-flex flex-wrap items-center gap-1.5">
+                                          changed from <PriorityBadge priority={Number(change.oldValue ?? 0) as any} /> to <PriorityBadge priority={Number(change.newValue ?? 0) as any} />
+                                        </span>
+                                      ) : (
+                                        <span>
+                                          changed from <span className="italic line-through opacity-60">"{change.oldValue ?? 'none'}"</span> to <span className="font-semibold text-app-ink">"{change.newValue ?? 'none'}"</span>
+                                        </span>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+
+                  {/* Logs Pagination */}
+                  {logsData?.pageInfo && (logsData.pageInfo.hasNextPage || logCursorHistory.length > 0) && (
+                    <div className="flex items-center justify-center gap-2 pt-4 -ml-6">
+                      <button
+                        onClick={() => {
+                          const history = [...logCursorHistory];
+                          history.pop();
+                          setLogCursorHistory(history);
+                          setLogCursor(history[history.length - 1] || null);
+                        }}
+                        disabled={logCursorHistory.length === 0}
+                        className="inline-flex items-center gap-1.5 rounded-full border border-app-line bg-white px-4 py-2 text-xs font-semibold text-app-ink hover:border-app-ink/20 disabled:opacity-40 transition-all duration-300"
+                      >
+                        <ArrowLeft size={12} />
+                        Prev
+                      </button>
+                      <button
+                        onClick={() => {
+                          if (logsData.pageInfo.endCursor) {
+                            setLogCursorHistory([...logCursorHistory, logCursor || '']);
+                            setLogCursor(logsData.pageInfo.endCursor);
+                          }
+                        }}
+                        disabled={!logsData.pageInfo.hasNextPage}
+                        className="inline-flex items-center gap-1.5 rounded-full border border-app-line bg-white px-4 py-2 text-xs font-semibold text-app-ink hover:border-app-ink/20 disabled:opacity-40 transition-all duration-300"
+                      >
+                        Next
+                        <ArrowRight size={12} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </SurfaceCardStrong>
 
           <SurfaceCardStrong className="p-5 md:p-6">

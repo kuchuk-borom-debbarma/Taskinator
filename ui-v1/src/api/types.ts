@@ -138,3 +138,31 @@ export interface SimulatedSlip {
   riskLevel: RiskLevel;
   bufferRemainingDays: number;
 }
+
+export interface TaskComment {
+  id: string;
+  task?: ProjectTask;
+  project?: Project;
+  author: User;
+  content: string;
+  version: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TaskFieldChange {
+  field: string;
+  oldValue: string | null;
+  newValue: string | null;
+}
+
+export interface TaskActivityLog {
+  id: string;
+  task?: ProjectTask;
+  project?: Project;
+  actor: User;
+  actionType: string;
+  changes: TaskFieldChange[];
+  createdAt: string;
+}
+

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Outlet, Link, useParams, useLocation, useNavigate } from '@tanstack/react-router';
-import { Layout, Users, Kanban, Loader2, PencilLine, Save, Trash2, X, Zap } from 'lucide-react';
+import { Layout, Users, Kanban, Loader2, PencilLine, Save, Trash2, Zap } from 'lucide-react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useApi } from '../../hooks/useApi';
 import { AppModal, TextAreaField, TextField } from '../shared/workspace';
@@ -59,23 +59,27 @@ export const ProjectLayout: React.FC = () => {
   ];
 
   return (
-    <div className="flex min-h-screen flex-col">
-      <div className="border-b border-app-line/80 bg-white/45 px-4 py-6 backdrop-blur-xl md:px-8">
-        <div className="page-frame !max-w-none !px-0 !py-0">
-          <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+    <div className="flex min-h-screen flex-col animate-fade-in">
+      {/* Premium Top Navigation Glass Header */}
+      <div className="border-b border-slate-200/60 bg-white/60 px-4 py-6 backdrop-blur-xl md:px-8 shrink-0">
+        <div className="page-frame !max-w-none !px-0 !py-0 space-y-5">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             {project ? (
-              <div>
-                <h1 className="text-3xl font-semibold tracking-[-0.04em] text-app-ink">{project.name}</h1>
+              <div className="space-y-1">
+                <h1 className="text-2xl font-extrabold tracking-[-0.04em] text-app-ink">{project.name}</h1>
                 {project.description ? (
-                  <p className="mt-2 max-w-3xl text-sm leading-relaxed text-app-muted line-clamp-1">{project.description}</p>
-                ) : null}
+                  <p className="max-w-3xl text-xs leading-relaxed text-app-muted line-clamp-1">{project.description}</p>
+                ) : (
+                  <p className="text-[11px] text-slate-400 italic">No description added.</p>
+                )}
               </div>
             ) : (
-              <div className="animate-pulse space-y-3">
-                <div className="h-8 w-48 rounded-lg bg-app-line/50" />
-                <div className="h-4 w-96 rounded-md bg-app-line/30" />
+              <div className="animate-pulse space-y-3.5">
+                <div className="h-7 w-48 rounded-lg bg-slate-100" />
+                <div className="h-4 w-96 rounded-md bg-slate-100/70" />
               </div>
             )}
+            
             {project ? (
               <div className="flex flex-wrap gap-2">
                 <button
@@ -84,9 +88,9 @@ export const ProjectLayout: React.FC = () => {
                     setDescriptionDraft(project.description || '');
                     setIsEditing(true);
                   }}
-                  className="inline-flex items-center gap-2 rounded-full border border-app-line bg-white/80 px-4 py-2 text-sm font-semibold text-app-ink transition hover:border-app-ink/20"
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white/70 px-3.5 py-2 text-xs font-bold text-app-ink hover:bg-slate-50 transition duration-300 cursor-pointer shadow-sm"
                 >
-                  <PencilLine size={15} />
+                  <PencilLine size={13} className="text-app-accent" />
                   Edit
                 </button>
                 <button
@@ -94,15 +98,17 @@ export const ProjectLayout: React.FC = () => {
                     if (confirm('Delete this project and all related project data?')) deleteProject.mutate();
                   }}
                   disabled={deleteProject.isPending}
-                  className="inline-flex items-center gap-2 rounded-full border border-app-danger/20 bg-app-danger/10 px-4 py-2 text-sm font-semibold text-app-danger transition hover:bg-app-danger/15 disabled:opacity-60"
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-red-200 bg-red-50 hover:bg-red-100 px-3.5 py-2 text-xs font-bold text-red-600 transition duration-300 disabled:opacity-60 cursor-pointer shadow-sm"
                 >
-                  {deleteProject.isPending ? <Loader2 size={15} className="animate-spin" /> : <Trash2 size={15} />}
+                  {deleteProject.isPending ? <Loader2 size={13} className="animate-spin" /> : <Trash2 size={13} />}
                   Delete
                 </button>
               </div>
             ) : null}
           </div>
-          <div className="flex flex-wrap gap-2">
+
+          {/* Sub Navigation Pill Bar */}
+          <div className="flex flex-wrap gap-1.5 pt-1">
             {navItems.map((item) => {
               const active =
                 item.label === 'Dashboard'
@@ -114,13 +120,13 @@ export const ProjectLayout: React.FC = () => {
                   key={item.label}
                   to={item.to}
                   params={{ projectId }}
-                  className={`inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-semibold transition ${
+                  className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-bold transition duration-300 cursor-pointer ${
                     active
-                      ? 'bg-app-ink text-white'
-                      : 'border border-app-line bg-white/75 text-app-ink hover:border-app-ink/20'
+                      ? 'bg-app-ink text-white shadow-sm'
+                      : 'border border-slate-200 bg-white/60 text-app-muted hover:border-slate-300 hover:text-app-ink'
                   }`}
                 >
-                  <item.icon size={16} />
+                  <item.icon size={13} />
                   {item.label}
                 </Link>
               );
@@ -129,11 +135,13 @@ export const ProjectLayout: React.FC = () => {
         </div>
       </div>
 
-      <div className="flex-1">
+      {/* Main Outlet Container */}
+      <div className="flex-1 bg-slate-50/15">
         <Outlet />
       </div>
 
-      <AppModal open={isEditing} title="Edit project" description="Update project metadata using optimistic locking." onClose={() => setIsEditing(false)}>
+      {/* Edit Project Dialog */}
+      <AppModal open={isEditing} title="Edit project scope" description="Update project metadata using optimistic locking." onClose={() => setIsEditing(false)}>
         <form
           className="space-y-4"
           onSubmit={(event) => {
@@ -141,23 +149,22 @@ export const ProjectLayout: React.FC = () => {
             if (nameDraft.trim()) updateProject.mutate();
           }}
         >
-          <TextField label="Project name" value={nameDraft} onChange={setNameDraft} required />
-          <TextAreaField label="Description" value={descriptionDraft} onChange={setDescriptionDraft} rows={4} />
-          <div className="flex flex-wrap gap-3 pt-2">
+          <TextField label="Project Name" value={nameDraft} onChange={setNameDraft} required />
+          <TextAreaField label="Description / Context" value={descriptionDraft} onChange={setDescriptionDraft} rows={4} />
+          <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-200/50">
             <button
               type="button"
               onClick={() => setIsEditing(false)}
-              className="inline-flex items-center gap-2 rounded-full border border-app-line bg-white/80 px-5 py-3 text-sm font-semibold text-app-ink transition hover:border-app-ink/20"
+              className="rounded-xl border border-slate-200 bg-white hover:bg-slate-50 px-4 py-2.5 text-xs font-bold text-app-ink transition duration-300 cursor-pointer"
             >
-              <X size={16} />
               Cancel
             </button>
             <button
               type="submit"
               disabled={updateProject.isPending || !nameDraft.trim()}
-              className="inline-flex items-center gap-2 rounded-full bg-app-accent px-5 py-3 text-sm font-semibold text-white transition hover:bg-app-accent/90 disabled:opacity-60"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-app-accent hover:bg-app-accent/90 px-4 py-2.5 text-xs font-bold text-white transition duration-300 disabled:opacity-60 cursor-pointer shadow-sm"
             >
-              {updateProject.isPending ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+              {updateProject.isPending ? <Loader2 size={13} className="animate-spin" /> : <Save size={13} />}
               Save project
             </button>
           </div>

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useParams, useSearch } from '@tanstack/react-router';
-import { ArrowLeft, ArrowRight, Loader2, Plus, Search, Users } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Loader2, Plus, Search, Users, ArrowUpRight } from 'lucide-react';
 import { useApi } from '../../hooks/useApi';
 import type { Team } from '../../api/types';
 import { AppModal, EmptyState, SurfaceCardStrong, TextField, formatDate } from '../shared/workspace';
@@ -74,86 +74,102 @@ export default function ProjectTeamsView() {
   const teams = data?.teams ?? [];
 
   return (
-    <div className="page-frame">
-      <div className="mt-0 flex items-center justify-between gap-4 py-2">
-        <div />
+    <div className="page-frame animate-fade-in space-y-6">
+      {/* Filters and Actions Hub */}
+      <div className="grid gap-6 md:grid-cols-[1fr_auto] items-end shrink-0">
+        {/* Search */}
+        <div className="rounded-[24px] border border-slate-200/60 bg-white/60 p-5 backdrop-blur-md shadow-sm w-full">
+          <label className="block space-y-1.5">
+            <span className="flex items-center gap-2 text-xs font-bold text-app-ink uppercase tracking-wide opacity-90">
+              <Search size={13} className="text-app-accent" />
+              Filter Teams
+            </span>
+            <div className="relative">
+              <input
+                value={search}
+                onChange={(event) => handleSearchChange(event.target.value)}
+                placeholder="Search teams by name..."
+                className="w-full rounded-xl border border-slate-200 bg-white/70 pl-3.5 pr-8 py-2.5 text-xs text-app-ink outline-none transition focus:border-app-accent focus:bg-white focus:ring-4 focus:ring-app-accent/5 shadow-sm"
+              />
+              {search && (
+                <button 
+                  onClick={() => handleSearchChange('')} 
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-xs font-semibold text-app-muted hover:text-app-ink cursor-pointer"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
+          </label>
+        </div>
+
         <button
           onClick={() => setShowCreate(true)}
-          className="inline-flex items-center gap-2 rounded-full bg-app-accent px-5 py-3 text-sm font-semibold text-white transition hover:bg-app-accent/90"
+          className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-app-accent hover:bg-app-accent/90 px-4 py-3 text-xs font-bold text-white transition duration-300 cursor-pointer shadow-sm shadow-app-accent/10 w-full md:w-auto"
         >
-          <Plus size={16} />
-          New team
+          <Plus size={14} />
+          Create Team
         </button>
       </div>
 
-      <div className="mb-6 rounded-[28px] border border-app-line bg-white/70 p-5">
-        <label className="block">
-          <span className="mb-2 flex items-center gap-2 text-sm font-medium text-app-ink">
-            <Search size={15} />
-            Search teams
-          </span>
-          <input
-            value={search}
-            onChange={(event) => handleSearchChange(event.target.value)}
-            placeholder="Search by team name..."
-            className="w-full rounded-2xl border border-app-line bg-white/80 px-4 py-3 text-sm text-app-ink outline-none transition focus:border-app-accent focus:ring-4 focus:ring-app-accent/10"
-          />
-        </label>
-      </div>
-
-      <div className="mt-4">
-        <SurfaceCardStrong className="p-5 md:p-6">
-          <div className="mb-6 flex items-center justify-between gap-4">
+      {/* Teams Feed Panel */}
+      <div>
+        <SurfaceCardStrong className="p-6 space-y-6 flex flex-col justify-between">
+          <div className="flex items-center justify-between border-b border-slate-200/40 pb-5 shrink-0">
             <div>
-              <p className="eyebrow mb-2">Team roster</p>
-              <h2 className="text-2xl font-semibold tracking-[-0.04em] text-app-ink">Current groups</h2>
+              <span className="text-[9px] font-extrabold uppercase tracking-widest text-app-accent">Team Roster</span>
+              <h2 className="text-xl font-bold tracking-tight text-app-ink mt-0.5">Active Groups</h2>
             </div>
-            <div className="rounded-full bg-app-ink/5 px-3 py-1.5 text-xs font-semibold text-app-muted">
-              {teams.length} loaded
+            <div className="rounded-xl bg-slate-100 px-3 py-2 text-xs font-bold text-app-muted border border-slate-200/30">
+              {teams.length} Groups
             </div>
           </div>
 
-          {isLoading ? (
-            <div className="flex min-h-[18rem] items-center justify-center">
-              <Loader2 size={28} className="animate-spin text-app-accent" />
-            </div>
-          ) : teams.length === 0 ? (
-            <EmptyState
-              icon={Users}
-              title="No teams yet"
-              description="Create a team to organize responsibilities and team membership inside this project."
-              action={
-                <button
-                  onClick={() => setShowCreate(true)}
-                  className="rounded-full bg-app-accent px-5 py-3 text-sm font-semibold text-white transition hover:bg-app-accent/90"
-                >
-                  Create team
-                </button>
-              }
-            />
-          ) : (
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {teams.map((team) => (
-                <Link
-                  key={team.id}
-                  to="/projects/$projectId/teams/$teamId"
-                  params={{ projectId, teamId: team.id }}
-                  className="rounded-[28px] border border-app-line bg-white/75 p-5 transition hover:border-app-accent/30"
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-
-                      <h3 className="text-xl font-semibold text-app-ink">{team.name}</h3>
-                      <p className="mt-2 text-sm text-app-muted">Created {formatDate(team.createdAt)}</p>
+          <div className="flex-1 min-h-[300px]">
+            {isLoading ? (
+              <div className="flex min-h-[18rem] items-center justify-center">
+                <Loader2 size={24} className="animate-spin text-app-accent" />
+              </div>
+            ) : teams.length === 0 ? (
+              <EmptyState
+                icon={Users}
+                title="No teams yet"
+                description="Establish teams to manage task assignments, timelines, and workload within this project workspace."
+                action={
+                  <button
+                    onClick={() => setShowCreate(true)}
+                    className="rounded-xl bg-app-accent hover:bg-app-accent/90 px-4 py-2.5 text-xs font-bold text-white transition duration-300 cursor-pointer shadow-sm"
+                  >
+                    Create Team
+                  </button>
+                }
+              />
+            ) : (
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {teams.map((team) => (
+                  <Link
+                    key={team.id}
+                    to="/projects/$projectId/teams/$teamId"
+                    params={{ projectId, teamId: team.id }}
+                    className="rounded-2xl border border-slate-200/60 hover:border-app-accent/35 bg-slate-50/20 p-5 transition-all duration-300 hover:translate-y-[-1px] shadow-sm hover:shadow-md group"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="space-y-1.5">
+                        <h3 className="text-sm font-bold text-app-ink group-hover:text-app-accent transition-colors">{team.name}</h3>
+                        <p className="text-[10px] text-app-muted">Established {formatDate(team.createdAt)}</p>
+                      </div>
+                      <span className="rounded-lg p-1.5 bg-slate-100 text-app-muted group-hover:bg-app-accent-soft group-hover:text-app-accent transition-all duration-300">
+                        <ArrowUpRight size={14} />
+                      </span>
                     </div>
-                    <ArrowRight size={16} className="text-app-muted" />
-                  </div>
-                </Link>
-              ))}
-            </div>
-          )}
+                  </Link>
+                ))}
+              </div>
+            )}
+          </div>
 
-          <div className="mt-6 flex items-center justify-between gap-4 border-t border-app-line pt-6">
+          {/* Pagination */}
+          <div className="mt-6 flex items-center justify-between gap-4 border-t border-slate-200/40 pt-5 shrink-0">
             <PagingButton
               disabled={!data?.pageInfo?.hasPreviousPage}
               onClick={() =>
@@ -167,7 +183,7 @@ export default function ProjectTeamsView() {
                 })
               }
             >
-              <ArrowLeft size={14} />
+              <ArrowLeft size={12} />
               Prev
             </PagingButton>
             <PagingButton
@@ -184,16 +200,17 @@ export default function ProjectTeamsView() {
               }
             >
               Next
-              <ArrowRight size={14} />
+              <ArrowRight size={12} />
             </PagingButton>
           </div>
         </SurfaceCardStrong>
       </div>
 
+      {/* Creation Modal */}
       <AppModal
         open={showCreate}
-        title="Create a team"
-        description="Keep team names simple and recognizable so the task flow reads clearly."
+        title="Create new project team"
+        description="Establish organizational team structures to delegate task scopes and coordinate execution."
         onClose={() => setShowCreate(false)}
       >
         <form
@@ -204,22 +221,22 @@ export default function ProjectTeamsView() {
             createTeam.mutate();
           }}
         >
-          <TextField label="Team name" value={name} onChange={setName} placeholder="Platform squad" required />
-          <div className="flex flex-wrap gap-3 pt-2">
+          <TextField label="Team Name / Segment" value={name} onChange={setName} placeholder="DevOps Platform Squad..." required />
+          <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-200/50">
             <button
               type="button"
               onClick={() => setShowCreate(false)}
-              className="rounded-full border border-app-line bg-white/80 px-5 py-3 text-sm font-semibold text-app-ink transition hover:border-app-ink/20"
+              className="rounded-xl border border-slate-200 bg-white hover:bg-slate-50 px-4 py-2.5 text-xs font-bold text-app-ink transition duration-300 cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={createTeam.isPending || !name.trim()}
-              className="inline-flex items-center gap-2 rounded-full bg-app-accent px-5 py-3 text-sm font-semibold text-white transition hover:bg-app-accent/90 disabled:opacity-60"
+              className="inline-flex items-center gap-1.5 rounded-xl bg-app-accent hover:bg-app-accent/90 px-4 py-2.5 text-xs font-bold text-white transition duration-300 disabled:opacity-60 cursor-pointer shadow-sm"
             >
-              {createTeam.isPending ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
-              Create team
+              {createTeam.isPending ? <Loader2 size={13} className="animate-spin" /> : <Plus size={13} />}
+              Create Team
             </button>
           </div>
         </form>
@@ -227,4 +244,3 @@ export default function ProjectTeamsView() {
     </div>
   );
 }
-

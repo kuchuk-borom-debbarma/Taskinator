@@ -86,6 +86,26 @@ type Task {
         before: String
     ): TaskLinkConnection!
 
+    """
+    Paginated list of comments on this task.
+    """
+    comments(
+        first: Int
+        after: String
+        last: Int
+        before: String
+    ): TaskCommentConnection!
+
+    """
+    Paginated list of activity and mutation logs on this task.
+    """
+    activityLogs(
+        first: Int
+        after: String
+        last: Int
+        before: String
+    ): TaskActivityLogConnection!
+
     version: Int!
 
     """

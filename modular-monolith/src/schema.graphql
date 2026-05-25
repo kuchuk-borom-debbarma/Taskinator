@@ -766,6 +766,18 @@ type TaskMutation {
     Updates a task link (label, source, or target).
     """
     updateLink(input: UpdateTaskLinkInput!): TaskLink!
+    """
+    Adds a new comment to a task.
+    """
+    addComment(taskId: ID!, content: String!): TaskComment!
+    """
+    Updates an existing task comment. Supports optimistic locking.
+    """
+    updateComment(commentId: ID!, content: String!, version: Int!): TaskComment!
+    """
+    Deletes an existing task comment. Returns the deleted comment's ID.
+    """
+    deleteComment(commentId: ID!): ID!
 }
 
 enum RiskLevel {
@@ -782,6 +794,53 @@ type SimulatedSlip {
     slipDays: Int!
     riskLevel: RiskLevel!
     bufferRemainingDays: Int!
+}
+
+type TaskComment {
+    id: ID!
+    task: Task!
+    project: Project!
+    author: User!
+    content: String!
+    version: Int!
+    createdAt: String!
+    updatedAt: String!
+}
+
+type TaskCommentEdge {
+    node: TaskComment!
+    cursor: String!
+}
+
+type TaskCommentConnection {
+    edges: [TaskCommentEdge!]!
+    pageInfo: PageInfo!
+}
+
+type TaskFieldChange {
+    field: String!
+    oldValue: String
+    newValue: String
+}
+
+type TaskActivityLog {
+    id: ID!
+    task: Task!
+    project: Project!
+    actor: User!
+    actionType: String!
+    changes: [TaskFieldChange!]!
+    createdAt: String!
+}
+
+type TaskActivityLogEdge {
+    node: TaskActivityLog!
+    cursor: String!
+}
+
+type TaskActivityLogConnection {
+    edges: [TaskActivityLogEdge!]!
+    pageInfo: PageInfo!
 }
 
 enum InputType {
@@ -980,6 +1039,24 @@ type Task {
         """
         before: String
     ): TaskLinkConnection!
+    """
+    Paginated list of comments on this task.
+    """
+    comments(
+        first: Int
+        after: String
+        last: Int
+        before: String
+    ): TaskCommentConnection!
+    """
+    Paginated list of activity and mutation logs on this task.
+    """
+    activityLogs(
+        first: Int
+        after: String
+        last: Int
+        before: String
+    ): TaskActivityLogConnection!
     version: Int!
     """
     User who created this task.
