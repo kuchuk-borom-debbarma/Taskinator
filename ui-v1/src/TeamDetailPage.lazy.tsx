@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { useNavigate, useParams, useSearch } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, ArrowRight, Loader2, PencilLine, Plus, Save, Trash2, Users, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Loader2, PencilLine, Plus, Save, Search, Trash2, Users, X } from 'lucide-react';
 import { useApi } from './hooks/useApi';
 import type { TeamMember } from './api/types';
 import { AppModal, EmptyState, SurfaceCard, SurfaceCardStrong, TextField, formatDate } from './components/shared/workspace';
 import { CONFIG } from './config';
+import { useDebounce } from './hooks/useDebounce';
 
 type TeamSearch = {
   cursor?: string;
@@ -21,6 +22,8 @@ export default function TeamDetailPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [teamName, setTeamName] = useState('');
   const [memberIds, setMemberIds] = useState('');
+  const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search, 300);
 
   const { data: detail, isLoading: isDetailLoading } = useQuery({
     queryKey: ['team-detail', teamId],
@@ -32,22 +35,32 @@ export default function TeamDetailPage() {
   const team = detail?.team;
 
   const { data: membersData, isLoading: isMembersLoading } = useQuery({
-    queryKey: ['team-members', teamId, cursor, direction],
+    queryKey: ['team-members', teamId, debouncedSearch, cursor, direction],
     queryFn: () =>
       teamApi.getTeamMembers(projectId, teamId, {
         first: direction === 'backward' ? undefined : CONFIG.PAGINATION.MEMBERS_LIST,
         after: direction === 'forward' ? cursor : undefined,
         last: direction === 'backward' ? CONFIG.PAGINATION.MEMBERS_LIST : undefined,
         before: direction === 'backward' ? cursor : undefined,
+        search: debouncedSearch.trim() || undefined,
       }),
-    enabled: !!projectId && !!teamId && !!cursor, // Only for pagination
-    initialData: cursor ? undefined : detail?.members,
+    enabled: !!projectId && !!teamId,
+    placeholderData: (prev) => prev,
     staleTime: CONFIG.CACHE.DEFAULT_STALE_TIME,
   });
 
-  const membersPage = cursor ? membersData : detail?.members;
+  const handleSearchChange = (val: string) => {
+    setSearch(val);
+    navigate({
+      to: '/projects/$projectId/teams/$teamId',
+      params: { projectId, teamId },
+      search: { cursor: undefined, direction: undefined }
+    });
+  };
+
+  const membersPage = membersData;
   const members = membersPage?.members ?? [];
-  const isLoading = isDetailLoading || (!!cursor && isMembersLoading);
+  const isLoading = isDetailLoading || isMembersLoading;
 
   const parsedMemberIds = () =>
     memberIds
@@ -200,6 +213,21 @@ export default function TeamDetailPage() {
               Add members
             </button>
           </form>
+
+          <div className="mb-6 rounded-[24px] border border-app-line bg-white/70 p-4">
+            <label className="block">
+              <span className="mb-2 flex items-center gap-2 text-sm font-medium text-app-ink">
+                <Search size={15} />
+                Search team members
+              </span>
+              <input
+                value={search}
+                onChange={(event) => handleSearchChange(event.target.value)}
+                placeholder="Search team member by username or email..."
+                className="w-full rounded-2xl border border-app-line bg-white/80 px-4 py-3 text-sm text-app-ink outline-none transition focus:border-app-accent focus:ring-4 focus:ring-app-accent/10"
+              />
+            </label>
+          </div>
 
           {isMembersLoading ? (
             <div className="flex min-h-[16rem] items-center justify-center">

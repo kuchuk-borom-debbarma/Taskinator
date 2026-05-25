@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useParams, useSearch } from '@tanstack/react-router';
-import { ArrowLeft, ArrowRight, Loader2, Plus, Users } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Loader2, Plus, Search, Users } from 'lucide-react';
 import { useApi } from '../../hooks/useApi';
 import type { Team } from '../../api/types';
 import { AppModal, EmptyState, SurfaceCardStrong, TextField, formatDate } from '../shared/workspace';
 import { PagingButton } from '../shared/PagingButton';
 import { CONFIG } from '../../config';
+import { useDebounce } from '../../hooks/useDebounce';
 
 type TeamSearch = {
   cursor?: string;
@@ -29,18 +30,20 @@ export default function ProjectTeamsView() {
   const navigate = useNavigate();
   const [showCreate, setShowCreate] = useState(false);
   const [name, setName] = useState('');
+  const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search, 300);
 
   const { data, isLoading } = useQuery({
-    queryKey: ['project-teams', projectId, cursor, direction],
+    queryKey: ['project-teams', projectId, debouncedSearch, cursor, direction],
     queryFn: () => {
       if (direction === 'backward') {
-        return teamApi.getTeams(projectId, { last: CONFIG.PAGINATION.TASKS_LIST, before: cursor });
+        return teamApi.getTeams(projectId, { last: CONFIG.PAGINATION.TASKS_LIST, before: cursor, search: debouncedSearch.trim() || undefined });
       }
-      return teamApi.getTeams(projectId, { first: CONFIG.PAGINATION.TASKS_LIST, after: direction === 'forward' ? cursor : undefined });
+      return teamApi.getTeams(projectId, { first: CONFIG.PAGINATION.TASKS_LIST, after: direction === 'forward' ? cursor : undefined, search: debouncedSearch.trim() || undefined });
     },
     enabled: !!projectId,
     initialData: () => {
-      if (cursor || direction) return undefined;
+      if (cursor || direction || debouncedSearch) return undefined;
       const teams = getCachedTeams(queryClient);
       return teams
         ? { teams, pageInfo: { hasNextPage: false, hasPreviousPage: false, endCursor: null, startCursor: null } }
@@ -48,6 +51,15 @@ export default function ProjectTeamsView() {
     },
     staleTime: CONFIG.CACHE.DEFAULT_STALE_TIME,
   });
+
+  const handleSearchChange = (val: string) => {
+    setSearch(val);
+    navigate({
+      to: '/projects/$projectId/teams',
+      params: { projectId },
+      search: { cursor: undefined, direction: undefined }
+    });
+  };
 
   const createTeam = useMutation({
     mutationFn: () => teamApi.createTeam(projectId, name.trim()),
@@ -74,7 +86,22 @@ export default function ProjectTeamsView() {
         </button>
       </div>
 
-      <div className="mt-8">
+      <div className="mb-6 rounded-[28px] border border-app-line bg-white/70 p-5">
+        <label className="block">
+          <span className="mb-2 flex items-center gap-2 text-sm font-medium text-app-ink">
+            <Search size={15} />
+            Search teams
+          </span>
+          <input
+            value={search}
+            onChange={(event) => handleSearchChange(event.target.value)}
+            placeholder="Search by team name..."
+            className="w-full rounded-2xl border border-app-line bg-white/80 px-4 py-3 text-sm text-app-ink outline-none transition focus:border-app-accent focus:ring-4 focus:ring-app-accent/10"
+          />
+        </label>
+      </div>
+
+      <div className="mt-4">
         <SurfaceCardStrong className="p-5 md:p-6">
           <div className="mb-6 flex items-center justify-between gap-4">
             <div>

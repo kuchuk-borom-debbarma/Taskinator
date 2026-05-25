@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useParams, useSearch } from '@tanstack/react-router';
 import { ArrowLeft, ArrowRight, Filter, FolderKanban, Loader2, Plus, Search } from 'lucide-react';
@@ -17,6 +17,7 @@ import {
 } from './components/shared/workspace';
 import { PagingButton } from './components/shared/PagingButton';
 import { CONFIG } from './config';
+import { useDebounce } from './hooks/useDebounce';
 
 type TaskSearch = {
   cursor?: string;
@@ -26,11 +27,16 @@ type TaskSearch = {
 export default function ProjectTasksIndex() {
   const { projectId } = useParams({ strict: false }) as { projectId?: string };
   const { cursor, direction } = useSearch({ from: '/authenticated-layout/projects/$projectId/tasks' }) as TaskSearch;
-  const { taskApi } = useApi();
+  const { taskApi, projectApi, teamApi } = useApi();
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [query, setQuery] = useState('');
+  const debouncedQuery = useDebounce(query, 300);
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'TODO' | 'IN_PROGRESS' | 'DONE'>('ALL');
+  const [priorityFilter, setPriorityFilter] = useState<'ALL' | number>('ALL');
+  const [teamFilter, setTeamFilter] = useState<'ALL' | string>('ALL');
+  const [assigneeFilter, setAssigneeFilter] = useState<'ALL' | string>('ALL');
+
   const [showCreate, setShowCreate] = useState(false);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -38,15 +44,54 @@ export default function ProjectTasksIndex() {
   const [priority, setPriority] = useState(2);
   const [dueDate, setDueDate] = useState('');
 
+  // Fetch all teams for the dropdown filter
+  const { data: teamsData } = useQuery({
+    queryKey: ['project-teams-all', projectId],
+    queryFn: () => teamApi.getTeams(projectId!, { first: 100 }),
+    enabled: !!projectId,
+    staleTime: CONFIG.CACHE.DEFAULT_STALE_TIME,
+  });
+
+  // Fetch all members for the dropdown filter
+  const { data: membersData } = useQuery({
+    queryKey: ['project-members-all', projectId],
+    queryFn: () => projectApi.getProjectMembers(projectId!, { first: 100 }),
+    enabled: !!projectId,
+    staleTime: CONFIG.CACHE.DEFAULT_STALE_TIME,
+  });
+
   const { data, isLoading } = useQuery({
-    queryKey: ['tasks', projectId, cursor, direction],
+    queryKey: [
+      'tasks',
+      projectId,
+      debouncedQuery,
+      statusFilter,
+      priorityFilter,
+      teamFilter,
+      assigneeFilter,
+      cursor,
+      direction,
+    ],
     queryFn: () => {
+      const searchParams = {
+        search: debouncedQuery.trim() || undefined,
+        status: statusFilter === 'ALL' ? undefined : statusFilter,
+        priority: priorityFilter === 'ALL' ? undefined : (priorityFilter as number),
+        teamId: teamFilter === 'ALL' ? undefined : teamFilter,
+        memberId: assigneeFilter === 'ALL' ? undefined : assigneeFilter,
+      };
+
       if (direction === 'backward') {
-        return taskApi.getTasks(projectId!, { last: CONFIG.PAGINATION.TASKS_LIST, before: cursor });
+        return taskApi.getTasks(projectId!, {
+          last: CONFIG.PAGINATION.TASKS_LIST,
+          before: cursor,
+          ...searchParams,
+        });
       }
       return taskApi.getTasks(projectId!, {
         first: CONFIG.PAGINATION.TASKS_LIST,
         after: direction === 'forward' ? cursor : undefined,
+        ...searchParams,
       });
     },
     enabled: !!projectId,
@@ -82,20 +127,40 @@ export default function ProjectTasksIndex() {
     },
   });
 
-  const filteredTasks = useMemo(() => {
-    const tasks = data?.tasks ?? [];
-    return tasks.filter((task) => {
-      const matchesStatus = statusFilter === 'ALL' || task.status === statusFilter;
-      const q = query.trim().toLowerCase();
-      const matchesQuery =
-        q.length === 0 ||
-        task.title.toLowerCase().includes(q) ||
-        task.description.toLowerCase().includes(q) ||
-        task.team?.name?.toLowerCase().includes(q) ||
-        task.assignedMember?.username?.toLowerCase().includes(q);
-      return matchesStatus && matchesQuery;
+  const resetPagination = () => {
+    navigate({
+      to: '/projects/$projectId/tasks',
+      params: { projectId: projectId! },
+      search: { cursor: undefined, direction: undefined },
     });
-  }, [data?.tasks, query, statusFilter]);
+  };
+
+  const handleQueryChange = (val: string) => {
+    setQuery(val);
+    resetPagination();
+  };
+
+  const handleStatusFilterChange = (val: typeof statusFilter) => {
+    setStatusFilter(val);
+    resetPagination();
+  };
+
+  const handlePriorityFilterChange = (val: typeof priorityFilter) => {
+    setPriorityFilter(val);
+    resetPagination();
+  };
+
+  const handleTeamFilterChange = (val: typeof teamFilter) => {
+    setTeamFilter(val);
+    resetPagination();
+  };
+
+  const handleAssigneeFilterChange = (val: typeof assigneeFilter) => {
+    setAssigneeFilter(val);
+    resetPagination();
+  };
+
+  const filteredTasks = data?.tasks ?? [];
 
   return (
     <div className="page-frame">
@@ -111,8 +176,8 @@ export default function ProjectTasksIndex() {
             </span>
             <input
               value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Title, description, team, or assignee"
+              onChange={(event) => handleQueryChange(event.target.value)}
+              placeholder="Title or description..."
               className="w-full rounded-2xl border border-app-line bg-white/80 px-4 py-3 text-sm text-app-ink outline-none transition focus:border-app-accent focus:ring-4 focus:ring-app-accent/10"
             />
           </label>
@@ -126,8 +191,8 @@ export default function ProjectTasksIndex() {
               {(['ALL', 'TODO', 'IN_PROGRESS', 'DONE'] as const).map((option) => (
                 <button
                   key={option}
-                  onClick={() => setStatusFilter(option)}
-                  className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                  onClick={() => handleStatusFilterChange(option)}
+                  className={`rounded-full px-4 py-2 text-xs font-semibold transition ${
                     statusFilter === option
                       ? 'bg-app-ink text-white'
                       : 'border border-app-line bg-white/75 text-app-ink hover:border-app-ink/20'
@@ -139,7 +204,71 @@ export default function ProjectTasksIndex() {
             </div>
           </div>
 
+          <div className="mt-5">
+            <span className="mb-2 block text-sm font-medium text-app-ink">Priority</span>
+            <select
+              value={priorityFilter}
+              onChange={(event) => {
+                const val = event.target.value;
+                handlePriorityFilterChange(val === 'ALL' ? 'ALL' : Number(val));
+              }}
+              className="w-full rounded-2xl border border-app-line bg-white/85 px-4 py-3 text-sm text-app-ink outline-none transition focus:border-app-accent focus:ring-4 focus:ring-app-accent/10"
+            >
+              <option value="ALL">All priorities</option>
+              <option value={0}>Urgent</option>
+              <option value={1}>High</option>
+              <option value={2}>Medium</option>
+              <option value={3}>Low</option>
+            </select>
+          </div>
 
+          <div className="mt-5">
+            <span className="mb-2 block text-sm font-medium text-app-ink">Team</span>
+            <select
+              value={teamFilter}
+              onChange={(event) => handleTeamFilterChange(event.target.value)}
+              className="w-full rounded-2xl border border-app-line bg-white/85 px-4 py-3 text-sm text-app-ink outline-none transition focus:border-app-accent focus:ring-4 focus:ring-app-accent/10"
+            >
+              <option value="ALL">All teams</option>
+              {teamsData?.teams?.map((team) => (
+                <option key={team.id} value={team.id}>
+                  {team.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="mt-5">
+            <span className="mb-2 block text-sm font-medium text-app-ink">Assignee</span>
+            <select
+              value={assigneeFilter}
+              onChange={(event) => handleAssigneeFilterChange(event.target.value)}
+              className="w-full rounded-2xl border border-app-line bg-white/85 px-4 py-3 text-sm text-app-ink outline-none transition focus:border-app-accent focus:ring-4 focus:ring-app-accent/10"
+            >
+              <option value="ALL">All assignees</option>
+              {membersData?.members?.map((member) => (
+                <option key={member.id} value={member.user?.id}>
+                  {member.user?.username || 'Unknown'}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {(query !== '' || statusFilter !== 'ALL' || priorityFilter !== 'ALL' || teamFilter !== 'ALL' || assigneeFilter !== 'ALL') && (
+            <button
+              onClick={() => {
+                setQuery('');
+                setStatusFilter('ALL');
+                setPriorityFilter('ALL');
+                setTeamFilter('ALL');
+                setAssigneeFilter('ALL');
+                resetPagination();
+              }}
+              className="mt-6 w-full rounded-2xl border border-app-danger/20 bg-app-danger/10 py-3 text-xs font-semibold text-app-danger transition hover:bg-app-danger/15"
+            >
+              Reset all filters
+            </button>
+          )}
         </SurfaceCard>
 
         <SurfaceCardStrong className="p-5 md:p-6">

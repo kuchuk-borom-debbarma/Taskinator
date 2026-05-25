@@ -4,8 +4,11 @@ export interface TaskAPI {
   getTasks(
     projectId: string,
     params?: PaginationArgs & {
-      teamId?: string,
-      memberId?: string,
+      teamId?: string;
+      memberId?: string;
+      search?: string;
+      status?: string;
+      priority?: number;
     }
   ): Promise<{ tasks: ProjectTask[], pageInfo: PageInfo }>;
 

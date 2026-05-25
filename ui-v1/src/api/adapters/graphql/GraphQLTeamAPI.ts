@@ -58,13 +58,13 @@ export class GraphQLTeamAPI implements TeamAPI {
 
   async getTeams(
     projectId: string, 
-    pagination?: PaginationArgs
+    pagination?: PaginationArgs & { search?: string }
   ): Promise<{ teams: Team[], pageInfo: PageInfo }> {
-    const { first, after, last, before } = pagination || {};
+    const { first, after, last, before, search } = pagination || {};
     const data = await this.query<any>(gql`
-      query GetProjectTeams($projectId: ID!, $first: Int, $after: String, $last: Int, $before: String) {
+      query GetProjectTeams($projectId: ID!, $first: Int, $after: String, $last: Int, $before: String, $search: String) {
         project(id: $projectId) {
-          teams(first: $first, after: $after, last: $last, before: $before) {
+          teams(first: $first, after: $after, last: $last, before: $before, search: $search) {
             edges {
               node {
                 id
@@ -84,7 +84,7 @@ export class GraphQLTeamAPI implements TeamAPI {
           }
         }
       }
-    `, { projectId, first, after, last, before });
+    `, { projectId, first, after, last, before, search });
  
     const conn = data.project?.teams;
     if (!conn) return { teams: [], pageInfo: { hasNextPage: false, hasPreviousPage: false, endCursor: null, startCursor: null } };
@@ -166,12 +166,12 @@ export class GraphQLTeamAPI implements TeamAPI {
   async getTeamMembers(
     projectId: string, 
     teamId: string, 
-    pagination?: PaginationArgs
+    pagination?: PaginationArgs & { search?: string }
   ): Promise<{ members: TeamMember[], pageInfo: PageInfo }> {
-    const { first, after, last, before } = pagination || {};
+    const { first, after, last, before, search } = pagination || {};
     const data = await this.query<any>(gql`
-      query GetTeamMembers($projectId: ID!, $teamId: ID!, $first: Int, $after: String, $last: Int, $before: String) {
-        teamMembers(projectId: $projectId, teamId: $teamId, first: $first, after: $after, last: $last, before: $before) {
+      query GetTeamMembers($projectId: ID!, $teamId: ID!, $first: Int, $after: String, $last: Int, $before: String, $search: String) {
+        teamMembers(projectId: $projectId, teamId: $teamId, first: $first, after: $after, last: $last, before: $before, search: $search) {
           edges {
             node {
               id
@@ -188,7 +188,7 @@ export class GraphQLTeamAPI implements TeamAPI {
           }
         }
       }
-    `, { projectId, teamId, first, after, last, before });
+    `, { projectId, teamId, first, after, last, before, search });
 
     return {
       members: data.teamMembers.edges.map((e: any) => e.node),

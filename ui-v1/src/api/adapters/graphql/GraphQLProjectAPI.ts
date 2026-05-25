@@ -297,11 +297,12 @@ export class GraphQLProjectAPI implements ProjectAPI {
     return data.removeProjectMembers;
   }
 
-  async getProjectMembers(projectId: string, pagination?: PaginationArgs): Promise<{ members: ProjectMember[], pageInfo: PageInfo }> {
+  async getProjectMembers(projectId: string, pagination?: PaginationArgs & { search?: string }): Promise<{ members: ProjectMember[], pageInfo: PageInfo }> {
+    const { first, after, last, before, search } = pagination || {};
     const data = await this.query<any>(gql`
-      query GetProjectMembers($projectId: ID!, $first: Int, $after: String, $last: Int, $before: String) {
+      query GetProjectMembers($projectId: ID!, $first: Int, $after: String, $last: Int, $before: String, $search: String) {
         project(id: $projectId) {
-          projectMembers(first: $first, after: $after, last: $last, before: $before) {
+          projectMembers(first: $first, after: $after, last: $last, before: $before, search: $search) {
             edges {
               node {
                 id
@@ -319,7 +320,7 @@ export class GraphQLProjectAPI implements ProjectAPI {
           }
         }
       }
-    `, { projectId, ...pagination });
+    `, { projectId, first, after, last, before, search });
 
     if (!data.project?.projectMembers) return { members: [], pageInfo: { hasNextPage: false, hasPreviousPage: false, startCursor: null, endCursor: null } };
 

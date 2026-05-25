@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useParams } from '@tanstack/react-router';
-import { ArrowLeft, ArrowRight, Loader2, Plus, Trash2, Users } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Loader2, Plus, Search, Trash2, Users } from 'lucide-react';
 import { useApi } from '../../hooks/useApi';
 import type { ProjectMember } from '../../api/types';
 import { EmptyState, TextField, formatDate } from '../shared/workspace';
 import { PagingButton } from '../shared/PagingButton';
 import { CONFIG } from '../../config';
+import { useDebounce } from '../../hooks/useDebounce';
 
 export default function ProjectMembersView() {
   const { projectId } = useParams({ from: '/authenticated-layout/projects/$projectId/members' });
@@ -16,18 +17,26 @@ export default function ProjectMembersView() {
   const [cursor, setCursor] = useState<string | undefined>(undefined);
   const [direction, setDirection] = useState<'forward' | 'backward' | undefined>(undefined);
   const [userIds, setUserIds] = useState('');
+  const [search, setSearch] = useState('');
+  const debouncedSearch = useDebounce(search, 300);
 
   const { data, isLoading } = useQuery({
-    queryKey: ['project-members', projectId, cursor, direction],
+    queryKey: ['project-members', projectId, debouncedSearch, cursor, direction],
     queryFn: () => projectApi.getProjectMembers(
       projectId,
       direction === 'backward'
-        ? { last: CONFIG.PAGINATION.MEMBERS_LIST, before: cursor }
-        : { first: CONFIG.PAGINATION.MEMBERS_LIST, after: cursor }
+        ? { last: CONFIG.PAGINATION.MEMBERS_LIST, before: cursor, search: debouncedSearch.trim() || undefined }
+        : { first: CONFIG.PAGINATION.MEMBERS_LIST, after: cursor, search: debouncedSearch.trim() || undefined }
     ),
     staleTime: CONFIG.CACHE.DEFAULT_STALE_TIME,
     placeholderData: (prev) => prev,
   });
+
+  const handleSearchChange = (val: string) => {
+    setSearch(val);
+    setCursor(undefined);
+    setDirection(undefined);
+  };
 
   const members = data?.members ?? [];
   const pageInfo = data?.pageInfo;
@@ -91,6 +100,21 @@ export default function ProjectMembersView() {
           Add members
         </button>
       </form>
+
+      <div className="mb-6 rounded-[28px] border border-app-line bg-white/70 p-5">
+        <label className="block">
+          <span className="mb-2 flex items-center gap-2 text-sm font-medium text-app-ink">
+            <Search size={15} />
+            Search members
+          </span>
+          <input
+            value={search}
+            onChange={(event) => handleSearchChange(event.target.value)}
+            placeholder="Search by username or email..."
+            className="w-full rounded-2xl border border-app-line bg-white/80 px-4 py-3 text-sm text-app-ink outline-none transition focus:border-app-accent focus:ring-4 focus:ring-app-accent/10"
+          />
+        </label>
+      </div>
 
       <div>
         {isLoading ? (

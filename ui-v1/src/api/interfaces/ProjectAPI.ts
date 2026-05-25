@@ -8,7 +8,7 @@ export interface ProjectAPI {
   deleteProjects(projectIds: string[]): Promise<{ success: boolean; deletedCount: number }>;
   addProjectMembers(projectId: string, userIds: string[]): Promise<{ success: boolean }>;
   removeProjectMembers(projectId: string, memberIds: string[]): Promise<{ success: boolean }>;
-  getProjectMembers(projectId: string, pagination?: PaginationArgs): Promise<{ members: ProjectMember[], pageInfo: PageInfo }>;
+  getProjectMembers(projectId: string, pagination?: PaginationArgs & { search?: string }): Promise<{ members: ProjectMember[], pageInfo: PageInfo }>;
   getProjectLinks(projectId: string, pagination?: PaginationArgs): Promise<{ links: any[], pageInfo: PageInfo }>;
   getProjectDashboardData(projectId: string): Promise<{
     project: Project | null,

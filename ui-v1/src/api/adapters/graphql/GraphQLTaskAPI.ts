@@ -137,15 +137,18 @@ export class GraphQLTaskAPI implements TaskAPI {
   async getTasks(
     projectId: string,
     params: PaginationArgs & {
-      teamId?: string,
-      memberId?: string,
+      teamId?: string;
+      memberId?: string;
+      search?: string;
+      status?: string;
+      priority?: number;
     } = {}
   ): Promise<{ tasks: ProjectTask[], pageInfo: PageInfo }> {
-    const { teamId, memberId, first, after, last, before } = params;
+    const { teamId, memberId, first, after, last, before, search, status, priority } = params;
     const data = await this.query<any>(gql`
-      query GetProjectTasks($projectId: ID!, $teamId: ID, $memberId: ID, $first: Int, $after: String, $last: Int, $before: String) {
+      query GetProjectTasks($projectId: ID!, $teamId: ID, $memberId: ID, $first: Int, $after: String, $last: Int, $before: String, $search: String, $status: String, $priority: Int) {
         project(id: $projectId) {
-          projectTasks(teamId: $teamId, memberId: $memberId, first: $first, after: $after, last: $last, before: $before) {
+          projectTasks(teamId: $teamId, memberId: $memberId, first: $first, after: $after, last: $last, before: $before, search: $search, status: $status, priority: $priority) {
             edges {
               node {
                 ${TASK_FIELDS}
@@ -160,7 +163,7 @@ export class GraphQLTaskAPI implements TaskAPI {
           }
         }
       }
-    `, { projectId, teamId, memberId, first, after, last, before });
+    `, { projectId, teamId, memberId, first, after, last, before, search, status, priority });
 
     const conn = data.project?.projectTasks;
     if (!conn) return { tasks: [], pageInfo: { hasNextPage: false, hasPreviousPage: false, endCursor: null, startCursor: null } };
