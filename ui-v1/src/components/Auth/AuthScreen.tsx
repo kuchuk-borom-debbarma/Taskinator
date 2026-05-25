@@ -70,26 +70,26 @@ export const AuthScreen: React.FC = () => {
                 <Sparkles size={16} className="text-app-accent" />
                 Task-In
               </div>
-              <h1 className="mt-6 max-w-xl text-4xl font-semibold leading-tight tracking-[-0.05em] text-app-ink md:text-6xl">
-                Modern task management for high-performance teams.
+              <h1 className="mt-6 max-w-xl text-4xl font-extrabold leading-[1.1] tracking-[-0.04em] text-app-ink md:text-5xl">
+                The collaborative task engine with dependency intelligence.
               </h1>
-              <p className="mt-5 max-w-2xl text-base leading-8 text-app-muted md:text-lg">
-                Manage projects, teams, and task dependencies in one fast, clear interface.
+              <p className="mt-5 max-w-2xl text-sm leading-relaxed text-app-muted md:text-base">
+                Task-In unites project management, relational task dependencies, and asynchronous outbox activity logs in a single, lightning-fast workspace designed for high-performance teams.
               </p>
             </div>
 
             <div className="grid gap-4 md:grid-cols-3">
               <FeatureCard
-                title="Decision-ready"
-                description="Track progress, blockers, and workload in a single pass."
+                title="Dependency Graphs"
+                description="Map relational links (blocking, child context) directly inside task views."
               />
               <FeatureCard
-                title="Seamless flow"
-                description="Navigate from project summaries to task details instantly."
+                title="Asynchronous Logs"
+                description="Audit precise field changes and lifecycle deltas out-of-band."
               />
               <FeatureCard
-                title="Team context"
-                description="Keep teams and dependencies visible where work happens."
+                title="Optimistic Comments"
+                description="Collaborate in real-time with version-locked comments and team tags."
               />
             </div>
           </div>
