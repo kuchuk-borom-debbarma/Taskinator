@@ -1,42 +1,33 @@
----
-gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
-status: unknown
-last_updated: "2026-05-23T11:25:00.000Z"
-progress:
-  total_phases: 5
-  completed_phases: 5
-  total_plans: 6
-  completed_plans: 6
-  percent: 100
----
+# Project State: Project-Level Throttling
 
-# Project State: CWB Automation
+## Project Reference
+- **Core Value**: Prevent any single project from starving system resources (DB, Kafka, CPU, Memory).
+- **Current Focus**: Roadmap established, ready for phase 1 initialization.
 
-## Current Status
+## Current Position
+- **Phase**: 0 (Not started)
+- **Plan**: N/A
+- **Status**: Initialization
+- **Progress**: [----------] 0%
 
-- **Phase:** Milestone Complete
-- **Milestone:** CWB Automation Implementation Complete
-- **Next Step:** None.
+## Performance Metrics
+- **Throttling Overhead**: TBD (< 5ms target)
+- **Fairness Index**: TBD
+- **Rejection Rate**: TBD
 
-## Completed Tasks
-- [x] Questioning: Migration, Execution, Testing preferences clarified.
-- [x] Research: TaskService and AutoAction code mapped.
-- [x] Requirements: CWB functional/non-functional specs documented.
-- [x] Roadmap: 5-phase implementation plan established.
-- [x] Phase 1: Database & Schema Evolution complete.
-- [x] Phase 2: Pre-Action Guards (Preventive) complete.
-- [x] Phase 3: Post-Action Cascades (Reactive) complete.
-- [x] Phase 4: UI Metadata & Cleanup complete.
-- [x] Phase 5: Verification & Hardening complete.
+## Accumulated Context
+### Key Decisions
+- Use `rate-limiter-flexible` for API-level throttling (Research finding).
+- Use `Bottleneck` for background task concurrency (Research finding).
+- Use SQL Window Functions for fair-share outbox fetching (Research finding).
 
-## Active Blockers
+### Todos
+- [ ] Initialize Phase 1
+- [ ] Setup Redis for throttling state
 
-- None.
+### Blockers
+- None
 
-## Memory
-
-- **Migration Policy:** Wipe legacy data (Fresh Start).
-- **Execution Policy:** Kafka Native for cascades.
-- **Testing Policy:** E2E Heavy.
+## Session Continuity
+- **Last Action**: Created ROADMAP.md and STATE.md.
+- **Next Step**: Start Phase 1: Database & Schema Evolution.

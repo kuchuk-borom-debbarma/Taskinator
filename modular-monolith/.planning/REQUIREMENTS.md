@@ -29,8 +29,26 @@
 - **NFR-1**: Throttling check overhead must be < 5ms per request.
 - **NFR-2**: System must not deadlock due to throttling-induced delays (reject instead of wait).
 
+## Traceability
+
+| Requirement | Phase | Status |
+|-------------|-------|--------|
+| REQ-ID-1 | Phase 1 | Pending |
+| REQ-ID-2 | Phase 1 | Pending |
+| REQ-ID-3 | Phase 3 | Pending |
+| REQ-ID-4 | Phase 2 | Pending |
+| REQ-ID-5 | Phase 2 | Pending |
+| REQ-ID-6 | Phase 3 | Pending |
+| REQ-ID-7 | Phase 3 | Pending |
+| REQ-ID-8 | Phase 4 | Pending |
+| REQ-ID-9 | Phase 4 | Pending |
+| NFR-1 | Phase 3 | Pending |
+| NFR-2 | Phase 4 | Pending |
+| US-1 | Phase 5 | Pending |
+| US-2 | Phase 5 | Pending |
+| US-3 | Phase 5 | Pending |
+
 ## Definition of Done
 - [ ] Load test demonstrates Project A hitting limits while Project B remains unaffected.
 - [ ] Metering metrics visible in logs/Prometheus.
 - [ ] All `outbox_events` have valid `fk_project_id`.
-
