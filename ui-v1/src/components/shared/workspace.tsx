@@ -1,4 +1,4 @@
-import type { PropsWithChildren, ReactNode } from 'react';
+import { useState, type PropsWithChildren, type ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import { AlertCircle, CheckCircle2, Circle, Clock, X } from 'lucide-react';
 import { clsx } from 'clsx';
@@ -322,4 +322,142 @@ function getPriorityMeta(priority: number) {
     return { label: 'Low', className: 'bg-app-neutral/12 text-app-neutral' };
   }
   return { label: `Priority ${priority}`, className: 'bg-app-ink/10 text-app-ink' };
+}
+
+export function CustomInlineSelect({
+  value,
+  onChange,
+  onClose,
+  options,
+  type = 'text',
+}: {
+  value: string | number;
+  onChange: (v: any) => void;
+  onClose: () => void;
+  options: { label: string; value: string | number }[];
+  type?: 'text' | 'number';
+}) {
+  const isCustom = !options.find((o) => String(o.value) === String(value)) && value !== '';
+  const [mode, setMode] = useState<'select' | 'input'>(isCustom ? 'input' : 'select');
+  const [draft, setDraft] = useState(value);
+
+  const handleInputBlur = () => {
+    const val = type === 'number' ? Number(draft) : draft;
+    onChange(val);
+    onClose();
+  };
+
+  if (mode === 'select') {
+    return (
+      <select
+        autoFocus
+        value={value}
+        onChange={(e) => {
+          if (e.target.value === '__OTHER__') {
+            setMode('input');
+            setDraft('');
+          } else {
+            const val = type === 'number' ? Number(e.target.value) : e.target.value;
+            onChange(val);
+            onClose();
+          }
+        }}
+        onBlur={onClose}
+        className="w-full rounded-xl border border-app-line bg-white/50 px-2 py-1.5 text-sm outline-none shadow-sm cursor-pointer"
+      >
+        {options.map((o) => (
+          <option key={o.value} value={o.value}>
+            {o.label}
+          </option>
+        ))}
+        <option value="__OTHER__">Other (Custom)...</option>
+      </select>
+    );
+  }
+
+  return (
+    <input
+      autoFocus
+      type={type}
+      value={draft}
+      onChange={(e) => setDraft(e.target.value)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter') {
+          handleInputBlur();
+        } else if (e.key === 'Escape') {
+          onClose();
+        }
+      }}
+      onBlur={handleInputBlur}
+      placeholder={type === 'number' ? 'Enter a number...' : 'Type custom value...'}
+      className="w-full rounded-xl border border-app-accent bg-white px-2 py-1.5 text-sm outline-none shadow-sm focus:ring-2 focus:ring-app-accent/10"
+    />
+  );
+}
+
+export function CustomFormSelect({
+  label,
+  value,
+  onChange,
+  options,
+  type = 'text',
+  placeholder,
+}: {
+  label: string;
+  value: string | number;
+  onChange: (v: any) => void;
+  options: { label: string; value: string | number }[];
+  type?: 'text' | 'number';
+  placeholder?: string;
+}) {
+  const isCustomValue = !options.find((o) => String(o.value) === String(value)) && value !== '';
+  const [isCustom, setIsCustom] = useState(isCustomValue);
+  const [customVal, setCustomVal] = useState(isCustomValue ? String(value) : '');
+
+  const handleSelectChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const val = e.target.value;
+    if (val === '__OTHER__') {
+      setIsCustom(true);
+      onChange(type === 'number' ? 0 : '');
+    } else {
+      setIsCustom(false);
+      onChange(type === 'number' ? Number(val) : val);
+    }
+  };
+
+  const handleInputChange = (val: string) => {
+    setCustomVal(val);
+    onChange(type === 'number' ? Number(val) : val);
+  };
+
+  return (
+    <div className="space-y-2">
+      <label className="block">
+        <span className="mb-2 block text-sm font-medium text-app-ink">{label}</span>
+        <select
+          value={isCustom ? '__OTHER__' : value}
+          onChange={handleSelectChange}
+          className="w-full rounded-2xl border border-app-line bg-white/85 px-4 py-3 text-sm text-app-ink outline-none transition focus:border-app-accent focus:ring-4 focus:ring-app-accent/10 cursor-pointer"
+        >
+          {options.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+          <option value="__OTHER__">Other (Custom)...</option>
+        </select>
+      </label>
+
+      {isCustom && (
+        <TextField
+          type={type}
+          label={`Custom ${label}`}
+          value={customVal}
+          onChange={handleInputChange}
+          placeholder={placeholder || `Enter custom ${label.toLowerCase()}...`}
+          required
+        />
+      )}
+    </div>
+  );
 }

@@ -3,9 +3,11 @@ import { Link } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, ArrowRight, Copy, Loader2, Network, PencilLine, Plus, Save, Trash2, X, AlertTriangle, ShieldAlert } from 'lucide-react';
 import { useApi } from '../../hooks/useApi';
-import type { TaskLink } from '../../api/types';
+import type { TaskLink, TaskStatus, TaskPriority } from '../../api/types';
 import {
   AppModal,
+  CustomFormSelect,
+  CustomInlineSelect,
   EmptyState,
   LoadingPane,
   PriorityBadge,
@@ -30,16 +32,16 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
   const [isEditing, setIsEditing] = useState(false);
   const [titleDraft, setTitleDraft] = useState('');
   const [descriptionDraft, setDescriptionDraft] = useState('');
-  const [statusDraft, setStatusDraft] = useState('');
-  const [priorityDraft, setPriorityDraft] = useState(0);
+  const [statusDraft, setStatusDraft] = useState<TaskStatus>('');
+  const [priorityDraft, setPriorityDraft] = useState<TaskPriority>(0);
   const [teamIdDraft, setTeamIdDraft] = useState<string | null>(null);
   const [memberIdDraft, setMemberIdDraft] = useState<string | null>(null);
   const [dueDateDraft, setDueDateDraft] = useState<string>('');
   const [sliderDelayDays, setSliderDelayDays] = useState(0);
 
   const [inlineDraft, setInlineDraft] = useState<{
-    status: string;
-    priority: number;
+    status: TaskStatus;
+    priority: TaskPriority;
     teamId: string | null;
     memberId: string | null;
     dueDate: string | null;
@@ -380,7 +382,7 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
                 isEditing={activeInlineField === 'status'}
                 onEditClick={() => setActiveInlineField('status')}
                 editNode={
-                  <CustomSelect
+                  <CustomInlineSelect
                     value={inlineDraft.status}
                     onChange={(val) => handleInlineChange({ status: val })}
                     onClose={() => setActiveInlineField(null)}
@@ -400,7 +402,7 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
                 isEditing={activeInlineField === 'priority'}
                 onEditClick={() => setActiveInlineField('priority')}
                 editNode={
-                  <CustomSelect
+                  <CustomInlineSelect
                     type="number"
                     value={inlineDraft.priority}
                     onChange={(val) => handleInlineChange({ priority: val })}
@@ -756,32 +758,29 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
               <TextField type="date" label="Due Date" value={dueDateDraft} onChange={setDueDateDraft} />
               
               <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-app-muted">Status</p>
-                  <select
-                    value={statusDraft}
-                    onChange={(e) => setStatusDraft(e.target.value)}
-                    className="w-full rounded-xl border border-app-line bg-white/50 px-3 py-2 text-sm outline-none shadow-sm cursor-pointer"
-                  >
-                    <option value="TODO">Todo</option>
-                    <option value="IN_PROGRESS">In Progress</option>
-                    <option value="DONE">Done</option>
-                    <option value="CANCELED">Canceled</option>
-                  </select>
-                </div>
-                <div className="space-y-2">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-app-muted">Priority</p>
-                  <select
-                    value={priorityDraft}
-                    onChange={(e) => setPriorityDraft(Number(e.target.value))}
-                    className="w-full rounded-xl border border-app-line bg-white/50 px-3 py-2 text-sm outline-none shadow-sm cursor-pointer"
-                  >
-                    <option value={0}>Urgent (P0)</option>
-                    <option value={1}>High (P1)</option>
-                    <option value={2}>Medium (P2)</option>
-                    <option value={3}>Low (P3)</option>
-                  </select>
-                </div>
+                <CustomFormSelect
+                  label="Status"
+                  value={statusDraft}
+                  onChange={setStatusDraft}
+                  options={[
+                    { label: 'Todo', value: 'TODO' },
+                    { label: 'In Progress', value: 'IN_PROGRESS' },
+                    { label: 'Done', value: 'DONE' },
+                    { label: 'Canceled', value: 'CANCELED' },
+                  ]}
+                />
+                <CustomFormSelect
+                  label="Priority"
+                  value={priorityDraft}
+                  onChange={setPriorityDraft}
+                  type="number"
+                  options={[
+                    { label: 'Urgent (P0)', value: 0 },
+                    { label: 'High (P1)', value: 1 },
+                    { label: 'Medium (P2)', value: 2 },
+                    { label: 'Low (P3)', value: 3 },
+                  ]}
+                />
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -1182,73 +1181,4 @@ function DependencyCard({
   );
 }
 
-function CustomSelect({
-  value,
-  onChange,
-  onClose,
-  options,
-  type = 'text',
-}: {
-  value: string | number;
-  onChange: (v: any) => void;
-  onClose: () => void;
-  options: { label: string; value: string | number }[];
-  type?: 'text' | 'number';
-}) {
-  const isCustom = !options.find((o) => String(o.value) === String(value)) && value !== '';
-  const [mode, setMode] = useState<'select' | 'input'>(isCustom ? 'input' : 'select');
-  const [draft, setDraft] = useState(value);
 
-  const handleInputBlur = () => {
-    const val = type === 'number' ? Number(draft) : draft;
-    onChange(val);
-    onClose();
-  };
-
-  if (mode === 'select') {
-    return (
-      <select
-        autoFocus
-        value={value}
-        onChange={(e) => {
-          if (e.target.value === '__OTHER__') {
-            setMode('input');
-            setDraft('');
-          } else {
-            const val = type === 'number' ? Number(e.target.value) : e.target.value;
-            onChange(val);
-            onClose();
-          }
-        }}
-        onBlur={onClose}
-        className="w-full rounded-xl border border-app-line bg-white/50 px-2 py-1.5 text-sm outline-none shadow-sm cursor-pointer"
-      >
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>
-            {o.label}
-          </option>
-        ))}
-        <option value="__OTHER__">Other (Custom)...</option>
-      </select>
-    );
-  }
-
-  return (
-    <input
-      autoFocus
-      type={type}
-      value={draft}
-      onChange={(e) => setDraft(e.target.value)}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter') {
-          handleInputBlur();
-        } else if (e.key === 'Escape') {
-          onClose();
-        }
-      }}
-      onBlur={handleInputBlur}
-      placeholder={type === 'number' ? 'Enter a number...' : 'Type custom value...'}
-      className="w-full rounded-xl border border-app-accent bg-white px-2 py-1.5 text-sm outline-none shadow-sm focus:ring-2 focus:ring-app-accent/10"
-    />
-  );
-}

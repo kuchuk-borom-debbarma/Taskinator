@@ -1,4 +1,5 @@
 export type TaskStatus = 'TODO' | 'IN_PROGRESS' | 'DONE' | (string & {});
+export type TaskPriority = 0 | 1 | 2 | 3 | number;
 
 export interface PaginationArgs {
   first?: number;
@@ -44,7 +45,7 @@ export interface ProjectTask {
   title: string;
   description: string;
   status: TaskStatus;
-  priority: number;
+  priority: TaskPriority;
   dueDate?: string;
   project?: Project;
   team?: Team;

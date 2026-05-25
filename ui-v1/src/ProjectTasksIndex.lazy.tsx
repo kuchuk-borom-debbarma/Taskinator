@@ -3,9 +3,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link, useNavigate, useParams, useSearch } from '@tanstack/react-router';
 import { ArrowLeft, ArrowRight, Filter, FolderKanban, Loader2, Plus, Search } from 'lucide-react';
 import { useApi } from './hooks/useApi';
-import type { ProjectTask } from './api/types';
+import type { ProjectTask, TaskStatus, TaskPriority } from './api/types';
 import {
   AppModal,
+  CustomFormSelect,
   EmptyState,
   PriorityBadge,
   StatusBadge,
@@ -40,8 +41,8 @@ export default function ProjectTasksIndex() {
   const [showCreate, setShowCreate] = useState(false);
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [status, setStatus] = useState<'TODO' | 'IN_PROGRESS' | 'DONE'>('TODO');
-  const [priority, setPriority] = useState(2);
+  const [status, setStatus] = useState<TaskStatus>('TODO');
+  const [priority, setPriority] = useState<TaskPriority>(2);
   const [dueDate, setDueDate] = useState('');
 
   // Fetch all teams for the dropdown filter
@@ -371,31 +372,28 @@ export default function ProjectTasksIndex() {
           <TextField label="Title" value={title} onChange={setTitle} placeholder="Write launch checklist" required />
           <TextAreaField label="Description" value={description} onChange={setDescription} placeholder="Describe the outcome and any key notes." />
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <label className="block">
-              <span className="mb-2 block text-sm font-medium text-app-ink">Status</span>
-              <select
-                value={status}
-                onChange={(event) => setStatus(event.target.value as typeof status)}
-                className="w-full rounded-2xl border border-app-line bg-white/85 px-4 py-3 text-sm text-app-ink outline-none transition focus:border-app-accent focus:ring-4 focus:ring-app-accent/10"
-              >
-                <option value="TODO">Todo</option>
-                <option value="IN_PROGRESS">In progress</option>
-                <option value="DONE">Done</option>
-              </select>
-            </label>
-            <label className="block">
-              <span className="mb-2 block text-sm font-medium text-app-ink">Priority</span>
-              <select
-                value={priority}
-                onChange={(event) => setPriority(Number(event.target.value))}
-                className="w-full rounded-2xl border border-app-line bg-white/85 px-4 py-3 text-sm text-app-ink outline-none transition focus:border-app-accent focus:ring-4 focus:ring-app-accent/10"
-              >
-                <option value={0}>Urgent</option>
-                <option value={1}>High</option>
-                <option value={2}>Medium</option>
-                <option value={3}>Low</option>
-              </select>
-            </label>
+            <CustomFormSelect
+              label="Status"
+              value={status}
+              onChange={setStatus}
+              options={[
+                { label: 'Todo', value: 'TODO' },
+                { label: 'In progress', value: 'IN_PROGRESS' },
+                { label: 'Done', value: 'DONE' },
+              ]}
+            />
+            <CustomFormSelect
+              label="Priority"
+              value={priority}
+              onChange={setPriority}
+              type="number"
+              options={[
+                { label: 'Urgent', value: 0 },
+                { label: 'High', value: 1 },
+                { label: 'Medium', value: 2 },
+                { label: 'Low', value: 3 },
+              ]}
+            />
             <TextField type="date" label="Due Date" value={dueDate} onChange={setDueDate} />
           </div>
           <div className="flex flex-wrap gap-3 pt-2">
