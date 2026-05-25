@@ -518,6 +518,7 @@ export class TaskAutomationListener {
         created_by: string;
         updated_by: string;
         priority: number | null;
+        due_date: Date | null;
         created_at: Date;
         updated_at: Date;
         direct_incoming_count: number | null;
@@ -539,6 +540,7 @@ export class TaskAutomationListener {
             createdBy: row.created_by,
             updatedBy: row.updated_by,
             priority: row.priority ?? 0,
+            dueDate: row.due_date,
             createdAt: row.created_at,
             updatedAt: row.updated_at,
             directIncomingCount: row.direct_incoming_count ?? 0,

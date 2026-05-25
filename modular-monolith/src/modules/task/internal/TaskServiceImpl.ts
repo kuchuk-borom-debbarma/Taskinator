@@ -151,6 +151,7 @@ export class TaskServiceImpl implements TaskService {
         description?: string | null;
         status?: string | null;
         priority?: number | null;
+        dueDate?: string | null;
         traceId?: string | null;
     }): Promise<Task> {
         logger.info(
@@ -174,6 +175,7 @@ export class TaskServiceImpl implements TaskService {
                 title: result.title,
                 status: result.status,
                 priority: result.priority,
+                dueDate: result.dueDate ? result.dueDate.toISOString() : null,
                 actorId: param.actorId,
                 traceId: param.traceId,
             },
@@ -194,6 +196,7 @@ export class TaskServiceImpl implements TaskService {
         teamId?: string | null;
         memberId?: string | null;
         priority?: number | null;
+        dueDate?: string | null;
         traceId?: string | null;
     }): Promise<Task> {
         logger.info(
@@ -222,6 +225,7 @@ export class TaskServiceImpl implements TaskService {
                 title: result.title,
                 status: result.status,
                 priority: result.priority,
+                dueDate: result.dueDate ? result.dueDate.toISOString() : null,
                 actorId: param.actorId,
                 traceId: param.traceId,
                 old: {
@@ -230,6 +234,7 @@ export class TaskServiceImpl implements TaskService {
                     title: (result as any).prev_title,
                     status: (result as any).prev_status,
                     priority: (result as any).prev_priority,
+                    dueDate: (result as any).prev_due_date,
                 },
             },
         });

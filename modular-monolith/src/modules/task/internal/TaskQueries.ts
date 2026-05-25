@@ -59,6 +59,7 @@ export const getTasksPage = async (
             created_by AS "createdBy",
             updated_by AS "updatedBy",
             priority,
+            due_date AS "dueDate",
             created_at AS "createdAt",
             created_at::text as "epochPrecision",
             updated_at AS "updatedAt",
@@ -153,6 +154,7 @@ export const getTasksByIds = async (ids: string[]): Promise<Task[]> => {
             created_by AS "createdBy",
             updated_by AS "updatedBy",
             priority,
+            due_date AS "dueDate",
             created_at AS "createdAt",
             updated_at AS "updatedAt",
             direct_incoming_count AS "directIncomingCount",
@@ -187,6 +189,7 @@ export const getTasksByActorIdAndIds = async (
             created_by AS "createdBy",
             updated_by AS "updatedBy",
             priority,
+            due_date AS "dueDate",
             created_at AS "createdAt",
             updated_at AS "updatedAt",
             direct_incoming_count AS "directIncomingCount",
@@ -651,6 +654,7 @@ export const insertTask = async (param: {
     description?: string | null;
     status?: string | null;
     priority?: number | null;
+    dueDate?: string | null;
     traceId?: string | null;
 }): Promise<Task> => {
     const result = await sql<Task>`
@@ -669,6 +673,7 @@ export const insertTask = async (param: {
                 description, 
                 status, 
                 priority,
+                due_date,
                 created_by, 
                 updated_by
             )
@@ -678,6 +683,7 @@ export const insertTask = async (param: {
                 ${param.description ?? ''}, 
                 ${param.status ?? 'TODO'}, 
                 ${param.priority ?? 0},
+                ${param.dueDate ?? null}::timestamptz,
                 ${param.actorId}, 
                 ${param.actorId}
             WHERE EXISTS (SELECT 1 FROM authorized)
@@ -693,6 +699,7 @@ export const insertTask = async (param: {
                 created_by AS "createdBy", 
                 updated_by AS "updatedBy",
                 priority, 
+                due_date AS "dueDate",
                 created_at AS "createdAt", 
                 updated_at AS "updatedAt",
                 direct_incoming_count AS "directIncomingCount",
@@ -716,6 +723,7 @@ export const insertTask = async (param: {
                     'title', title,
                     'status', status,
                     'priority', priority,
+                    'dueDate', "dueDate",
                     'actorId', ${param.actorId}::text,
                     'traceId', ${param.traceId}::text
                 )
@@ -745,6 +753,7 @@ export const updateTask = async (param: {
     teamId?: string | null;
     memberId?: string | null;
     priority?: number | null;
+    dueDate?: string | null;
     traceId?: string | null;
 }): Promise<Task> => {
     // 1. Build dynamic SET fragments
@@ -756,6 +765,8 @@ export const updateTask = async (param: {
         updates.push(sql`status = ${param.status ?? 'TODO'}`);
     if (param.priority !== undefined)
         updates.push(sql`priority = ${param.priority ?? 0}`);
+    if (param.dueDate !== undefined)
+        updates.push(sql`due_date = ${param.dueDate}::timestamptz`);
 
     // Assignment updates
     if (param.teamId !== undefined) {
@@ -785,7 +796,7 @@ export const updateTask = async (param: {
 
     const result = await sql<Task>`
         WITH old_state AS (
-            SELECT fk_team_id, fk_member_id, title, status, priority
+            SELECT fk_team_id, fk_member_id, title, status, priority, due_date
             FROM project_task 
             WHERE id = ${param.taskId}::uuid
         ),
@@ -850,6 +861,7 @@ export const updateTask = async (param: {
                 created_by AS "createdBy", 
                 updated_by AS "updatedBy",
                 priority, 
+                due_date AS "dueDate",
                 created_at AS "createdAt", 
                 updated_at AS "updatedAt",
                 direct_incoming_count AS "directIncomingCount",
@@ -873,14 +885,16 @@ export const updateTask = async (param: {
                         'memberId', o.fk_member_id,
                         'title', o.title,
                         'status', o.status,
-                        'priority', o.priority
+                        'priority', o.priority,
+                        'dueDate', o.due_date
                     ),
                     'new', jsonb_build_object(
                         'teamId', u."teamId",
                         'memberId', u."memberId",
                         'title', u.title,
                         'status', u.status,
-                        'priority', u.priority
+                        'priority', u.priority,
+                        'dueDate', u."dueDate"
                     ),
                     'actorId', ${param.actorId}::text,
                     'traceId', ${param.traceId}::text

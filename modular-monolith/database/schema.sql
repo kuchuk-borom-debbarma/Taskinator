@@ -77,6 +77,7 @@ CREATE TABLE project_task (
     prev_title TEXT,
     prev_team_id UUID,
     prev_member_id TEXT,
+    due_date TIMESTAMP WITH TIME ZONE,
     CONSTRAINT fk_task_project_id CHECK (fk_project_id IS NOT NULL)
 );
 

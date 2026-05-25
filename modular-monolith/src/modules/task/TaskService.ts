@@ -16,6 +16,7 @@ export type Task = {
     createdBy: string;
     updatedBy: string;
     priority: number;
+    dueDate: Date | null;
     createdAt: Date;
     updatedAt: Date;
     directIncomingCount: number;
@@ -190,6 +191,7 @@ export interface TaskService extends BaseService {
         description?: string | null;
         status?: string | null;
         priority?: number | null;
+        dueDate?: string | null;
         traceId?: string | null;
     }): Promise<Task>;
 
@@ -204,6 +206,7 @@ export interface TaskService extends BaseService {
         teamId?: string | null;
         memberId?: string | null;
         priority?: number | null;
+        dueDate?: string | null;
         traceId?: string | null;
     }): Promise<Task>;
 

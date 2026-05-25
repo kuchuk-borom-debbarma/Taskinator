@@ -12,6 +12,7 @@ interface CreateTaskInput {
     description?: string;
     status?: string;
     priority?: number;
+    dueDate?: string;
 }
 
 interface UpdateTaskInput {
@@ -23,6 +24,7 @@ interface UpdateTaskInput {
     teamId?: string;
     memberId?: string;
     priority?: number;
+    dueDate?: string;
 }
 
 interface UpdateTaskLinkInput {
@@ -47,7 +49,14 @@ export const taskResolvers = {
         description: (parent: Task) => parent.description,
         status: (parent: Task) => parent.status,
         priority: (parent: Task) => parent.priority,
-        dueDate: (parent: Task) => (parent as any).dueDate || null,
+        dueDate: (parent: Task) => {
+            if (!parent.dueDate) return null;
+            const date =
+                parent.dueDate instanceof Date
+                    ? parent.dueDate
+                    : new Date(parent.dueDate);
+            return Number.isNaN(date.getTime()) ? null : date.toISOString();
+        },
         project: (parent: Task, _args: any, context: GraphQLContext) => {
             return context.loaders.project.byId.load(parent.projectId);
         },
@@ -337,6 +346,7 @@ export const taskResolvers = {
                 description: input.description,
                 status: input.status,
                 priority: input.priority,
+                dueDate: input.dueDate,
             });
         },
         update: async (
@@ -356,6 +366,7 @@ export const taskResolvers = {
                 teamId: input.teamId,
                 memberId: input.memberId,
                 priority: input.priority,
+                dueDate: input.dueDate,
             });
         },
         delete: async (

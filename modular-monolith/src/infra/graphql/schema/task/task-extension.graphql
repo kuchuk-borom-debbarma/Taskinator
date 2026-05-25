@@ -93,6 +93,10 @@ input CreateTaskInput {
     Initial numeric priority. Lower is higher urgency.
     """
     priority: Int
+    """
+    Optional ISO 8601 due date.
+    """
+    dueDate: String
 }
 
 input UpdateTaskInput {
@@ -128,6 +132,10 @@ input UpdateTaskInput {
     Updated numeric priority. Lower is higher urgency.
     """
     priority: Int
+    """
+    Updated ISO 8601 due date. Omit to leave unchanged, or set to null to clear.
+    """
+    dueDate: String
 }
 
 input CreateTaskLinkInput {

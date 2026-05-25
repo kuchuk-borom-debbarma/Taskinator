@@ -20,6 +20,11 @@ export interface ProjectTaskTable {
     prev_title: string | null;
     prev_team_id: string | null;
     prev_member_id: string | null;
+    due_date: ColumnType<
+        Date | null,
+        string | Date | null | undefined,
+        string | Date | null | undefined
+    >;
     version: Generated<number>;
     created_by: string;
     updated_by: string;

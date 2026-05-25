@@ -34,17 +34,20 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
   const [priorityDraft, setPriorityDraft] = useState(0);
   const [teamIdDraft, setTeamIdDraft] = useState<string | null>(null);
   const [memberIdDraft, setMemberIdDraft] = useState<string | null>(null);
+  const [dueDateDraft, setDueDateDraft] = useState<string>('');
 
   const [inlineDraft, setInlineDraft] = useState<{
     status: string;
     priority: number;
     teamId: string | null;
     memberId: string | null;
+    dueDate: string | null;
   }>({
     status: '',
     priority: 0,
     teamId: null,
     memberId: null,
+    dueDate: null,
   });
   const [activeInlineField, setActiveInlineField] = useState<string | null>(null);
   const [isDebouncing, setIsDebouncing] = useState(false);
@@ -94,6 +97,7 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
         priority: task.priority,
         teamId: task.team?.id || null,
         memberId: task.assignedMember?.id || null,
+        dueDate: task.dueDate || null,
       });
     }
   }, [task]);
@@ -118,6 +122,7 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
         priority: next.priority,
         teamId: next.teamId,
         memberId: next.memberId,
+        dueDate: next.dueDate,
       }).then(() => {
         queryClient.invalidateQueries({ queryKey: ['task-detail', taskId] });
         queryClient.invalidateQueries({ queryKey: ['tasks', task!.project?.id] });
@@ -180,6 +185,7 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
         priority: priorityDraft,
         teamId: teamIdDraft,
         memberId: memberIdDraft,
+        dueDate: dueDateDraft ? new Date(dueDateDraft).toISOString() : null,
       });
     },
     onSuccess: (updated) => {
@@ -341,6 +347,7 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
                 setPriorityDraft(task.priority);
                 setTeamIdDraft(task.team?.id || null);
                 setMemberIdDraft(task.assignedMember?.id || null);
+                setDueDateDraft(task.dueDate ? new Date(task.dueDate).toISOString().split('T')[0] : '');
                 setIsEditing(true);
               }}
               className="inline-flex items-center gap-2 rounded-full border border-app-line bg-white/80 px-4 py-2 text-sm font-semibold text-app-ink transition hover:border-app-ink/20"
@@ -451,6 +458,23 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
                 : (task.team?.name || 'No team assigned')}
             </MetaItem>
             <MetaItem label="Project" value={task.project?.name || 'No project'} />
+            <MetaItem
+              label="Due Date"
+              isEditing={activeInlineField === 'dueDate'}
+              onEditClick={() => setActiveInlineField('dueDate')}
+              editNode={
+                <input
+                  type="date"
+                  autoFocus
+                  value={inlineDraft.dueDate ? inlineDraft.dueDate.split('T')[0] : ''}
+                  onChange={(e) => handleInlineChange({ dueDate: e.target.value ? new Date(e.target.value).toISOString() : null })}
+                  onBlur={() => setActiveInlineField(null)}
+                  className="w-full rounded-xl border border-app-line bg-white/50 px-2 py-1.5 text-sm outline-none shadow-sm cursor-pointer"
+                />
+              }
+            >
+              {inlineDraft.dueDate ? formatDate(inlineDraft.dueDate) : (task.dueDate ? formatDate(task.dueDate) : 'No due date')}
+            </MetaItem>
             <div className="grid grid-cols-2 gap-3">
               <MetaItem label="Created" value={formatDate(task.createdAt)} />
               <MetaItem label="Updated" value={formatDate(task.updatedAt)} />
@@ -596,6 +620,7 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
             <div className="space-y-4 max-h-[70vh] overflow-y-auto px-1">
               <TextField label="Title" value={titleDraft} onChange={setTitleDraft} />
               <TextAreaField label="Description" value={descriptionDraft} onChange={setDescriptionDraft} rows={4} />
+              <TextField type="date" label="Due Date" value={dueDateDraft} onChange={setDueDateDraft} />
               
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">

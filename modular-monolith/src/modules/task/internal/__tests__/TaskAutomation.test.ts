@@ -19,6 +19,7 @@ const mockTask: Task = {
     createdBy: actorId,
     updatedBy: actorId,
     priority: 0,
+    dueDate: null,
     createdAt: new Date('2026-05-24T00:00:00.000Z'),
     updatedAt: new Date('2026-05-24T00:00:00.000Z'),
     directIncomingCount: 0,

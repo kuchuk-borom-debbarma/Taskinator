@@ -36,6 +36,7 @@ export default function ProjectTasksIndex() {
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState<'TODO' | 'IN_PROGRESS' | 'DONE'>('TODO');
   const [priority, setPriority] = useState(2);
+  const [dueDate, setDueDate] = useState('');
 
   const { data, isLoading } = useQuery({
     queryKey: ['tasks', projectId, cursor, direction],
@@ -60,6 +61,7 @@ export default function ProjectTasksIndex() {
       description: description.trim() || undefined,
       status,
       priority,
+      dueDate: dueDate || undefined,
     }),
     onSuccess: (task) => {
       queryClient.invalidateQueries({ queryKey: ['tasks', projectId] });
@@ -75,6 +77,7 @@ export default function ProjectTasksIndex() {
       setDescription('');
       setStatus('TODO');
       setPriority(2);
+      setDueDate('');
       navigate({ to: '/projects/$projectId/tasks/$taskId', params: { projectId: projectId!, taskId: task.id } });
     },
   });
@@ -238,7 +241,7 @@ export default function ProjectTasksIndex() {
         >
           <TextField label="Title" value={title} onChange={setTitle} placeholder="Write launch checklist" required />
           <TextAreaField label="Description" value={description} onChange={setDescription} placeholder="Describe the outcome and any key notes." />
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <label className="block">
               <span className="mb-2 block text-sm font-medium text-app-ink">Status</span>
               <select
@@ -264,6 +267,7 @@ export default function ProjectTasksIndex() {
                 <option value={3}>Low</option>
               </select>
             </label>
+            <TextField type="date" label="Due Date" value={dueDate} onChange={setDueDate} />
           </div>
           <div className="flex flex-wrap gap-3 pt-2">
             <button
