@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ArrowRight, CheckCircle2, Loader2, ShieldCheck, Sparkles } from 'lucide-react';
+import { ArrowRight, CheckCircle2, Loader2, Sparkles } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { InlineMessage, SurfaceCardStrong, TextField } from '../shared/workspace';
 
@@ -152,20 +152,17 @@ export const AuthScreen: React.FC = () => {
               </button>
             </form>
 
-            <div className="mt-8 flex items-center justify-between gap-4 rounded-[28px] bg-app-accent/10 px-4 py-4 text-sm text-app-muted">
-              <div className="flex items-center gap-2">
-                <ShieldCheck size={16} className="text-app-accent-2" />
-                Secure local session storage
-              </div>
+            <div className="mt-6 text-center">
               <button
+                type="button"
                 onClick={() => {
                   setIsLogin(!isLogin);
                   setError(null);
                   setMessage(null);
                 }}
-                className="font-semibold text-app-ink transition hover:text-app-accent"
+                className="text-xs font-semibold text-app-muted hover:text-app-accent transition-colors duration-300 cursor-pointer"
               >
-                {isLogin ? 'Need an account?' : 'Already have one?'}
+                {isLogin ? "Don't have an account? Sign up" : "Already have an account? Sign in"}
               </button>
             </div>
           </SurfaceCardStrong>
