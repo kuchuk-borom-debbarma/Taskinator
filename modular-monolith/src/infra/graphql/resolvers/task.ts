@@ -326,6 +326,28 @@ export const taskResolvers = {
                 (res): res is Task => res !== null && !(res instanceof Error),
             );
         },
+        simulateSlippage: async (
+            _parent: any,
+            {
+                projectId,
+                taskId,
+                delayDays,
+            }: { projectId: string; taskId: string; delayDays: number },
+            context: GraphQLContext,
+        ) => {
+            if (!context.userId) throw new UnauthorizedError();
+            const slips = await taskService.simulateSlippage(
+                context.userId,
+                projectId,
+                taskId,
+                delayDays,
+            );
+            return slips.map((s) => ({
+                ...s,
+                originalDueDate: s.originalDueDate?.toISOString() || null,
+                simulatedDueDate: s.simulatedDueDate?.toISOString() || null,
+            }));
+        },
     },
 
     Mutation: {

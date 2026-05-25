@@ -225,8 +225,33 @@ extend type Query {
     Fetches multiple tasks by ID. Returns only those the user is authorized to view.
     """
     tasks(ids: [ID!]!): [Task!]!
+
+    """
+    Simulates the cascading slippage risk for downstream tasks blocked by a delayed task.
+    """
+    simulateSlippage(
+        projectId: ID!
+        taskId: ID!
+        delayDays: Int!
+    ): [SimulatedSlip!]!
 }
 
 extend type Mutation {
     task: TaskMutation!
+}
+
+enum RiskLevel {
+    LOW
+    MEDIUM
+    HIGH
+}
+
+type SimulatedSlip {
+    taskId: ID!
+    title: String!
+    originalDueDate: String
+    simulatedDueDate: String
+    slipDays: Int!
+    riskLevel: RiskLevel!
+    bufferRemainingDays: Int!
 }

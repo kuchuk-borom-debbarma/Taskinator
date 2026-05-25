@@ -20,6 +20,8 @@ import type {
     GetTaskLinksParam,
     LinkConnection,
     PaginationParams,
+    RiskLevel,
+    SimulatedSlip,
     Task,
     TaskAutomationRule,
     TaskConnection,
@@ -1080,6 +1082,131 @@ export class TaskServiceImpl implements TaskService {
             teamId,
             userIds: Array.from(userIdsSet),
         }));
+    }
+
+    async simulateSlippage(
+        userId: string,
+        projectId: string,
+        taskId: string,
+        delayDays: number,
+    ): Promise<SimulatedSlip[]> {
+        // 1. Authorize: check if user has access to the project
+        const member = await db
+            .selectFrom('project_member')
+            .select('id')
+            .where('fk_project_id', '=', projectId)
+            .where('fk_user_id', '=', userId)
+            .executeTakeFirst();
+
+        const project = await db
+            .selectFrom('project')
+            .select('fk_user_id')
+            .where('id', '=', projectId)
+            .executeTakeFirst();
+
+        const isCreator = project?.fk_user_id === userId;
+        if (!member && !isCreator) {
+            throw new ValidationError(
+                'Actor does not have permission to access this project',
+            );
+        }
+
+        // 2. Fetch target task
+        const task = await db
+            .selectFrom('project_task')
+            .select(['id', 'title', 'due_date as dueDate'])
+            .where('id', '=', taskId)
+            .where('fk_project_id', '=', projectId)
+            .executeTakeFirst();
+
+        if (!task) {
+            throw new NotFoundError(
+                `Task with ID ${taskId} not found in project ${projectId}`,
+            );
+        }
+
+        // If target task doesn't have a due_date, default to today's date to allow simulation
+        const originDate = task.dueDate ? new Date(task.dueDate) : new Date();
+
+        // 3. Fetch unique descendants of task
+        const descendants = await db
+            .selectFrom('task_reachability')
+            .innerJoin(
+                'project_task',
+                'project_task.id',
+                'task_reachability.descendant_task_id',
+            )
+            .select([
+                'project_task.id',
+                'project_task.title',
+                'project_task.due_date as dueDate',
+            ])
+            .where('task_reachability.ancestor_task_id', '=', taskId)
+            .where('task_reachability.fk_project_id', '=', projectId)
+            .where('task_reachability.depth', '>', 0)
+            .distinct()
+            .execute();
+
+        const results: SimulatedSlip[] = [];
+
+        // 4. Calculate for slipped task itself
+        const selfSimulatedDueDate = new Date(
+            originDate.getTime() + delayDays * 24 * 60 * 60 * 1000,
+        );
+        results.push({
+            taskId: task.id,
+            title: task.title,
+            originalDueDate: task.dueDate ? new Date(task.dueDate) : null,
+            simulatedDueDate: selfSimulatedDueDate,
+            slipDays: delayDays,
+            riskLevel: delayDays > 0 ? 'HIGH' : 'LOW',
+            bufferRemainingDays: 0,
+        });
+
+        // 5. Calculate for each descendant
+        for (const desc of descendants) {
+            const descOrigDate = desc.dueDate ? new Date(desc.dueDate) : null;
+            let simulatedDueDate: Date | null = null;
+            let slipDays = 0;
+            let riskLevel: RiskLevel = 'LOW';
+            let bufferRemainingDays = 999; // Default infinite buffer if no dates
+
+            if (descOrigDate) {
+                // Calculate Slack = descOrigDate - originDate
+                const slackMs = descOrigDate.getTime() - originDate.getTime();
+                const slackDays = Math.max(
+                    0,
+                    Math.floor(slackMs / (24 * 60 * 60 * 1000)),
+                );
+
+                // Calculate Delay = max(0, delayDays - slackDays)
+                slipDays = Math.max(0, delayDays - slackDays);
+                simulatedDueDate = new Date(
+                    descOrigDate.getTime() + slipDays * 24 * 60 * 60 * 1000,
+                );
+                bufferRemainingDays = Math.max(0, slackDays - delayDays);
+
+                if (slipDays > 0) {
+                    riskLevel = 'HIGH';
+                } else if (delayDays >= 0.8 * slackDays) {
+                    riskLevel = 'MEDIUM';
+                } else {
+                    riskLevel = 'LOW';
+                }
+            }
+
+            results.push({
+                taskId: desc.id,
+                title: desc.title,
+                originalDueDate: descOrigDate,
+                simulatedDueDate: simulatedDueDate,
+                slipDays,
+                riskLevel,
+                bufferRemainingDays,
+            });
+        }
+
+        return results;
     }
 
     async init(): Promise<void> {

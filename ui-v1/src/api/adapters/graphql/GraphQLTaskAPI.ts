@@ -1,5 +1,5 @@
 import type { TaskAPI } from '../../interfaces/TaskAPI';
-import type { PageInfo, PaginationArgs, ProjectTask, TaskLink, NeighbourDirection } from '../../types';
+import type { PageInfo, PaginationArgs, ProjectTask, TaskLink, NeighbourDirection, SimulatedSlip } from '../../types';
 import { AuthenticationError } from '../../errors';
 
 import { CONFIG } from '../../../config';
@@ -372,4 +372,24 @@ export class GraphQLTaskAPI implements TaskAPI {
     );
   }
 
+  async simulateSlippage(
+    projectId: string,
+    taskId: string,
+    delayDays: number
+  ): Promise<SimulatedSlip[]> {
+    const data = await this.query<any>(gql`
+      query SimulateSlippage($projectId: ID!, $taskId: ID!, $delayDays: Int!) {
+        simulateSlippage(projectId: $projectId, taskId: $taskId, delayDays: $delayDays) {
+          taskId
+          title
+          originalDueDate
+          simulatedDueDate
+          slipDays
+          riskLevel
+          bufferRemainingDays
+        }
+      }
+    `, { projectId, taskId, delayDays });
+    return data.simulateSlippage;
+  }
 }

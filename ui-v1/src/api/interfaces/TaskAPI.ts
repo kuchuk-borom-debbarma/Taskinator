@@ -1,4 +1,4 @@
-import type { PageInfo, PaginationArgs, ProjectTask, TaskLink, NeighbourDirection } from '../types';
+import type { PageInfo, PaginationArgs, ProjectTask, TaskLink, NeighbourDirection, SimulatedSlip } from '../types';
 
 export interface TaskAPI {
   getTasks(
@@ -56,5 +56,11 @@ export interface TaskAPI {
     links: TaskLink[],
     pageInfo: PageInfo,
   }>;
+
+  simulateSlippage(
+    projectId: string,
+    taskId: string,
+    delayDays: number
+  ): Promise<SimulatedSlip[]>;
 }
 

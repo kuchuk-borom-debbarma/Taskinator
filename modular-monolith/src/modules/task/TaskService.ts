@@ -4,6 +4,18 @@ import type { BaseService } from './index.ts';
 
 export type TaskStatus = string;
 
+export type RiskLevel = 'LOW' | 'MEDIUM' | 'HIGH';
+
+export type SimulatedSlip = {
+    taskId: string;
+    title: string;
+    originalDueDate: Date | null;
+    simulatedDueDate: Date | null;
+    slipDays: number;
+    riskLevel: RiskLevel;
+    bufferRemainingDays: number;
+};
+
 export type Task = {
     id: string;
     projectId: string;
@@ -293,6 +305,13 @@ export interface TaskService extends BaseService {
     handleUnassignMemberFromTeamTasks(
         events: DomainEvent<{ teamId: string; userIds: string[] }>[],
     ): Promise<void>;
+
+    simulateSlippage(
+        userId: string,
+        projectId: string,
+        taskId: string,
+        delayDays: number,
+    ): Promise<SimulatedSlip[]>;
 }
 
 // ─── Neighbourhood (Radial Graph View) ──────────────────────────────────────

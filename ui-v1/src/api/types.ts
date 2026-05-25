@@ -125,3 +125,15 @@ export interface TaskNeighbourhood {
   hasNextPage: boolean;
   endCursor?: string;
 }
+
+export type RiskLevel = 'LOW' | 'MEDIUM' | 'HIGH';
+
+export interface SimulatedSlip {
+  taskId: string;
+  title: string;
+  originalDueDate: string | null;
+  simulatedDueDate: string | null;
+  slipDays: number;
+  riskLevel: RiskLevel;
+  bufferRemainingDays: number;
+}

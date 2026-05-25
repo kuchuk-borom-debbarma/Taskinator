@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link } from '@tanstack/react-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { ArrowLeft, ArrowRight, Copy, Loader2, Network, PencilLine, Plus, Save, Trash2, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Copy, Loader2, Network, PencilLine, Plus, Save, Trash2, X, AlertTriangle, ShieldAlert } from 'lucide-react';
 import { useApi } from '../../hooks/useApi';
 import type { TaskLink } from '../../api/types';
 import {
@@ -35,6 +35,7 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
   const [teamIdDraft, setTeamIdDraft] = useState<string | null>(null);
   const [memberIdDraft, setMemberIdDraft] = useState<string | null>(null);
   const [dueDateDraft, setDueDateDraft] = useState<string>('');
+  const [sliderDelayDays, setSliderDelayDays] = useState(0);
 
   const [inlineDraft, setInlineDraft] = useState<{
     status: string;
@@ -74,6 +75,12 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
   });
 
   const task = detail?.task;
+
+  const { data: simulatedSlips, isLoading: simulationLoading } = useQuery({
+    queryKey: ['slippage-simulation', taskId, sliderDelayDays],
+    queryFn: () => taskApi.simulateSlippage(task!.project!.id, taskId, sliderDelayDays),
+    enabled: !!task?.project?.id && sliderDelayDays > 0,
+  });
 
   // Fetch project teams for dropdown
   const { data: teamsData } = useQuery({
@@ -595,6 +602,132 @@ export const TaskDetailView: React.FC<TaskDetailViewProps> = ({ taskId, onClose 
                   setOutgoingDir('backward');
                 }}
               />
+            </div>
+          </SurfaceCardStrong>
+
+          <SurfaceCardStrong className="p-5 md:p-6">
+            <div className="mb-4 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+              <div>
+                <h2 className="text-2xl font-semibold tracking-[-0.04em] text-app-ink">Slippage Blast Radius Simulator</h2>
+                <p className="text-xs text-app-muted mt-1">Simulate cascading blocker delays across the dependency map.</p>
+              </div>
+              <div className="flex items-center gap-1.5 rounded-full bg-app-accent/10 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-app-accent self-start">
+                <ShieldAlert size={12} />
+                Graph Powered
+              </div>
+            </div>
+
+            <div className="space-y-5">
+              <div className="rounded-2xl border border-app-line/60 bg-white/40 p-4">
+                <div className="flex items-center justify-between gap-4 mb-2">
+                  <span className="text-sm font-semibold text-app-ink">Simulated Schedule Delay</span>
+                  <span className="text-sm font-bold text-app-accent px-2.5 py-1 bg-app-accent/10 rounded-xl">
+                    +{sliderDelayDays} {sliderDelayDays === 1 ? 'day' : 'days'}
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="30"
+                  value={sliderDelayDays}
+                  onChange={(e) => setSliderDelayDays(Number(e.target.value))}
+                  className="w-full h-2 rounded-lg bg-app-line accent-app-accent cursor-pointer outline-none transition"
+                />
+                <div className="flex justify-between text-[10px] text-app-muted mt-1">
+                  <span>No delay (0d)</span>
+                  <span>15 days</span>
+                  <span>30 days</span>
+                </div>
+              </div>
+
+              {sliderDelayDays === 0 ? (
+                <div className="text-center py-6 border border-dashed border-app-line rounded-2xl bg-white/20">
+                  <p className="text-sm text-app-muted">Drag the slider above to forecast cascading schedule slips!</p>
+                </div>
+              ) : simulationLoading ? (
+                <div className="flex items-center justify-center gap-2 py-8">
+                  <Loader2 size={20} className="animate-spin text-app-accent" />
+                  <span className="text-sm text-app-muted">Simulating path delays...</span>
+                </div>
+              ) : simulatedSlips && simulatedSlips.length > 0 ? (
+                <div className="space-y-4">
+                  {/* Summary Metric Badges */}
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    <div className="rounded-2xl border border-app-line bg-white/45 p-3 text-center">
+                      <div className="text-[10px] font-semibold text-app-muted uppercase tracking-wider">Blast Radius</div>
+                      <div className="text-xl font-bold text-app-ink mt-1">
+                        {simulatedSlips.length - 1} {simulatedSlips.length - 1 === 1 ? 'task' : 'tasks'}
+                      </div>
+                    </div>
+                    <div className="rounded-2xl border border-app-line bg-white/45 p-3 text-center">
+                      <div className="text-[10px] font-semibold text-app-muted uppercase tracking-wider">Critical Slips</div>
+                      <div className="text-xl font-bold text-app-danger mt-1">
+                        {simulatedSlips.filter(s => s.riskLevel === 'HIGH' && s.taskId !== taskId).length}
+                      </div>
+                    </div>
+                    <div className="rounded-2xl border border-app-line bg-white/45 p-3 text-center col-span-2 md:col-span-1">
+                      <div className="text-[10px] font-semibold text-app-muted uppercase tracking-wider">Max Chain Slip</div>
+                      <div className="text-xl font-bold text-app-warning mt-1">
+                        +{Math.max(...simulatedSlips.map(s => s.slipDays))}d
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Header alert if milestones slip */}
+                  {simulatedSlips.some(s => s.riskLevel === 'HIGH' && s.taskId !== taskId) && (
+                    <div className="flex items-start gap-2.5 rounded-2xl border border-app-danger/15 bg-app-danger/10 px-4 py-3 text-sm text-app-danger">
+                      <AlertTriangle size={18} className="shrink-0 mt-0.5" />
+                      <div>
+                        <span className="font-semibold">Milestone slip alert!</span> This simulated delay causes downstream tasks to violate their target deadlines.
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Task list showing slip details */}
+                  <div className="rounded-2xl border border-app-line bg-white/20 divide-y divide-app-line overflow-hidden max-h-[300px] overflow-y-auto">
+                    {simulatedSlips.map(slip => {
+                      const isSelf = slip.taskId === taskId;
+                      const badgeStyles = {
+                        HIGH: 'bg-app-danger/12 text-app-danger',
+                        MEDIUM: 'bg-app-accent/12 text-app-accent',
+                        LOW: 'bg-app-success/12 text-app-success',
+                      };
+
+                      return (
+                        <div key={slip.taskId} className={`p-3 flex items-center justify-between gap-4 hover:bg-white/40 transition ${isSelf ? 'bg-app-accent/5' : ''}`}>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-semibold text-app-ink truncate">{slip.title}</span>
+                              {isSelf && <span className="rounded-md bg-app-accent/10 px-1.5 py-0.5 text-[9px] font-bold text-app-accent">Delayed Task</span>}
+                            </div>
+                            <div className="text-[10px] text-app-muted mt-0.5 flex flex-wrap gap-2">
+                              <span>Due: {slip.originalDueDate ? formatDate(slip.originalDueDate) : 'No date'}</span>
+                              {slip.simulatedDueDate && (
+                                <span className="font-medium text-app-accent">
+                                  Simulated: {formatDate(slip.simulatedDueDate)}
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-center gap-3 shrink-0">
+                            <span className="text-[10px] font-bold">
+                              {slip.slipDays > 0 ? `+${slip.slipDays}d` : 'on time'}
+                            </span>
+                            <span className={`rounded-full px-2 py-0.5 text-[9px] font-bold ${badgeStyles[slip.riskLevel]}`}>
+                              {slip.riskLevel}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-6 border border-dashed border-app-line rounded-2xl bg-white/20">
+                  <p className="text-sm text-app-muted">Failed to compute schedule simulation.</p>
+                </div>
+              )}
             </div>
           </SurfaceCardStrong>
         </div>
