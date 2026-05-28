@@ -7,6 +7,9 @@ export interface TraceContext {
     traceId: string; // UUID shared across the full causal chain
     nodeId: string; // ID of the node that published the event
     depth: number; // depthIndex of the publishing node
+    publishedAt: string; // ISO timestamp of when the event was written to the outbox
+    // → passed as scheduledAtLocal to continueTrace so Topo-Tracer
+    //   can show Kafka queue latency (publish → consume gap)
 }
 
 export interface DomainEvent<T = any> {

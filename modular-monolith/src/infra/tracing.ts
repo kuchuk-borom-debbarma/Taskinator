@@ -26,6 +26,7 @@ export function getTraceEnvelope(): TraceContext | undefined {
         traceId: node.traceId,
         nodeId: node.id,
         depth: node.depthIndex,
+        publishedAt: new Date().toISOString(),
     };
 }
 
@@ -86,13 +87,16 @@ export async function traceMethod<T>(
 
     // ── Mode 2: No ALS context, but a cross-process trace header arrived ────
     if (opts.incomingTrace) {
-        const { traceId, nodeId, depth } = opts.incomingTrace;
+        const { traceId, nodeId, depth, publishedAt } = opts.incomingTrace;
         const node = Tracer.continueTrace(
             traceId,
             nodeId,
             opts.name,
             opts.nodeType || NodeType.MESSAGE_CONSUMER,
             depth,
+            undefined, // group
+            new Date(publishedAt), // scheduledAtLocal — when the event was published
+            // gives Topo-Tracer the Kafka queue latency
         );
         node.markProcessed();
         try {
