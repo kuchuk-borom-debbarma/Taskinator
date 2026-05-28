@@ -1,5 +1,6 @@
 import { db } from '../../../../infra/database/index.ts';
 import { logger } from '../../../../infra/logger/index.ts';
+import { traceMethod } from '../../../../infra/tracing.ts';
 import eventBus from '../../../../infra/utils/EventBus.ts';
 import {
     EVENT_STREAMS,
@@ -30,97 +31,113 @@ export class TaskActivityLogListener {
 
     private async handleCreated(events: DomainEvent[]) {
         if (events.length === 0) return;
-        logger.info(
-            `[Task Activity Log] Logging creation for batch of ${events.length} tasks`,
+
+        await traceMethod(
+            {
+                containerId: 'task-module',
+                containerName: 'Task Module',
+                containerType: 'Logical Domain Module',
+                name: 'activityLog.handleCreated',
+                incomingTrace: events[0]?.traceContext,
+            },
+            async () => {
+                logger.info(
+                    `[Task Activity Log] Logging creation for batch of ${events.length} tasks`,
+                );
+
+                const logs = events.map((event) => {
+                    const data = event.data;
+                    const payload: Record<string, any> = {
+                        title: data.title,
+                        status: data.status,
+                        priority: data.priority,
+                        dueDate: data.dueDate,
+                        teamId: data.teamId,
+                        memberId: data.memberId,
+                        actorId: data.actorId,
+                        traceId: data.traceId,
+                    };
+
+                    return {
+                        fk_task_id: data.taskId,
+                        fk_project_id: data.projectId,
+                        fk_user_id: data.actorId,
+                        action_type: 'task.created',
+                        payload: payload,
+                    };
+                });
+
+                await db
+                    .insertInto('task_activity_log')
+                    .values(logs as any)
+                    .execute();
+            },
         );
-
-        const logs = events.map((event) => {
-            const data = event.data;
-            const payload: Record<string, any> = {
-                title: data.title,
-                status: data.status,
-                priority: data.priority,
-                dueDate: data.dueDate,
-                teamId: data.teamId,
-                memberId: data.memberId,
-                actorId: data.actorId,
-                traceId: data.traceId,
-            };
-
-            return {
-                fk_task_id: data.taskId,
-                fk_project_id: data.projectId,
-                fk_user_id: data.actorId,
-                action_type: 'task.created',
-                payload: payload,
-            };
-        });
-
-        await db
-            .insertInto('task_activity_log')
-            .values(logs as any)
-            .execute();
     }
 
     private async handleUpdated(events: DomainEvent[]) {
         if (events.length === 0) return;
-        logger.info(
-            `[Task Activity Log] Logging updates for batch of ${events.length} tasks`,
-        );
 
-        const logs: any[] = [];
-
-        for (const event of events) {
-            const data = event.data;
-            const {
-                taskId,
-                projectId,
-                actorId,
-                old,
-                new: newState,
-                traceId,
-            } = data;
-
-            if (!old || !newState) {
-                logger.warn(
-                    `[Task Activity Log] Skipping update event for task ${taskId} due to missing old/new state`,
+        await traceMethod(
+            {
+                containerId: 'task-module',
+                containerName: 'Task Module',
+                containerType: 'Logical Domain Module',
+                name: 'activityLog.handleUpdated',
+                incomingTrace: events[0]?.traceContext,
+            },
+            async () => {
+                logger.info(
+                    `[Task Activity Log] Logging updates for batch of ${events.length} tasks`,
                 );
-                continue;
-            }
 
-            // Find changed fields
-            const changes: Record<string, { old: any; new: any }> = {};
+                const logs: any[] = [];
 
-            for (const [key, newVal] of Object.entries(newState)) {
-                const oldVal = (old as any)[key];
-                if (JSON.stringify(oldVal) !== JSON.stringify(newVal)) {
-                    changes[key] = {
-                        old: oldVal,
-                        new: newVal,
-                    };
+                for (const event of events) {
+                    const data = event.data;
+                    const {
+                        taskId,
+                        projectId,
+                        actorId,
+                        old,
+                        new: newState,
+                        traceId,
+                    } = data;
+
+                    if (!old || !newState) {
+                        logger.warn(
+                            `[Task Activity Log] Skipping update event for task ${taskId} due to missing old/new state`,
+                        );
+                        continue;
+                    }
+
+                    const changes: Record<string, { old: any; new: any }> = {};
+
+                    for (const [key, newVal] of Object.entries(newState)) {
+                        const oldVal = (old as any)[key];
+                        if (JSON.stringify(oldVal) !== JSON.stringify(newVal)) {
+                            changes[key] = { old: oldVal, new: newVal };
+                        }
+                    }
+
+                    if (Object.keys(changes).length === 0) continue;
+
+                    logs.push({
+                        fk_task_id: taskId,
+                        fk_project_id: projectId,
+                        fk_user_id: actorId,
+                        action_type: 'task.updated',
+                        payload: { changes, actorId, traceId },
+                    });
                 }
-            }
 
-            // If no fields changed, skip writing a log row
-            if (Object.keys(changes).length === 0) {
-                continue;
-            }
-
-            logs.push({
-                fk_task_id: taskId,
-                fk_project_id: projectId,
-                fk_user_id: actorId,
-                action_type: 'task.updated',
-                payload: {
-                    changes,
-                    actorId,
-                    traceId,
-                },
-            });
-        }
-
-        if (logs.length > 0) {
-            await db.insertInto('task_activity_log').values(logs).execute();
-        }
+                if (logs.length > 0) {
+                    await db
+                        .insertInto('task_activity_log')
+                        .values(logs)
+                        .execute();
+                }
+            },
+        );
     }
 }

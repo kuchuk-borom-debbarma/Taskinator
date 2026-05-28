@@ -1,4 +1,5 @@
 import { logger } from '../../../../infra/logger';
+import { traceMethod } from '../../../../infra/tracing.ts';
 import eventBus from '../../../../infra/utils/EventBus.ts';
 import type { DomainEvent } from '../../../../infra/utils/event-bus';
 import { EVENT_STREAMS, EVENT_TYPES } from '../../../../infra/utils/event-bus';
@@ -32,6 +33,17 @@ export class ProjectAggregated_ChangeUserProjectCount {
     ) {
         if (events.length === 0) return;
 
-        await authService.handleUserProjectCountSync(events);
+        await traceMethod(
+            {
+                containerId: 'auth-module',
+                containerName: 'Auth Module',
+                containerType: 'Logical Domain Module',
+                name: 'listener.handleAggregatedCounts',
+                incomingTrace: events[0]?.traceContext,
+            },
+            async () => {
+                await authService.handleUserProjectCountSync(events);
+            },
+        );
     }
 }

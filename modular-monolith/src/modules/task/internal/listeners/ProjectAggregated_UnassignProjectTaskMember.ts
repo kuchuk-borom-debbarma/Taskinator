@@ -1,4 +1,5 @@
 import { logger } from '../../../../infra/logger';
+import { traceMethod } from '../../../../infra/tracing.ts';
 import eventBus from '../../../../infra/utils/EventBus.ts';
 import {
     EVENT_STREAMS,
@@ -9,7 +10,6 @@ import { taskService } from '../../index.ts';
 
 /**
  * Execution Listener: Unassign Project Task Member
- * Specifically clears the assignment (fk_member_id) for specific users across all tasks in a project.
  * [Action]: UNASSIGN_PROJECT_TASK_MEMBER
  */
 export class ProjectAggregated_UnassignProjectTaskMember {
@@ -32,6 +32,19 @@ export class ProjectAggregated_UnassignProjectTaskMember {
     private async handleUnassignProjectTaskMember(
         events: DomainEvent<{ projectId: string; userIds: string[] }>[],
     ) {
-        await taskService.handleUnassignProjectTaskMember(events);
+        if (events.length === 0) return;
+
+        await traceMethod(
+            {
+                containerId: 'task-module',
+                containerName: 'Task Module',
+                containerType: 'Logical Domain Module',
+                name: 'listener.handleUnassignProjectTaskMember',
+                incomingTrace: events[0]?.traceContext,
+            },
+            async () => {
+                await taskService.handleUnassignProjectTaskMember(events);
+            },
+        );
     }
 }

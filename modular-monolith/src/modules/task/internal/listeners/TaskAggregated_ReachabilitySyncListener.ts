@@ -1,4 +1,5 @@
 import { logger } from '../../../../infra/logger';
+import { traceMethod } from '../../../../infra/tracing.ts';
 import eventBus from '../../../../infra/utils/EventBus.ts';
 import type { DomainEvent } from '../../../../infra/utils/event-bus';
 import {
@@ -10,14 +11,7 @@ import type { TaskReachabilityLinkChange } from '../../TaskService.ts';
 
 /**
  * Task Aggregated Listener: Reachability Sync
- *
- * Logic:
- * 1. Consumes SYNC_TASK_REACHABILITY signals.
- * 2. If 'ADD': Executes transitive closure expansion via Bridge Cross-Join.
- * 3. If 'REMOVE': Executes graph contraction and repair (Recursive Repair).
- * 4. Syncs project-wide task graph counters after repair.
  */
-//FUTURE: Optimise for database lock    .
 export class TaskAggregated_ReachabilitySyncListener {
     async init() {
         logger.info('[Task -> Reachability Listener] Initializing');
@@ -39,6 +33,19 @@ export class TaskAggregated_ReachabilitySyncListener {
             links: TaskReachabilityLinkChange[];
         }>[],
     ) {
-        await taskService.handleTaskReachabilitySync(events);
+        if (events.length === 0) return;
+
+        await traceMethod(
+            {
+                containerId: 'task-module',
+                containerName: 'Task Module',
+                containerType: 'Logical Domain Module',
+                name: 'listener.handleReachabilitySync',
+                incomingTrace: events[0]?.traceContext,
+            },
+            async () => {
+                await taskService.handleTaskReachabilitySync(events);
+            },
+        );
     }
 }

@@ -1,4 +1,5 @@
 import { logger } from '../../../../infra/logger';
+import { traceMethod } from '../../../../infra/tracing.ts';
 import eventBus from '../../../../infra/utils/EventBus.ts';
 import {
     EVENT_STREAMS,
@@ -9,8 +10,6 @@ import { taskService } from '../../index.ts';
 
 /**
  * Execution Listener: Orphan Team Tasks
- * Handles the orphaning of tasks (removing team/member associations)
- * when a team is deleted.
  */
 export class TeamAggregated_OrphanTeamTasksListener {
     async init() {
@@ -32,6 +31,19 @@ export class TeamAggregated_OrphanTeamTasksListener {
     private async handleOrphanTeamTasks(
         events: DomainEvent<{ teamIds: string[] }>[],
     ) {
-        await taskService.handleOrphanTeamTasks(events);
+        if (events.length === 0) return;
+
+        await traceMethod(
+            {
+                containerId: 'task-module',
+                containerName: 'Task Module',
+                containerType: 'Logical Domain Module',
+                name: 'listener.handleOrphanTeamTasks',
+                incomingTrace: events[0]?.traceContext,
+            },
+            async () => {
+                await taskService.handleOrphanTeamTasks(events);
+            },
+        );
     }
 }
