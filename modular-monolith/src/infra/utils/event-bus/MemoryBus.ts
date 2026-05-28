@@ -19,7 +19,10 @@ export class MemoryBus implements Bus {
             | Array<{ id?: string; key: string | null; data: any }>,
     ) {
         const items = Array.isArray(payload) ? payload : [payload];
-        const events = items.map((i) => createEvent(type, i.key, i.data, i.id));
+        // Carry traceContext from the outbox payload envelope into the DomainEvent
+        const events = items.map((i) =>
+            createEvent(type, i.key, i.data, i.id, i.data?.traceContext),
+        );
         // Emit with a small async delay to simulate Kafka's async delivery
         for (const e of events) {
             setTimeout(() => {
@@ -41,10 +44,9 @@ export class MemoryBus implements Bus {
                 processingQueue = processingQueue.then(async () => {
                     try {
                         if (options?.batch) {
+                            // Pass the full DomainEvent[] — traceContext travels in the envelope
                             await handler([e]);
                         } else {
-                            // If it's a wildcard handler, we might want to pass the type too
-                            // but the interface says (data: any)
                             await handler(e.data);
                         }
                     } catch (err) {

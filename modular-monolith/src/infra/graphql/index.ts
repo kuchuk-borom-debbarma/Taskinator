@@ -1,6 +1,8 @@
 import { createYoga } from 'graphql-yoga';
 import jwt from 'jsonwebtoken';
+import { NodeType, Tracer } from 'nodejs';
 import { logger } from '../logger';
+import { tracingContext } from '../tracing';
 import { createContext, type GraphQLContext } from './context';
 import { schema } from './schema';
 
@@ -35,7 +37,21 @@ export const yoga = createYoga<GraphQLContext>({
             logger.debug('Context initialized for anonymous user');
         }
 
-        return createContext(userId);
+        // Start a root trace in the 'gateway' container for this incoming GraphQL request
+        const rootNode = Tracer.startTrace(
+            'GraphQL Request',
+            NodeType.HTTP_SERVER,
+        );
+        rootNode.markProcessed();
+
+        // Resolve context inside the tracing AsyncLocalStorage context so resolvers inherit it
+        return new Promise<GraphQLContext>((resolve) => {
+            tracingContext.run(rootNode, () => {
+                const contextObj = createContext(userId);
+                (contextObj as any).traceNode = rootNode;
+                resolve({ ...initialContext, ...contextObj });
+            });
+        });
     },
     plugins: [
         {
@@ -44,18 +60,21 @@ export const yoga = createYoga<GraphQLContext>({
                 const operationName = args.operationName ?? 'Anonymous';
                 logger.info(`GraphQL Execution Started: ${operationName}`);
 
+                // Retrieve the active trace node from AsyncLocalStorage to update its name dynamically
+                const rootNode = tracingContext.getStore();
+                if (rootNode) {
+                    rootNode.name = `GraphQL: ${operationName}`;
+                }
+
                 return {
-                    onNext({ result }: any) {
+                    onEnd() {
                         const duration = Date.now() - start;
-                        if (result.errors) {
-                            logger.error(
-                                `GraphQL Execution Errors in ${operationName} (${duration}ms):`,
-                                result.errors,
-                            );
-                        } else {
-                            logger.info(
-                                `GraphQL Execution Completed: ${operationName} (${duration}ms)`,
-                            );
+                        logger.info(
+                            `GraphQL Execution Completed: ${operationName} (${duration}ms)`,
+                        );
+                        // Complete the root trace node when the GraphQL operation completes
+                        if (rootNode) {
+                            rootNode.markCompleted();
                         }
                     },
                 };

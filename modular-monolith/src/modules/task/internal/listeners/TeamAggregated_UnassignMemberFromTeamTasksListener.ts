@@ -1,4 +1,5 @@
 import { logger } from '../../../../infra/logger';
+import { traceMethod } from '../../../../infra/tracing.ts';
 import eventBus from '../../../../infra/utils/EventBus.ts';
 import {
     EVENT_STREAMS,
@@ -9,8 +10,6 @@ import { taskService } from '../../index.ts';
 
 /**
  * Execution Listener: Unassign Member From Team Tasks
- * Handles surgical unassignment of specific users from tasks within a team
- * when those users leave the team.
  */
 export class TeamAggregated_UnassignMemberFromTeamTasksListener {
     async init() {
@@ -32,6 +31,19 @@ export class TeamAggregated_UnassignMemberFromTeamTasksListener {
     private async handleUnassignMemberFromTeamTasks(
         events: DomainEvent<{ teamId: string; userIds: string[] }>[],
     ) {
-        await taskService.handleUnassignMemberFromTeamTasks(events);
+        if (events.length === 0) return;
+
+        await traceMethod(
+            {
+                containerId: 'task-module',
+                containerName: 'Task Module',
+                containerType: 'Logical Domain Module',
+                name: 'listener.handleUnassignMemberFromTeamTasks',
+                incomingTrace: events[0]?.traceContext,
+            },
+            async () => {
+                await taskService.handleUnassignMemberFromTeamTasks(events);
+            },
+        );
     }
 }

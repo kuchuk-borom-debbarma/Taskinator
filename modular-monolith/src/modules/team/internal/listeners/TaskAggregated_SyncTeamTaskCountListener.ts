@@ -1,4 +1,5 @@
 import { logger } from '../../../../infra/logger';
+import { traceMethod } from '../../../../infra/tracing.ts';
 import eventBus from '../../../../infra/utils/EventBus.ts';
 import type { DomainEvent } from '../../../../infra/utils/event-bus';
 import { EVENT_STREAMS, EVENT_TYPES } from '../../../../infra/utils/event-bus';
@@ -28,6 +29,19 @@ export class TaskAggregated_SyncTeamTaskCountListener {
     private async handleTeamTaskCountsChanged(
         events: DomainEvent<{ teamId: string; delta: number }>[],
     ) {
-        await teamService.handleSyncTeamTaskCount(events);
+        if (events.length === 0) return;
+
+        await traceMethod(
+            {
+                containerId: 'team-module',
+                containerName: 'Team Module',
+                containerType: 'Logical Domain Module',
+                name: 'listener.handleTeamTaskCountsChanged',
+                incomingTrace: events[0]?.traceContext,
+            },
+            async () => {
+                await teamService.handleSyncTeamTaskCount(events);
+            },
+        );
     }
 }

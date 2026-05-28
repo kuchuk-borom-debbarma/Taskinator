@@ -6,6 +6,7 @@ import {
     ValidationError,
 } from '../../../infra/graphql/errors.ts';
 import { logger } from '../../../infra/logger/index.ts';
+import { traceMethod } from '../../../infra/tracing.ts';
 import {
     EVENT_STREAMS,
     EVENT_TYPES,
@@ -76,82 +77,123 @@ import {
     updateTaskLink,
 } from './TaskQueries.ts';
 
+const CONTAINER = {
+    containerId: 'task-module',
+    containerName: 'Task Module',
+    containerType: 'Logical Domain Module',
+} as const;
+
 export class TaskServiceImpl implements TaskService {
     async getTasks(
         userId: string,
         projectId: string | null,
         params: PaginationParams,
     ): Promise<TaskConnection> {
-        logger.debug(
-            `TaskService.getTasks called for user: ${userId}, project: ${projectId}`,
+        return traceMethod(
+            { ...CONTAINER, name: 'taskService.getTasks' },
+            async () => {
+                logger.debug(
+                    `TaskService.getTasks called for user: ${userId}, project: ${projectId}`,
+                );
+                return getTasksPage(userId, projectId, params);
+            },
         );
-        return getTasksPage(userId, projectId, params);
     }
 
     async getTasksByIds(ids: string[]): Promise<Task[]> {
-        logger.debug(`TaskService.getTasksByIds called for ${ids.length} ids`);
-        return await getTasksByIdsQuery(ids);
+        return traceMethod(
+            { ...CONTAINER, name: 'taskService.getTasksByIds' },
+            async () => {
+                logger.debug(
+                    `TaskService.getTasksByIds called for ${ids.length} ids`,
+                );
+                return await getTasksByIdsQuery(ids);
+            },
+        );
     }
 
     async getTasksByActorIdAndIds(
         actorId: string,
         ids: string[],
     ): Promise<Task[]> {
-        logger.debug(
-            `TaskService.getTasksByActorIdAndIds called for actor: ${actorId}, tasks: ${ids.length}`,
+        return traceMethod(
+            { ...CONTAINER, name: 'taskService.getTasksByActorIdAndIds' },
+            async () => {
+                logger.debug(
+                    `TaskService.getTasksByActorIdAndIds called for actor: ${actorId}, tasks: ${ids.length}`,
+                );
+                return await getTasksByActorIdAndIds(actorId, ids);
+            },
         );
-        return await getTasksByActorIdAndIds(actorId, ids);
     }
 
     async getTaskContextById(
         taskId: string,
     ): Promise<TaskContextRow | undefined> {
-        logger.debug(
-            `TaskService.getTaskContextById called for task: ${taskId}`,
+        return traceMethod(
+            { ...CONTAINER, name: 'taskService.getTaskContextById' },
+            async () => {
+                logger.debug(
+                    `TaskService.getTaskContextById called for task: ${taskId}`,
+                );
+                return getTaskContextByIdQuery(taskId);
+            },
         );
-        return getTaskContextByIdQuery(taskId);
     }
 
     async getTaskLinks(
         params: GetTaskLinksParam,
         pagination: PaginationParams,
     ): Promise<LinkConnection> {
-        logger.debug(
-            `TaskService.getTaskLinks called for task: ${params.taskId}, direction: ${params.direction}, depthLimit: ${params.depthLimit ?? 'none'}`,
-        );
-        return await getTaskLinksPage(
-            params.userId,
-            params.projectId,
-            params.taskId,
-            params.direction,
-            params.depthLimit,
-            pagination,
+        return traceMethod(
+            { ...CONTAINER, name: 'taskService.getTaskLinks' },
+            async () => {
+                logger.debug(
+                    `TaskService.getTaskLinks called for task: ${params.taskId}, direction: ${params.direction}, depthLimit: ${params.depthLimit ?? 'none'}`,
+                );
+                return await getTaskLinksPage(
+                    params.userId,
+                    params.projectId,
+                    params.taskId,
+                    params.direction,
+                    params.depthLimit,
+                    pagination,
+                );
+            },
         );
     }
 
     async getTaskNeighbourhood(
         params: GetNeighbourhoodParam,
     ): Promise<TaskNeighbourhoodResult> {
-        logger.debug(
-            `TaskService.getTaskNeighbourhood called for task: ${params.taskId}`,
+        return traceMethod(
+            { ...CONTAINER, name: 'taskService.getTaskNeighbourhood' },
+            async () => {
+                logger.debug(
+                    `TaskService.getTaskNeighbourhood called for task: ${params.taskId}`,
+                );
+                return await getNeighbourhood(params);
+            },
         );
-        return await getNeighbourhood(params);
     }
 
     async getAutomationRulesForProject(
         userId: string,
         projectId: string,
     ): Promise<TaskAutomationRule[]> {
-        await this.ensureAutomationProjectAccess(userId, projectId);
-
-        const rules = await db
-            .selectFrom('task_automation_rule')
-            .selectAll()
-            .where('fk_project_id', '=', projectId)
-            .orderBy('created_at', 'asc')
-            .execute();
-
-        return rules.map((rule) => this.mapAutomationRule(rule));
+        return traceMethod(
+            { ...CONTAINER, name: 'taskService.getAutomationRulesForProject' },
+            async () => {
+                await this.ensureAutomationProjectAccess(userId, projectId);
+                const rules = await db
+                    .selectFrom('task_automation_rule')
+                    .selectAll()
+                    .where('fk_project_id', '=', projectId)
+                    .orderBy('created_at', 'asc')
+                    .execute();
+                return rules.map((rule) => this.mapAutomationRule(rule));
+            },
+        );
     }
 
     async createTask(param: {
@@ -164,35 +206,44 @@ export class TaskServiceImpl implements TaskService {
         dueDate?: string | null;
         traceId?: string | null;
     }): Promise<Task> {
-        logger.info(
-            `TaskService.createTask started by ${param.actorId} in project ${param.projectId} for "${param.title}" (Trace: ${param.traceId ?? 'none'})`,
-        );
-        if (param.title.length < 3 || param.title.length > 255) {
-            throw new Error('Task title must be between 3 and 255 characters.');
-        }
-        const result = await insertTask(param);
+        return traceMethod(
+            { ...CONTAINER, name: 'taskService.createTask' },
+            async () => {
+                logger.info(
+                    `TaskService.createTask started by ${param.actorId} in project ${param.projectId} for "${param.title}" (Trace: ${param.traceId ?? 'none'})`,
+                );
+                if (param.title.length < 3 || param.title.length > 255) {
+                    throw new Error(
+                        'Task title must be between 3 and 255 characters.',
+                    );
+                }
+                const result = await insertTask(param);
 
-        // SYNC ORCHESTRATION (ORCH-01)
-        // Trigger synchronous auto-actions immediately in the request lifecycle.
-        // The registry ensures decoupling while allowing side-effects to run before the response.
-        await syncActionRegistry.executeHandlers('task.created', {
-            type: EVENT_TYPES.TASK.CREATED,
-            data: {
-                taskId: result.id,
-                projectId: result.projectId,
-                teamId: result.teamId,
-                memberId: result.memberId,
-                title: result.title,
-                status: result.status,
-                priority: result.priority,
-                dueDate: result.dueDate ? result.dueDate.toISOString() : null,
-                actorId: param.actorId,
-                traceId: param.traceId,
+                // SYNC ORCHESTRATION (ORCH-01)
+                // Trigger synchronous auto-actions immediately in the request lifecycle.
+                // The registry ensures decoupling while allowing side-effects to run before the response.
+                await syncActionRegistry.executeHandlers('task.created', {
+                    type: EVENT_TYPES.TASK.CREATED,
+                    data: {
+                        taskId: result.id,
+                        projectId: result.projectId,
+                        teamId: result.teamId,
+                        memberId: result.memberId,
+                        title: result.title,
+                        status: result.status,
+                        priority: result.priority,
+                        dueDate: result.dueDate
+                            ? result.dueDate.toISOString()
+                            : null,
+                        actorId: param.actorId,
+                        traceId: param.traceId,
+                    },
+                });
+
+                logger.info(`TaskService.createTask successful: ${result.id}`);
+                return result;
             },
-        });
-
-        logger.info(`TaskService.createTask successful: ${result.id}`);
-        return result;
+        );
     }
 
     async updateTask(param: {
@@ -209,154 +260,185 @@ export class TaskServiceImpl implements TaskService {
         dueDate?: string | null;
         traceId?: string | null;
     }): Promise<Task> {
-        logger.info(
-            `TaskService.updateTask started for ${param.taskId} by ${param.actorId} (Trace: ${param.traceId ?? 'none'})`,
-        );
-        if (
-            param.title &&
-            (param.title.length < 3 || param.title.length > 255)
-        ) {
-            throw new Error('Task title must be between 3 and 255 characters.');
-        }
+        return traceMethod(
+            { ...CONTAINER, name: 'taskService.updateTask' },
+            async () => {
+                logger.info(
+                    `TaskService.updateTask started for ${param.taskId} by ${param.actorId} (Trace: ${param.traceId ?? 'none'})`,
+                );
+                if (
+                    param.title &&
+                    (param.title.length < 3 || param.title.length > 255)
+                ) {
+                    throw new Error(
+                        'Task title must be between 3 and 255 characters.',
+                    );
+                }
 
-        await this.runSyncAutomationRules(param);
+                await this.runSyncAutomationRules(param);
 
-        const result = await updateTask(param);
+                const result = await updateTask(param);
 
-        // SYNC ORCHESTRATION (ORCH-01)
-        // Passes both 'current' and 'old' (snapshot) state to allow transition-based predicates.
-        await syncActionRegistry.executeHandlers('task.updated', {
-            type: EVENT_TYPES.TASK.UPDATED,
-            data: {
-                taskId: result.id,
-                projectId: result.projectId,
-                teamId: result.teamId,
-                memberId: result.memberId,
-                title: result.title,
-                status: result.status,
-                priority: result.priority,
-                dueDate: result.dueDate ? result.dueDate.toISOString() : null,
-                actorId: param.actorId,
-                traceId: param.traceId,
-                old: {
-                    teamId: (result as any).prev_team_id,
-                    memberId: (result as any).prev_member_id,
-                    title: (result as any).prev_title,
-                    status: (result as any).prev_status,
-                    priority: (result as any).prev_priority,
-                    dueDate: (result as any).prev_due_date,
-                },
+                // SYNC ORCHESTRATION (ORCH-01)
+                // Passes both 'current' and 'old' (snapshot) state to allow transition-based predicates.
+                await syncActionRegistry.executeHandlers('task.updated', {
+                    type: EVENT_TYPES.TASK.UPDATED,
+                    data: {
+                        taskId: result.id,
+                        projectId: result.projectId,
+                        teamId: result.teamId,
+                        memberId: result.memberId,
+                        title: result.title,
+                        status: result.status,
+                        priority: result.priority,
+                        dueDate: result.dueDate
+                            ? result.dueDate.toISOString()
+                            : null,
+                        actorId: param.actorId,
+                        traceId: param.traceId,
+                        old: {
+                            teamId: (result as any).prev_team_id,
+                            memberId: (result as any).prev_member_id,
+                            title: (result as any).prev_title,
+                            status: (result as any).prev_status,
+                            priority: (result as any).prev_priority,
+                            dueDate: (result as any).prev_due_date,
+                        },
+                    },
+                });
+
+                logger.info(
+                    `TaskService.updateTask successful: ${param.taskId}`,
+                );
+                return result;
             },
-        });
-
-        logger.info(`TaskService.updateTask successful: ${param.taskId}`);
-        return result;
+        );
     }
 
     async createAutomationRule(
         actorId: string,
         input: CreateTaskAutomationRuleInput,
     ): Promise<TaskAutomationRule> {
-        await this.ensureAutomationProjectAccess(actorId, input.projectId);
-        this.validateAutomationRuleInput(input);
+        return traceMethod(
+            { ...CONTAINER, name: 'taskService.createAutomationRule' },
+            async () => {
+                await this.ensureAutomationProjectAccess(
+                    actorId,
+                    input.projectId,
+                );
+                this.validateAutomationRuleInput(input);
 
-        const rows = await db
-            .insertInto('task_automation_rule')
-            .values({
-                fk_project_id: input.projectId,
-                name: input.name,
-                is_active: input.isActive ?? true,
-                is_sync: input.isSync ?? false,
-                trigger_type: input.triggerType,
-                trigger_value: input.triggerValue ?? null,
-                condition_type: input.conditionType,
-                condition_value: input.conditionValue ?? null,
-                action_type: input.actionType,
-                action_value: input.actionValue ?? null,
-            })
-            .returningAll()
-            .execute();
+                const rows = await db
+                    .insertInto('task_automation_rule')
+                    .values({
+                        fk_project_id: input.projectId,
+                        name: input.name,
+                        is_active: input.isActive ?? true,
+                        is_sync: input.isSync ?? false,
+                        trigger_type: input.triggerType,
+                        trigger_value: input.triggerValue ?? null,
+                        condition_type: input.conditionType,
+                        condition_value: input.conditionValue ?? null,
+                        action_type: input.actionType,
+                        action_value: input.actionValue ?? null,
+                    })
+                    .returningAll()
+                    .execute();
 
-        const rule = rows[0];
-        if (!rule)
-            throw new ValidationError('Unable to create automation rule.');
+                const rule = rows[0];
+                if (!rule)
+                    throw new ValidationError(
+                        'Unable to create automation rule.',
+                    );
 
-        return this.mapAutomationRule(rule);
+                return this.mapAutomationRule(rule);
+            },
+        );
     }
 
     async updateAutomationRule(
         actorId: string,
         input: UpdateTaskAutomationRuleInput,
     ): Promise<TaskAutomationRule> {
-        await this.ensureAutomationProjectAccess(actorId, input.projectId);
-        this.validateAutomationRuleInput(input);
-
-        const updates: Record<string, unknown> = {
-            version: sql`version + 1`,
-            updated_at: sql`CURRENT_TIMESTAMP`,
-        };
-
-        if (input.name !== undefined) {
-            if (input.name === null || input.name.trim().length === 0) {
-                throw new ValidationError('Automation rule name is required.');
-            }
-            updates.name = input.name;
-        }
-        if (input.isActive !== undefined) {
-            if (input.isActive === null) {
-                throw new ValidationError('isActive cannot be null.');
-            }
-            updates.is_active = input.isActive;
-        }
-        if (input.isSync !== undefined) {
-            if (input.isSync === null) {
-                throw new ValidationError('isSync cannot be null.');
-            }
-            updates.is_sync = input.isSync;
-        }
-        if (input.triggerType !== undefined)
-            updates.trigger_type = input.triggerType;
-        if (input.triggerValue !== undefined)
-            updates.trigger_value = input.triggerValue;
-        if (input.conditionType !== undefined)
-            updates.condition_type = input.conditionType;
-        if (input.conditionValue !== undefined)
-            updates.condition_value = input.conditionValue;
-        if (input.actionType !== undefined)
-            updates.action_type = input.actionType;
-        if (input.actionValue !== undefined)
-            updates.action_value = input.actionValue;
-
-        const rows = await db
-            .updateTable('task_automation_rule')
-            .set(updates as any)
-            .where('id', '=', input.ruleId)
-            .where('fk_project_id', '=', input.projectId)
-            .where('version', '=', input.version)
-            .returningAll()
-            .execute();
-
-        const rule = rows[0];
-        if (!rule) {
-            const existing = await db
-                .selectFrom('task_automation_rule')
-                .select(['id', 'version'])
-                .where('id', '=', input.ruleId)
-                .where('fk_project_id', '=', input.projectId)
-                .executeTakeFirst();
-
-            if (!existing) {
-                throw new NotFoundError(
-                    `Automation rule ${input.ruleId} not found.`,
+        return traceMethod(
+            { ...CONTAINER, name: 'taskService.updateAutomationRule' },
+            async () => {
+                await this.ensureAutomationProjectAccess(
+                    actorId,
+                    input.projectId,
                 );
-            }
+                this.validateAutomationRuleInput(input);
 
-            throw new ConflictError(
-                `Automation rule version mismatch. Expected ${input.version}, but current version is ${existing.version}.`,
-            );
-        }
+                const updates: Record<string, unknown> = {
+                    version: sql`version + 1`,
+                    updated_at: sql`CURRENT_TIMESTAMP`,
+                };
 
-        return this.mapAutomationRule(rule);
+                if (input.name !== undefined) {
+                    if (input.name === null || input.name.trim().length === 0) {
+                        throw new ValidationError(
+                            'Automation rule name is required.',
+                        );
+                    }
+                    updates.name = input.name;
+                }
+                if (input.isActive !== undefined) {
+                    if (input.isActive === null) {
+                        throw new ValidationError('isActive cannot be null.');
+                    }
+                    updates.is_active = input.isActive;
+                }
+                if (input.isSync !== undefined) {
+                    if (input.isSync === null) {
+                        throw new ValidationError('isSync cannot be null.');
+                    }
+                    updates.is_sync = input.isSync;
+                }
+                if (input.triggerType !== undefined)
+                    updates.trigger_type = input.triggerType;
+                if (input.triggerValue !== undefined)
+                    updates.trigger_value = input.triggerValue;
+                if (input.conditionType !== undefined)
+                    updates.condition_type = input.conditionType;
+                if (input.conditionValue !== undefined)
+                    updates.condition_value = input.conditionValue;
+                if (input.actionType !== undefined)
+                    updates.action_type = input.actionType;
+                if (input.actionValue !== undefined)
+                    updates.action_value = input.actionValue;
+
+                const rows = await db
+                    .updateTable('task_automation_rule')
+                    .set(updates as any)
+                    .where('id', '=', input.ruleId)
+                    .where('fk_project_id', '=', input.projectId)
+                    .where('version', '=', input.version)
+                    .returningAll()
+                    .execute();
+
+                const rule = rows[0];
+                if (!rule) {
+                    const existing = await db
+                        .selectFrom('task_automation_rule')
+                        .select(['id', 'version'])
+                        .where('id', '=', input.ruleId)
+                        .where('fk_project_id', '=', input.projectId)
+                        .executeTakeFirst();
+
+                    if (!existing) {
+                        throw new NotFoundError(
+                            `Automation rule ${input.ruleId} not found.`,
+                        );
+                    }
+
+                    throw new ConflictError(
+                        `Automation rule version mismatch. Expected ${input.version}, but current version is ${existing.version}.`,
+                    );
+                }
+
+                return this.mapAutomationRule(rule);
+            },
+        );
     }
 
     async deleteAutomationRule(
@@ -364,16 +446,21 @@ export class TaskServiceImpl implements TaskService {
         projectId: string,
         ruleId: string,
     ): Promise<boolean> {
-        await this.ensureAutomationProjectAccess(actorId, projectId);
+        return traceMethod(
+            { ...CONTAINER, name: 'taskService.deleteAutomationRule' },
+            async () => {
+                await this.ensureAutomationProjectAccess(actorId, projectId);
 
-        const result = await db
-            .deleteFrom('task_automation_rule')
-            .where('id', '=', ruleId)
-            .where('fk_project_id', '=', projectId)
-            .returning('id')
-            .executeTakeFirst();
+                const result = await db
+                    .deleteFrom('task_automation_rule')
+                    .where('id', '=', ruleId)
+                    .where('fk_project_id', '=', projectId)
+                    .returning('id')
+                    .executeTakeFirst();
 
-        return !!result;
+                return !!result;
+            },
+        );
     }
 
     async deleteTask(param: {
@@ -381,22 +468,29 @@ export class TaskServiceImpl implements TaskService {
         projectId: string;
         taskId: string;
     }): Promise<string> {
-        logger.info(
-            `TaskService.deleteTask started for ${param.taskId} by ${param.actorId}`,
-        );
-        const result = await deleteTask(param);
+        return traceMethod(
+            { ...CONTAINER, name: 'taskService.deleteTask' },
+            async () => {
+                logger.info(
+                    `TaskService.deleteTask started for ${param.taskId} by ${param.actorId}`,
+                );
+                const result = await deleteTask(param);
 
-        await syncActionRegistry.executeHandlers('task.deleted', {
-            type: EVENT_TYPES.TASK.DELETED,
-            data: {
-                taskId: param.taskId,
-                projectId: param.projectId,
-                actorId: param.actorId,
+                await syncActionRegistry.executeHandlers('task.deleted', {
+                    type: EVENT_TYPES.TASK.DELETED,
+                    data: {
+                        taskId: param.taskId,
+                        projectId: param.projectId,
+                        actorId: param.actorId,
+                    },
+                });
+
+                logger.info(
+                    `TaskService.deleteTask successful: ${param.taskId}`,
+                );
+                return result;
             },
-        });
-
-        logger.info(`TaskService.deleteTask successful: ${param.taskId}`);
-        return result;
+        );
     }
 
     async createTaskLink(param: {
@@ -406,12 +500,19 @@ export class TaskServiceImpl implements TaskService {
         targetTaskId: string;
         label: string;
     }): Promise<TaskLink> {
-        logger.info(
-            `TaskService.createTaskLink started by ${param.actorId} between ${param.sourceTaskId} and ${param.targetTaskId}`,
+        return traceMethod(
+            { ...CONTAINER, name: 'taskService.createTaskLink' },
+            async () => {
+                logger.info(
+                    `TaskService.createTaskLink started by ${param.actorId} between ${param.sourceTaskId} and ${param.targetTaskId}`,
+                );
+                const result = await insertTaskLink(param);
+                logger.info(
+                    `TaskService.createTaskLink successful: ${result.id}`,
+                );
+                return result;
+            },
         );
-        const result = await insertTaskLink(param);
-        logger.info(`TaskService.createTaskLink successful: ${result.id}`);
-        return result;
     }
 
     async deleteTaskLink(param: {
@@ -419,12 +520,19 @@ export class TaskServiceImpl implements TaskService {
         projectId: string;
         linkId: string;
     }): Promise<string> {
-        logger.info(
-            `TaskService.deleteTaskLink started for ${param.linkId} by ${param.actorId}`,
+        return traceMethod(
+            { ...CONTAINER, name: 'taskService.deleteTaskLink' },
+            async () => {
+                logger.info(
+                    `TaskService.deleteTaskLink started for ${param.linkId} by ${param.actorId}`,
+                );
+                const result = await deleteTaskLink(param);
+                logger.info(
+                    `TaskService.deleteTaskLink successful: ${param.linkId}`,
+                );
+                return result;
+            },
         );
-        const result = await deleteTaskLink(param);
-        logger.info(`TaskService.deleteTaskLink successful: ${param.linkId}`);
-        return result;
     }
 
     async updateTaskLink(param: {
@@ -435,12 +543,19 @@ export class TaskServiceImpl implements TaskService {
         targetTaskId?: string | null;
         label?: string | null;
     }): Promise<TaskLink> {
-        logger.info(
-            `TaskService.updateTaskLink started for ${param.linkId} by ${param.actorId}`,
+        return traceMethod(
+            { ...CONTAINER, name: 'taskService.updateTaskLink' },
+            async () => {
+                logger.info(
+                    `TaskService.updateTaskLink started for ${param.linkId} by ${param.actorId}`,
+                );
+                const result = await updateTaskLink(param);
+                logger.info(
+                    `TaskService.updateTaskLink successful: ${param.linkId}`,
+                );
+                return result;
+            },
         );
-        const result = await updateTaskLink(param);
-        logger.info(`TaskService.updateTaskLink successful: ${param.linkId}`);
-        return result;
     }
 
     async getProjectLinks(
@@ -448,10 +563,19 @@ export class TaskServiceImpl implements TaskService {
         projectId: string,
         pagination: PaginationParams,
     ): Promise<LinkConnection> {
-        logger.debug(
-            `TaskService.getProjectLinks called for project: ${projectId}`,
+        return traceMethod(
+            { ...CONTAINER, name: 'taskService.getProjectLinks' },
+            async () => {
+                logger.debug(
+                    `TaskService.getProjectLinks called for project: ${projectId}`,
+                );
+                return await getProjectTaskLinksPage(
+                    userId,
+                    projectId,
+                    pagination,
+                );
+            },
         );
-        return await getProjectTaskLinksPage(userId, projectId, pagination);
     }
 
     async handleTaskReachabilitySync(
@@ -1222,10 +1346,15 @@ export class TaskServiceImpl implements TaskService {
         taskId: string,
         pagination: PaginationParams,
     ): Promise<TaskCommentConnection> {
-        logger.debug(
-            `TaskService.getTaskComments called for task ${taskId} by user ${userId}`,
+        return traceMethod(
+            { ...CONTAINER, name: 'taskService.getTaskComments' },
+            async () => {
+                logger.debug(
+                    `TaskService.getTaskComments called for task ${taskId} by user ${userId}`,
+                );
+                return await getTaskCommentsPage(userId, taskId, pagination);
+            },
         );
-        return await getTaskCommentsPage(userId, taskId, pagination);
     }
 
     async getTaskActivityLogs(
@@ -1233,10 +1362,19 @@ export class TaskServiceImpl implements TaskService {
         taskId: string,
         pagination: PaginationParams,
     ): Promise<TaskActivityLogConnection> {
-        logger.debug(
-            `TaskService.getTaskActivityLogs called for task ${taskId} by user ${userId}`,
+        return traceMethod(
+            { ...CONTAINER, name: 'taskService.getTaskActivityLogs' },
+            async () => {
+                logger.debug(
+                    `TaskService.getTaskActivityLogs called for task ${taskId} by user ${userId}`,
+                );
+                return await getTaskActivityLogsPage(
+                    userId,
+                    taskId,
+                    pagination,
+                );
+            },
         );
-        return await getTaskActivityLogsPage(userId, taskId, pagination);
     }
 
     async addComment(
@@ -1244,20 +1382,31 @@ export class TaskServiceImpl implements TaskService {
         taskId: string,
         content: string,
     ): Promise<TaskComment> {
-        logger.info(
-            `TaskService.addComment started for task ${taskId} by user ${userId}`,
+        return traceMethod(
+            { ...CONTAINER, name: 'taskService.addComment' },
+            async () => {
+                logger.info(
+                    `TaskService.addComment started for task ${taskId} by user ${userId}`,
+                );
+                if (!content || content.trim().length === 0) {
+                    throw new ValidationError(
+                        'Comment content cannot be empty.',
+                    );
+                }
+                if (content.length > 2000) {
+                    throw new ValidationError(
+                        'Comment content cannot exceed 2000 characters.',
+                    );
+                }
+                const result = await insertCommentQuery(
+                    userId,
+                    taskId,
+                    content.trim(),
+                );
+                logger.info(`TaskService.addComment successful: ${result.id}`);
+                return result;
+            },
         );
-        if (!content || content.trim().length === 0) {
-            throw new ValidationError('Comment content cannot be empty.');
-        }
-        if (content.length > 2000) {
-            throw new ValidationError(
-                'Comment content cannot exceed 2000 characters.',
-            );
-        }
-        const result = await insertCommentQuery(userId, taskId, content.trim());
-        logger.info(`TaskService.addComment successful: ${result.id}`);
-        return result;
     }
 
     async updateComment(
@@ -1266,34 +1415,48 @@ export class TaskServiceImpl implements TaskService {
         content: string,
         version: number,
     ): Promise<TaskComment> {
-        logger.info(
-            `TaskService.updateComment started for comment ${commentId} by user ${userId}`,
+        return traceMethod(
+            { ...CONTAINER, name: 'taskService.updateComment' },
+            async () => {
+                logger.info(
+                    `TaskService.updateComment started for comment ${commentId} by user ${userId}`,
+                );
+                if (!content || content.trim().length === 0) {
+                    throw new ValidationError(
+                        'Comment content cannot be empty.',
+                    );
+                }
+                if (content.length > 2000) {
+                    throw new ValidationError(
+                        'Comment content cannot exceed 2000 characters.',
+                    );
+                }
+                const result = await updateCommentQuery(
+                    userId,
+                    commentId,
+                    content.trim(),
+                    version,
+                );
+                logger.info(
+                    `TaskService.updateComment successful: ${result.id}`,
+                );
+                return result;
+            },
         );
-        if (!content || content.trim().length === 0) {
-            throw new ValidationError('Comment content cannot be empty.');
-        }
-        if (content.length > 2000) {
-            throw new ValidationError(
-                'Comment content cannot exceed 2000 characters.',
-            );
-        }
-        const result = await updateCommentQuery(
-            userId,
-            commentId,
-            content.trim(),
-            version,
-        );
-        logger.info(`TaskService.updateComment successful: ${result.id}`);
-        return result;
     }
 
     async deleteComment(userId: string, commentId: string): Promise<string> {
-        logger.info(
-            `TaskService.deleteComment started for comment ${commentId} by user ${userId}`,
+        return traceMethod(
+            { ...CONTAINER, name: 'taskService.deleteComment' },
+            async () => {
+                logger.info(
+                    `TaskService.deleteComment started for comment ${commentId} by user ${userId}`,
+                );
+                const result = await deleteCommentQuery(userId, commentId);
+                logger.info(`TaskService.deleteComment successful: ${result}`);
+                return result;
+            },
         );
-        const result = await deleteCommentQuery(userId, commentId);
-        logger.info(`TaskService.deleteComment successful: ${result}`);
-        return result;
     }
 
     async init(): Promise<void> {

@@ -1,4 +1,5 @@
 import { logger } from '../../../../infra/logger';
+import { traceMethod } from '../../../../infra/tracing.ts';
 import eventBus from '../../../../infra/utils/EventBus.ts';
 import type { DomainEvent } from '../../../../infra/utils/event-bus';
 import { EVENT_STREAMS, EVENT_TYPES } from '../../../../infra/utils/event-bus';
@@ -30,6 +31,17 @@ export class TeamAggregated_SyncProjectTeamCountListener {
     ) {
         if (events.length === 0) return;
 
-        await projectService.handleSyncProjectTeamCount(events);
+        await traceMethod(
+            {
+                containerId: 'project-module',
+                containerName: 'Project Module',
+                containerType: 'Logical Domain Module',
+                name: 'listener.handleSyncProjectTeamCount',
+                incomingTrace: events[0]?.traceContext,
+            },
+            async () => {
+                await projectService.handleSyncProjectTeamCount(events);
+            },
+        );
     }
 }

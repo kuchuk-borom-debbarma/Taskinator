@@ -1,4 +1,5 @@
 import { logger } from '../../../../infra/logger';
+import { traceMethod } from '../../../../infra/tracing.ts';
 import eventBus from '../../../../infra/utils/EventBus.ts';
 import {
     EVENT_STREAMS,
@@ -33,6 +34,17 @@ export class ProjectAggregated_RemoveProjectMember {
     ) {
         if (events.length === 0) return;
 
-        await projectService.handleRemoveProjectMember(events);
+        await traceMethod(
+            {
+                containerId: 'project-module',
+                containerName: 'Project Module',
+                containerType: 'Logical Domain Module',
+                name: 'listener.handleRemoveMember',
+                incomingTrace: events[0]?.traceContext,
+            },
+            async () => {
+                await projectService.handleRemoveProjectMember(events);
+            },
+        );
     }
 }
