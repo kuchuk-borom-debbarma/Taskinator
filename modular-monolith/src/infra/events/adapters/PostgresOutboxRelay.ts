@@ -3,6 +3,10 @@ import type { Pool, PoolClient } from 'pg';
 import type { EventRelayPort } from '../../contracts/index.ts';
 import type { Database } from '../../database/index.ts';
 import type { Logger } from '../../logger/index.ts';
+import {
+    continueTraceFromMetadata,
+    extractTraceMetadata,
+} from '../../tracing/index.ts';
 import type { Bus } from '../../utils/event-bus/types.ts';
 
 interface PendingOutboxEvent {
@@ -200,10 +204,27 @@ export class PostgresOutboxRelay implements EventRelayPort {
                     `[OutboxRelay] Relaying ${group.payloads.length} events of type "${group.type}" to stream "${group.stream}"` +
                         ` (eventIds: [${group.payloads.map((payload) => payload.id).join(', ')}])`,
                 );
-                return this.deps.eventBus.publish(
-                    group.stream,
-                    group.type,
-                    group.payloads,
+                return continueTraceFromMetadata(
+                    extractTraceMetadata(group.payloads[0]?.data),
+                    `Outbox relay ${group.stream}/${group.type}`,
+                    {
+                        importanceLevel: 2,
+                        edgeLabel: 'relays',
+                        data: {
+                            stream: group.stream,
+                            eventType: group.type,
+                            count: group.payloads.length,
+                            eventIds: group.payloads.map(
+                                (payload) => payload.id,
+                            ),
+                        },
+                    },
+                    () =>
+                        this.deps.eventBus.publish(
+                            group.stream,
+                            group.type,
+                            group.payloads,
+                        ),
                 );
             }),
         );

@@ -1,6 +1,8 @@
+import { getOperationAST } from 'graphql';
 import { createYoga } from 'graphql-yoga';
 import jwt from 'jsonwebtoken';
 import { logger } from '../logger';
+import { traceMutation } from '../tracing/index.ts';
 import { createContext, type GraphQLContext } from './context';
 import { schema } from './schema';
 
@@ -39,10 +41,33 @@ export const yoga = createYoga<GraphQLContext>({
     },
     plugins: [
         {
-            onExecute({ args }: any) {
+            onExecute({ args, setExecuteFn, executeFn }: any) {
                 const start = Date.now();
                 const operationName = args.operationName ?? 'Anonymous';
+                const operation = getOperationAST(
+                    args.document,
+                    args.operationName,
+                );
                 logger.info(`GraphQL Execution Started: ${operationName}`);
+
+                if (operation?.operation === 'mutation') {
+                    const originalExecuteFn = executeFn;
+                    setExecuteFn((executeArgs: any) =>
+                        traceMutation(
+                            operation.name?.value ??
+                                args.operationName ??
+                                'Anonymous',
+                            {
+                                operationName:
+                                    operation.name?.value ??
+                                    args.operationName ??
+                                    'Anonymous',
+                                userId: args.contextValue?.userId,
+                            },
+                            () => originalExecuteFn(executeArgs),
+                        ),
+                    );
+                }
 
                 return {
                     onNext({ result }: any) {

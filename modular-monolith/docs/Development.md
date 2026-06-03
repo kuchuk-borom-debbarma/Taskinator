@@ -23,6 +23,7 @@ We use **Kysely** for type-safe SQL.
     2. Add the event emission logic to the domain service using `eventBus.publish()`.
     3. Register a new listener in `src/kafka/registry.ts`.
 - **Idempotency**: Always ensure your consumer logic is idempotent. Check the `processed_event` table before executing side effects.
+- **Tracing**: Before adding or changing mutation, outbox, Kafka, aggregator, listener, or cascade instrumentation, read the [Topo-Tracer Instrumentation Contract](./Tracing.md). It defines coverage, node names, edge labels, importance levels, payload rules, and async `_trace` propagation.
 
 ## 🧪 Testing Workflow
 

@@ -1,5 +1,11 @@
 import { type Consumer, Kafka, Partitioners, type Producer } from 'kafkajs';
 import { logger } from '../../logger';
+import {
+    attachTraceMetadata,
+    continueTraceFromMetadata,
+    extractTraceMetadata,
+    traceStep,
+} from '../../tracing/index.ts';
 import { EVENT_STREAMS } from './constants.ts';
 import { createEvent } from './eventFactory.ts';
 import type { Bus, DomainEvent } from './types.ts';
@@ -80,13 +86,31 @@ export class KafkaBus implements Bus {
     }
 
     private async emit(events: DomainEvent[], stream: string) {
-        await this.producer.send({
-            topic: stream,
-            messages: events.map((e) => ({
-                key: e.key,
-                value: JSON.stringify(e),
-            })),
-        });
+        await traceStep(
+            `Kafka publish ${stream}/${events[0]?.type ?? 'unknown'}`,
+            {
+                importanceLevel: 2,
+                edgeLabel: 'publishes',
+                data: {
+                    stream,
+                    eventType: events[0]?.type,
+                    count: events.length,
+                    eventIds: events.map((event) => event.eventId),
+                },
+            },
+            async () => {
+                await this.producer.send({
+                    topic: stream,
+                    messages: events.map((event) => ({
+                        key: event.key,
+                        value: JSON.stringify({
+                            ...event,
+                            data: attachTraceMetadata(event.data, 'publishes'),
+                        }),
+                    })),
+                });
+            },
+        );
     }
 
     private async createConsumer(
@@ -126,6 +150,7 @@ export class KafkaBus implements Bus {
                             allEvents,
                             handlers,
                             options,
+                            groupId,
                             isRunning,
                             isStale,
                         );
@@ -150,6 +175,7 @@ export class KafkaBus implements Bus {
         events: DomainEvent[],
         handlers: Record<string, (data: any) => Promise<void>>,
         options: { batch?: boolean } | undefined,
+        groupId: string,
         isRunning: () => boolean,
         isStale: () => boolean,
     ) {
@@ -177,10 +203,37 @@ export class KafkaBus implements Bus {
                     `Kafka: Executing handler for type "${type}" (${events.length} events)`,
                 );
                 if (options?.batch) {
-                    await handler(events);
+                    await continueTraceFromMetadata(
+                        extractTraceMetadata(events[0]?.data),
+                        `Consumer ${groupId} ${events[0]?.type ?? type}`,
+                        {
+                            importanceLevel: 2,
+                            edgeLabel: 'consumes',
+                            data: {
+                                groupType: type,
+                                groupId,
+                                count: events.length,
+                                eventIds: events.map((event) => event.eventId),
+                            },
+                        },
+                        () => handler(events),
+                    );
                 } else {
                     for (const e of events) {
-                        await handler(e.data);
+                        await continueTraceFromMetadata(
+                            extractTraceMetadata(e.data),
+                            `Consumer ${groupId} ${e.type}`,
+                            {
+                                importanceLevel: 2,
+                                edgeLabel: 'consumes',
+                                data: {
+                                    eventType: e.type,
+                                    eventId: e.eventId,
+                                    groupId,
+                                },
+                            },
+                            () => handler(e.data),
+                        );
                     }
                 }
             }),

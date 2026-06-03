@@ -1,4 +1,5 @@
 import type { EventStorePort, OutboxEntry } from '../../contracts/index.ts';
+import { attachTraceMetadata } from '../../tracing/index.ts';
 import type { DomainEvent } from '../../utils/event-bus/types.ts';
 import { getTimeString } from '../../utils/utils.ts';
 
@@ -8,7 +9,15 @@ export class PostgresEventStoreProvider implements EventStorePort {
     async appendOutboxEvents(trx: any, entries: OutboxEntry[]): Promise<void> {
         if (entries.length === 0) return;
 
-        await trx.insertInto('outbox_events').values(entries).execute();
+        await trx
+            .insertInto('outbox_events')
+            .values(
+                entries.map((entry) => ({
+                    ...entry,
+                    payload: attachTraceMetadata(entry.payload, 'emits'),
+                })),
+            )
+            .execute();
     }
 
     async claimEvents(

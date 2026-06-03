@@ -2,6 +2,7 @@ import { startConsumers } from './infra/events/consumers/registry.ts';
 import { yoga } from './infra/graphql';
 import { infra } from './infra/index.ts';
 import { logger } from './infra/logger';
+import { initTracing, shutdownTracing } from './infra/tracing/index.ts';
 import { authService } from './modules/auth/index.ts';
 import { projectService } from './modules/project';
 import { teamService } from './modules/team';
@@ -21,6 +22,7 @@ export async function bootstrap(
 
     // 1. Infrastructure
     await infra.init();
+    initTracing();
 
     // 2. Domain Services & Consumers
     await Promise.all([
@@ -48,6 +50,7 @@ export async function shutdown() {
 
     logger.info('[App] Shutting down...');
     await infra.destroy();
+    await shutdownTracing();
 
     isRunning = false;
     logger.info('[App] Shutdown complete');

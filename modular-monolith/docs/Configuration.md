@@ -16,6 +16,8 @@ Create a `.env` file in the `modular-monolith/` directory based on the following
 | `KAFKA_BROKERS` | Comma-separated Kafka broker addresses | `localhost:9092` |
 | `REDIS_URL` | Redis connection URL | `redis://localhost:6379` |
 | `JWT_SECRET` | Secret key for signing Auth tokens | — |
+| `TOPO_TRACER_URL` | Topo-Tracer backend URL for best-effort mutation lifecycle tracing | `http://localhost:3999` |
+| `TOPO_TRACER_SAMPLE_RATE` | Fraction of GraphQL mutations to trace. `1` means 100%. | `1` |
 
 ## 🏗 Infrastructure Requirements
 
@@ -37,3 +39,6 @@ The Outbox Relay polling interval and batch size can be adjusted in `src/utils/e
 
 ### Kafka Consumer Groups
 Each domain module uses its own Kafka consumer group (e.g., `taskinator-task-group`, `taskinator-project-group`) to allow for independent scaling.
+
+### Topo-Tracer
+Taskinator's tracing rules are documented in [Tracing](./Tracing.md). Tracing is best-effort: Topo-Tracer outages must not fail requests, event relay work, Kafka consumers, or domain side effects.

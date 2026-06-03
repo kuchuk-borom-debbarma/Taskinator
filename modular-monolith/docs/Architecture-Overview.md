@@ -17,6 +17,7 @@ The system adheres to three main architectural pillars:
 - **Message Broker**: Kafka (for domain events)
 - **Caching & Routing**: Redis (for real-time targeted routing & pub/sub)
 - **API**: GraphQL (Yoga) with SSE for subscriptions
+- **Tracing**: Topo-Tracer explicit node/edge graphs for GraphQL mutation lifecycles
 
 ## 🗺 System Blueprint
 
@@ -29,9 +30,13 @@ To support infinitely nested tasks, we use **Materialized Paths**. This allows u
 ### 3. Targeted Real-time Routing
 Instead of broadcasting events to every connected client (naive fan-out), Taskinator uses an "Air Traffic Control" pattern. A dedicated Router consumer checks a Redis-based mapping of `User -> InstanceID` and routes events only to the specific server node where the user is connected.
 
+### 4. Lifecycle Tracing
+Taskinator uses Topo-Tracer to model GraphQL mutation lifecycles as explicit node/edge graphs. The tracing contract, coverage rules, importance levels, payload policy, and async `_trace` propagation rules are defined in [Tracing](./Tracing.md).
+
 ## 🔗 Further Reading
 
 - [Modular Monolith Design](./Modular-Monolith-Design.md)
 - [Event-Driven Flows](./Event-Driven-Flows.md)
 - [Kafka Outbox Pattern](./Kafka-Outbox-Pattern.md)
+- [Tracing](./Tracing.md)
 - [Real-time Routing](./Realtime-Routing.md)
