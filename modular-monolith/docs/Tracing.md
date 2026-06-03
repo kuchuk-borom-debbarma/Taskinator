@@ -47,6 +47,9 @@ Mutation traces must include these lifecycle/function steps when they exist:
 - Downstream service/action calls caused by the event.
 - Repair/cascade work such as reachability sync, count repair, orphaning,
   unassignment, and deletion chunks.
+- Self-chunking recursive event loops, including every claim, id collection,
+  bounded DB chunk, branch decision, continuation outbox insert, relay,
+  publish, consume, and final repair step.
 
 Do not add trace nodes for passive object mapping, trivial variable
 assignment, or code that does not represent a meaningful lifecycle step.
@@ -154,6 +157,26 @@ Task event continuation:
 | `Listener TaskAggregated_ReachabilitySyncListener.handle` | `2` | `handles` |
 | `TaskService.handleTaskReachabilitySync` | `2` | `calls` |
 | `DB expand task_reachability` | `3` | `repairs` |
+
+Self-chunking task link/reachability cleanup:
+
+| Node | Importance | Edge from previous |
+| --- | ---: | --- |
+| `Consumer task-link-decommissioning-group project.aggregated.delete_project_task_link` | `2` | `consumes` |
+| `TaskService.handleDeleteProjectTaskLink` | `1` | `calls` |
+| `DB claim processed_event task-link-decommissioning-group` | `3` | `validates` |
+| `TaskService.collectProjectIds` | `3` | `calls` |
+| `DB delete task_link chunk` | `3` | `writes` |
+| `Outbox insert project.aggregated.delete_project_task_link_chunk` | `3` | `emits` |
+| `Outbox relay project-aggregated/project.aggregated.delete_project_task_link_chunk` | `2` | `relays` |
+| `Kafka publish project-aggregated/project.aggregated.delete_project_task_link_chunk` | `2` | `publishes` |
+| `Consumer task-link-decommissioning-group project.aggregated.delete_project_task_link_chunk` | `2` | `consumes` |
+
+Repeat the claim/collect/delete/outbox cycle for every full chunk. The final
+chunk should still trace the claim, collection, and DB chunk. If the final
+branch performs repair instead of emitting another continuation, trace that
+repair explicitly, for example `DB recursive reachability repair CTE` with the
+`repairs` edge.
 
 Deep helper chain:
 

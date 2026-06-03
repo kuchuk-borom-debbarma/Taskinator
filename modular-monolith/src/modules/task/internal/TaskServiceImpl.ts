@@ -6,6 +6,7 @@ import {
     ValidationError,
 } from '../../../infra/graphql/errors.ts';
 import { logger } from '../../../infra/logger/index.ts';
+import { traceStep } from '../../../infra/tracing/index.ts';
 import {
     EVENT_STREAMS,
     EVENT_TYPES,
@@ -463,10 +464,23 @@ export class TaskServiceImpl implements TaskService {
         );
 
         await db.transaction().execute(async (trx) => {
-            const unprocessed = await claimEventsAtomic(
-                trx,
-                events,
-                'task-reachability-sync-group',
+            const unprocessed = await traceStep(
+                'DB claim processed_event task-reachability-sync-group',
+                {
+                    importanceLevel: 3,
+                    edgeLabel: 'validates',
+                    data: {
+                        groupId: 'task-reachability-sync-group',
+                        count: events.length,
+                        eventIds: events.map((event) => event.eventId),
+                    },
+                },
+                () =>
+                    claimEventsAtomic(
+                        trx,
+                        events,
+                        'task-reachability-sync-group',
+                    ),
             );
 
             if (unprocessed.length === 0) return;
@@ -485,25 +499,65 @@ export class TaskServiceImpl implements TaskService {
                     `[Graph Engine] Applying ${links.length} reachability updates for project ${projectId}`,
                 );
 
-                for (const link of links) {
-                    if (link.action === 'ADD') {
-                        await expandTaskReachability(
-                            trx,
+                await traceStep(
+                    'TaskService.handleTaskReachabilitySync project',
+                    {
+                        importanceLevel: 3,
+                        edgeLabel: 'handles',
+                        data: {
                             projectId,
-                            link.sourceTaskId,
-                            link.targetTaskId,
-                        );
-                    } else if (link.action === 'REMOVE') {
-                        await contractTaskReachability(
-                            trx,
-                            projectId,
-                            link.sourceTaskId,
-                            link.targetTaskId,
-                        );
-                    }
-                }
+                            linkCount: links.length,
+                            eventId: event.eventId,
+                        },
+                    },
+                    async () => {
+                        for (const link of links) {
+                            if (link.action === 'ADD') {
+                                await traceStep(
+                                    'DB expand task_reachability',
+                                    {
+                                        importanceLevel: 4,
+                                        edgeLabel: 'repairs',
+                                        data: { projectId, ...link },
+                                    },
+                                    () =>
+                                        expandTaskReachability(
+                                            trx,
+                                            projectId,
+                                            link.sourceTaskId,
+                                            link.targetTaskId,
+                                        ),
+                                );
+                            } else if (link.action === 'REMOVE') {
+                                await traceStep(
+                                    'DB contract task_reachability',
+                                    {
+                                        importanceLevel: 4,
+                                        edgeLabel: 'repairs',
+                                        data: { projectId, ...link },
+                                    },
+                                    () =>
+                                        contractTaskReachability(
+                                            trx,
+                                            projectId,
+                                            link.sourceTaskId,
+                                            link.targetTaskId,
+                                        ),
+                                );
+                            }
+                        }
 
-                await syncTaskGraphCounters(trx, projectId);
+                        await traceStep(
+                            'DB sync task graph counters',
+                            {
+                                importanceLevel: 4,
+                                edgeLabel: 'repairs',
+                                data: { projectId },
+                            },
+                            () => syncTaskGraphCounters(trx, projectId),
+                        );
+                    },
+                );
             }
         });
     }
@@ -538,22 +592,56 @@ export class TaskServiceImpl implements TaskService {
         if (events.length === 0) return;
 
         await db.transaction().execute(async (trx) => {
-            const unprocessed = await claimEventsAtomic(
-                trx,
-                events,
-                'task-bulk-reachability-group',
+            const unprocessed = await traceStep(
+                'DB claim processed_event task-bulk-reachability-group',
+                {
+                    importanceLevel: 3,
+                    edgeLabel: 'validates',
+                    data: {
+                        groupId: 'task-bulk-reachability-group',
+                        count: events.length,
+                        eventIds: events.map((event) => event.eventId),
+                    },
+                },
+                () =>
+                    claimEventsAtomic(
+                        trx,
+                        events,
+                        'task-bulk-reachability-group',
+                    ),
             );
 
             if (unprocessed.length === 0) return;
 
-            const taskIds = this.collectTaskIds(unprocessed);
+            const taskIds = await traceStep(
+                'TaskService.collectTaskIds',
+                {
+                    importanceLevel: 3,
+                    edgeLabel: 'calls',
+                    data: {
+                        count: unprocessed.length,
+                        eventIds: unprocessed.map((event) => event.eventId),
+                    },
+                },
+                () => this.collectTaskIds(unprocessed),
+            );
 
             logger.info(
                 `[Graph Engine] Purging reachability chunk for ${taskIds.length} tasks`,
             );
 
-            const { affectedCount, affectedProjectIds } =
-                await deleteTaskReachabilityChunk(trx, taskIds);
+            const { affectedCount, affectedProjectIds } = await traceStep(
+                'DB delete task_reachability chunk',
+                {
+                    importanceLevel: 3,
+                    edgeLabel: 'repairs',
+                    data: {
+                        taskIds,
+                        chunkSize: BULK_DELETE_CHUNK_SIZE,
+                    },
+                },
+                () => deleteTaskReachabilityChunk(trx, taskIds),
+            );
 
             logger.info(
                 `[Graph Engine] Purged ${affectedCount} reachability rows across ${affectedProjectIds.length} projects`,
@@ -563,23 +651,51 @@ export class TaskServiceImpl implements TaskService {
                 logger.info(
                     '[Graph Engine] Chunk full — deferring repair, emitting continuation signal',
                 );
-                await appendEventsToOutbox(trx, [
+                await traceStep(
+                    `Outbox insert ${EVENT_TYPES.TASK_AGGREGATED.DELETE_TASK_REACHABILITY_CHUNK}`,
                     {
-                        stream: EVENT_STREAMS.TASK_AGGREGATED,
-                        payload: {
-                            type: EVENT_TYPES.TASK_AGGREGATED
-                                .DELETE_TASK_REACHABILITY_CHUNK,
+                        importanceLevel: 3,
+                        edgeLabel: 'emits',
+                        data: {
+                            stream: EVENT_STREAMS.TASK_AGGREGATED,
+                            eventType:
+                                EVENT_TYPES.TASK_AGGREGATED
+                                    .DELETE_TASK_REACHABILITY_CHUNK,
                             taskIds,
+                            affectedCount,
                         },
                     },
-                ]);
+                    () =>
+                        appendEventsToOutbox(trx, [
+                            {
+                                stream: EVENT_STREAMS.TASK_AGGREGATED,
+                                payload: {
+                                    type: EVENT_TYPES.TASK_AGGREGATED
+                                        .DELETE_TASK_REACHABILITY_CHUNK,
+                                    taskIds,
+                                },
+                            },
+                        ]),
+                );
             } else if (affectedProjectIds.length > 0) {
                 logger.info(
                     `[Graph Engine] Final chunk complete — repairing closure for ${affectedProjectIds.length} projects`,
                 );
-                await repairTaskReachabilityForProjects(
-                    trx,
-                    affectedProjectIds,
+                await traceStep(
+                    'DB recursive reachability repair CTE',
+                    {
+                        importanceLevel: 3,
+                        edgeLabel: 'repairs',
+                        data: {
+                            affectedProjectIds,
+                            affectedCount,
+                        },
+                    },
+                    () =>
+                        repairTaskReachabilityForProjects(
+                            trx,
+                            affectedProjectIds,
+                        ),
                 );
             }
         });
@@ -622,18 +738,50 @@ export class TaskServiceImpl implements TaskService {
         if (events.length === 0) return;
 
         await db.transaction().execute(async (trx) => {
-            const unprocessed = await claimEventsAtomic(
-                trx,
-                events,
-                'task-decommissioning-group',
+            const unprocessed = await traceStep(
+                'DB claim processed_event task-decommissioning-group',
+                {
+                    importanceLevel: 3,
+                    edgeLabel: 'validates',
+                    data: {
+                        groupId: 'task-decommissioning-group',
+                        count: events.length,
+                        eventIds: events.map((event) => event.eventId),
+                    },
+                },
+                () =>
+                    claimEventsAtomic(
+                        trx,
+                        events,
+                        'task-decommissioning-group',
+                    ),
             );
 
             if (unprocessed.length === 0) return;
 
-            const projectIds = this.collectProjectIds(unprocessed);
-            const { affectedCount } = await deleteProjectTasksChunk(
-                projectIds,
-                trx,
+            const projectIds = await traceStep(
+                'TaskService.collectProjectIds',
+                {
+                    importanceLevel: 3,
+                    edgeLabel: 'calls',
+                    data: {
+                        count: unprocessed.length,
+                        eventIds: unprocessed.map((event) => event.eventId),
+                    },
+                },
+                () => this.collectProjectIds(unprocessed),
+            );
+            const { affectedCount } = await traceStep(
+                'DB delete project_task chunk',
+                {
+                    importanceLevel: 3,
+                    edgeLabel: 'writes',
+                    data: {
+                        projectIds,
+                        chunkSize: BULK_DELETE_CHUNK_SIZE,
+                    },
+                },
+                () => deleteProjectTasksChunk(projectIds, trx),
             );
 
             logger.info(
@@ -644,16 +792,32 @@ export class TaskServiceImpl implements TaskService {
                 logger.info(
                     '[ProjectAggregated -> Task] Chunk full — emitting continuation signal',
                 );
-                await appendEventsToOutbox(trx, [
+                await traceStep(
+                    `Outbox insert ${EVENT_TYPES.PROJECT_AGGREGATED.DELETE_PROJECT_TASK_CHUNK}`,
                     {
-                        stream: EVENT_STREAMS.PROJECT_AGGREGATED,
-                        payload: {
-                            type: EVENT_TYPES.PROJECT_AGGREGATED
-                                .DELETE_PROJECT_TASK_CHUNK,
+                        importanceLevel: 3,
+                        edgeLabel: 'emits',
+                        data: {
+                            stream: EVENT_STREAMS.PROJECT_AGGREGATED,
+                            eventType:
+                                EVENT_TYPES.PROJECT_AGGREGATED
+                                    .DELETE_PROJECT_TASK_CHUNK,
                             projectIds,
+                            affectedCount,
                         },
                     },
-                ]);
+                    () =>
+                        appendEventsToOutbox(trx, [
+                            {
+                                stream: EVENT_STREAMS.PROJECT_AGGREGATED,
+                                payload: {
+                                    type: EVENT_TYPES.PROJECT_AGGREGATED
+                                        .DELETE_PROJECT_TASK_CHUNK,
+                                    projectIds,
+                                },
+                            },
+                        ]),
+                );
             }
         });
     }
@@ -664,18 +828,50 @@ export class TaskServiceImpl implements TaskService {
         if (events.length === 0) return;
 
         await db.transaction().execute(async (trx) => {
-            const unprocessed = await claimEventsAtomic(
-                trx,
-                events,
-                'task-link-decommissioning-group',
+            const unprocessed = await traceStep(
+                'DB claim processed_event task-link-decommissioning-group',
+                {
+                    importanceLevel: 3,
+                    edgeLabel: 'validates',
+                    data: {
+                        groupId: 'task-link-decommissioning-group',
+                        count: events.length,
+                        eventIds: events.map((event) => event.eventId),
+                    },
+                },
+                () =>
+                    claimEventsAtomic(
+                        trx,
+                        events,
+                        'task-link-decommissioning-group',
+                    ),
             );
 
             if (unprocessed.length === 0) return;
 
-            const projectIds = this.collectProjectIds(unprocessed);
-            const { affectedCount } = await deleteProjectTaskLinksChunk(
-                projectIds,
-                trx,
+            const projectIds = await traceStep(
+                'TaskService.collectProjectIds',
+                {
+                    importanceLevel: 3,
+                    edgeLabel: 'calls',
+                    data: {
+                        count: unprocessed.length,
+                        eventIds: unprocessed.map((event) => event.eventId),
+                    },
+                },
+                () => this.collectProjectIds(unprocessed),
+            );
+            const { affectedCount } = await traceStep(
+                'DB delete task_link chunk',
+                {
+                    importanceLevel: 3,
+                    edgeLabel: 'writes',
+                    data: {
+                        projectIds,
+                        chunkSize: BULK_DELETE_CHUNK_SIZE,
+                    },
+                },
+                () => deleteProjectTaskLinksChunk(projectIds, trx),
             );
 
             logger.info(
@@ -686,16 +882,32 @@ export class TaskServiceImpl implements TaskService {
                 logger.info(
                     '[ProjectAggregated -> Task] Chunk full — emitting continuation signal for task links',
                 );
-                await appendEventsToOutbox(trx, [
+                await traceStep(
+                    `Outbox insert ${EVENT_TYPES.PROJECT_AGGREGATED.DELETE_PROJECT_TASK_LINK_CHUNK}`,
                     {
-                        stream: EVENT_STREAMS.PROJECT_AGGREGATED,
-                        payload: {
-                            type: EVENT_TYPES.PROJECT_AGGREGATED
-                                .DELETE_PROJECT_TASK_LINK_CHUNK,
+                        importanceLevel: 3,
+                        edgeLabel: 'emits',
+                        data: {
+                            stream: EVENT_STREAMS.PROJECT_AGGREGATED,
+                            eventType:
+                                EVENT_TYPES.PROJECT_AGGREGATED
+                                    .DELETE_PROJECT_TASK_LINK_CHUNK,
                             projectIds,
+                            affectedCount,
                         },
                     },
-                ]);
+                    () =>
+                        appendEventsToOutbox(trx, [
+                            {
+                                stream: EVENT_STREAMS.PROJECT_AGGREGATED,
+                                payload: {
+                                    type: EVENT_TYPES.PROJECT_AGGREGATED
+                                        .DELETE_PROJECT_TASK_LINK_CHUNK,
+                                    projectIds,
+                                },
+                            },
+                        ]),
+                );
             }
         });
     }
@@ -706,18 +918,50 @@ export class TaskServiceImpl implements TaskService {
         if (events.length === 0) return;
 
         await db.transaction().execute(async (trx) => {
-            const unprocessed = await claimEventsAtomic(
-                trx,
-                events,
-                'task-project-reachability-purge-group',
+            const unprocessed = await traceStep(
+                'DB claim processed_event task-project-reachability-purge-group',
+                {
+                    importanceLevel: 3,
+                    edgeLabel: 'validates',
+                    data: {
+                        groupId: 'task-project-reachability-purge-group',
+                        count: events.length,
+                        eventIds: events.map((event) => event.eventId),
+                    },
+                },
+                () =>
+                    claimEventsAtomic(
+                        trx,
+                        events,
+                        'task-project-reachability-purge-group',
+                    ),
             );
 
             if (unprocessed.length === 0) return;
 
-            const projectIds = this.collectProjectIds(unprocessed);
-            const { affectedCount } = await deleteProjectTaskReachabilityChunk(
-                projectIds,
-                trx,
+            const projectIds = await traceStep(
+                'TaskService.collectProjectIds',
+                {
+                    importanceLevel: 3,
+                    edgeLabel: 'calls',
+                    data: {
+                        count: unprocessed.length,
+                        eventIds: unprocessed.map((event) => event.eventId),
+                    },
+                },
+                () => this.collectProjectIds(unprocessed),
+            );
+            const { affectedCount } = await traceStep(
+                'DB delete project task_reachability chunk',
+                {
+                    importanceLevel: 3,
+                    edgeLabel: 'repairs',
+                    data: {
+                        projectIds,
+                        chunkSize: BULK_DELETE_CHUNK_SIZE,
+                    },
+                },
+                () => deleteProjectTaskReachabilityChunk(projectIds, trx),
             );
 
             logger.info(
@@ -728,16 +972,32 @@ export class TaskServiceImpl implements TaskService {
                 logger.info(
                     '[Graph Engine] Chunk full — emitting continuation signal for reachability purge',
                 );
-                await appendEventsToOutbox(trx, [
+                await traceStep(
+                    `Outbox insert ${EVENT_TYPES.PROJECT_AGGREGATED.DELETE_PROJECT_TASK_REACHABILITY_CHUNK}`,
                     {
-                        stream: EVENT_STREAMS.PROJECT_AGGREGATED,
-                        payload: {
-                            type: EVENT_TYPES.PROJECT_AGGREGATED
-                                .DELETE_PROJECT_TASK_REACHABILITY_CHUNK,
+                        importanceLevel: 3,
+                        edgeLabel: 'emits',
+                        data: {
+                            stream: EVENT_STREAMS.PROJECT_AGGREGATED,
+                            eventType:
+                                EVENT_TYPES.PROJECT_AGGREGATED
+                                    .DELETE_PROJECT_TASK_REACHABILITY_CHUNK,
                             projectIds,
+                            affectedCount,
                         },
                     },
-                ]);
+                    () =>
+                        appendEventsToOutbox(trx, [
+                            {
+                                stream: EVENT_STREAMS.PROJECT_AGGREGATED,
+                                payload: {
+                                    type: EVENT_TYPES.PROJECT_AGGREGATED
+                                        .DELETE_PROJECT_TASK_REACHABILITY_CHUNK,
+                                    projectIds,
+                                },
+                            },
+                        ]),
+                );
             }
         });
     }
