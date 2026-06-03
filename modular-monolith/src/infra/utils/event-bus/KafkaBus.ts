@@ -1,3 +1,4 @@
+import { context, propagation, trace } from '@opentelemetry/api';
 import { type Consumer, Kafka, Partitioners, type Producer } from 'kafkajs';
 import { logger } from '../../logger';
 import { EVENT_STREAMS } from './constants.ts';
@@ -65,10 +66,7 @@ export class KafkaBus implements Bus {
         logger.debug(
             `Kafka: Publishing ${items.length} events to stream "${stream}" (Type: ${type})`,
         );
-        // Carry traceContext from the outbox payload envelope into the DomainEvent
-        const events = items.map((i) =>
-            createEvent(type, i.key, i.data, i.id, i.data?.traceContext),
-        );
+        const events = items.map((i) => createEvent(type, i.key, i.data, i.id));
         await this.emit(events, stream);
     }
 
@@ -85,10 +83,11 @@ export class KafkaBus implements Bus {
     private async emit(events: DomainEvent[], stream: string) {
         await this.producer.send({
             topic: stream,
-            messages: events.map((e) => ({
-                key: e.key,
-                value: JSON.stringify(e),
-            })),
+            messages: events.map((e) => {
+                const headers: Record<string, string> = {};
+                propagation.inject(context.active(), headers);
+                return { key: e.key, value: JSON.stringify(e), headers };
+            }),
         });
     }
 
@@ -116,33 +115,56 @@ export class KafkaBus implements Bus {
                     `Kafka Consumer [${groupId}]: Received batch of ${batch.messages.length} from "${stream}"`,
                 );
 
-                try {
-                    const allEvents: DomainEvent[] = batch.messages
-                        .map((m) => JSON.parse(m.value?.toString() || '{}'))
-                        .filter((e) => handlers[e.type] || handlers['*']);
+                const firstMessageHeaders = batch.messages[0]?.headers || {};
+                const parentContext = propagation.extract(
+                    context.active(),
+                    firstMessageHeaders as any,
+                );
 
-                    if (allEvents.length > 0) {
-                        logger.info(
-                            `Kafka Consumer [${groupId}]: Processing ${allEvents.length} relevant events from "${stream}"`,
-                        );
-                        await this.executeHandlers(
-                            allEvents,
-                            handlers,
-                            options,
-                            isRunning,
-                            isStale,
-                        );
-                    }
+                await context.with(parentContext, async () => {
+                    const tracer = trace.getTracer('kafkajs-consumer');
+                    await tracer.startActiveSpan(
+                        `process batch ${stream}`,
+                        {},
+                        async (span) => {
+                            try {
+                                const allEvents: DomainEvent[] = batch.messages
+                                    .map((m) =>
+                                        JSON.parse(m.value?.toString() || '{}'),
+                                    )
+                                    .filter(
+                                        (e) =>
+                                            handlers[e.type] || handlers['*'],
+                                    );
 
-                    for (const m of batch.messages) resolveOffset(m.offset);
-                    await heartbeat();
-                } catch (err) {
-                    logger.error(
-                        `Kafka Consumer [${groupId}]: Batch processing failed`,
-                        err,
+                                if (allEvents.length > 0) {
+                                    logger.info(
+                                        `Kafka Consumer [${groupId}]: Processing ${allEvents.length} relevant events from "${stream}"`,
+                                    );
+                                    await this.executeHandlers(
+                                        allEvents,
+                                        handlers,
+                                        options,
+                                        isRunning,
+                                        isStale,
+                                    );
+                                }
+
+                                for (const m of batch.messages)
+                                    resolveOffset(m.offset);
+                                await heartbeat();
+                            } catch (err) {
+                                logger.error(
+                                    `Kafka Consumer [${groupId}]: Batch processing failed`,
+                                    err,
+                                );
+                                throw err;
+                            } finally {
+                                span.end();
+                            }
+                        },
                     );
-                    throw err;
-                }
+                });
             },
         });
 
@@ -172,18 +194,17 @@ export class KafkaBus implements Bus {
         }
 
         await Promise.all(
-            Array.from(byType.entries()).map(async ([type, typeEvents]) => {
+            Array.from(byType.entries()).map(async ([type, events]) => {
                 const handler = handlers[type];
                 if (!handler) return;
 
                 logger.debug(
-                    `Kafka: Executing handler for type "${type}" (${typeEvents.length} events)`,
+                    `Kafka: Executing handler for type "${type}" (${events.length} events)`,
                 );
                 if (options?.batch) {
-                    // Pass the full DomainEvent[] — traceContext travels in the envelope
-                    await handler(typeEvents);
+                    await handler(events);
                 } else {
-                    for (const e of typeEvents) {
+                    for (const e of events) {
                         await handler(e.data);
                     }
                 }

@@ -1,5 +1,4 @@
 import { logger } from '../../../../infra/logger';
-import { traceMethod } from '../../../../infra/tracing.ts';
 import eventBus from '../../../../infra/utils/EventBus.ts';
 import {
     EVENT_STREAMS,
@@ -10,6 +9,14 @@ import { taskService } from '../../index.ts';
 
 /**
  * Execution Listener: Delete Project Task Reachability (Chunked)
+ *
+ * Processes transitive closure row deletion in bounded chunks to prevent
+ * long-lived database locks. The repair CTE is intentionally deferred:
+ * intermediate chunk passes only delete rows. On the FINAL chunk
+ * (affectedCount < BULK_DELETE_CHUNK_SIZE), the entire purge is done
+ * and the reachability table will be rebuilt by the separate link-layer
+ * constraints (FK cascade). No explicit repair is needed here — by the
+ * time project reachability is purged, the tasks and links are already gone.
  *
  * [Action]: DELETE_PROJECT_TASK_REACHABILITY | DELETE_PROJECT_TASK_REACHABILITY_CHUNK
  */
@@ -23,9 +30,11 @@ export class ProjectAggregated_DeleteProjectReachability {
             EVENT_STREAMS.PROJECT_AGGREGATED,
             'task-project-reachability-purge-group',
             {
+                // Initial trigger from the Project aggregator
                 [EVENT_TYPES.PROJECT_AGGREGATED
                     .DELETE_PROJECT_TASK_REACHABILITY]:
                     this.handleProjectReachabilityPurge.bind(this),
+                // Self-signaling continuation when a chunk finishes but rows remain
                 [EVENT_TYPES.PROJECT_AGGREGATED
                     .DELETE_PROJECT_TASK_REACHABILITY_CHUNK]:
                     this.handleProjectReachabilityPurge.bind(this),
@@ -37,19 +46,6 @@ export class ProjectAggregated_DeleteProjectReachability {
     private async handleProjectReachabilityPurge(
         events: DomainEvent<{ projectIds: string[] }>[],
     ) {
-        if (events.length === 0) return;
-
-        await traceMethod(
-            {
-                containerId: 'task-module',
-                containerName: 'Task Module',
-                containerType: 'Logical Domain Module',
-                name: 'listener.handleProjectReachabilityPurge',
-                incomingTrace: events[0]?.traceContext,
-            },
-            async () => {
-                await taskService.handleDeleteProjectReachability(events);
-            },
-        );
+        await taskService.handleDeleteProjectReachability(events);
     }
 }

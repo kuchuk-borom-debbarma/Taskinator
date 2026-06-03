@@ -1,6 +1,5 @@
 import { db } from '../../../infra/database';
 import { logger } from '../../../infra/logger';
-import { traceMethod } from '../../../infra/tracing';
 import type { PaginationParams } from '../../../infra/types/pagination.ts';
 import eventBus from '../../../infra/utils/EventBus.ts';
 import type { DomainEvent } from '../../../infra/utils/event-bus';
@@ -21,12 +20,6 @@ import {
     getProjectsByIds,
 } from './ProjectQueries.ts';
 
-const CONTAINER = {
-    containerId: 'project-module',
-    containerName: 'Project Module',
-    containerType: 'Logical Domain Module',
-} as const;
-
 export class ProjectServiceImpl implements ProjectService {
     async getProjectsOfUser(
         userId: string,
@@ -37,19 +30,14 @@ export class ProjectServiceImpl implements ProjectService {
         nextCursor: string | null;
         prevCursor: string | null;
     }> {
-        return traceMethod(
-            { ...CONTAINER, name: 'projectService.getProjectsOfUser' },
-            async () => {
-                logger.debug(
-                    `ProjectService.getProjectsOfUser called for userId: ${userId}`,
-                );
-                const result = await getProjects(userId, params);
-                logger.debug(
-                    `ProjectService.getProjectsOfUser returned ${result.projects.length} projects`,
-                );
-                return result;
-            },
+        logger.debug(
+            `ProjectService.getProjectsOfUser called for userId: ${userId}`,
         );
+        const result = await getProjects(userId, params);
+        logger.debug(
+            `ProjectService.getProjectsOfUser returned ${result.projects.length} projects`,
+        );
+        return result;
     }
 
     async getProjectMembers(
@@ -61,77 +49,46 @@ export class ProjectServiceImpl implements ProjectService {
         nextCursor: string | null;
         prevCursor: string | null;
     }> {
-        return traceMethod(
-            { ...CONTAINER, name: 'projectService.getProjectMembers' },
-            async () => {
-                logger.debug(
-                    `ProjectService.getProjectMembers called for project: ${projectId}`,
-                );
-                return getProjectMembers(userId, projectId, params);
-            },
+        logger.debug(
+            `ProjectService.getProjectMembers called for project: ${projectId}`,
         );
+        return getProjectMembers(userId, projectId, params);
     }
 
     async getProjectMembersByIds(
         memberIds: string[],
     ): Promise<ProjectMember[]> {
-        return traceMethod(
-            { ...CONTAINER, name: 'projectService.getProjectMembersByIds' },
-            async () => {
-                logger.debug(
-                    `ProjectService.getProjectMembersByIds called for ${memberIds.length} ids`,
-                );
-                return getProjectMembersByIds(memberIds);
-            },
+        logger.debug(
+            `ProjectService.getProjectMembersByIds called for ${memberIds.length} ids`,
         );
+        return getProjectMembersByIds(memberIds);
     }
 
     async getProjectMembersByActorIdAndIds(
         userId: string,
         memberIds: string[],
     ): Promise<ProjectMember[]> {
-        return traceMethod(
-            {
-                ...CONTAINER,
-                name: 'projectService.getProjectMembersByActorIdAndIds',
-            },
-            async () => {
-                logger.debug(
-                    `ProjectService.getProjectMembersByActorIdAndIds called for actor: ${userId}, members: ${memberIds.length}`,
-                );
-                return getProjectMembersByActorIdAndIds(userId, memberIds);
-            },
+        logger.debug(
+            `ProjectService.getProjectMembersByActorIdAndIds called for actor: ${userId}, members: ${memberIds.length}`,
         );
+        return getProjectMembersByActorIdAndIds(userId, memberIds);
     }
 
     async getProjectsByIds(ids: string[]): Promise<Project[]> {
-        return traceMethod(
-            { ...CONTAINER, name: 'projectService.getProjectsByIds' },
-            async () => {
-                logger.debug(
-                    `ProjectService.getProjectsByIds called for ${ids.length} ids`,
-                );
-                return getProjectsByIds(ids);
-            },
+        logger.debug(
+            `ProjectService.getProjectsByIds called for ${ids.length} ids`,
         );
+        return getProjectsByIds(ids);
     }
 
     async getProjectsByActorIdAndProjectIds(
         userId: string,
         projectIds: string[],
     ): Promise<Project[]> {
-        return traceMethod(
-            {
-                ...CONTAINER,
-                name: 'projectService.getProjectsByActorIdAndProjectIds',
-            },
-            async () => {
-                logger.debug(
-                    `ProjectService.getProjectsByActorIdAndProjectIds called for actor: ${userId}, projects: ${projectIds.length}`,
-                );
-                return getProjectsByActorIdAndProjectIds(userId, projectIds);
-            },
+        logger.debug(
+            `ProjectService.getProjectsByActorIdAndProjectIds called for actor: ${userId}, projects: ${projectIds.length}`,
         );
+        return getProjectsByActorIdAndProjectIds(userId, projectIds);
     }
 
     async destroy(): Promise<void> {
@@ -149,36 +106,31 @@ export class ProjectServiceImpl implements ProjectService {
         name: string;
         description?: string;
     }): Promise<Project | null> {
-        return traceMethod(
-            { ...CONTAINER, name: 'projectService.createProject' },
-            async () => {
-                logger.info(
-                    `ProjectService.createProject started by ${param.actorId} for "${param.name}"`,
-                );
-
-                if (param.name.length < 3 || param.name.length > 255) {
-                    throw new Error(
-                        'Project name must be between 3 and 255 characters.',
-                    );
-                }
-
-                const result = await queries.insertProject({
-                    userId: param.actorId,
-                    name: param.name,
-                    description: param.description,
-                });
-                if (result) {
-                    logger.info(
-                        `ProjectService.createProject successful: ${result.id}`,
-                    );
-                } else {
-                    logger.error(
-                        `ProjectService.createProject failed for "${param.name}"`,
-                    );
-                }
-                return result;
-            },
+        logger.info(
+            `ProjectService.createProject started by ${param.actorId} for "${param.name}"`,
         );
+
+        if (param.name.length < 3 || param.name.length > 255) {
+            throw new Error(
+                'Project name must be between 3 and 255 characters.',
+            );
+        }
+
+        const result = await queries.insertProject({
+            userId: param.actorId,
+            name: param.name,
+            description: param.description,
+        });
+        if (result) {
+            logger.info(
+                `ProjectService.createProject successful: ${result.id}`,
+            );
+        } else {
+            logger.error(
+                `ProjectService.createProject failed for "${param.name}"`,
+            );
+        }
+        return result;
     }
 
     async updateProject(param: {
@@ -188,54 +140,42 @@ export class ProjectServiceImpl implements ProjectService {
         name?: string;
         description?: string;
     }): Promise<Project | null> {
-        return traceMethod(
-            { ...CONTAINER, name: 'projectService.updateProject' },
-            async () => {
-                logger.info(
-                    `ProjectService.updateProject started for ${param.id} by ${param.actorId}`,
-                );
-
-                if (
-                    param.name !== undefined &&
-                    (param.name.length < 3 || param.name.length > 255)
-                ) {
-                    throw new Error(
-                        'Project name must be between 3 and 255 characters.',
-                    );
-                }
-
-                const result = await queries.updateProject(param);
-                if (result) {
-                    logger.info(
-                        `ProjectService.updateProject successful: ${param.id}`,
-                    );
-                } else {
-                    logger.warn(
-                        `ProjectService.updateProject failed for ${param.id} (likely version mismatch or permissions)`,
-                    );
-                }
-                return result;
-            },
+        logger.info(
+            `ProjectService.updateProject started for ${param.id} by ${param.actorId}`,
         );
+
+        if (
+            param.name !== undefined &&
+            (param.name.length < 3 || param.name.length > 255)
+        ) {
+            throw new Error(
+                'Project name must be between 3 and 255 characters.',
+            );
+        }
+
+        const result = await queries.updateProject(param);
+        if (result) {
+            logger.info(`ProjectService.updateProject successful: ${param.id}`);
+        } else {
+            logger.warn(
+                `ProjectService.updateProject failed for ${param.id} (likely version mismatch or permissions)`,
+            );
+        }
+        return result;
     }
 
     async deleteProjects(param: {
         actorId: string;
         projectIds: string[];
     }): Promise<{ success: boolean; deletedCount: number }> {
-        return traceMethod(
-            { ...CONTAINER, name: 'projectService.deleteProjects' },
-            async () => {
-                logger.info(
-                    `ProjectService.deleteProjects started by ${param.actorId} for ${param.projectIds.length} projects`,
-                );
-                const result = await queries.deleteProjects(param);
-                logger.info(
-                    `ProjectService.deleteProjects completed: deleted ${result.deletedCount} projects`,
-                );
-                return result;
-            },
+        logger.info(
+            `ProjectService.deleteProjects started by ${param.actorId} for ${param.projectIds.length} projects`,
         );
+        const result = await queries.deleteProjects(param);
+        logger.info(
+            `ProjectService.deleteProjects completed: deleted ${result.deletedCount} projects`,
+        );
+        return result;
     }
 
     async addProjectMembers(param: {
@@ -243,19 +183,12 @@ export class ProjectServiceImpl implements ProjectService {
         projectId: string;
         userIds: string[];
     }): Promise<boolean> {
-        return traceMethod(
-            { ...CONTAINER, name: 'projectService.addProjectMembers' },
-            async () => {
-                logger.info(
-                    `ProjectService.addProjectMembers started for ${param.projectId} by ${param.actorId}, users: ${param.userIds.length}`,
-                );
-                const result = await queries.insertProjectMembers(param);
-                logger.info(
-                    `ProjectService.addProjectMembers result: ${result}`,
-                );
-                return result;
-            },
+        logger.info(
+            `ProjectService.addProjectMembers started for ${param.projectId} by ${param.actorId}, users: ${param.userIds.length}`,
         );
+        const result = await queries.insertProjectMembers(param);
+        logger.info(`ProjectService.addProjectMembers result: ${result}`);
+        return result;
     }
 
     async removeProjectMembers(param: {
@@ -263,151 +196,108 @@ export class ProjectServiceImpl implements ProjectService {
         projectId: string;
         userIds: string[];
     }): Promise<boolean> {
-        return traceMethod(
-            { ...CONTAINER, name: 'projectService.removeProjectMembers' },
-            async () => {
-                logger.info(
-                    `ProjectService.removeProjectMembers started for ${param.projectId} by ${param.actorId}, users: ${param.userIds.length}`,
-                );
-                const result = await queries.deleteProjectMembers(param);
-                logger.info(
-                    `ProjectService.removeProjectMembers result: ${result}`,
-                );
-                return result;
-            },
+        logger.info(
+            `ProjectService.removeProjectMembers started for ${param.projectId} by ${param.actorId}, users: ${param.userIds.length}`,
         );
+        const result = await queries.deleteProjectMembers(param);
+        logger.info(`ProjectService.removeProjectMembers result: ${result}`);
+        return result;
     }
 
     async handleProjectMemberCountSync(
         events: DomainEvent<{ projectId: string; delta: number }>[],
     ): Promise<void> {
-        return traceMethod(
-            {
-                ...CONTAINER,
-                name: 'projectService.handleProjectMemberCountSync',
-            },
-            async () => {
-                await this.handleProjectCountSync(
-                    events,
-                    'project-member-count-group',
-                    'members_count',
-                    queries.updateProjectMemberCountsBulk,
-                );
-            },
+        await this.handleProjectCountSync(
+            events,
+            'project-member-count-group',
+            'members_count',
+            queries.updateProjectMemberCountsBulk,
         );
     }
 
     async handleSyncProjectTaskCount(
         events: DomainEvent<{ projectId: string; delta: number }>[],
     ): Promise<void> {
-        return traceMethod(
-            { ...CONTAINER, name: 'projectService.handleSyncProjectTaskCount' },
-            async () => {
-                await this.handleProjectCountSync(
-                    events,
-                    'project-task-count-group',
-                    'tasks_count',
-                    queries.updateProjectTaskCountsBulk,
-                );
-            },
+        await this.handleProjectCountSync(
+            events,
+            'project-task-count-group',
+            'tasks_count',
+            queries.updateProjectTaskCountsBulk,
         );
     }
 
     async handleSyncProjectTeamCount(
         events: DomainEvent<{ projectId: string; delta: number }>[],
     ): Promise<void> {
-        return traceMethod(
-            { ...CONTAINER, name: 'projectService.handleSyncProjectTeamCount' },
-            async () => {
-                await this.handleProjectCountSync(
-                    events,
-                    'project-team-count-group',
-                    'teams_count',
-                    queries.updateProjectTeamCountsBulk,
-                );
-            },
+        await this.handleProjectCountSync(
+            events,
+            'project-team-count-group',
+            'teams_count',
+            queries.updateProjectTeamCountsBulk,
         );
     }
 
     async handleRemoveProjectMember(
         events: DomainEvent<{ projectId: string; userIds: string[] }>[],
     ): Promise<void> {
-        return traceMethod(
-            { ...CONTAINER, name: 'projectService.handleRemoveProjectMember' },
-            async () => {
-                if (events.length === 0) return;
+        if (events.length === 0) return;
 
-                await db.transaction().execute(async (trx) => {
-                    const unprocessed = await claimEventsAtomic(
-                        trx,
-                        events,
-                        'project-member-removal-group',
-                    );
+        await db.transaction().execute(async (trx) => {
+            const unprocessed = await claimEventsAtomic(
+                trx,
+                events,
+                'project-member-removal-group',
+            );
 
-                    if (unprocessed.length === 0) return;
+            if (unprocessed.length === 0) return;
 
-                    const projectMap = new Map<string, Set<string>>();
-                    for (const event of unprocessed) {
-                        const { projectId, userIds } = event.data;
-                        const existing =
-                            projectMap.get(projectId) || new Set<string>();
-                        userIds.forEach((id: string) => existing.add(id));
-                        projectMap.set(projectId, existing);
-                    }
+            const projectMap = new Map<string, Set<string>>();
+            for (const event of unprocessed) {
+                const { projectId, userIds } = event.data;
+                const existing = projectMap.get(projectId) || new Set<string>();
+                userIds.forEach((id: string) => existing.add(id));
+                projectMap.set(projectId, existing);
+            }
 
-                    const deltas = Array.from(projectMap.entries()).map(
-                        ([projectId, userIdsSet]) => ({
-                            projectId,
-                            userIds: Array.from(userIdsSet),
-                        }),
-                    );
+            const deltas = Array.from(projectMap.entries()).map(
+                ([projectId, userIdsSet]) => ({
+                    projectId,
+                    userIds: Array.from(userIdsSet),
+                }),
+            );
 
-                    logger.info(
-                        `[ProjectService] Removing project members for ${deltas.length} projects (from ${unprocessed.length} events)`,
-                    );
+            logger.info(
+                `[ProjectService] Removing project members for ${deltas.length} projects (from ${unprocessed.length} events)`,
+            );
 
-                    await queries.purgeProjectMembersBatch(deltas, trx);
-                });
-            },
-        );
+            await queries.purgeProjectMembersBatch(deltas, trx);
+        });
     }
 
     async handleDeleteProjectMember(
         events: DomainEvent<{ projectIds: string[] }>[],
     ): Promise<void> {
-        return traceMethod(
-            { ...CONTAINER, name: 'projectService.handleDeleteProjectMember' },
-            async () => {
-                if (events.length === 0) return;
+        if (events.length === 0) return;
 
-                await db.transaction().execute(async (trx) => {
-                    const unprocessed = await claimEventsAtomic(
-                        trx,
-                        events,
-                        'project-decommissioning-group',
-                    );
+        await db.transaction().execute(async (trx) => {
+            const unprocessed = await claimEventsAtomic(
+                trx,
+                events,
+                'project-decommissioning-group',
+            );
 
-                    if (unprocessed.length === 0) return;
+            if (unprocessed.length === 0) return;
 
-                    const projectIds = Array.from(
-                        new Set(
-                            unprocessed.flatMap(
-                                (event) => event.data.projectIds,
-                            ),
-                        ),
-                    );
+            const projectIds = Array.from(
+                new Set(unprocessed.flatMap((event) => event.data.projectIds)),
+            );
 
-                    logger.info(
-                        `[ProjectService] Decommissioning all members for ${projectIds.length} projects (from ${unprocessed.length} events)`,
-                    );
+            logger.info(
+                `[ProjectService] Decommissioning all members for ${projectIds.length} projects (from ${unprocessed.length} events)`,
+            );
 
-                    await queries.purgeProjectMembersByProjectIdsBatch(
-                        projectIds,
-                        trx,
-                    );
-                });
-            },
-        );
+            await queries.purgeProjectMembersByProjectIdsBatch(projectIds, trx);
+        });
     }
 
     private async handleProjectCountSync(

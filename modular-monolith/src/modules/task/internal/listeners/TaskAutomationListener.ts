@@ -29,7 +29,6 @@
 
 import { db } from '../../../../infra/database/index.ts';
 import { logger } from '../../../../infra/logger/index.ts';
-import { traceMethod } from '../../../../infra/tracing.ts';
 import eventBus from '../../../../infra/utils/EventBus.ts';
 import type { DomainEvent } from '../../../../infra/utils/event-bus';
 import {
@@ -95,24 +94,12 @@ export class TaskAutomationListener {
     private async handleTaskCreated(
         events: DomainEvent<TaskCreatedPayload>[],
     ): Promise<void> {
-        if (events.length === 0) return;
+        for (const event of events) {
+            const { projectId, taskId } = event.data;
+            const actorId = event.data.actorId || 'system:automation';
 
-        await traceMethod(
-            {
-                containerId: 'task-module',
-                containerName: 'Task Module',
-                containerType: 'Logical Domain Module',
-                name: 'automation.handleTaskCreated',
-                incomingTrace: events[0]?.traceContext,
-            },
-            async () => {
-                for (const event of events) {
-                    const { projectId, taskId } = event.data;
-                    const actorId = event.data.actorId || 'system:automation';
-                    await this.runTaskCreatedRules(projectId, taskId, actorId);
-                }
-            },
-        );
+            await this.runTaskCreatedRules(projectId, taskId, actorId);
+        }
     }
 
     /**
@@ -122,98 +109,92 @@ export class TaskAutomationListener {
     private async handleTaskUpdated(
         events: DomainEvent<TaskUpdatedPayload>[],
     ): Promise<void> {
-        if (events.length === 0) return;
+        for (const event of events) {
+            const { old, new: next, projectId, taskId } = event.data;
+            if (!next) continue;
 
-        await traceMethod(
-            {
-                containerId: 'task-module',
-                containerName: 'Task Module',
-                containerType: 'Logical Domain Module',
-                name: 'automation.handleTaskUpdated',
-                incomingTrace: events[0]?.traceContext,
-            },
-            async () => {
-                for (const event of events) {
-                    const { old, new: next, projectId, taskId } = event.data;
-                    if (!next) continue;
+            const actorId = event.data.actorId || 'system:automation';
 
-                    const actorId = event.data.actorId || 'system:automation';
+            const isStatusChanged =
+                old?.status !== undefined && old.status !== next.status;
+            const isPriorityChanged =
+                old?.priority !== undefined && old.priority !== next.priority;
+            const isAssigneeChanged =
+                (old?.memberId !== undefined &&
+                    old.memberId !== next.memberId) ||
+                (old?.teamId !== undefined && old.teamId !== next.teamId);
 
-                    const isStatusChanged =
-                        old?.status !== undefined && old.status !== next.status;
-                    const isPriorityChanged =
-                        old?.priority !== undefined &&
-                        old.priority !== next.priority;
-                    const isAssigneeChanged =
-                        (old?.memberId !== undefined &&
-                            old.memberId !== next.memberId) ||
-                        (old?.teamId !== undefined &&
-                            old.teamId !== next.teamId);
+            if (isStatusChanged) {
+                const fromStatus = old?.status ?? null;
+                const toStatus = next.status ?? null;
 
-                    if (isStatusChanged) {
-                        const fromStatus = old?.status ?? null;
-                        const toStatus = next.status ?? null;
+                // Run rules that fire on the task itself.
+                await this.runStatusChangedRules(
+                    projectId,
+                    taskId,
+                    fromStatus,
+                    toStatus,
+                    actorId,
+                );
 
-                        await this.runStatusChangedRules(
-                            projectId,
-                            taskId,
-                            fromStatus,
-                            toStatus,
-                            actorId,
-                        );
-                        await this.runDescendantStatusChangedRules(
-                            projectId,
-                            taskId,
-                            fromStatus,
-                            toStatus,
-                            actorId,
-                        );
-                        await this.runLinkedIncomingStatusChangedRules(
-                            projectId,
-                            taskId,
-                            fromStatus,
-                            toStatus,
-                            actorId,
-                        );
-                        await this.runLinkedOutgoingStatusChangedRules(
-                            projectId,
-                            taskId,
-                            fromStatus,
-                            toStatus,
-                            actorId,
-                        );
-                    }
+                // Run rules that fire on ancestor tasks when a descendant changes.
+                await this.runDescendantStatusChangedRules(
+                    projectId,
+                    taskId,
+                    fromStatus,
+                    toStatus,
+                    actorId,
+                );
 
-                    if (isPriorityChanged) {
-                        const fromPriority = old?.priority ?? null;
-                        const toPriority = next.priority ?? null;
-                        await this.runPriorityChangedRules(
-                            projectId,
-                            taskId,
-                            fromPriority,
-                            toPriority,
-                            actorId,
-                        );
-                    }
+                // Run rules that fire when a linked incoming task changes status.
+                await this.runLinkedIncomingStatusChangedRules(
+                    projectId,
+                    taskId,
+                    fromStatus,
+                    toStatus,
+                    actorId,
+                );
 
-                    if (isAssigneeChanged) {
-                        const fromMemberId = old?.memberId ?? null;
-                        const toMemberId = next.memberId ?? null;
-                        const fromTeamId = old?.teamId ?? null;
-                        const toTeamId = next.teamId ?? null;
-                        await this.runAssigneeChangedRules(
-                            projectId,
-                            taskId,
-                            fromMemberId,
-                            toMemberId,
-                            fromTeamId,
-                            toTeamId,
-                            actorId,
-                        );
-                    }
-                }
-            },
-        );
+                // Run rules that fire when a linked outgoing task changes status.
+                await this.runLinkedOutgoingStatusChangedRules(
+                    projectId,
+                    taskId,
+                    fromStatus,
+                    toStatus,
+                    actorId,
+                );
+            }
+
+            if (isPriorityChanged) {
+                const fromPriority = old?.priority ?? null;
+                const toPriority = next.priority ?? null;
+
+                await this.runPriorityChangedRules(
+                    projectId,
+                    taskId,
+                    fromPriority,
+                    toPriority,
+                    actorId,
+                );
+            }
+
+            if (isAssigneeChanged) {
+                const fromMemberId = old?.memberId ?? null;
+                const toMemberId = next.memberId ?? null;
+                const fromTeamId = old?.teamId ?? null;
+                const toTeamId = next.teamId ?? null;
+
+                await this.runAssigneeChangedRules(
+                    projectId,
+                    taskId,
+                    fromMemberId,
+                    toMemberId,
+                    fromTeamId,
+                    toTeamId,
+                    actorId,
+                );
+            }
+        }
     }
 
     // ─── STATUS_CHANGED ───────────────────────────────────────────────────────

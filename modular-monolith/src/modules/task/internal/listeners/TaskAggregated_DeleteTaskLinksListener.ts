@@ -1,5 +1,4 @@
 import { logger } from '../../../../infra/logger';
-import { traceMethod } from '../../../../infra/tracing.ts';
 import eventBus from '../../../../infra/utils/EventBus.ts';
 import type { DomainEvent } from '../../../../infra/utils/event-bus';
 import { EVENT_STREAMS, EVENT_TYPES } from '../../../../infra/utils/event-bus';
@@ -29,19 +28,6 @@ export class TaskAggregated_DeleteTaskLinksListener {
     private async handleTaskLinksDeleted(
         events: DomainEvent<{ taskIds: string[] }>[],
     ) {
-        if (events.length === 0) return;
-
-        await traceMethod(
-            {
-                containerId: 'task-module',
-                containerName: 'Task Module',
-                containerType: 'Logical Domain Module',
-                name: 'listener.handleTaskLinksDeleted',
-                incomingTrace: events[0]?.traceContext,
-            },
-            async () => {
-                await taskService.handleDeleteTaskLinks(events);
-            },
-        );
+        await taskService.handleDeleteTaskLinks(events);
     }
 }

@@ -1,76 +1,30 @@
-import { ContainerType, Tracer } from 'nodejs';
+import { getNodeAutoInstrumentations } from '@opentelemetry/auto-instrumentations-node';
+import { OTLPTraceExporter } from '@opentelemetry/exporter-trace-otlp-http';
+import { NodeSDK } from '@opentelemetry/sdk-node';
 
-// Initialize Topo-Tracer globally for logical monolith boundary mapping
+const sdk = new NodeSDK({
+    serviceName: 'taskinator-modular-monolith',
+    traceExporter: new OTLPTraceExporter({
+        url: 'http://localhost:4318/v1/traces',
+    }),
+    instrumentations: [getNodeAutoInstrumentations()],
+});
+
 try {
-    Tracer.init(
-        { baseUrl: process.env.TOPO_TRACER_URL || 'http://localhost:3000' },
-        {
-            name: 'GraphQL Gateway',
-            containerType: ContainerType.EXPRESS_API,
-            id: 'gateway',
-        },
-    );
-
-    // Pre-register every logical container up-front so that concurrent background
-    // workers (outbox relay, event bus) never race on registerContainer at runtime.
-    const containers = [
-        {
-            id: 'auth-module',
-            name: 'Auth Module',
-            containerType: 'Logical Domain Module',
-        },
-        {
-            id: 'project-module',
-            name: 'Project Module',
-            containerType: 'Logical Domain Module',
-        },
-        {
-            id: 'task-module',
-            name: 'Task Module',
-            containerType: 'Logical Domain Module',
-        },
-        {
-            id: 'team-module',
-            name: 'Team Module',
-            containerType: 'Logical Domain Module',
-        },
-        {
-            id: 'outbox-relay',
-            name: 'Outbox Relay',
-            containerType: 'Background Worker',
-        },
-        {
-            id: 'event-bus',
-            name: 'Event Bus',
-            containerType: 'Message Broker Adapter',
-        },
-    ] as const;
-
-    for (const c of containers) {
-        Tracer.registerContainer(c);
-    }
-
+    sdk.start();
     console.log(
-        '[Topo-Tracer] Initialized — pointing to backend at',
-        process.env.TOPO_TRACER_URL || 'http://localhost:3000',
-    );
-    console.log(
-        `[Topo-Tracer] Registered ${containers.length + 1} containers (gateway + modules)`,
+        '[OTel] Tracing initialized and pointing to locally hosted Jaeger OTLP receiver (localhost:4318)',
     );
 } catch (error) {
-    console.error('[Topo-Tracer] Error initializing tracer', error);
+    console.error('[OTel] Error initializing tracing', error);
 }
 
-// Gracefully flush and shut down Topo-Tracer on process exit
-const gracefulShutdown = async () => {
-    try {
-        await Tracer.shutdown();
-        console.log('[Topo-Tracer] Telemetry flushed & terminated');
-    } catch (error) {
-        console.error('[Topo-Tracer] Error during shutdown', error);
-    }
-    process.exit(0);
-};
-
-process.on('SIGTERM', gracefulShutdown);
-process.on('SIGINT', gracefulShutdown);
+// Gracefully shut down the SDK on process exit
+process.on('SIGTERM', () => {
+    sdk.shutdown()
+        .then(() => console.log('[OTel] Tracing terminated'))
+        .catch((error) =>
+            console.log('[OTel] Error terminating tracing', error),
+        )
+        .finally(() => process.exit(0));
+});

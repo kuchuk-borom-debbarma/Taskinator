@@ -3,7 +3,6 @@ import type { Pool, PoolClient } from 'pg';
 import type { EventRelayPort } from '../../contracts/index.ts';
 import type { Database } from '../../database/index.ts';
 import type { Logger } from '../../logger/index.ts';
-import { traceMethod } from '../../tracing.ts';
 import type { Bus } from '../../utils/event-bus/types.ts';
 
 interface PendingOutboxEvent {
@@ -71,80 +70,70 @@ export class PostgresOutboxRelay implements EventRelayPort {
     }
 
     async processBatch() {
-        return traceMethod(
-            {
-                containerId: 'outbox-relay',
-                containerName: 'Outbox Relay',
-                containerType: 'Background Worker',
-                name: 'outboxRelay.processBatch',
-            },
-            async () => {
-                // 1. Claim pending events in a super-fast micro-transaction
-                const events = await this.deps.db
-                    .transaction()
-                    .execute(async (trx: any) => {
-                        const pending = await this.fetchPendingEvents(trx);
-                        if (pending.length === 0) return [];
+        // 1. Claim pending events in a super-fast micro-transaction
+        const events = await this.deps.db
+            .transaction()
+            .execute(async (trx: any) => {
+                const pending = await this.fetchPendingEvents(trx);
+                if (pending.length === 0) return [];
 
-                        const eventIds = pending.map((event) => event.id);
+                const eventIds = pending.map((event) => event.id);
 
-                        // Lock events using a lease lock. If we crash, another process can reclaim it after 60s.
-                        await trx
-                            .updateTable('outbox_events')
-                            .set({
-                                status: 'PROCESSING',
-                                locked_at: sql<any>`NOW()`,
-                            })
-                            .where('id', 'in', eventIds)
-                            .execute();
+                // Lock events using a lease lock. If we crash, another process can reclaim it after 60s.
+                await trx
+                    .updateTable('outbox_events')
+                    .set({
+                        status: 'PROCESSING',
+                        locked_at: sql<any>`NOW()`,
+                    })
+                    .where('id', 'in', eventIds)
+                    .execute();
 
-                        return pending;
-                    });
+                return pending;
+            });
 
-                if (events.length === 0) return;
+        if (events.length === 0) return;
 
-                this.deps.logger.info(
-                    `[OutboxRelay] Claimed batch of ${events.length} events for processing: ` +
-                        `[${events.map((event) => `id=${event.id}, stream=${event.stream}, type=${event.payload.type}`).join('; ')}]`,
-                );
-
-                try {
-                    // 2. Dispatch to Event Bus (Kafka network I/O) OUTSIDE the database transaction
-                    await this.dispatchToEventBus(events);
-
-                    // 3. Clear processed events in a fast, single query outside a transaction
-                    const eventIds = events.map((event) => event.id);
-                    await this.clearProcessedEvents(eventIds);
-
-                    if (events.length === 100 && this.isRunning) {
-                        setImmediate(() => this.processBatch());
-                    }
-                } catch (err) {
-                    this.deps.logger.error(
-                        '[OutboxRelay] Error dispatching event batch, reverting status to PENDING for retry',
-                        err,
-                    );
-
-                    // Recovery: Reset events to PENDING so they can be claimed again immediately
-                    const eventIds = events.map((event) => event.id);
-                    try {
-                        await this.deps.db
-                            .updateTable('outbox_events')
-                            .set({
-                                status: 'PENDING',
-                                locked_at: null,
-                            })
-                            .where('id', 'in', eventIds)
-                            .execute();
-                    } catch (resetErr) {
-                        this.deps.logger.error(
-                            '[OutboxRelay] Failed to revert event batch status to PENDING',
-                            resetErr,
-                        );
-                    }
-                }
-            },
+        this.deps.logger.info(
+            `[OutboxRelay] Claimed batch of ${events.length} events for processing: ` +
+                `[${events.map((event) => `id=${event.id}, stream=${event.stream}, type=${event.payload.type}`).join('; ')}]`,
         );
+
+        try {
+            // 2. Dispatch to Event Bus (Kafka network I/O) OUTSIDE the database transaction
+            await this.dispatchToEventBus(events);
+
+            // 3. Clear processed events in a fast, single query outside a transaction
+            const eventIds = events.map((event) => event.id);
+            await this.clearProcessedEvents(eventIds);
+
+            if (events.length === 100 && this.isRunning) {
+                setImmediate(() => this.processBatch());
+            }
+        } catch (err) {
+            this.deps.logger.error(
+                '[OutboxRelay] Error dispatching event batch, reverting status to PENDING for retry',
+                err,
+            );
+
+            // Recovery: Reset events to PENDING so they can be claimed again immediately
+            const eventIds = events.map((event) => event.id);
+            try {
+                await this.deps.db
+                    .updateTable('outbox_events')
+                    .set({
+                        status: 'PENDING',
+                        locked_at: null,
+                    })
+                    .where('id', 'in', eventIds)
+                    .execute();
+            } catch (resetErr) {
+                this.deps.logger.error(
+                    '[OutboxRelay] Failed to revert event batch status to PENDING',
+                    resetErr,
+                );
+            }
+        }
     }
 
     private async fetchPendingEvents(trx: Transaction<Database>) {
@@ -180,57 +169,43 @@ export class PostgresOutboxRelay implements EventRelayPort {
     }
 
     private async dispatchToEventBus(events: PendingOutboxEvent[]) {
-        return traceMethod(
+        const groups = new Map<
+            string,
             {
-                containerId: 'event-bus',
-                containerName: 'Event Bus',
-                containerType: 'Message Broker Adapter',
-                name: 'eventBus.publish',
-            },
-            async () => {
-                const groups = new Map<
-                    string,
-                    {
-                        stream: string;
-                        type: string;
-                        payloads: Array<{
-                            id: string;
-                            key: string | null;
-                            data: any;
-                        }>;
-                    }
-                >();
+                stream: string;
+                type: string;
+                payloads: Array<{ id: string; key: string | null; data: any }>;
+            }
+        >();
 
-                for (const event of events) {
-                    const stream = event.stream;
-                    const type = event.payload.type;
-                    const groupKey = `${stream}|${type}`;
+        for (const event of events) {
+            const stream = event.stream;
+            const type = event.payload.type;
+            const groupKey = `${stream}|${type}`;
 
-                    if (!groups.has(groupKey)) {
-                        groups.set(groupKey, { stream, type, payloads: [] });
-                    }
+            if (!groups.has(groupKey)) {
+                groups.set(groupKey, { stream, type, payloads: [] });
+            }
 
-                    groups.get(groupKey)?.payloads.push({
-                        id: event.event_id,
-                        key: event.stream_key,
-                        data: event.payload,
-                    });
-                }
+            groups.get(groupKey)?.payloads.push({
+                id: event.event_id,
+                key: event.stream_key,
+                data: event.payload,
+            });
+        }
 
-                await Promise.all(
-                    Array.from(groups.values()).map((group) => {
-                        this.deps.logger.info(
-                            `[OutboxRelay] Relaying ${group.payloads.length} events of type "${group.type}" to stream "${group.stream}"` +
-                                ` (eventIds: [${group.payloads.map((payload) => payload.id).join(', ')}])`,
-                        );
-                        return this.deps.eventBus.publish(
-                            group.stream,
-                            group.type,
-                            group.payloads,
-                        );
-                    }),
+        await Promise.all(
+            Array.from(groups.values()).map((group) => {
+                this.deps.logger.info(
+                    `[OutboxRelay] Relaying ${group.payloads.length} events of type "${group.type}" to stream "${group.stream}"` +
+                        ` (eventIds: [${group.payloads.map((payload) => payload.id).join(', ')}])`,
                 );
-            },
+                return this.deps.eventBus.publish(
+                    group.stream,
+                    group.type,
+                    group.payloads,
+                );
+            }),
         );
     }
 
