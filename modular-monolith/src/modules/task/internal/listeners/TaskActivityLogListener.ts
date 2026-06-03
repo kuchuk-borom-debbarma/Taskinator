@@ -44,7 +44,6 @@ export class TaskActivityLogListener {
                 teamId: data.teamId,
                 memberId: data.memberId,
                 actorId: data.actorId,
-                traceId: data.traceId,
             };
 
             return {
@@ -72,14 +71,7 @@ export class TaskActivityLogListener {
 
         for (const event of events) {
             const data = event.data;
-            const {
-                taskId,
-                projectId,
-                actorId,
-                old,
-                new: newState,
-                traceId,
-            } = data;
+            const { taskId, projectId, actorId, old, new: newState } = data;
 
             if (!old || !newState) {
                 logger.warn(
@@ -114,7 +106,6 @@ export class TaskActivityLogListener {
                 payload: {
                     changes,
                     actorId,
-                    traceId,
                 },
             });
         }

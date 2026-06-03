@@ -1,4 +1,3 @@
-import { context, propagation, trace } from '@opentelemetry/api';
 import { type Consumer, Kafka, Partitioners, type Producer } from 'kafkajs';
 import { logger } from '../../logger';
 import { EVENT_STREAMS } from './constants.ts';
@@ -83,11 +82,10 @@ export class KafkaBus implements Bus {
     private async emit(events: DomainEvent[], stream: string) {
         await this.producer.send({
             topic: stream,
-            messages: events.map((e) => {
-                const headers: Record<string, string> = {};
-                propagation.inject(context.active(), headers);
-                return { key: e.key, value: JSON.stringify(e), headers };
-            }),
+            messages: events.map((e) => ({
+                key: e.key,
+                value: JSON.stringify(e),
+            })),
         });
     }
 
@@ -115,56 +113,33 @@ export class KafkaBus implements Bus {
                     `Kafka Consumer [${groupId}]: Received batch of ${batch.messages.length} from "${stream}"`,
                 );
 
-                const firstMessageHeaders = batch.messages[0]?.headers || {};
-                const parentContext = propagation.extract(
-                    context.active(),
-                    firstMessageHeaders as any,
-                );
+                try {
+                    const allEvents: DomainEvent[] = batch.messages
+                        .map((m) => JSON.parse(m.value?.toString() || '{}'))
+                        .filter((e) => handlers[e.type] || handlers['*']);
 
-                await context.with(parentContext, async () => {
-                    const tracer = trace.getTracer('kafkajs-consumer');
-                    await tracer.startActiveSpan(
-                        `process batch ${stream}`,
-                        {},
-                        async (span) => {
-                            try {
-                                const allEvents: DomainEvent[] = batch.messages
-                                    .map((m) =>
-                                        JSON.parse(m.value?.toString() || '{}'),
-                                    )
-                                    .filter(
-                                        (e) =>
-                                            handlers[e.type] || handlers['*'],
-                                    );
+                    if (allEvents.length > 0) {
+                        logger.info(
+                            `Kafka Consumer [${groupId}]: Processing ${allEvents.length} relevant events from "${stream}"`,
+                        );
+                        await this.executeHandlers(
+                            allEvents,
+                            handlers,
+                            options,
+                            isRunning,
+                            isStale,
+                        );
+                    }
 
-                                if (allEvents.length > 0) {
-                                    logger.info(
-                                        `Kafka Consumer [${groupId}]: Processing ${allEvents.length} relevant events from "${stream}"`,
-                                    );
-                                    await this.executeHandlers(
-                                        allEvents,
-                                        handlers,
-                                        options,
-                                        isRunning,
-                                        isStale,
-                                    );
-                                }
-
-                                for (const m of batch.messages)
-                                    resolveOffset(m.offset);
-                                await heartbeat();
-                            } catch (err) {
-                                logger.error(
-                                    `Kafka Consumer [${groupId}]: Batch processing failed`,
-                                    err,
-                                );
-                                throw err;
-                            } finally {
-                                span.end();
-                            }
-                        },
+                    for (const m of batch.messages) resolveOffset(m.offset);
+                    await heartbeat();
+                } catch (err) {
+                    logger.error(
+                        `Kafka Consumer [${groupId}]: Batch processing failed`,
+                        err,
                     );
-                });
+                    throw err;
+                }
             },
         });
 

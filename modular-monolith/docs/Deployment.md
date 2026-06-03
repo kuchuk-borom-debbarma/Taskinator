@@ -29,7 +29,6 @@ We use Kysely for type-safe queries. Migrations should be run sequentially durin
 
 ### 3. Monitoring & Observability
 - **Logs**: We use a structured JSON logger. In production, these should be forwarded to a central log aggregator (e.g., ELK or Datadog).
-- **Traces**: The system is instrumented with OpenTelemetry.
 - **Metrics**: Monitor Kafka consumer lag and PostgreSQL transaction rates as primary health indicators.
 
 ## 📦 Build Process

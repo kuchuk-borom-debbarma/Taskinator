@@ -4,11 +4,10 @@ import { taskService } from '../index.ts';
 export class CascadeService {
     async resolveBlockers(param: {
         actorId: string;
-        traceId?: string;
         taskId: string;
         targetStatus: string;
     }) {
-        const { actorId, traceId, taskId, targetStatus } = param;
+        const { actorId, taskId, targetStatus } = param;
 
         // Find direct successors of this task linked with 'blocks'
         const successors = await db
@@ -45,7 +44,6 @@ export class CascadeService {
                         taskId: target_task_id,
                         version: successorTask.version,
                         status: targetStatus,
-                        traceId,
                     });
                 }
             }
@@ -54,11 +52,10 @@ export class CascadeService {
 
     async cascadePriority(param: {
         actorId: string;
-        traceId?: string;
         taskId: string;
         priority: number;
     }) {
-        const { actorId, traceId, taskId, priority } = param;
+        const { actorId, taskId, priority } = param;
 
         const subtasks = await db
             .selectFrom('task_reachability')
@@ -77,7 +74,6 @@ export class CascadeService {
                     taskId: descendant_task_id,
                     version: subtask.version,
                     priority,
-                    traceId,
                 });
             }
         }
@@ -85,11 +81,10 @@ export class CascadeService {
 
     async cascadeTeam(param: {
         actorId: string;
-        traceId?: string;
         taskId: string;
         teamId: string | null;
     }) {
-        const { actorId, traceId, taskId, teamId } = param;
+        const { actorId, taskId, teamId } = param;
 
         const subtasks = await db
             .selectFrom('task_reachability')
@@ -108,17 +103,12 @@ export class CascadeService {
                     taskId: descendant_task_id,
                     version: subtask.version,
                     teamId,
-                    traceId,
                 });
             }
         }
     }
 
-    async cascadeDelete(param: {
-        actorId: string;
-        traceId?: string;
-        taskId: string;
-    }) {
+    async cascadeDelete(param: { actorId: string; taskId: string }) {
         const { actorId, taskId } = param;
 
         // Fetch task to get its project ID

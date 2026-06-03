@@ -48,7 +48,7 @@ sequenceDiagram
         Engine->>Engine: 11. Evaluate AST conditions (ConditionEvaluator)
         Engine->>Engine: 12. Compile & execute action (ActionExecutor)
         Engine-->>Proc: 13. Returns mutated contextual entities
-        Proc->>Aggregator: 14. Push changes (entity, traceId, depth)
+        Proc->>Aggregator: 14. Push changes (entity, depth)
     end
     
     rect rgb(240, 255, 240)
@@ -211,7 +211,7 @@ The [PipelineOrchestrator](file:///Users/kuchukboromdebbarma/Documents/projects/
 ### 4.2 Kafka-Driven Resume Loops
 If a pipeline contains multiple action sets, the engine splits execution into sequential Kafka-driven continuation bounds to maintain small, predictable message frames:
 - **`PIPELINE.TRIGGER`**: Dispatched to launch the execution chain from step 0.
-- **`PIPELINE.CONTINUE`**: If the orchestrator finishes a step and a subsequent step exists, it appends a `PIPELINE.CONTINUE` event containing `{ autopilotId, state: { traceId, stepIndex: nextIndex, depth } }` into the outbox. When the event consumer processes the continuation message, it resumes execution precisely from that index, maintaining exact sequential ordering without locking process resources.
+- **`PIPELINE.CONTINUE`**: If the orchestrator finishes a step and a subsequent step exists, it appends a `PIPELINE.CONTINUE` event containing `{ autopilotId, state: { stepIndex: nextIndex, depth } }` into the outbox. When the event consumer processes the continuation message, it resumes execution precisely from that index, maintaining exact sequential ordering without locking process resources.
 
 ---
 
@@ -237,7 +237,7 @@ When flushing updates to tasks, the aggregator must notify the rest of Taskinato
 To achieve this in exactly **one database round-trip**, we compile a single PostgreSQL CTE query:
 1.  **`old_state` CTE**: Selects old fields (`fk_team_id`, `fk_member_id`, `title`, `status`) of all task IDs being updated.
 2.  **`updated_task` CTE**: Executes a bulk `UPDATE` using SQL `CASE` statements to apply unique changes to different rows in one statement, returning the newly updated values.
-3.  **`inserted_outbox` Insert**: Performed in the same query by joining `updated_task` and `old_state` CTEs, building a fully populated `task.updated` payload carrying old state, new state, correlation `traceId`, and loop `depth` parameters!
+3.  **`inserted_outbox` Insert**: Performed in the same query by joining `updated_task` and `old_state` CTEs, building a fully populated `task.updated` payload carrying old state, new state, and loop `depth` parameters!
 
 ```sql
 WITH old_state AS (
@@ -278,7 +278,6 @@ SELECT
             'status', u.status
         ),
         'actorId', 'system:autopilot',
-        'traceId', CASE id WHEN $9::uuid THEN $10 WHEN $11::uuid THEN $12 END,
         'depth', CASE id WHEN $13::uuid THEN $14::integer WHEN $15::uuid THEN $16::integer END
     )
 FROM updated_task u
@@ -336,4 +335,4 @@ To guard against loop crashes, the Autopilot engine implements a **Trace-Level D
 ```
 
 ### 6.1 Loop Detection Threshold
-If the recursion chain depth exceeds **50 hops**, `PipelineOrchestrator.checkLoopSafety()` instantly throws a loop detection error. The orchestrator catches the error, halts execution, and logs the complete cascade path along with the `traceId` to the diagnostics console. This prevents infinite cycles from ever exhausting CPU or storage.
+If the recursion chain depth exceeds **50 hops**, `PipelineOrchestrator.checkLoopSafety()` instantly throws a loop detection error. The orchestrator catches the error, halts execution, and logs the complete cascade path to the diagnostics console. This prevents infinite cycles from ever exhausting CPU or storage.

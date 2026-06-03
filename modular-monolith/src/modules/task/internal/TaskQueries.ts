@@ -662,7 +662,6 @@ export const insertTask = async (param: {
     status?: string | null;
     priority?: number | null;
     dueDate?: string | null;
-    traceId?: string | null;
 }): Promise<Task> => {
     const result = await sql<Task>`
         WITH authorized AS (
@@ -731,8 +730,7 @@ export const insertTask = async (param: {
                     'status', status,
                     'priority', priority,
                     'dueDate', "dueDate",
-                    'actorId', ${param.actorId}::text,
-                    'traceId', ${param.traceId}::text
+                    'actorId', ${param.actorId}::text
                 )
             FROM inserted_task
         )
@@ -761,7 +759,6 @@ export const updateTask = async (param: {
     memberId?: string | null;
     priority?: number | null;
     dueDate?: string | null;
-    traceId?: string | null;
 }): Promise<Task> => {
     // 1. Build dynamic SET fragments
     const updates: any[] = [];
@@ -903,8 +900,7 @@ export const updateTask = async (param: {
                         'priority', u.priority,
                         'dueDate', u."dueDate"
                     ),
-                    'actorId', ${param.actorId}::text,
-                    'traceId', ${param.traceId}::text
+                    'actorId', ${param.actorId}::text
                 )
             FROM updated_task u, old_state o
         )
@@ -2144,7 +2140,6 @@ export const getTaskActivityLogsPage = async (
             for (const [field, val] of Object.entries<any>(payload)) {
                 if (
                     field !== 'actorId' &&
-                    field !== 'traceId' &&
                     field !== 'taskId' &&
                     field !== 'projectId'
                 ) {

@@ -204,7 +204,6 @@ export interface TaskService extends BaseService {
         status?: string | null;
         priority?: number | null;
         dueDate?: string | null;
-        traceId?: string | null;
     }): Promise<Task>;
 
     updateTask(param: {
@@ -219,7 +218,6 @@ export interface TaskService extends BaseService {
         memberId?: string | null;
         priority?: number | null;
         dueDate?: string | null;
-        traceId?: string | null;
     }): Promise<Task>;
 
     createAutomationRule(

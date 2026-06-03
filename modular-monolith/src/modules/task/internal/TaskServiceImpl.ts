@@ -162,10 +162,9 @@ export class TaskServiceImpl implements TaskService {
         status?: string | null;
         priority?: number | null;
         dueDate?: string | null;
-        traceId?: string | null;
     }): Promise<Task> {
         logger.info(
-            `TaskService.createTask started by ${param.actorId} in project ${param.projectId} for "${param.title}" (Trace: ${param.traceId ?? 'none'})`,
+            `TaskService.createTask started by ${param.actorId} in project ${param.projectId} for "${param.title}"`,
         );
         if (param.title.length < 3 || param.title.length > 255) {
             throw new Error('Task title must be between 3 and 255 characters.');
@@ -187,7 +186,6 @@ export class TaskServiceImpl implements TaskService {
                 priority: result.priority,
                 dueDate: result.dueDate ? result.dueDate.toISOString() : null,
                 actorId: param.actorId,
-                traceId: param.traceId,
             },
         });
 
@@ -207,10 +205,9 @@ export class TaskServiceImpl implements TaskService {
         memberId?: string | null;
         priority?: number | null;
         dueDate?: string | null;
-        traceId?: string | null;
     }): Promise<Task> {
         logger.info(
-            `TaskService.updateTask started for ${param.taskId} by ${param.actorId} (Trace: ${param.traceId ?? 'none'})`,
+            `TaskService.updateTask started for ${param.taskId} by ${param.actorId}`,
         );
         if (
             param.title &&
@@ -237,7 +234,6 @@ export class TaskServiceImpl implements TaskService {
                 priority: result.priority,
                 dueDate: result.dueDate ? result.dueDate.toISOString() : null,
                 actorId: param.actorId,
-                traceId: param.traceId,
                 old: {
                     teamId: (result as any).prev_team_id,
                     memberId: (result as any).prev_member_id,
